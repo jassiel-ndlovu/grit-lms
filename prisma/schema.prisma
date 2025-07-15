@@ -8,6 +8,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  STUDENT
+  TUTOR
+  ADMIN
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -17,17 +23,165 @@ model User {
   createdAt DateTime @default(now())
 }
 
+model Tutor {
+  id              String   @id @default(cuid())
+  fullName        String
+  email           String   @unique
+  profileImageUrl String?
+  bio             String?
+  courses         Course[]
+}
+
+model Student {
+  id                    String                 @id @default(cuid())
+  fullName              String
+  email                 String                 @unique
+  imageUrl              String?
+  courses               Course[]               @relation("CourseEnrollments")
+  lessonCompletions     LessonCompletion[]
+  assessmentCompletions AssessmentCompletion[]
+  submissionEntries     SubmissionEntry[]
+  Grade                 Grade[]
+  Notification          Notification[]
+}
+
+model Course {
+  id           String         @id @default(cuid())
+  name         String
+  description  String?
+  imageUrl     String
+  tutorId      String
+  tutor        Tutor          @relation(fields: [tutorId], references: [id])
+  students     Student[]      @relation("CourseEnrollments")
+  lessons      Lesson[]
+  quizzes      Quiz[]
+  tests        Test[]
+  submissions  Submission[]
+  courseEvents CourseEvent[]
+  Grade        Grade[]
+  Notification Notification[]
+}
+
+model Lesson {
+  id             String             @id @default(cuid())
+  title          String
+  description    String?
+  videoUrl       String?
+  attachmentUrls String[]           @default([])
+  order          Int
+  courseId       String
+  course         Course             @relation(fields: [courseId], references: [id])
+  completions    LessonCompletion[]
+}
+
+model LessonCompletion {
+  id          String   @id @default(cuid())
+  studentId   String
+  lessonId    String
+  completedAt DateTime
+
+  student Student @relation(fields: [studentId], references: [id])
+  lesson  Lesson  @relation(fields: [lessonId], references: [id])
+}
+
+model CourseEvent {
+  id       String   @id @default(cuid())
+  title    String
+  date     DateTime
+  link     String
+  courseId String
+  course   Course   @relation(fields: [courseId], references: [id])
+}
+
+model Quiz {
+  id          String                 @id @default(cuid())
+  title       String
+  courseId    String
+  course      Course                 @relation(fields: [courseId], references: [id])
+  dueDate     DateTime
+  createdAt   DateTime               @default(now())
+  completions AssessmentCompletion[]
+}
+
+model Test {
+  id          String                 @id @default(cuid())
+  title       String
+  courseId    String
+  course      Course                 @relation(fields: [courseId], references: [id])
+  dueDate     DateTime
+  createdAt   DateTime               @default(now())
+  completions AssessmentCompletion[]
+}
+
+model AssessmentCompletion {
+  id          String    @id @default(cuid())
+  studentId   String
+  quizId      String?
+  testId      String?
+  startedAt   DateTime
+  completedAt DateTime?
+  score       Float?
+
+  student Student @relation(fields: [studentId], references: [id])
+  quiz    Quiz?   @relation(fields: [quizId], references: [id])
+  test    Test?   @relation(fields: [testId], references: [id])
+}
+
+model Submission {
+  id       String            @id @default(cuid())
+  title    String
+  fileType String
+  courseId String
+  course   Course            @relation(fields: [courseId], references: [id])
+  dueDate  DateTime
+  entries  SubmissionEntry[]
+}
+
+model SubmissionEntry {
+  id           String   @id @default(cuid())
+  studentId    String
+  submissionId String
+  submittedAt  DateTime
+  fileUrl      String
+  grade        Float?
+
+  student    Student    @relation(fields: [studentId], references: [id])
+  submission Submission @relation(fields: [submissionId], references: [id])
+}
+
 model Resource {
   id          String   @id @default(cuid())
   title       String
   description String
   url         String
   uploadedAt  DateTime @default(now())
-  uploadedBy  String
+  uploadedBy  String // could reference tutor or admin
 }
 
-enum Role {
-  STUDENT
-  TUTOR
-  ADMIN
+model Grade {
+  id        String   @id @default(cuid())
+  studentId String
+  courseId  String
+  type      String // e.g. "Quiz", "Test", "Final Mark"
+  title     String // e.g. "June Test"
+  value     Float
+  outOf     Float
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+  course  Course  @relation(fields: [courseId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  link      String?
+  studentId String? // null = global notification
+  courseId  String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  student Student? @relation(fields: [studentId], references: [id])
+  course  Course?  @relation(fields: [courseId], references: [id])
 }
