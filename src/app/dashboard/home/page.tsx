@@ -9,6 +9,9 @@ import { assessments, courses, submissions } from '@/lib/static';
 export default function Home() {
   const handleSearch = ({ searchTerm, filter, sort }: CourseSearchOptions) => {
     // Apply filtering or fetch logic here
+    console.log('Search Term:', searchTerm);
+    console.log('Filter:', filter);
+    console.log('Sort:', sort);
   };
 
   const events: CourseEvent[] = courses.flatMap(course => course.courseEvents || []);

@@ -12,15 +12,16 @@ interface CoursePageProps {
 }
 
 export default function CoursePage({ params }: CoursePageProps) {
-  const { courseId } = use(params);
-  const course = courses.find((c) => c.courseId === courseId);
-  if (!course) return notFound();
-
   const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const currentLesson = course.lessons[selectedLessonIndex];
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
+
+  const { courseId } = use(params);
+  const course = courses.find((c) => c.courseId === courseId);
+  if (!course) return notFound();
+  
+  const currentLesson = course.lessons[selectedLessonIndex];
 
   const handleComplete = (lessonId: string) => {
     setCompletedLessons((prev) =>
