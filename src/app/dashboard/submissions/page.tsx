@@ -1,7 +1,7 @@
 'use client';
 
 import { submissions, courses } from '@/lib/static';
-import { Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 

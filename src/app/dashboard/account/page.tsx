@@ -1,8 +1,7 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
-import { LogOut, Shield, User2, Bell, Lock } from 'lucide-react'
+import { Shield, User2, Bell, Lock } from 'lucide-react'
 
 const mockUser = {
   fullName: 'Jane Doe',

@@ -8,7 +8,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 export default function Home() {
-  const router = useRouter();
   const events: CourseEvent[] = courses.flatMap(course => course.courseEvents || []);
   const continueCourses: Course[] = []; // courses.filter(course => course.lessons.length > 0)
 

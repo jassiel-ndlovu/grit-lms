@@ -1,6 +1,6 @@
 'use client'
 
-import { Moon, Sun, Globe, Trash2, Download, EyeOff, SlidersHorizontal } from 'lucide-react'
+import { Sun, Globe, Trash2, Download, EyeOff, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 
 export default function SettingsPage() {

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { CalendarDays, FileText, Send } from 'lucide-react'
 
 function getMonthDates(year: number, month: number) {
-  const start = new Date(year, month, 1)
+  // const start = new Date(year, month, 1)
   const end = new Date(year, month + 1, 0)
   const days = []
 
