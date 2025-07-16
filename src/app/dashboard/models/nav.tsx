@@ -8,17 +8,17 @@ export default function Nav() {
 
   const navItems = [
     { icon: Home, label: "Home", link: "/dashboard" },
-    { icon: Calendar, label: "Calendar", link: "#" },
-    { icon: Book, label: "Courses", link: "#" },
-    { icon: FileText, label: "Tests", link: "#" },
-    { icon: FileText, label: "Submissions", link: "#" },
-    { icon: User, label: "Account", link: "#" },
-    { icon: Settings, label: "Settings", link: "#" },
+    { icon: Calendar, label: "Calendar", link: "/dashboard/calendar" },
+    { icon: Book, label: "Courses", link: "/dashboard/browse-courses" },
+    { icon: FileText, label: "Tests", link: "/dashboard/tests" },
+    { icon: FileText, label: "Submissions", link: "/dashboard/submissions" },
+    { icon: User, label: "Account", link: "/dashboard/account" },
+    { icon: Settings, label: "Settings", link: "/dashboard/settings" },
   ];
 
   return (
     <nav
-      className={`sticky top-0 h-screen z-30 bg-gray-100 border-r border-gray-300 shadow-sm transition-all duration-300 ${
+      className={`sticky top-0 h-screen z-30 bg-white border-r border-gray-300 shadow-sm transition-all duration-300 ${
         isCollapsed ? "w-16" : "w-48"
       }`}
     >

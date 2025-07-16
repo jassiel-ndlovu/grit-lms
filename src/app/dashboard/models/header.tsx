@@ -60,8 +60,8 @@ export default function Header({ user }: HeaderProps) {
                 />
               </div>
             ) : (
-              <div className="w-7 h-7 bg-blue-400 text-sm font-semibold rounded-full flex items-center justify-center text-white">
-                {user.name.charAt(0).toUpperCase() + user.surname.charAt(0).toUpperCase()}
+              <div className="w-7 h-7 bg-orange-500 text-sm font-semibold rounded-full flex items-center justify-center text-white">
+                {user.name.charAt(0).toUpperCase()}
               </div>
             )}
 
