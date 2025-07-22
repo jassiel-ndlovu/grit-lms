@@ -1,35 +1,44 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Footer from '../components/footer'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+import Footer from '../components/footer';
+import LoadingPopup from '../components/loading';
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-    setError("")
+    const result = await signIn('credentials', {
+      redirect: false,
+      email,
+      password,
+    });
 
-    // API call
+    setLoading(false);
 
-
-    // End API call
-
-    router.push('/dashboard')
-  }
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      router.push('/dashboard');
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col">
+      {loading && <LoadingPopup />}
       <main className="h-full flex items-center justify-center bg-gray-50">
         <div className="w-full max-w-sm p-6 bg-white border border-gray-200">
-          <h1 className="text-2xl font-bold mb-6 text-center">
-            Login to GRIT
-          </h1>
+          <h1 className="text-2xl font-bold mb-6 text-center">Login to GRIT</h1>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -81,5 +90,5 @@ export default function LoginPage() {
       </main>
       <Footer />
     </div>
-  )
+  );
 }

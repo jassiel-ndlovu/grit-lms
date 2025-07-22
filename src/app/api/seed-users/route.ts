@@ -38,7 +38,7 @@ export async function GET() {
     // Create tutor and students
     await prisma.tutor.create({
       data: {
-        name: 'Nkosenhle Jassiel Ndlovu',
+        fullName: 'Nkosenhle Jassiel Ndlovu',
         email: 'nkosijassiel@gmail.com',
         bio: 'Mathematics and IT tutor.',
       },
@@ -55,6 +55,7 @@ export async function GET() {
           email: 'anesumusungo3@gmail.com',
         },
       ],
+      skipDuplicates: true,
     });
 
     return NextResponse.json({ message: 'Seed successful' }, { status: 200 });

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { assessments, courses, submissions } from '@/lib/static';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 export default function Home() {
   const events: CourseEvent[] = courses.flatMap(course => course.courseEvents || []);

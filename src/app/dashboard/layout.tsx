@@ -6,11 +6,6 @@ import Header from './models/header';
 import Nav from './models/nav';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const user = {
-    name: 'Jassiel',
-    surname: 'Ndlovu',
-  }
-
   return (
     <div className="min-h-screen flex flex-col">
       {/* Layout Container */}
@@ -20,7 +15,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* Main Content */}
         <main className="h-[100vh] flex-1 flex flex-col">
-          <Header user={user} />
+          <Header />
           <div className="h-[92vh]">
             {children}
           </div>

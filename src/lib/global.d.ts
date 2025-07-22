@@ -1,12 +1,28 @@
+import { $Enums } from "@/generated/prisma";
+
 export {};
 
 declare global {
+  interface GritUser {
+    id: string;
+    name: string;
+    email: string;
+    role: $Enums.Role;
+  }
+
   interface Tutor {
-    tutorId: string;
+    id: string;
     fullName: string;
     email: string;
     profileImageUrl?: string;
     bio?: string;
+  }
+
+  interface Student {
+    id: string;
+    fullName: string;
+    email: string;
+    imageUrl: string | null;
   }
 
   interface CourseSearchOptions {
