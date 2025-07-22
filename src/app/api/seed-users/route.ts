@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
 export async function GET() {
   try {
-    const prisma = new PrismaClient();
 
     // Hash passwords
     const tutorPassword = await bcrypt.hash('Jassiel1234#1', 10);
@@ -58,7 +57,7 @@ export async function GET() {
       ],
     });
 
-    return NextResponse.json({ message: 'Seed successful' });
+    return NextResponse.json({ message: 'Seed successful' }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Seed failed with error: ' + error }, { status: 500 });
