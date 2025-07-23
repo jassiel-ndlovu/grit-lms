@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Footer from "../components/footer";
+import Footer from "../dashboard/models/footer";
 
 export default function SupportPage() {
   return (

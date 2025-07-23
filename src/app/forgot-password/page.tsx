@@ -1,4 +1,4 @@
-import Footer from "../components/footer";
+import Footer from "../dashboard/models/footer";
 
 export default function ForgotPasswordPage() {
   return (

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import Footer from '../components/footer';
+import Footer from '../dashboard/models/footer';
 import LoadingPopup from '../components/loading';
 
 export default function LoginPage() {

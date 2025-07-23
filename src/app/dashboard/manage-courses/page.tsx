@@ -1,162 +1,244 @@
 'use client';
 
-import { Plus, Pencil, Users, FileText, Layers } from 'lucide-react';
+import { Plus, Pencil, Users, FileText, Layers, ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import Image from 'next/image';
-
-type Course = {
-  id: string;
-  courseName: string;
-  description: string;
-  level: string;
-  category: string;
-  imageUrl?: string;
-};
+import { useProfile } from '@/context/ProfileContext';
+import { useStudent } from '@/context/StudentContext'; // pulling list of students
 
 export default function ManageCoursesPage() {
   const [isOpen, setIsOpen] = useState(false);
-  const [courses, setCourses] = useState<Course[]>([]); // Replace with fetched data later
-  const [formData, setFormData] = useState({
+  const [courses, setCourses] = useState<Course[]>([]);
+  const { students } = useStudent();
+
+  const emptyForm = {
     courseName: '',
     description: '',
-    level: '',
-    category: '',
-    imageUrl: ''
-  });
+    courseImageUrl: '',
+    selectedStudentIds: [] as string[],
+  };
+  const [formData, setFormData] = useState(emptyForm);
+
+  const { profile } = useProfile();
+  const tutorProfile = profile as Tutor;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, selectedOptions } = e.target as HTMLSelectElement;
+    if (name === 'selectedStudentIds') {
+      const ids = Array.from(selectedOptions).map(opt => opt.value);
+      setFormData(prev => ({ ...prev, selectedStudentIds: ids }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
 
   const handleCreateCourse = () => {
-    // You will replace this with your API call
-    const newCourse = {
-      ...formData,
-      id: crypto.randomUUID()
+    const enrolled = students.filter(s => formData.selectedStudentIds.includes(s.id));
+    const newCourse: Course = {
+      courseId: crypto.randomUUID(),
+      courseName: formData.courseName,
+      description: formData.description,
+      courseImageUrl: formData.courseImageUrl,
+      tutor: tutorProfile,
+      enrolledStudents: enrolled,
+      lessons: [],
+      activeQuizzes: [],
+      activeTests: [],
+      activeSubmissions: [],
+      courseEvents: [],
     };
+
     setCourses(prev => [...prev, newCourse]);
+    setFormData(emptyForm);
     setIsOpen(false);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
   return (
-    <div className="px-6 py-8 space-y-8 bg-gray-50 min-h-screen">
-      <div className="flex items-center justify-between">
+    <div className="px-6 py-8 bg-gray-50 min-h-screen space-y-8">
+      <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-800">Manage Courses</h1>
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-500 transition"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 transition"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-5 h-5" />
           Create Course
         </button>
       </div>
 
-      {/* Course List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses.length > 0 ? (
-          courses.map(course => (
-            <div key={course.id} className="bg-white rounded-xl shadow border border-gray-200 p-4 space-y-4">
-              {course.imageUrl && (
-                <div className="w-full h-32 relative">
-                  <Image src={course.imageUrl} alt="Course" fill className="object-cover rounded-md" />
+        {courses.length ? (
+          courses.map(c => (
+            <div key={c.courseId} className="bg-white rounded-xl shadow hover:shadow-md transition p-5 space-y-4">
+              {c.courseImageUrl ? (
+                <div className="w-full h-36 relative rounded-lg overflow-hidden">
+                  <Image src={c.courseImageUrl} alt="" fill className="object-cover" />
+                </div>
+              ) : (
+                <div className="w-full h-36 bg-gray-200 flex items-center justify-center rounded-lg">
+                  <ImageIcon className="w-8 h-8 text-gray-400" />
                 </div>
               )}
-              <h2 className="text-lg font-semibold text-gray-800">{course.courseName}</h2>
-              <p className="text-sm text-gray-600">{course.description}</p>
-              <div className="text-xs text-gray-500">Level: {course.level} | Category: {course.category}</div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                <button className="text-sm px-3 py-1 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100">
-                  <Layers className="w-4 h-4 inline mr-1" />
-                  Add Content
-                </button>
-                <button className="text-sm px-3 py-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100">
-                  <Users className="w-4 h-4 inline mr-1" />
-                  Manage Students
-                </button>
-                <button className="text-sm px-3 py-1 rounded bg-yellow-50 text-yellow-600 hover:bg-yellow-100">
-                  <FileText className="w-4 h-4 inline mr-1" />
-                  Create Test
-                </button>
-                <button className="text-sm px-3 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100">
-                  <Pencil className="w-4 h-4 inline mr-1" />
-                  Edit
-                </button>
+              <h2 className="text-lg font-semibold text-gray-900">{c.courseName}</h2>
+              <p className="text-gray-600 text-sm line-clamp-3">{c.description}</p>
+              <div className="text-xs text-gray-500">
+                Students Enrolled: {c.enrolledStudents.length}
+              </div>
+              <div className="flex flex-wrap gap-2 pt-3">
+                {[
+                  ['Add Content', Layers, 'bg-indigo-50 text-indigo-600'],
+                  ['Manage Students', Users, 'bg-emerald-50 text-emerald-600'],
+                  ['Create Test', FileText, 'bg-yellow-50 text-yellow-600'],
+                  ['Edit', Pencil, 'bg-blue-50 text-blue-600']
+                ].map(([label, Icon, style], index) => (
+                  <button key={index} className={`flex items-center gap-1 px-3 py-1 rounded ${style} hover:opacity-90 transition text-sm`}>
+                    <Icon className="w-4 h-4" />
+                    {label as string}
+                  </button>
+                ))}
               </div>
             </div>
           ))
         ) : (
-          <p className="text-gray-500">No courses created yet.</p>
+          <p className="text-gray-600 text-sm">No courses created yet.</p>
         )}
       </div>
 
-      {/* Create Course Modal */}
-      <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="relative z-50">
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="bg-white w-full max-w-md p-6 rounded-xl shadow-lg">
-            <Dialog.Title className="text-xl font-bold mb-4">Create a New Course</Dialog.Title>
-            <div className="space-y-4">
+      <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+
+        <div className="bg-white w-full max-w-xl z-10 p-8 space-y-6 relative">
+          <h2 className="text-2xl font-bold text-gray-800">Create New Course</h2>
+
+          <div className="space-y-5">
+            {/* Course Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Course Name</label>
               <input
                 type="text"
                 name="courseName"
-                placeholder="Course Name"
                 value={formData.courseName}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
+                className="mt-2 block w-full border border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
               />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Description</label>
               <textarea
                 name="description"
-                placeholder="Course Description"
+                rows={3}
                 value={formData.description}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-              />
-              <select
-                name="level"
-                value={formData.level}
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-              >
-                <option value="">Select Level</option>
-                <option value="Grade 10">Grade 10</option>
-                <option value="Grade 11">Grade 11</option>
-                <option value="Grade 12">Grade 12</option>
-              </select>
-              <input
-                type="text"
-                name="category"
-                placeholder="Category (e.g. IT, Maths)"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
-              />
-              <input
-                type="text"
-                name="imageUrl"
-                placeholder="Image URL (optional)"
-                value={formData.imageUrl}
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded"
+                className="mt-2 block w-full border border-gray-300 px-3 py-2 resize-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setIsOpen(false)}
-                className="px-4 py-2 rounded text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateCourse}
-                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-500"
-              >
-                Create
-              </button>
+
+            {/* Image URL */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Image URL</label>
+              <input
+                type="text"
+                name="courseImageUrl"
+                value={formData.courseImageUrl}
+                onChange={handleChange}
+                className="mt-2 block w-full border border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+              />
             </div>
-          </Dialog.Panel>
+
+            {/* Student Select */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Enroll Students</label>
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                  value=""
+                  onChange={e => {
+                    const studentId = e.target.value;
+                    if (!formData.selectedStudentIds.includes(studentId)) {
+                      setFormData(prev => ({
+                        ...prev,
+                        selectedStudentIds: [...prev.selectedStudentIds, studentId],
+                      }));
+                    }
+                  }}
+                >
+                  <option value="" disabled>Select a student</option>
+                  {students
+                    .filter(s => !formData.selectedStudentIds.includes(s.id))
+                    .map(student => (
+                      <option key={student.id} value={student.id}>
+                        {student.fullName} ({student.email})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Selected Students Chips */}
+              {formData.selectedStudentIds.length > 0 && (
+                <div className="flex flex-wrap mt-3 gap-2">
+                  {formData.selectedStudentIds.map(studentId => {
+                    const student = students.find(s => s.id === studentId);
+                    if (!student) return null;
+
+                    return (
+                      <div
+                        key={student.id}
+                        className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 shadow-sm"
+                      >
+                        {student.imageUrl ? (
+                          <Image
+                            src={student.imageUrl}
+                            alt={student.fullName}
+                            width={24}
+                            height={24}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <div className="w-4 h-4 p-3 text-sm text-white flex items-center justify-center rounded-full bg-blue-400">
+                            {student.fullName.charAt(0)}
+                          </div>
+                        )}
+                        <span>{student.fullName}</span>
+                        <button
+                          onClick={() =>
+                            setFormData(prev => ({
+                              ...prev,
+                              selectedStudentIds: prev.selectedStudentIds.filter(id => id !== student.id),
+                            }))
+                          }
+                          className="ml-1 text-gray-400 hover:text-red-500 transition"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              onClick={() => setIsOpen(false)}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateCourse}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-500 transition"
+            >
+              Create
+            </button>
+          </div>
         </div>
       </Dialog>
+
     </div>
   );
 }
