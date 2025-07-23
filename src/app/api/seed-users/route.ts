@@ -11,7 +11,7 @@ export async function GET() {
     const anesuPassword = await bcrypt.hash('Anesu672$23', 10);
 
     // Create users
-    const users = await prisma.user.createMany({
+    await prisma.user.createMany({
       data: [
         {
           name: 'Nkosenhle Jassiel Ndlovu',

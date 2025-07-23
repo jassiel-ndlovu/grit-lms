@@ -1,5 +1,5 @@
 const tutor: Tutor = {
-  tutorId: "1",
+  id: "1",
   fullName: "Nkosenhle Ndlovu",
   email: "nkosijassiel@gmail.com",
   profileImageUrl: "/images/tutor-avatar.png",

@@ -49,11 +49,11 @@ const authOptions: NextAuthOptions = {
     async jwt({ token, user }: { token: JWT; user?: User }) {
       if (user) {
         token.id = user.id;
-        // @ts-ignore
+        // @ts-expect-error name throws error
         token.name = user.name;
-        // @ts-ignore
+        // @ts-expect-error email throws error
         token.email = user.email;
-        // @ts-ignore
+        // @ts-expect-error role throws error
         token.role = user.role;
       }
       return token;
@@ -63,7 +63,6 @@ const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.name = token.name as string;
         session.user.email = token.email as string;
-        // @ts-ignore
         session.user.role = token.role;
       }
       return session;

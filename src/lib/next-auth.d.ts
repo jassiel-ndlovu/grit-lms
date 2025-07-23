@@ -1,5 +1,3 @@
-import NextAuth from 'next-auth';
-import { GritUser } from './GritUser';
 import { $Enums } from '@/generated/prisma';
 
 declare module 'next-auth' {
@@ -11,8 +9,6 @@ declare module 'next-auth' {
       role: $Enums.Role;
     };
   }
-
-  interface User extends GritUser {}
 }
 
 declare module 'next-auth/jwt' {
