@@ -32,15 +32,13 @@ export default function Header() {
         </button>
 
         <div ref={menuRef} className="relative">
-          <ProfileProvider>
-            <HeaderUserProfile menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
-          </ProfileProvider>
+          <HeaderUserProfile menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
 
           {menuOpen && (
             <div className="absolute right-0 w-60 bg-white border border-gray-200 shadow-lg rounded-md z-50">
               <ul className="py-2 text-sm text-gray-700">
                 <li className="px-4 py-2 hover:bg-gray-100">
-                  <Link 
+                  <Link
                     href="/dashboard/account"
                     className="flex items-center gap-2 cursor-pointer"
                   >

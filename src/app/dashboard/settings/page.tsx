@@ -17,7 +17,7 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-600 mt-1">Manage your preferences and application behavior.</p>
         </header>
 
-        <div className="bg-white rounded-md  divide-y border border-gray-300">
+        <div className="bg-white rounded-md divide-gray-200 divide-y border border-gray-300">
           {/* General */}
           <section className="p-6 space-y-4">
             <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2">

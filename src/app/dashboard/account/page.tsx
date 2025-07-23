@@ -1,18 +1,25 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Shield, User2, Bell, Lock } from 'lucide-react'
-
-const mockUser = {
-  fullName: 'Jane Doe',
-  email: 'jane.doe@example.com',
-  role: 'Student',
-  avatarUrl: '/images/user-avatar.png',
-  lastLogin: '2025-07-13T14:32:00Z',
-}
+import { useState } from 'react';
+import { useProfile } from '@/context/ProfileContext';
+import { Shield, User2, Bell, Lock } from 'lucide-react';
 
 export default function AccountPage() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const { profile, session, status } = useProfile();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  if (status === 'loading' || !profile) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="text-gray-600 animate-pulse">Loading your profile...</div>
+      </div>
+    );
+  }
+
+  const fullName = profile.fullName || session?.user?.name || 'Unnamed User';
+  const email = session?.user?.email || 'N/A';
+  const role = session?.user?.role || 'UNKNOWN';
+  // const lastLogin = profile.updatedAt || new Date().toISOString(); 
 
   return (
     <div className="h-full w-full bg-gray-50 px-6 py-10 overflow-auto">
@@ -21,33 +28,26 @@ export default function AccountPage() {
         <p className="text-sm text-gray-600 mt-1">Manage your account details and preferences.</p>
       </header>
 
-      <main className="max-w-5xl mx-auto bg-white rounded-md border border-gray-300 divide-y">
+      <main className="max-w-5xl mx-auto bg-white rounded-md border border-gray-300 divide-y divide-gray-200">
         {/* Profile Summary */}
         <section className="p-6 flex items-center gap-6">
-          {/* <Image
-            src={mockUser.avatarUrl}
-            alt="Profile"
-            width={80}
-            height={80}
-            className="rounded-full border object-cover"
-          /> */}
           <div className="w-16 h-16 p-2 text-xl text-white font-medium flex justify-center items-center bg-orange-500 rounded-full">
-            {mockUser.fullName.charAt(0)}
+            {fullName.charAt(0)}
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-gray-800">{mockUser.fullName}</h2>
-            <p className="text-sm text-gray-500">{mockUser.email}</p>
-            <p className="text-sm text-blue-600">{mockUser.role}</p>
+            <h2 className="text-xl font-semibold text-gray-800">{fullName}</h2>
+            <p className="text-sm text-gray-500">{email}</p>
+            <p className="text-sm text-blue-600 capitalize">{role.toLowerCase()}</p>
           </div>
         </section>
 
-        {/* Account Preferences */}
+        {/* Personal Info */}
         <section className="p-6 space-y-4">
           <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
             <User2 className="w-5 h-5 text-gray-500" /> Personal Info
           </h3>
-          <div className="text-sm text-gray-600">
-            Update your name, email or avatar by contacting support.
+          <div className="text-sm text-gray-600 space-y-1">
+            <p><strong>Full Name:</strong> {fullName}</p>
           </div>
         </section>
 
@@ -75,10 +75,10 @@ export default function AccountPage() {
             <Shield className="w-5 h-5 text-indigo-500" /> Security
           </h3>
           <div className="space-y-2 text-sm text-gray-700">
-            <p>Last Login: {new Date(mockUser.lastLogin).toLocaleString()}</p>
+            <p>Last Login: -</p>
             <div className="flex justify-between items-center">
               <p>Two-Factor Authentication</p>
-              <span className="text-green-600 font-semibold">Enabled</span>
+              <span className="text-green-600 font-semibold">Disabled</span>
             </div>
             <button className="text-blue-600 hover:underline text-sm">View Device History</button>
           </div>
@@ -98,7 +98,7 @@ export default function AccountPage() {
           <div className="text-sm text-red-600">
             Deleting your account is permanent and cannot be undone.
           </div>
-          <button className="text-red-700 font-medium border border-red-700 px-4 py-2 rounded hover:bg-red-100 transition">
+          <button className="text-sm text-red-700 font-medium border border-red-700 px-4 py-2 rounded hover:bg-red-100 transition">
             Delete My Account
           </button>
         </section>
