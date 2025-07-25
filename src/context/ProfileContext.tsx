@@ -20,32 +20,32 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Student | Tutor | null>(null);
 
   useEffect(() => {
-  const fetchProfile = async () => {
-    if (!session?.user?.id) {
-      console.warn("No user ID in session");
-      return;
-    }
-
-    if (!session.user.role) {
-      console.warn("No role in session user", session.user);
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/profile?role=${session.user.role}`);
-      if (!res.ok) {
-        console.error("Failed to fetch profile");
+    const fetchProfile = async () => {
+      if (!session?.user?.id) {
+        console.warn("No user ID in session");
         return;
       }
-      const data = await res.json();
-      setProfile(data);
-    } catch (err) {
-      console.error("Error fetching profile", err);
-    }
-  };
 
-  fetchProfile();
-}, [session]);
+      if (!session.user.role) {
+        console.warn("No role in session user", session.user);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/profile?role=${session.user.role}`);
+        if (!res.ok) {
+          console.error("Failed to fetch profile");
+          return;
+        }
+        const data = await res.json();
+        setProfile(data);
+      } catch (err) {
+        console.error("Error fetching profile", err);
+      }
+    };
+
+    fetchProfile();
+  }, [session]);
 
 
   return (

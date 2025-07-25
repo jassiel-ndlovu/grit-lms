@@ -1,27 +1,49 @@
 'use client';
 
-import { Plus, Pencil, Users, FileText, Layers, ImageIcon } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, ImageIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import Image from 'next/image';
 import { useProfile } from '@/context/ProfileContext';
-import { useStudent } from '@/context/StudentContext'; // pulling list of students
+import { useStudent } from '@/context/StudentContext';
+import { useCourses } from '@/context/CourseContext';
+import TutorCourseCard from './tutor-course-card';
+import TutorCourseCardSkeleton from './tutor-skeleton-course-card';
 
 export default function ManageCoursesPage() {
   const [isOpen, setIsOpen] = useState(false);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const { students } = useStudent();
-
-  const emptyForm = {
+  const [localCourses, setLocalCourses] = useState<Course[]>([]);
+  const [formData, setFormData] = useState({
     courseName: '',
     description: '',
-    courseImageUrl: '',
+    courseImageUrl: 'course-image-1.jpeg',
     selectedStudentIds: [] as string[],
-  };
-  const [formData, setFormData] = useState(emptyForm);
+  });
 
   const { profile } = useProfile();
   const tutorProfile = profile as Tutor;
+  const { students } = useStudent();
+  const { courses, loading: coursesLoading, createCourse, message } = useCourses();
+
+  const [creating, setCreating] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  // Filter courses
+  useEffect(() => {
+    if (tutorProfile?.id && courses?.length) {
+      const filtered = courses.filter(c => c.tutor.id === tutorProfile.id);
+      setLocalCourses(filtered);
+    }
+  }, [courses, tutorProfile]);
+
+  // Show toast/feedback
+  useEffect(() => {
+    if (message) {
+      setFeedback(message);
+      const timeout = setTimeout(() => setFeedback(null), 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [message]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, selectedOptions } = e.target as HTMLSelectElement;
@@ -33,25 +55,35 @@ export default function ManageCoursesPage() {
     }
   };
 
-  const handleCreateCourse = () => {
+  const handleCreateCourse = async () => {
+    setCreating(true);
+
     const enrolled = students.filter(s => formData.selectedStudentIds.includes(s.id));
     const newCourse: Course = {
-      courseId: crypto.randomUUID(),
-      courseName: formData.courseName,
+      id: crypto.randomUUID(),
+      name: formData.courseName,
       description: formData.description,
-      courseImageUrl: formData.courseImageUrl,
+      imageUrl: formData.courseImageUrl,
       tutor: tutorProfile,
-      enrolledStudents: enrolled,
+      students: enrolled,
       lessons: [],
-      activeQuizzes: [],
-      activeTests: [],
-      activeSubmissions: [],
+      quizzes: [],
+      tests: [],
+      submissions: [],
       courseEvents: [],
     };
 
-    setCourses(prev => [...prev, newCourse]);
-    setFormData(emptyForm);
+    await createCourse(newCourse);
+
+    setFormData({
+      courseName: '',
+      description: '',
+      courseImageUrl: 'course-image-1.jpeg',
+      selectedStudentIds: [],
+    });
+
     setIsOpen(false);
+    setCreating(false);
   };
 
   return (
@@ -67,52 +99,61 @@ export default function ManageCoursesPage() {
         </button>
       </div>
 
+      {feedback && (
+        <div className="text-sm bg-sky-100 text-gray-800 px-4 py-2 border border-sky-300 mb-4">
+          {feedback}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses.length ? (
-          courses.map(c => (
-            <div key={c.courseId} className="bg-white rounded-xl shadow hover:shadow-md transition p-5 space-y-4">
-              {c.courseImageUrl ? (
-                <div className="w-full h-36 relative rounded-lg overflow-hidden">
-                  <Image src={c.courseImageUrl} alt="" fill className="object-cover" />
-                </div>
-              ) : (
-                <div className="w-full h-36 bg-gray-200 flex items-center justify-center rounded-lg">
-                  <ImageIcon className="w-8 h-8 text-gray-400" />
-                </div>
-              )}
-              <h2 className="text-lg font-semibold text-gray-900">{c.courseName}</h2>
-              <p className="text-gray-600 text-sm line-clamp-3">{c.description}</p>
-              <div className="text-xs text-gray-500">
-                Students Enrolled: {c.enrolledStudents.length}
-              </div>
-              <div className="flex flex-wrap gap-2 pt-3">
-                {[
-                  ['Add Content', Layers, 'bg-indigo-50 text-indigo-600'],
-                  ['Manage Students', Users, 'bg-emerald-50 text-emerald-600'],
-                  ['Create Test', FileText, 'bg-yellow-50 text-yellow-600'],
-                  ['Edit', Pencil, 'bg-blue-50 text-blue-600']
-                ].map(([label, Icon, style], index) => (
-                  <button key={index} className={`flex items-center gap-1 px-3 py-1 rounded ${style} hover:opacity-90 transition text-sm`}>
-                    <Icon className="w-4 h-4" />
-                    {label as string}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {coursesLoading ? (
+          <>
+            <TutorCourseCardSkeleton />
+            <TutorCourseCardSkeleton />
+            <TutorCourseCardSkeleton />
+            <TutorCourseCardSkeleton />
+          </>
+        ) : localCourses.length ? (
+          localCourses.map((c, index) => (
+            <TutorCourseCard key={index} c={c} />
           ))
         ) : (
-          <p className="text-gray-600 text-sm">No courses created yet.</p>
+          <div className="col-span-full flex flex-col items-center justify-center p-10 bg-white border border-dashed border-gray-300 rounded-lg text-center shadow-sm">
+            <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
+            <h3 className="text-lg font-semibold text-gray-700">No Courses Available</h3>
+            <p className="text-sm text-gray-500 mt-1 mb-4">
+              You haven’t created any courses yet. Start by clicking the “Create Course” button above.
+            </p>
+            <button
+              onClick={() => setIsOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-500 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Create Your First Course
+            </button>
+          </div>
         )}
       </div>
 
+      {/* Dialog */}
       <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center px-4">
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
 
-        <div className="bg-white w-full max-w-xl z-10 p-8 space-y-6 relative">
-          <h2 className="text-2xl font-bold text-gray-800">Create New Course</h2>
+        <div className="bg-white w-full rounded-t-lg max-w-xl z-10 p-8 space-y-6 relative">
+          {/* Banner Header */}
+          <div
+            className="relative h-32 -mt-8 -mx-8 mb-10 px-8 py-4 flex items-center bg-cover bg-center rounded-t-lg"
+            style={{
+              backgroundImage: `url("/images/${formData.courseImageUrl || 'course-image-1.jpeg'}")`,
+            }}
+          >
+            <h2 className="absolute -bottom-4 left-4 text-xl text-orange-500 font-bold bg-white rounded-t-lg px-3 pt-1">
+              Create New Course
+            </h2>
+          </div>
 
+          {/* Form Inputs */}
           <div className="space-y-5">
-            {/* Course Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Course Name</label>
               <input
@@ -120,11 +161,10 @@ export default function ManageCoursesPage() {
                 name="courseName"
                 value={formData.courseName}
                 onChange={handleChange}
-                className="mt-2 block w-full border border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                className="mt-2 block w-full text-sm border border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
-            {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Description</label>
               <textarea
@@ -132,92 +172,91 @@ export default function ManageCoursesPage() {
                 rows={3}
                 value={formData.description}
                 onChange={handleChange}
-                className="mt-2 block w-full border border-gray-300 px-3 py-2 resize-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-2 block w-full text-sm border border-gray-300 px-3 py-2 resize-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
-            {/* Image URL */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">Image URL</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 mb-1">Course Banner</label>
+              <select
                 name="courseImageUrl"
                 value={formData.courseImageUrl}
                 onChange={handleChange}
-                className="mt-2 block w-full border border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+                className="block w-full text-sm border border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {[1, 2, 3, 4, 5, 6, 7].map(i => (
+                  <option key={i} value={`course-image-${i}.jpeg`}>
+                    course-image-{i}.jpeg
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Student Select */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Enroll Students</label>
-              <div className="flex gap-2">
-                <select
-                  className="flex-1 border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                  value=""
-                  onChange={e => {
-                    const studentId = e.target.value;
-                    if (!formData.selectedStudentIds.includes(studentId)) {
-                      setFormData(prev => ({
-                        ...prev,
-                        selectedStudentIds: [...prev.selectedStudentIds, studentId],
-                      }));
-                    }
-                  }}
-                >
-                  <option value="" disabled>Select a student</option>
-                  {students
-                    .filter(s => !formData.selectedStudentIds.includes(s.id))
-                    .map(student => (
-                      <option key={student.id} value={student.id}>
-                        {student.fullName} ({student.email})
-                      </option>
-                    ))}
-                </select>
-              </div>
+              <select
+                className="block w-full text-sm border border-gray-300 px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                value=""
+                onChange={e => {
+                  const studentId = e.target.value;
+                  if (!formData.selectedStudentIds.includes(studentId)) {
+                    setFormData(prev => ({
+                      ...prev,
+                      selectedStudentIds: [...prev.selectedStudentIds, studentId],
+                    }));
+                  }
+                }}
+              >
+                <option value="" disabled>Select a student</option>
+                {students
+                  .filter(s => !formData.selectedStudentIds.includes(s.id))
+                  .map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.fullName} ({student.email})
+                    </option>
+                  ))}
+              </select>
 
-              {/* Selected Students Chips */}
-              {formData.selectedStudentIds.length > 0 && (
-                <div className="flex flex-wrap mt-3 gap-2">
-                  {formData.selectedStudentIds.map(studentId => {
-                    const student = students.find(s => s.id === studentId);
-                    if (!student) return null;
+              {/* Chips */}
+              <div className="flex flex-wrap mt-3 gap-2">
+                {formData.selectedStudentIds.map(studentId => {
+                  const student = students.find(s => s.id === studentId);
+                  if (!student) return null;
 
-                    return (
-                      <div
-                        key={student.id}
-                        className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 shadow-sm"
+                  return (
+                    <div
+                      key={student.id}
+                      className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1 text-sm text-gray-700 shadow-sm"
+                    >
+                      {student.imageUrl ? (
+                        <Image
+                          src={student.imageUrl}
+                          alt={student.fullName}
+                          width={24}
+                          height={24}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 text-xs text-white flex items-center justify-center rounded-full bg-blue-400">
+                          {student.fullName.charAt(0)}
+                        </div>
+                      )}
+                      <span>{student.fullName}</span>
+                      <button
+                        onClick={() =>
+                          setFormData(prev => ({
+                            ...prev,
+                            selectedStudentIds: prev.selectedStudentIds.filter(id => id !== student.id),
+                          }))
+                        }
+                        className="ml-1 text-gray-400 hover:text-red-500 transition"
                       >
-                        {student.imageUrl ? (
-                          <Image
-                            src={student.imageUrl}
-                            alt={student.fullName}
-                            width={24}
-                            height={24}
-                            className="rounded-full"
-                          />
-                        ) : (
-                          <div className="w-4 h-4 p-3 text-sm text-white flex items-center justify-center rounded-full bg-blue-400">
-                            {student.fullName.charAt(0)}
-                          </div>
-                        )}
-                        <span>{student.fullName}</span>
-                        <button
-                          onClick={() =>
-                            setFormData(prev => ({
-                              ...prev,
-                              selectedStudentIds: prev.selectedStudentIds.filter(id => id !== student.id),
-                            }))
-                          }
-                          className="ml-1 text-gray-400 hover:text-red-500 transition"
-                        >
-                          &times;
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                        &times;
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -225,20 +264,24 @@ export default function ManageCoursesPage() {
           <div className="flex justify-end gap-3 pt-4">
             <button
               onClick={() => setIsOpen(false)}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition"
+              className="px-4 py-1 text-sm text-gray-600 hover:text-gray-800 transition"
             >
               Cancel
             </button>
             <button
               onClick={handleCreateCourse}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-500 transition"
+              className="w-24 px-6 py-1 bg-blue-600 text-white text-sm hover:bg-blue-500 transition disabled:opacity-50"
+              disabled={creating}
             >
-              Create
+              {creating ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+              ) : (
+                'Create'
+              )}
             </button>
           </div>
         </div>
       </Dialog>
-
     </div>
   );
 }

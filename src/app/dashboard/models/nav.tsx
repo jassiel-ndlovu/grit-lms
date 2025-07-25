@@ -16,7 +16,7 @@ import { useState } from 'react';
 
 export default function Nav() {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { profile, session } = useProfile();
+  const { session } = useProfile();
   const pathname = usePathname();
   const role = session?.user?.role;
 
@@ -34,8 +34,8 @@ export default function Nav() {
     { icon: Home, label: 'Home', link: '/dashboard' },
     { icon: Calendar, label: 'Calendar', link: '/dashboard/calendar' },
     { icon: Wrench, label: 'Manage Courses', link: '/dashboard/manage-courses' },
-    { icon: FileText, label: 'Review Tests', link: '/dashboard/tests' },
-    { icon: FileText, label: 'Review Submissions', link: '/dashboard/submissions' },
+    { icon: FileText, label: 'Tests', link: '/dashboard/tutor-tests' },
+    { icon: FileText, label: 'Submissions', link: '/dashboard/tutor-submissions' },
     { icon: User, label: 'Account', link: '/dashboard/account' },
     { icon: Settings, label: 'Settings', link: '/dashboard/settings' },
   ];
@@ -53,7 +53,7 @@ export default function Nav() {
   }, null as typeof navItems[number] | null);
 
   return (
-    <nav className={`sticky top-0 h-screen z-30 bg-white border-r border-gray-300 shadow-sm transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-48'}`}>
+    <nav className={`sticky top-0 h-screen overflow-y-auto z-30 bg-white border-r border-gray-300 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-48'}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4">
         {!isCollapsed && <span className="text-2xl font-bold text-blue-500">Grit</span>}

@@ -7,7 +7,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-800 text-white py-4">
       <div className="container mx-auto text-center">
-        <div className="flex justify-center space-x-8 mb-2">
+        <div className="flex justify-center space-x-8">
           <SwapLink link="/forgot-password" text="Forgot your password?" />
           <SwapLink link="/support" text="Contact Support" />
           <SwapLink link="/privacy-policy" text="Privacy Policy" />

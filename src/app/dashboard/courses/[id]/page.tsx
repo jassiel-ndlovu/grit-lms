@@ -8,7 +8,7 @@ import clsx from "clsx";
 import { ChevronLeft, ChevronRight, FileText, Send, Calendar, Video, CheckCircle, Circle } from "lucide-react";
 
 interface CoursePageProps {
-  params: Promise<{ courseId: string }>;
+  params: Promise<{ id: string }>;
 }
 
 export default function CoursePage({ params }: CoursePageProps) {
@@ -17,10 +17,10 @@ export default function CoursePage({ params }: CoursePageProps) {
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
 
-  const { courseId } = use(params);
-  const course = courses.find((c) => c.courseId === courseId);
+  const { id } = use(params);
+  const course = courses.find((c) => c.id === id);
   if (!course) return notFound();
-  
+
   const currentLesson = course.lessons[selectedLessonIndex];
 
   const handleComplete = (lessonId: string) => {
@@ -87,7 +87,7 @@ export default function CoursePage({ params }: CoursePageProps) {
       <main className="p-8 space-y-8 overflow-y-auto">
         <div>
           <h1 className="text-3xl font-bold text-blue-500">
-            {course.courseName}
+            {course.name}
           </h1>
           <p className="text-sm text-gray-500">
             Tutor: {course.tutor.fullName}
@@ -139,8 +139,8 @@ export default function CoursePage({ params }: CoursePageProps) {
           <button
             onClick={() => handleComplete(currentLesson.id)}
             className={`mt-4 flex items-center gap-2 text-sm px-4 py-2 rounded transition ${isCompleted
-                ? "bg-gray-300 text-gray-800 hover:bg-gray-400"
-                : "bg-green-600 text-white hover:bg-green-700"
+              ? "bg-gray-300 text-gray-800 hover:bg-gray-400"
+              : "bg-green-600 text-white hover:bg-green-700"
               }`}
           >
             {isCompleted ? (
@@ -181,7 +181,7 @@ export default function CoursePage({ params }: CoursePageProps) {
                 icon={<Calendar className="w-4 h-4 text-indigo-500" />}
               >
                 {course.courseEvents.map((event) => (
-                  <div 
+                  <div
                     key={event.id}
                     className="p-1 bg-white border border-gray-200"
                   >
@@ -201,12 +201,12 @@ export default function CoursePage({ params }: CoursePageProps) {
               </SidebarSection>
             )}
 
-            {(course.activeTests.length > 0 || course.activeQuizzes.length > 0) && (
+            {(course.tests.length > 0 || course.quizzes.length > 0) && (
               <SidebarSection
                 title="Assessments"
                 icon={<FileText className="w-4 -4 text-blue-500" />}
               >
-                {[...course.activeTests, ...course.activeQuizzes].map((a) => (
+                {[...course.tests, ...course.quizzes].map((a) => (
                   <div key={a.id}>
                     <p className="font-medium">{a.title}</p>
                     <p className="text-xs text-gray-500">
@@ -217,12 +217,12 @@ export default function CoursePage({ params }: CoursePageProps) {
               </SidebarSection>
             )}
 
-            {course.activeSubmissions.length > 0 && (
+            {course.submissions.length > 0 && (
               <SidebarSection
                 title="Submissions"
                 icon={<Send className="w-4 h-4 text-green-500" />}
               >
-                {course.activeSubmissions.map((s) => (
+                {course.submissions.map((s) => (
                   <div key={s.id}>
                     <p className="font-medium">{s.title}</p>
                     <p className="text-xs text-gray-500">

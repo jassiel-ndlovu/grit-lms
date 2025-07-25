@@ -40,16 +40,16 @@ declare global {
   }
 
   interface Course {
-    courseId: string;
-    courseName: string;
+    id: string;
+    name: string;
     tutor: Tutor;
     description: string;
-    courseImageUrl: string;
-    enrolledStudents: Student[];
+    imageUrl: string;
+    students: Student[];
     lessons: Lesson[];
-    activeQuizzes: Quiz[];
-    activeTests: Test[];
-    activeSubmissions: Submission[];
+    quizzes: Quiz[];
+    tests: Test[];
+    submissions: Submission[];
     courseEvents: CourseEvent[];
   }
 

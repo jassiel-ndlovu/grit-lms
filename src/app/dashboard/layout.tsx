@@ -10,16 +10,16 @@ import { CoursesProvider } from '@/context/CourseContext';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-full max-h-screen flex flex-col">
       {/* Layout Container */}
       <div className="flex flex-1">
         {/* Sidebar */}
         <Nav />
 
         {/* Main Content */}
-        <main className="h-[100vh] flex-1 flex flex-col">
+        <main className="h-full max-h-[100vh] overflow-y-auto flex-1 flex flex-col">
           <Header />
-          <div className="h-[92vh]">
+          <div className="h-full max-h-[92vh]">
             <StudentProvider>
               <TutorProvider>
                 <CoursesProvider>
