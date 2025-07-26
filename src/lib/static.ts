@@ -60,13 +60,13 @@ export const submissions: Submission[] = [
 
 export const courses: Course[] = [
   {
-    courseId: "1",
-    courseName: "Mathematics G12",
+    id: "1",
+    name: "Mathematics G12",
     tutor: tutor,
     description:
       "This course covers the full South African CAPS curriculum for Grade 12 Mathematics, including Algebra, Trigonometry, Calculus, Probability, and Geometry. It includes lessons, tests, and past paper practice.",
-    courseImageUrl: "/images/course-image-2.jpeg",
-    enrolledStudents: [],
+    imageUrl: "/images/course-image-2.jpeg",
+    students: [],
     lessons: [
       {
         id: "m1",
@@ -108,9 +108,9 @@ export const courses: Course[] = [
         completedBy: []
       }
     ],
-    activeQuizzes: [],
-    activeTests: [],
-    activeSubmissions: [],
+    quizzes: [],
+    tests: [],
+    submissions: [],
     courseEvents: [
       {
         id: "1",
@@ -122,13 +122,13 @@ export const courses: Course[] = [
     ]
   },
   {
-    courseId: "2",
-    courseName: "Information Technology G12",
+    id: "2",
+    name: "Information Technology G12",
     tutor: tutor,
     description:
       "This course teaches Java programming, databases, and theory aligned to the South African CAPS curriculum for Grade 12 IT. Includes projects, quizzes, and real-time code evaluation.",
-    courseImageUrl: "/images/course-image-7.jpeg",
-    enrolledStudents: [],
+    imageUrl: "/images/course-image-7.jpeg",
+    students: [],
     lessons: [
       {
         id: "it1",
@@ -170,9 +170,9 @@ export const courses: Course[] = [
         completedBy: []
       }
     ],
-    activeQuizzes: [],
-    activeTests: [],
-    activeSubmissions: [],
+    quizzes: [],
+    tests: [],
+    submissions: [],
     courseEvents: [
       {
         id: "2",

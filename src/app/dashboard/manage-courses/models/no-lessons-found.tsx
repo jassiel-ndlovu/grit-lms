@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookOpen, Plus } from 'lucide-react';
 import CreateLessonDialog from './create-lesson-dialog';
+import { useLesson } from '@/context/LessonContext';
 
 interface NoLessonsFoundProps {
   courseId: string;
@@ -11,34 +12,30 @@ interface NoLessonsFoundProps {
 export default function NoLessonsFound({ courseId, courseName, onLessonCreated }: NoLessonsFoundProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const { createLesson } = useLesson();
 
   const handleCreateLesson = async (lessonData: Partial<Lesson>) => {
     setCreating(true);
+    setServerError(null);
+
     try {
-      // Here you would call your API to create the lesson
-      // For now, we'll simulate the API call
-      const newLesson: Lesson = {
-        id: `lesson_${Date.now()}`, // Generate temporary ID
-        title: lessonData.title!,
-        courseId: courseId,
-        description: lessonData.description!,
-        videoUrl: lessonData.videoUrl || [],
-        resourceLinks: lessonData.resourceLinks || [],
-        completedBy: []
-      };
+      const newLesson = await createLesson(courseId, lessonData);
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!newLesson) {
+        setServerError("Could not create lesson. Please try again.");
+        return;
+      }
 
-      // Call the parent callback if provided
       if (onLessonCreated) {
         onLessonCreated(newLesson);
       }
 
-      setShowCreateDialog(false);
+      // setShowCreateDialog(false);
     } catch (error) {
       console.error('Error creating lesson:', error);
-      // Handle error - you might want to show a toast or error message
+      setServerError("Something went wrong while creating the lesson.");
     } finally {
       setCreating(false);
     }
@@ -58,14 +55,14 @@ export default function NoLessonsFound({ courseId, courseName, onLessonCreated }
             </p>
           </div>
           <div className="space-y-3">
-            <button 
+            <button
               onClick={() => setShowCreateDialog(true)}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white text-sm px-6 py-3 hover:bg-blue-700 transition"
             >
               <Plus className="w-5 h-5" />
               Create First Lesson
             </button>
-            <button 
+            <button
               onClick={() => window.history.back()}
               className="w-full text-gray-600 text-sm px-6 py-2 border border-gray-300 hover:bg-gray-100 transition"
             >
@@ -80,9 +77,13 @@ export default function NoLessonsFound({ courseId, courseName, onLessonCreated }
         <CreateLessonDialog
           courseId={courseId}
           courseName={courseName}
-          onClose={() => setShowCreateDialog(false)}
+          onClose={() => {
+            setShowCreateDialog(false);
+            setServerError(null);
+          }}
           onSave={handleCreateLesson}
           loading={creating}
+          serverError={serverError}
         />
       )}
     </>

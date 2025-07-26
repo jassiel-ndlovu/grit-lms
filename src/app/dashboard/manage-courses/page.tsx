@@ -7,8 +7,8 @@ import Image from 'next/image';
 import { useProfile } from '@/context/ProfileContext';
 import { useStudent } from '@/context/StudentContext';
 import { useCourses } from '@/context/CourseContext';
-import TutorCourseCard from './tutor-course-card';
-import TutorCourseCardSkeleton from './tutor-skeleton-course-card';
+import TutorCourseCard from './models/tutor-course-card';
+import TutorCourseCardSkeleton from './skeletons/tutor-skeleton-course-card';
 
 export default function ManageCoursesPage() {
   const [isOpen, setIsOpen] = useState(false);

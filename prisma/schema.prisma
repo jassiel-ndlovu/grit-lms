@@ -66,12 +66,20 @@ model Lesson {
   id             String             @id @default(cuid())
   title          String
   description    String?
-  videoUrl       String?
-  attachmentUrls String[]           @default([])
+  videoUrl       String[]           @default([])
+  attachmentUrls Attachment[]
   order          Int
   courseId       String
   course         Course             @relation(fields: [courseId], references: [id])
   completions    LessonCompletion[]
+}
+
+model Attachment {
+  id       String @id @default(cuid())
+  title    String
+  url      String
+  lesson   Lesson @relation(fields: [lessonId], references: [id])
+  lessonId String
 }
 
 model LessonCompletion {

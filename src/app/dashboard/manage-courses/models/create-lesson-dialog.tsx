@@ -9,15 +9,10 @@ interface CreateLessonDialogProps {
   onClose: () => void;
   onSave: (lesson: Partial<Lesson>) => Promise<void>;
   loading?: boolean;
+  serverError?: string | null;
 }
 
-export default function CreateLessonDialog({
-  courseId,
-  courseName,
-  onClose,
-  onSave,
-  loading = false
-}: CreateLessonDialogProps) {
+export default function CreateLessonDialog({ courseId, courseName, onClose, onSave, loading = false, serverError }: CreateLessonDialogProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -38,7 +33,7 @@ export default function CreateLessonDialog({
       newErrors.description = 'Lesson description is required';
     }
 
-    // Validate video URLs (only if they're not empty)
+    // Validate video URLs
     formData.videoUrl.forEach((url, index) => {
       if (url.trim() && !isValidUrl(url)) {
         newErrors[`video_${index}`] = 'Please enter a valid URL';
@@ -93,7 +88,6 @@ export default function CreateLessonDialog({
       onClose();
     } catch (error) {
       console.error('Error creating lesson:', error);
-      // You could add error state here to show user-friendly error messages
     }
   };
 
@@ -157,13 +151,13 @@ export default function CreateLessonDialog({
     >
       <div className="bg-white shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Create First Lesson</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Create Lesson</h2>
               <p className="text-sm text-gray-500">{courseName}</p>
             </div>
           </div>
@@ -180,6 +174,11 @@ export default function CreateLessonDialog({
         {/* Content */}
         <div className="p-6 space-y-6 max-h-[calc(90vh-140px)] overflow-y-auto">
           {/* Lesson Title */}
+          {serverError && (
+              <div className="text-red-600 bg-red-100 border border-red-300 rounded px-4 py-2 mb-4 text-sm">
+                {serverError}
+              </div>
+            )}
           <div>
             <label htmlFor="lesson-title" className="block text-sm font-medium text-gray-700 mb-2">
               Lesson Title *
@@ -190,8 +189,7 @@ export default function CreateLessonDialog({
               value={formData.title}
               onChange={(e) => updateFormData('title', e.target.value)}
               placeholder="Enter lesson title..."
-              className={`w-full text-sm px-3 py-2 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.title ? 'border-red-300' : 'border-gray-300'
-                }`}
+              className={`w-full text-gray-900 text-sm px-3 py-2 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors ${errors.title ? 'border-red-300' : 'border-gray-300'}`}
               disabled={loading}
               maxLength={200}
             />
@@ -221,13 +219,14 @@ export default function CreateLessonDialog({
                 ## Learning Objectives
                 By the end of this lesson, you will be able to..."
               rows={6}
-              className={`w-full px-3 py-2 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-colors ${errors.description ? 'border-red-300' : 'border-gray-300'
+              className={`w-full px-3 py-2 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono text-gray-900 text-sm transition-colors ${errors.description ? 'border-red-300' : 'border-gray-300'
                 }`}
               disabled={loading}
             />
             {errors.description && (
               <p className="mt-1 text-sm text-red-600" role="alert">{errors.description}</p>
             )}
+            
             <p className="mt-1 text-xs text-gray-500">
               You can use Markdown formatting for rich text content
             </p>
@@ -260,7 +259,7 @@ export default function CreateLessonDialog({
                         value={url}
                         onChange={(e) => updateVideoUrl(index, e.target.value)}
                         placeholder="https://example.com/video.mp4"
-                        className={`flex-1 px-3 py-2 border text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors[`video_${index}`] ? 'border-red-300' : 'border-gray-300'
+                        className={`flex-1 px-3 py-2 border text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors ${errors[`video_${index}`] ? 'border-red-300' : 'border-gray-300'
                           }`}
                         disabled={loading}
                       />
@@ -314,7 +313,7 @@ export default function CreateLessonDialog({
                         value={resource.title}
                         onChange={(e) => updateResourceLink(index, 'title', e.target.value)}
                         placeholder="Resource title (e.g., Additional Reading, Practice Exercises)"
-                        className={`w-full px-3 py-2 border text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors[`resource_title_${index}`] ? 'border-red-300' : 'border-gray-300'
+                        className={`w-full px-3 py-2 border text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors ${errors[`resource_title_${index}`] ? 'border-red-300' : 'border-gray-300'
                           }`}
                         disabled={loading}
                         maxLength={100}
@@ -324,7 +323,7 @@ export default function CreateLessonDialog({
                         value={resource.url}
                         onChange={(e) => updateResourceLink(index, 'url', e.target.value)}
                         placeholder="https://example.com"
-                        className={`w-full px-3 py-2 border text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors[`resource_url_${index}`] ? 'border-red-300' : 'border-gray-300'
+                        className={`w-full px-3 py-2 border text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors ${errors[`resource_url_${index}`] ? 'border-red-300' : 'border-gray-300'
                           }`}
                         disabled={loading}
                       />

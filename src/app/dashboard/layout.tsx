@@ -7,6 +7,7 @@ import Nav from './models/nav';
 import { StudentProvider } from '@/context/StudentContext';
 import { TutorProvider } from '@/context/TutorContext';
 import { CoursesProvider } from '@/context/CourseContext';
+import { LessonProvider } from '@/context/LessonContext';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -23,7 +24,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <StudentProvider>
               <TutorProvider>
                 <CoursesProvider>
+                  <LessonProvider>
                   {children}
+                  </LessonProvider>
                 </CoursesProvider>
               </TutorProvider>
             </StudentProvider>

@@ -1,10 +1,10 @@
-import Skeleton from "../components/skeleton";
+import Skeleton from "../../components/skeleton";
 
 export default function ManageLessonsSkeleton() {
   return (
     <div className="h-full grid grid-cols-[250px_1fr] bg-gray-100">
       {/* Sidebar Skeleton */}
-      <aside className="h-full p-4 bg-gray-600 text-white space-y-4">
+      <aside className="h-full p-4 bg-gray-400 text-white space-y-4">
         <Skeleton className="h-6 w-3/4 bg-gray-400" />
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (

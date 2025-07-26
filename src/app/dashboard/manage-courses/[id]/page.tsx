@@ -8,7 +8,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import StudentManagerDialog from './student-manager-dialog';
 import { useStudent } from '@/context/StudentContext';
-import CourseContentNotFound from '../content-not-found';
+import CourseContentNotFound from '../models/content-not-found';
 
 export default function EditCoursePage() {
   const { id } = useParams();
