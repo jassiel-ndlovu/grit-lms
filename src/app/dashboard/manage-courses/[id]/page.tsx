@@ -29,7 +29,7 @@ export default function EditCoursePage() {
     }
   }, [id, courses, courseLoading]);
 
-  if ((loading || courseLoading || courses.length === 0 || course === undefined) && !courseUpdateLoading) {
+  if ((loading || courses.length === 0 || course === undefined) && !courseUpdateLoading) {
     return <CourseSkeleton />;
   }
 

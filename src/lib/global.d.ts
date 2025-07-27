@@ -1,4 +1,4 @@
-import { $Enums } from "@/generated/prisma";
+import { $Enums, QuestionType } from "@/generated/prisma";
 
 export {};
 
@@ -66,8 +66,41 @@ declare global {
     type: "quiz";
   }
 
-  export interface Test extends Assessment {
-    type: "test";
+  interface Test extends Assessment {
+    id: string;
+    title: string;
+    description: string;
+    preTestInstructions?: string;
+    courseId: string;
+    courseName: string;
+    dueDate: Date;
+    timeLimit?: number; // in minutes
+    totalPoints: number;
+    questions: Array<{
+      id: string;
+      question: string;
+      type: QuestionType;
+      points: number;
+      options?: string[];
+      correctAnswer?: string;
+    }>;
+    submissions: Array<{
+      id: string;
+      studentId: string;
+      studentName: string;
+      submittedAt: Date;
+      answers: Record<string, any>; // includes file URLs if file-upload
+      uploadedFiles?: {
+        questionId: string;
+        fileUrl: string;
+        fileType: string;
+      }[];
+      score?: number;
+      feedback?: string;
+      status: "submitted" | "graded" | "late";
+    }>;
+    createdAt: string;
+    isActive: boolean;
   }
 
   interface Submission {

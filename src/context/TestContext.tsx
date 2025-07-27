@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import axios from "axios";
 
 interface TestContextType {
@@ -24,10 +24,10 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const fetchTests = async (courseId: string) => {
+  const fetchTests = async (tutorId: string) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/tests?courseId=${courseId}`);
+      const res = await axios.get(`/api/tests?tutorId=${tutorId}`);
       setTests(res.data);
     } catch (err) {
       console.error("Failed to fetch tests", err);

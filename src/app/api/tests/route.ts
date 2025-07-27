@@ -2,10 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
-  const courseId = req.nextUrl.searchParams.get("courseId");
-  if (!courseId) return NextResponse.json({ error: "Course ID required" }, { status: 400 });
+  const tutorId = req.nextUrl.searchParams.get("tutorId");
+  if (!tutorId) return NextResponse.json({ error: "Tutor ID required" }, { status: 400 });
 
-  const tests = await prisma.test.findMany({ where: { courseId } });
+  const tests = await prisma.test.findMany({
+    where: {
+      course: {
+        tutorId: tutorId,
+      },
+    },
+    include: {
+      course: true,
+      submissions: true,
+      questions: true,
+    },
+  });
   return NextResponse.json(tests);
 }
 

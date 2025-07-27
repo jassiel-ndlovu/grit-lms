@@ -43,6 +43,7 @@ model Student {
   submissionEntries     SubmissionEntry[]
   Grade                 Grade[]
   Notification          Notification[]
+  TestSubmission        TestSubmission[]
 }
 
 model Course {
@@ -112,13 +113,82 @@ model Quiz {
 }
 
 model Test {
-  id          String                 @id @default(cuid())
-  title       String
-  courseId    String
-  course      Course                 @relation(fields: [courseId], references: [id])
-  dueDate     DateTime
-  createdAt   DateTime               @default(now())
-  completions AssessmentCompletion[]
+  id                  String   @id @default(cuid())
+  title               String
+  description         String
+  preTestInstructions String?
+  dueDate             DateTime
+  timeLimit           Int?
+  totalPoints         Int
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
+  questions            TestQuestion[]
+  submissions          TestSubmission[]
+  AssessmentCompletion AssessmentCompletion[]
+}
+
+model TestQuestion {
+  id     String @id @default(cuid())
+  testId String
+  test   Test   @relation(fields: [testId], references: [id])
+
+  question     String
+  type         QuestionType
+  points       Int
+  options      String[] // for MCQ only
+  answer       String? // correct answer for MCQ or short-answer
+  UploadedFile UploadedFile[]
+}
+
+model TestSubmission {
+  id          String           @id @default(cuid())
+  testId      String
+  studentId   String
+  submittedAt DateTime
+  answers     Json
+  score       Float?
+  feedback    String?
+  status      SubmissionStatus
+
+  test          Test           @relation(fields: [testId], references: [id])
+  student       Student        @relation(fields: [studentId], references: [id])
+  uploadedFiles UploadedFile[]
+}
+
+model UploadedFile {
+  id           String   @id @default(cuid())
+  fileUrl      String
+  fileType     FileType
+  questionId   String
+  submissionId String
+
+  question   TestQuestion   @relation(fields: [questionId], references: [id])
+  submission TestSubmission @relation(fields: [submissionId], references: [id])
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  SHORT_ANSWER
+  ESSAY
+  FILE_UPLOAD
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  LATE
+}
+
+enum FileType {
+  PDF
+  DOCX
+  ZIP
+  JPEG
+  OTHER
 }
 
 model AssessmentCompletion {
