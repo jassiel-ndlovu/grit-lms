@@ -1,13 +1,65 @@
+"use client";
+
 import { Calendar, FileText, Send } from "lucide-react";
+import { redirect, useRouter } from "next/navigation";
+import { useCourses } from "@/context/CourseContext";
+import { useTests } from "@/context/TestContext";
+import { useProfile } from "@/context/ProfileContext";
+import { useEffect, useMemo } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import CourseCard from "../components/course-card";
-import { assessments, courses, submissions } from "@/lib/static";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import DashboardSkeleton from "../components/dashboard-skeleton";
+import { formatDate } from "@/lib/functions";
 
 export default function StudentDashboard() {
-  const events: CourseEvent[] = courses.flatMap(course => course.courseEvents || []);
-  const continueCourses: Course[] = []; // Placeholder for logic
+  const { courses, loading: coursesLoading } = useCourses();
+  const { tests, fetchTestsByCourse, loading: testsLoading } = useTests();
+  const { profile, loading: profileLoading } = useProfile();
+
+  // Derived data
+  const studentProfile = profile as Student;
+
+  // Memoized computations
+  const continueCourses = useMemo(() => courses.filter(course => !course.students.find(s => s.id === studentProfile.id)) ?? [], [courses]);
+
+  const events = useMemo(() =>
+    courses?.flatMap(course => course.courseEvents ?? []) ?? [],
+    [courses]
+  );
+
+  const studentTests = useMemo(() =>
+    tests.filter(test =>
+      courses?.some(course => course.id === test.courseId)
+    ) ?? [],
+    [tests, courses]
+  );
+
+  const studentSubmissions = useMemo(() =>
+    studentTests.flatMap(test =>
+      test.submissions?.filter(sub => sub.studentId === studentProfile?.id) ?? []
+    ) ?? [],
+    [studentTests, studentProfile]
+  );
+
+  // Data fetching
+  useEffect(() => {
+    if (studentProfile?.id) {
+      const courseIds = continueCourses.map(course => course.id);
+      fetchTestsByCourse(courseIds);
+    }
+  }, [studentProfile?.id, fetchTestsByCourse, coursesLoading]);
+
+  // Loading state
+  const isLoading = coursesLoading || testsLoading || profileLoading;
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  // Early return if no profile
+  if (!studentProfile) {
+    redirect("/");
+  }
 
   return (
     <div className="h-full px-6 pt-6 pb-10 space-y-12 bg-gray-50 overflow-y-auto">
@@ -29,25 +81,40 @@ export default function StudentDashboard() {
 
       {/* Continue Working */}
       <section>
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Continue Working</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          Continue Working
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {continueCourses.length > 0 ? (
-            continueCourses.map(course => (
-              <CourseCard key={course.courseId} course={course} />
-            ))
-          ) : (
-            <div className="text-sm text-gray-500">No active lessons yet.</div>
-          )}
+          {isLoading || !continueCourses.length
+            ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
+            : continueCourses.length > 0
+              ? continueCourses.map(course => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  lessons={[]}
+                />
+              ))
+              : <div className="text-sm text-gray-500">No active lessons yet.</div>
+          }
         </div>
       </section>
 
       {/* Enrolled Courses */}
       <section>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Enrolled Courses</h2>
-        {continueCourses.length > 0 ? (
+        {isLoading || !continueCourses.length ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : continueCourses.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {continueCourses.map(course => (
-              <CourseCard key={course.courseId} course={course} />
+              <CourseCard
+                key={course.id}
+                course={course}
+                lessons={[]}
+              />
             ))}
           </div>
         ) : (
@@ -79,14 +146,23 @@ export default function StudentDashboard() {
       {/* Events, Assessments, Submissions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <CourseEventSection events={events} />
-        <CourseAssessmentSection assessments={assessments} />
-        <CourseSubmissionSection submissions={submissions} />
+        <CourseAssessmentSection assessments={studentTests} />
+        <CourseSubmissionSection submissions={studentSubmissions} />
       </div>
     </div>
   );
 }
 
-function CourseEventSection({ events }: { events: CourseEvent[] }) {
+function SkeletonCard() {
+  return (
+    <div className="h-32 bg-white border border-gray-200 rounded-xl shadow-sm p-4 animate-pulse">
+      <div className="h-4 w-2/3 bg-gray-200 rounded mb-2"></div>
+      <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
+    </div>
+  );
+}
+
+function CourseEventSection({ events, loading = false }: { events: CourseEvent[]; loading?: boolean }) {
   const router = useRouter();
   return (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -95,7 +171,9 @@ function CourseEventSection({ events }: { events: CourseEvent[] }) {
         Upcoming Meetings
       </h2>
       <div className="space-y-3">
-        {events.length === 0 ? (
+        {loading ? (
+          [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
+        ) : events.length === 0 ? (
           <p className="text-sm text-gray-500">No meetings scheduled.</p>
         ) : (
           events.slice(0, 3).map(event => (
@@ -105,7 +183,7 @@ function CourseEventSection({ events }: { events: CourseEvent[] }) {
               className="cursor-pointer bg-gray-50 p-3 rounded hover:bg-blue-50 transition"
             >
               <p className="text-sm font-medium text-gray-800">{event.title}</p>
-              <p className="text-xs text-gray-500">{new Date(event.date).toUTCString()}</p>
+              <p className="text-xs text-gray-500">{formatDate(new Date(event.date))}</p>
             </div>
           ))
         )}
@@ -114,7 +192,8 @@ function CourseEventSection({ events }: { events: CourseEvent[] }) {
   );
 }
 
-function CourseAssessmentSection({ assessments }: { assessments: Assessment[] }) {
+function CourseAssessmentSection({ assessments, loading = false }: { assessments: Test[] | null; loading?: boolean }) {
+
   return (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
       <h2 className="text-md font-semibold text-indigo-600 mb-4 flex items-center gap-2">
@@ -122,15 +201,15 @@ function CourseAssessmentSection({ assessments }: { assessments: Assessment[] })
         Upcoming Assessments
       </h2>
       <div className="space-y-3">
-        {assessments.length === 0 ? (
+        {loading ? (
+          [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
+        ) : assessments?.length === 0 ? (
           <p className="text-sm text-gray-500">No upcoming assessments.</p>
         ) : (
-          assessments.map(a => (
+          assessments?.map(a => (
             <div key={a.id} className="bg-gray-50 p-3 rounded hover:bg-indigo-50 transition">
-              <p className="text-sm font-medium text-gray-800">
-                {courses.find(course => course.courseId === a.courseId)?.courseName || 'Unknown'} - {a.title}
-              </p>
-              <p className="text-xs text-gray-500">Due: {a.dueDate}</p>
+              <p className="text-sm font-medium text-gray-800">{a.title}</p>
+              <p className="text-xs text-gray-500">Due: {formatDate(a.dueDate)}</p>
             </div>
           ))
         )}
@@ -139,7 +218,24 @@ function CourseAssessmentSection({ assessments }: { assessments: Assessment[] })
   );
 }
 
-function CourseSubmissionSection({ submissions }: { submissions: Submission[] }) {
+type Sub = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  submittedAt: Date;
+  // @ts-ignore
+  answers: Record<string, any>;
+  uploadedFiles?: {
+    questionId: string;
+    fileUrl: string;
+    fileType: string;
+  }[];
+  score?: number;
+  feedback?: string;
+  status: "submitted" | "graded" | "late";
+}
+
+function CourseSubmissionSection({ submissions, loading = false }: { submissions: Sub[] | null; loading?: boolean }) {
   return (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
       <h2 className="text-md font-semibold text-emerald-600 mb-4 flex items-center gap-2">
@@ -147,13 +243,15 @@ function CourseSubmissionSection({ submissions }: { submissions: Submission[] })
         Upcoming Submissions
       </h2>
       <div className="space-y-3">
-        {submissions.length === 0 ? (
+        {loading ? (
+          [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
+        ) : submissions?.length === 0 ? (
           <p className="text-sm text-gray-500">No upcoming submissions.</p>
         ) : (
-          submissions.map(s => (
+          submissions?.map(s => (
             <div key={s.id} className="bg-gray-50 p-3 rounded hover:bg-emerald-50 transition">
-              <p className="text-sm font-medium text-gray-800">{s.title}</p>
-              <p className="text-xs text-gray-500">Due: {s.dueDate}</p>
+              <p className="text-sm font-medium text-gray-800">{s.studentName}</p>
+              <p className="text-xs text-gray-500">Due: {s.status}</p>
             </div>
           ))
         )}

@@ -1,14 +1,8 @@
 'use client';
 
-import { submissions, courses } from '@/lib/static';
-import { Clock, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 
 export default function SubmissionsPage() {
-  const active = submissions;
-  const past = submissions;
-
   return (
     <div className="h-full px-6 py-6 space-y-10 bg-gray-50">
       <div className="space-y-1">
@@ -19,7 +13,7 @@ export default function SubmissionsPage() {
       </div>
 
       {/* Active Submissions */}
-      <section>
+      {/* <section>
         <h2 className="text-lg font-medium text-gray-800 mb-4">Active Submissions</h2>
         {active.length === 0 ? (
           <NoSubmissions message="You have no pending submissions." />
@@ -53,10 +47,10 @@ export default function SubmissionsPage() {
             })}
           </div>
         )}
-      </section>
+      </section> */}
 
       {/* Past Submissions */}
-      <section>
+      {/* <section>
         <h2 className="text-lg font-medium text-gray-800 mb-4">Completed Submissions</h2>
         {past.length === 0 ? (
           <NoSubmissions message="You haven’t completed any submissions yet." />
@@ -90,11 +84,12 @@ export default function SubmissionsPage() {
             })}
           </div>
         )}
-      </section>
+      </section> */}
     </div>
   );
 }
 
+// @ts-ignore
 function NoSubmissions({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center p-10 text-center text-gray-500 bg-white shadow rounded">

@@ -89,7 +89,8 @@ declare global {
       studentId: string;
       studentName: string;
       submittedAt: Date;
-      answers: Record<string, any>; // includes file URLs if file-upload
+      // @ts-expect-error type any
+      answers: Record<string, any>;
       uploadedFiles?: {
         questionId: string;
         fileUrl: string;
@@ -109,7 +110,7 @@ declare global {
     courseId: string;
     dueDate: string;
     fileType: "pdf" | "docx" | "zip" | "other";
-    completedBy: SubmissionEntry[];
+    completions: SubmissionEntry[];
   }
 
   interface AssessmentCompletion {
@@ -133,7 +134,7 @@ declare global {
     description: string;
     videoUrl?: string[];
     resourceLinks: { title: string; url: string }[];
-    completedBy: {
+    completions: {
       studentId: string;
       completedAt: string;
     }[];

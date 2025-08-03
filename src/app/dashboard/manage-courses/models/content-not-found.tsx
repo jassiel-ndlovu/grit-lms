@@ -10,7 +10,7 @@ export default function CourseContentNotFound() {
       <div>
         <h2 className="text-2xl font-semibold text-gray-800">Course Not Found</h2>
         <p className="text-sm text-gray-500 mt-1">
-          We couldn't load this course. It may have been removed or there was a server issue.
+          We couldn&apos;t load this course. It may have been removed or there was a server issue.
         </p>
       </div>
       <Link

@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useCourses } from '@/context/CourseContext';
-import { Pencil, Users, FileText, Layers, FilePlus2, BookOpenText, AlertTriangle } from 'lucide-react';
+import { Pencil, Users, FileText, Layers, FilePlus2, BookOpenText } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import StudentManagerDialog from './student-manager-dialog';
@@ -12,7 +12,7 @@ import CourseContentNotFound from '../models/content-not-found';
 
 export default function EditCoursePage() {
   const { id } = useParams();
-  const { updateLoading: courseUpdateLoading, loading: courseLoading, message, courses, updateCourse } = useCourses();
+  const { updating: courseUpdateLoading, loading: courseLoading, message, courses, updateCourse } = useCourses();
   const { students } = useStudent();
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -101,7 +101,7 @@ export default function EditCoursePage() {
               allStudents={students}
               enrolled={course.students}
               courseLoading={courseLoading}
-              message={message}
+              message={message?.content}
               onClose={() => setStudentDialogOpen(false)}
               onSave={async (selected) => {
                 await updateCourse(course.id, {

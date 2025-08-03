@@ -1,8 +1,9 @@
 'use client'
 
 import LoadingPopup from '@/app/components/loading'
-import { ProfileProvider, useProfile } from '@/context/ProfileContext'
+import { useProfile } from '@/context/ProfileContext'
 import { Bell, ChevronDown, ChevronUp, LogOut, User } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
@@ -46,7 +47,10 @@ export default function Header() {
                     View Profile
                   </Link>
                 </li>
-                <li className="px-4 py-2 hover:bg-gray-100 flex items-center gap-2 cursor-pointer">
+                <li 
+                onClick={() => signOut()}
+                className="px-4 py-2 hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
+                >
                   <LogOut className="w-4 h-4" />
                   Log Out
                 </li>

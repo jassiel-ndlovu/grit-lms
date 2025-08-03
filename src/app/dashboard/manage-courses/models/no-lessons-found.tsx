@@ -51,7 +51,7 @@ export default function NoLessonsFound({ courseId, courseName, onLessonCreated }
           <div>
             <h2 className="text-xl font-semibold text-gray-800 mb-2">No Lessons Found</h2>
             <p className="text-gray-600 text-sm">
-              The course "{courseName}" doesn't have any lessons yet. Create your first lesson to get started.
+              The course &quot;{courseName}&quot; doesn't have any lessons yet. Create your first lesson to get started.
             </p>
           </div>
           <div className="space-y-3">

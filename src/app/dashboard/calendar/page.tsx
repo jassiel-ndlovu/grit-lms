@@ -1,10 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
-import { assessments, courses, submissions } from '@/lib/static'
 import Image from 'next/image'
 import Link from 'next/link'
 import { CalendarDays, FileText, Send } from 'lucide-react'
+import { useCourses } from '@/context/CourseContext'
+import { useTests } from '@/context/TestContext'
 
 function getMonthDates(year: number, month: number) {
   // const start = new Date(year, month, 1)
@@ -19,6 +20,9 @@ function getMonthDates(year: number, month: number) {
 }
 
 export default function CalendarPage() {
+  const { courses } = useCourses();
+  const { tests } = useTests();
+
   const today = new Date()
   const year = today.getFullYear()
   const month = today.getMonth()
@@ -40,7 +44,7 @@ export default function CalendarPage() {
       })
     })
 
-    assessments.forEach((a) => {
+    tests.forEach((a) => {
       const key = new Date(a.dueDate).toDateString()
       result[key] = result[key] || []
       result[key].push({
@@ -50,15 +54,15 @@ export default function CalendarPage() {
       })
     })
 
-    submissions.forEach((s) => {
-      const key = new Date(s.dueDate).toDateString()
-      result[key] = result[key] || []
-      result[key].push({
-        type: 'submission',
-        title: s.title,
-        link: `/submissions/${s.id}`,
-      })
-    })
+    // submissions.forEach((s) => {
+    //   const key = new Date(s.dueDate).toDateString()
+    //   result[key] = result[key] || []
+    //   result[key].push({
+    //     type: 'submission',
+    //     title: s.title,
+    //     link: `/submissions/${s.id}`,
+    //   })
+    // })
 
     return result
   }, [])

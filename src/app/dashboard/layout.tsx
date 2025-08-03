@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <Nav />
 
         {/* Main Content */}
-        <main className="h-full max-h-[100vh] overflow-y-auto flex-1 flex flex-col">
+        <main className="h-screen overflow-y-auto flex-1 flex flex-col">
           <Header />
           <div className="h-full max-h-[92vh]">
             <StudentProvider>

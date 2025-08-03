@@ -9,7 +9,7 @@ export default function LessonMarkdown({ content }: { content: string }) {
         ul: ({ children }) => <ul className="list-disc pl-6 mb-4">{children}</ul>,
         li: ({ children }) => <li className="mb-1">{children}</li>,
         p: ({ children }) => <p className="mb-4">{children}</p>,
-        code: ({ node, className, children, ...props }) => {
+        code: ({ children, ...props }) => {
           const isInline = 'inline' in props && props.inline;
           return isInline ? (
             <code
@@ -19,11 +19,11 @@ export default function LessonMarkdown({ content }: { content: string }) {
               {children}
             </code>
           ) : (
-            <pre className="bg-gray-100 text-gray-800 px-4 py-2 rounded border border-gray-200 overflow-x-auto mt-4 mb-4">
+            <span className="w-full bg-gray-100 text-gray-800 px-2 py-0.5 rounded border border-gray-200 overflow-x-auto mt-4 mb-4">
               <code className="font-mono text-sm" {...props}>
                 {children}
               </code>
-            </pre>
+            </span>
           );
         },
       }}

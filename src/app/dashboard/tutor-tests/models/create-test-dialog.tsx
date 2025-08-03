@@ -1,5 +1,6 @@
 import { useCourses } from "@/context/CourseContext";
-import { QuestionType, FileType, SubmissionStatus, TestQuestion } from "@/generated/prisma";
+import { QuestionType, TestQuestion } from "@/generated/prisma";
+import { parseDateTimeLocal, formatForDateTimeLocal } from "@/lib/functions";
 import { FileText, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
@@ -22,9 +23,9 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
       id: "1",
       question: '',
       type: QuestionType.FILE_UPLOAD,
-      points: 10,
+      points: 1,
       options: ['', '', '', ''],
-      answer: ''
+      answer: '',
     }],
   });
 
@@ -52,6 +53,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
     }));
   };
 
+  // @ts-ignore
   const updateQuestion = (index: number, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -69,6 +71,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
       courseId: formData.courseId,
       dueDate: new Date(formData.dueDate || ''),
       timeLimit: formData.timeLimit,
+      questions: formData.questions,
       totalPoints,
       isActive: true
     };
@@ -153,8 +156,12 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
               </label>
               <input
                 type="datetime-local"
-                value={formData.dueDate ? formData.dueDate.toISOString().slice(0, 16) : ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, dueDate: new Date(e.target.value) }))}
+                value={formData.dueDate ? formatForDateTimeLocal(formData.dueDate) : ""}
+                onChange={(e) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    dueDate: parseDateTimeLocal(e.target.value)
+                  }))}
                 className="w-full text-sm px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -273,7 +280,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || !formData.title || !formData.courseId || !formData.dueDate}
+            disabled={loading || !formData.title || !formData.courseId || !formData.dueDate || !formData.questions || !formData.questions.length}
             className="text-sm px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Test'}

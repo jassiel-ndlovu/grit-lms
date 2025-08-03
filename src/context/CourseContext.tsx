@@ -1,19 +1,21 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import { useProfile } from './ProfileContext';
+import { Message } from '@/lib/message.class';
 
 interface CoursesContextType {
   courses: Course[];
   loading: boolean;
-  updateLoading: boolean;
-  message: string | null;
+  updating: boolean;
+  message: Message | null;
   fetchCourses: () => Promise<void>;
   createCourse: (course: Partial<Course>) => Promise<void>;
   updateCourse: (courseId: string, updated: Partial<Course>) => Promise<void>;
   deleteCourse: (courseId: string) => Promise<void>;
+  clearMessage: () => void;
 }
 
 const CoursesContext = createContext<CoursesContextType | undefined>(undefined);
@@ -24,87 +26,117 @@ export const useCourses = () => {
   return context;
 };
 
-export const CoursesProvider = ({ children }: { children: React.ReactNode }) => {
+export const CoursesProvider = ({ children }: { children: ReactNode }) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [updateLoading, setUpdateLoading] = useState<boolean>(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<boolean>(false);
+  const [message, setMessage] = useState<Message | null>(null);
 
   const { status } = useSession();
   const { profile } = useProfile();
 
-  const fetchCourses = async () => {
-    console.log("Fetching courses...");
+  const clearMessage = useCallback(() => {
+    setMessage(null);
+  }, []);
+
+  const fetchCourses = useCallback(async () => {
     setLoading(true);
     try {
       const res = await axios.get('/api/courses');
       setCourses(res.data);
+      // @ts-ignore
     } catch (err: any) {
-      setMessage(err.response?.data?.message || 'Failed to load courses');
+      setMessage(Message.error(
+        err.response?.data?.message || 'Failed to load courses',
+        { title: 'Fetch Error', duration: 5000 }
+      ));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const createCourse = async (course: Partial<Course>) => {
+  const createCourse = useCallback(async (course: Partial<Course>) => {
     setLoading(true);
-    setMessage(null);
+    clearMessage();
     try {
       const res = await axios.post('/api/courses', course);
       setCourses(prev => [...prev, res.data]);
-      setMessage('Course created successfully');
+      setMessage(Message.success(
+        'Course created successfully',
+        { duration: 3000 }
+      ));
+      // @ts-ignore
     } catch (err: any) {
-      setMessage(err.response?.data?.message || 'Failed to create course');
+      setMessage(Message.error(
+        err.response?.data?.message || 'Failed to create course',
+        { title: 'Creation Error' }
+      ));
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearMessage]);
 
-  const updateCourse = async (courseId: string, updated: Partial<Course>) => {
+  const updateCourse = useCallback(async (courseId: string, updated: Partial<Course>) => {
     setLoading(true);
-    setUpdateLoading(true);
+    setUpdating(true);
+    clearMessage();
     try {
       const payload: any = { ...updated };
 
-    // Prisma-compatible format
-    if (Array.isArray(updated.students)) {
-      payload.students = {
-        set: updated.students.map((s) => ({ id: s.id })),
-      };
-    }
+      // Prisma-compatible format
+      if (Array.isArray(updated.students)) {
+        payload.students = {
+          set: updated.students.map((s) => ({ id: s.id })),
+        };
+      }
 
-    const res = await axios.put(`/api/courses/${courseId}`, payload);
+      const res = await axios.put(`/api/courses/${courseId}`, payload);
 
       setCourses(prev =>
         prev.map(c => (c.id === courseId ? res.data : c))
       );
-      setMessage('Course updated');
+      setMessage(Message.success(
+        'Course updated successfully',
+        { duration: 3000 }
+      ));
+      // @ts-ignore
     } catch (err: any) {
-      setMessage(err.response?.data?.message || 'Update failed');
+      setMessage(Message.error(
+        err.response?.data?.message || 'Update failed',
+        { title: 'Update Error' }
+      ));
     } finally {
       setLoading(false);
-      setUpdateLoading(false);
+      setUpdating(false);
     }
-  };
+  }, [clearMessage]);
 
-  const deleteCourse = async (courseId: string) => {
+  const deleteCourse = useCallback(async (courseId: string) => {
     setLoading(true);
+    clearMessage();
     try {
       await axios.delete(`/api/courses/${courseId}`);
       setCourses(prev => prev.filter(c => c.id !== courseId));
-      setMessage('Course deleted');
+      setMessage(Message.success(
+        'Course deleted successfully',
+        { duration: 3000 }
+      ));
+      // @ts-ignore
     } catch (err: any) {
-      setMessage(err.response?.data?.message || 'Delete failed');
+      setMessage(Message.error(
+        err.response?.data?.message || 'Delete failed',
+        { title: 'Deletion Error' }
+      ));
     } finally {
       setLoading(false);
     }
-  };
+  }, [clearMessage]);
 
   useEffect(() => {
     if (status === 'authenticated' && profile) {
       fetchCourses();
     }
-  }, [status, profile]);
+  }, [status, profile, fetchCourses]);
 
   return (
     <CoursesContext.Provider
@@ -115,8 +147,9 @@ export const CoursesProvider = ({ children }: { children: React.ReactNode }) => 
         updateCourse,
         deleteCourse,
         loading,
-        updateLoading,
+        updating,
         message,
+        clearMessage,
       }}
     >
       {children}

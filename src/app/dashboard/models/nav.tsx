@@ -22,10 +22,10 @@ export default function Nav() {
 
   const studentNavItems = [
     { icon: Home, label: 'Home', link: '/dashboard' },
-    { icon: Calendar, label: 'Calendar', link: '/dashboard/calendar' },
-    { icon: Book, label: 'Courses', link: '/dashboard/browse-courses' },
+    { icon: Calendar, label: 'Calendar', link: '#' },
+    { icon: Book, label: 'Courses', link: '#' },
     { icon: FileText, label: 'Tests', link: '/dashboard/tests' },
-    { icon: FileText, label: 'Submissions', link: '/dashboard/submissions' },
+    { icon: FileText, label: 'Submissions', link: '#' },
     { icon: User, label: 'Account', link: '/dashboard/account' },
     { icon: Settings, label: 'Settings', link: '/dashboard/settings' },
   ];

@@ -1,18 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { courses } from '@/lib/static'
 import CourseCard from '../components/course-card'
 import { Filter, Search } from 'lucide-react'
 import Image from 'next/image'
+import { useCourses } from '@/context/CourseContext'
 
 export default function BrowseCoursesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState('All')
 
+  const { courses } = useCourses();
+
   const filteredCourses = courses.filter((course) =>
     (filter === 'All') &&
-    course.courseName.toLowerCase().includes(searchTerm.toLowerCase())
+    course.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const categories = ['All', 'Programming', 'Math', 'Science', 'Languages']
@@ -59,8 +61,8 @@ export default function BrowseCoursesPage() {
       <section className="max-w-5xl mx-auto">
         {filteredCourses.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCourses.map((course) => (
-              <CourseCard key={course.courseId} course={course} />
+            {filteredCourses.map((course: Course) => (
+              <CourseCard key={course.id} course={course} lessons={[]} />
             ))}
           </div>
         ) : (

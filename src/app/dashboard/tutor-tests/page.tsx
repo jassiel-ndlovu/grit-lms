@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { FileText, Plus, Trash2, Eye, Users, Clock, Search, Filter, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { FileText, Plus, Search, Filter } from 'lucide-react';
 import { useCourses } from '@/context/CourseContext';
 import { useTests } from '@/context/TestContext';
 import { useProfile } from '@/context/ProfileContext';
@@ -11,7 +11,7 @@ import TestCard from './models/test-card';
 
 export default function TutorTestsPage() {
   const { courses } = useCourses();
-  const { tests, fetchTests, createTest, deleteTest } = useTests();
+  const { tests, fetchTestsByTutorId, createTest, deleteTest, loading: testLoading } = useTests();
   const { profile } = useProfile();
 
   const tutorProfile: Tutor = profile as Tutor;
@@ -20,9 +20,6 @@ export default function TutorTestsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedTest, setSelectedTest] = useState<Test | null>(null);
-  const [showSubmissions, setShowSubmissions] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [testsLoading, setTestsLoading] = useState<boolean>(true);
 
@@ -33,18 +30,14 @@ export default function TutorTestsPage() {
   // ✅ Fetch tests when tutorProfile is ready
   useEffect(() => {
     if (tutorProfile?.id) {
-      fetchTests(tutorProfile.id);
+      fetchTestsByTutorId(tutorProfile.id);
     }
-  }, [tutorProfile?.id, tutorCourses]);
+  }, [fetchTestsByTutorId, tutorProfile?.id, tutorCourses]);
 
   const tutorTests = useMemo(() => {
     return tests.filter(test => tutorCourses.find(c => c.id === test.courseId));
-  }, [tests]);
+  }, [tests, tutorCourses]);
 
-  console.log("Tests", tests);
-  console.log("Tutor tests", tutorTests);
-
-  // ✅ Update tutorTests when tests change
   useEffect(() => {
     const filtered = tests.filter(test =>
       tutorCourses.some(course => course.id === test.courseId)
@@ -87,27 +80,9 @@ export default function TutorTestsPage() {
   const handleDeleteTest = async (testId: string) => {
     try {
       await deleteTest(testId);
-      setDeleteConfirmation(null);
     } catch (error) {
       console.error('Error deleting test:', error);
     }
-  };
-
-  const getSubmissionStats = (test: Test) => {
-    const total = test.submissions.length;
-    const graded = test.submissions.filter(s => s.status === 'graded').length;
-    const submitted = test.submissions.filter(s => s.status === 'submitted').length;
-    return { total, graded, submitted };
-  };
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('en-ZA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   return (
@@ -160,7 +135,7 @@ export default function TutorTestsPage() {
         </div>
 
         {/* Skeleton while loading */}
-        {testsLoading || !filteredTests ? (
+        {testsLoading || testLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <TestCardSkeleton key={i} />
@@ -173,9 +148,7 @@ export default function TutorTestsPage() {
                 key={test.id}
                 test={test}
                 course={courses.find(c => c.id === test.courseId)}
-                setDeleteConfirmation={setDeleteConfirmation}
-                setSelectedTest={setSelectedTest}
-                setShowSubmissions={setShowSubmissions}
+                deleteTest={handleDeleteTest}
               />
             ))}
           </div>

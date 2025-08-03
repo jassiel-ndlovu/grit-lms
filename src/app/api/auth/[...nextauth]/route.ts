@@ -71,7 +71,13 @@ const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/",
     error: "/",
+    signOut: "/",
   },
+  events: {
+    async signOut({ token }) {
+      console.log(`User ${token.email} signed out`);
+    }
+  }
 };
 
 const handler = NextAuth(authOptions);

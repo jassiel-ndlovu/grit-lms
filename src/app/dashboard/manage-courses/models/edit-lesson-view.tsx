@@ -2,6 +2,7 @@ import { Plus, Save } from "lucide-react";
 
 type EditLessonViewProps = {
   lesson: Partial<Lesson>;
+  // @ts-ignore
   onUpdate: (key: keyof Lesson, value: any) => void;
   onSave: () => void;
   onCancel: () => void;

@@ -61,7 +61,8 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
     try {
       new URL(string);
       return true;
-    } catch (_) {
+    } catch (e) {
+      e
       return false;
     }
   };
@@ -80,7 +81,6 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
       resourceLinks: formData.resourceLinks.filter(
         resource => resource.title.trim() !== '' && resource.url.trim() !== ''
       ),
-      completedBy: []
     };
 
     try {

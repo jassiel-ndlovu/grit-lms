@@ -3,14 +3,15 @@ import Link from "next/link";
 
 type CourseCardProps = {
   course: Course;
+  lessons: Lesson[];
 };
 
 export default function CourseCard({ course }: CourseCardProps) {
   const totalLessons = course.lessons.length;
-  const lessonsDone = course.lessons.reduce(
-    (acc, lesson) => acc + lesson.completedBy.length,
-    0
-  );
+  const lessonsDone = 0;//course.lessons.reduce(
+  //   (acc, lesson) => acc + lesson.completions.length,
+  //   0
+  // );
 
   const progressPercent =
     totalLessons > 0 ? (lessonsDone / totalLessons) * 100 : 0;
@@ -21,13 +22,13 @@ export default function CourseCard({ course }: CourseCardProps) {
   };
 
   return (
-    <Link href={`/dashboard/courses/${course.courseId}`} className="block">
+    <Link href={`/dashboard/courses/${course.id}`} className="block">
       <div className="bg-white border border-gray-200 hover:shadow-xl transition-shadow rounded-lg overflow-hidden">
         {/* Image */}
         <div className="relative w-full h-32">
           <Image
-            src={course.courseImageUrl || randomImage()}
-            alt={course.courseName}
+            src={`/images/${course.imageUrl}` || randomImage()}
+            alt={course.name}
             fill
             className="object-cover"
           />
@@ -38,7 +39,7 @@ export default function CourseCard({ course }: CourseCardProps) {
           <p className="text-sm text-gray-500">
             {course.tutor?.fullName ?? "Unknown Tutor"}
           </p>
-          <h3 className="text-lg font-semibold">{course.courseName}</h3>
+          <h3 className="text-lg font-semibold">{course.name}</h3>
 
           {/* Progress */}
           <div>

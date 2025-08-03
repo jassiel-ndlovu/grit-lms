@@ -2,16 +2,18 @@
 
 import { notFound } from "next/navigation";
 import { use, useState } from "react";
-import { courses } from "@/lib/static";
 import ReactMarkdown from "react-markdown";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, FileText, Send, Calendar, Video, CheckCircle, Circle } from "lucide-react";
+import { useCourses } from "@/context/CourseContext";
 
 interface CoursePageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function CoursePage({ params }: CoursePageProps) {
+  const { courses } = useCourses();
+
   const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
