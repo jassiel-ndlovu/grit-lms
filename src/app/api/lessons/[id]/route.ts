@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: lessonId } = await params;
   const body = await req.json();
 
@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: lessonId } = await params;
 
   await prisma.lesson.delete({ where: { id: lessonId } });

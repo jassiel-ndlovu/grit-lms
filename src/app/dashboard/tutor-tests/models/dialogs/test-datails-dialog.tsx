@@ -1,19 +1,20 @@
 import { BookOpen, Calendar, CheckCircle, Clock, Edit, FileText, XCircle } from "lucide-react";
 import DialogHeader from "./dialog-header";
 import DialogOverlay from "./dialog-overlay";
+import { $Enums } from "@/generated/prisma";
 
 type TestDetailsDialogProps = {
-  test: Test; 
-  course: Course; 
+  test: AppTypes.Test; 
+  course: AppTypes.Course; 
   onClose: () => void;
 }
 
 const TestDetailsDialog = ({ test, course, onClose }: TestDetailsDialogProps) => {
   const stats = {
     total: test.submissions.length,
-    graded: test.submissions.filter(s => s.status === 'graded').length,
-    submitted: test.submissions.filter(s => s.status === 'submitted').length,
-    late: test.submissions.filter(s => s.status === 'late').length
+    graded: test.submissions.filter(s => s.status === $Enums.SubmissionStatus.GRADED).length,
+    submitted: test.submissions.filter(s => s.status === $Enums.SubmissionStatus.SUBMITTED).length,
+    late: test.submissions.filter(s => s.status === $Enums.SubmissionStatus.LATE).length
   };
 
   const averageScore = stats.graded > 0 

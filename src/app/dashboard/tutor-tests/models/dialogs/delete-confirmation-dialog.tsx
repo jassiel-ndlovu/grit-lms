@@ -2,7 +2,7 @@ import { AlertTriangle } from "lucide-react";
 import DialogOverlay from "./dialog-overlay";
 
 type DeleteConfirmationDialogProps = {
-  test: Test; 
+  test: AppTypes.Test; 
   onConfirm: () => void; 
   onCancel: () => void;
 }

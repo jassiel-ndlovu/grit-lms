@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 'use client';
 
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
@@ -7,13 +9,16 @@ import { useProfile } from './ProfileContext';
 import { Message } from '@/lib/message.class';
 
 interface CoursesContextType {
-  courses: Course[];
+  courses: AppTypes.Course[];
   loading: boolean;
   updating: boolean;
   message: Message | null;
   fetchCourses: () => Promise<void>;
-  createCourse: (course: Partial<Course>) => Promise<void>;
-  updateCourse: (courseId: string, updated: Partial<Course>) => Promise<void>;
+  fetchCoursesByTutorId: (tutorId: string) => Promise<void>;
+  fetchCoursesByStudentId: (studentId: string) => Promise<void>;
+  fetchCoursesByIds: (courseIds: string[]) => Promise<void>;
+  createCourse: (course: Partial<AppTypes.Course>) => Promise<void>;
+  updateCourse: (courseId: string, updated: Partial<AppTypes.Course>) => Promise<void>;
   deleteCourse: (courseId: string) => Promise<void>;
   clearMessage: () => void;
 }
@@ -27,7 +32,7 @@ export const useCourses = () => {
 };
 
 export const CoursesProvider = ({ children }: { children: ReactNode }) => {
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<AppTypes.Course[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [updating, setUpdating] = useState<boolean>(false);
   const [message, setMessage] = useState<Message | null>(null);
@@ -44,7 +49,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await axios.get('/api/courses');
       setCourses(res.data);
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to load courses',
@@ -55,7 +60,58 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const createCourse = useCallback(async (course: Partial<Course>) => {
+  const fetchCoursesByTutorId = useCallback(async (tutorId: string) => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`/api/courses?tutorId=${tutorId}`);
+      setCourses(res.data);
+
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || 'Failed to load courses',
+        { title: 'Fetch Error', duration: 5000 }
+      ));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchCoursesByStudentId = useCallback(async (studentId: string) => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`/api/courses?studentId=${studentId}`);
+      setCourses(res.data);
+
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || 'Failed to load courses',
+        { title: 'Fetch Error', duration: 5000 }
+      ));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchCoursesByIds = useCallback(async (courseIds: string[]) => {
+    if (!courseIds.length) return;
+    setLoading(true);
+    try {
+      const res = await axios.get('/api/courses', {
+        params: { ids: courseIds.join(',') },
+      });
+      setCourses(res.data);
+
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || 'Failed to load courses',
+        { title: 'Fetch Error', duration: 5000 }
+      ));
+    } finally {
+      setLoading(false);
+    }
+  }, [clearMessage]);
+
+  const createCourse = useCallback(async (course: Partial<AppTypes.Course>) => {
     setLoading(true);
     clearMessage();
     try {
@@ -65,7 +121,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
         'Course created successfully',
         { duration: 3000 }
       ));
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to create course',
@@ -76,7 +132,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [clearMessage]);
 
-  const updateCourse = useCallback(async (courseId: string, updated: Partial<Course>) => {
+  const updateCourse = useCallback(async (courseId: string, updated: Partial<AppTypes.Course>) => {
     setLoading(true);
     setUpdating(true);
     clearMessage();
@@ -99,7 +155,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
         'Course updated successfully',
         { duration: 3000 }
       ));
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Update failed',
@@ -121,7 +177,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
         'Course deleted successfully',
         { duration: 3000 }
       ));
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Delete failed',
@@ -143,6 +199,9 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
       value={{
         courses,
         fetchCourses,
+        fetchCoursesByTutorId,
+        fetchCoursesByStudentId,
+        fetchCoursesByIds,
         createCourse,
         updateCourse,
         deleteCourse,

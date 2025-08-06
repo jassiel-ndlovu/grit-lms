@@ -72,8 +72,7 @@ export async function POST(req: NextRequest) {
     data: {
       ...data,
       questions: {
-        // @ts-ignore
-        create: data.questions.map((q: any) => ({
+        create: data.questions.map((q: AppTypes.TestQuestion) => ({
           question: q.question,
           type: q.type,
           points: q.points,

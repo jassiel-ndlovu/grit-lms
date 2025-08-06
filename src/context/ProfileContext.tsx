@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 'use client';
 
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
@@ -7,12 +9,12 @@ import { Message } from '@/lib/message.class';
 type ProfileContextType = {
   session: ReturnType<typeof useSession>['data'];
   status: ReturnType<typeof useSession>['status'];
-  profile: Student | Tutor | null;
+  profile: AppTypes.Student | AppTypes.Tutor | null;
   loading: boolean;
   message: Message | null;
   fetchProfile: () => Promise<void>;
   clearMessage: () => void;
-  updateProfile: (updatedData: Partial<Student | Tutor>) => Promise<void>;
+  updateProfile: (updatedData: Partial<AppTypes.Student | AppTypes.Tutor>) => Promise<void>;
 };
 
 export const ProfileContext = createContext<ProfileContextType>({
@@ -28,7 +30,7 @@ export const ProfileContext = createContext<ProfileContextType>({
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
-  const [profile, setProfile] = useState<Student | Tutor | null>(null);
+  const [profile, setProfile] = useState<AppTypes.Student | AppTypes.Tutor | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
 
@@ -53,7 +55,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
       const data = await res.json();
       setProfile(data);
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Error loading profile',
@@ -64,7 +66,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
   }, [session]);
 
-  const updateProfile = useCallback(async (updatedData: Partial<Student | Tutor>) => {
+  const updateProfile = useCallback(async (updatedData: Partial<AppTypes.Student | AppTypes.Tutor>) => {
     if (!profile?.id || !session?.user?.role) {
       setMessage(Message.error(
         'Cannot update profile - missing required information',
@@ -97,7 +99,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         'Profile updated successfully',
         { duration: 3000 }
       ));
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Error updating profile',

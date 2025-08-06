@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { createContext, useContext, ReactNode, useState, useCallback } from "react";
@@ -5,13 +7,13 @@ import axios from "axios";
 import { Message } from "@/lib/message.class";
 
 interface LessonContextProps {
-  lessons: Lesson[];
+  lessons: AppTypes.Lesson[];
   loading: boolean;
   updating: boolean;
   message: Message | null;
   fetchLessons: (courseId: string) => Promise<void>;
-  createLesson: (courseId: string, data: Partial<Lesson>) => Promise<Lesson | null>;
-  updateLesson: (lessonId: string, data: Partial<Lesson>) => Promise<Lesson | null>;
+  createLesson: (courseId: string, data: Partial<AppTypes.Lesson>) => Promise<AppTypes.Lesson | null>;
+  updateLesson: (lessonId: string, data: Partial<AppTypes.Lesson>) => Promise<AppTypes.Lesson | null>;
   deleteLesson: (lessonId: string) => Promise<boolean>;
   clearMessage: () => void;
 }
@@ -25,7 +27,7 @@ export const useLesson = () => {
 };
 
 export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [lessons, setLessons] = useState<AppTypes.Lesson[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [updating, setUpdating] = useState<boolean>(false);
   const [message, setMessage] = useState<Message | null>(null);
@@ -39,7 +41,7 @@ export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     try {
       const { data } = await axios.get(`/api/lessons?courseId=${courseId}`);
       setLessons(data);
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to load lessons',
@@ -50,7 +52,7 @@ export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, []);
 
-  const createLesson = useCallback(async (courseId: string, lesson: Partial<Lesson>) => {
+  const createLesson = useCallback(async (courseId: string, lesson: Partial<AppTypes.Lesson>) => {
     setLoading(true);
     clearMessage();
     try {
@@ -61,7 +63,7 @@ export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         { duration: 3000 }
       ));
       return data;
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to create lesson',
@@ -73,7 +75,7 @@ export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, [clearMessage]);
 
-  const updateLesson = useCallback(async (lessonId: string, updatedData: Partial<Lesson>) => {
+  const updateLesson = useCallback(async (lessonId: string, updatedData: Partial<AppTypes.Lesson>) => {
     setLoading(true);
     setUpdating(true);
     clearMessage();
@@ -87,7 +89,7 @@ export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         { duration: 3000 }
       ));
       return data;
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to update lesson',
@@ -111,7 +113,7 @@ export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         { duration: 3000 }
       ));
       return true;
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to delete lesson',

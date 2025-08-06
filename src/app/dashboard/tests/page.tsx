@@ -9,15 +9,13 @@ import { useCourses } from '@/context/CourseContext';
 import { useProfile } from '@/context/ProfileContext';
 import Skeleton from '../components/skeleton';
 
-export default function TestsPage() {
-  const router = useRouter();
-  
+export default function TestsPage() {  
   const { tests, fetchTestsByCourse, loading: testsLoading } = useTests();
   const { courses, loading: coursesLoading } = useCourses();
   const { profile, loading: profileLoading } = useProfile();
 
   // Memoize student profile once
-  const studentProfile = useMemo(() => profile as Student, [profile]);
+  const studentProfile = useMemo(() => profile as AppTypes.Student, [profile]);
 
   // Memoize courses without creating new arrays unnecessarily
   const studentCourses = useMemo(() => courses.filter(course => !course.students.find(s => s.id === studentProfile.id)) ?? [], [courses]);
@@ -78,8 +76,7 @@ export default function TestsPage() {
                 {course.tests.map(test => (
                   <TestContent 
                     key={test.id} 
-                    test={test} 
-                    router={router} 
+                    test={test}
                   />
                 ))}
               </div>
@@ -91,10 +88,11 @@ export default function TestsPage() {
   );
 }
 
-// @ts-ignore
-function TestContent({ test, router }: { test: Test; router: any }) {
+function TestContent({ test }: { test: AppTypes.Test }) {
   const [timeLeft, setTimeLeft] = useState<string>('Calculating...');
   const [isExpired, setIsExpired] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     if (!test.timeLimit) return;

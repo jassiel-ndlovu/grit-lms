@@ -1,148 +1,97 @@
-import { $Enums, QuestionType } from "@/generated/prisma";
+// global.d.ts
+import { Prisma, $Enums } from "@/generated/prisma";
 
 export {};
 
 declare global {
-  interface GritUser {
-    id: string;
-    name: string;
-    email: string;
-    role: $Enums.Role;
-  }
-
-  interface Tutor {
-    id: string;
-    fullName: string;
-    email: string;
-    profileImageUrl?: string;
-    bio?: string;
-  }
-
-  interface Student {
-    id: string;
-    fullName: string;
-    email: string;
-    imageUrl: string | null;
-  }
-
-  interface CourseSearchOptions {
-    searchTerm: string;
-    filter: string;
-    sort: string;
-  }
-
-  interface CourseEvent {
-    id: string;
-    courseId: string;
-    title: string;
-    link: string;
-    date: string;
-  }
-
-  interface Course {
-    id: string;
-    name: string;
-    tutor: Tutor;
-    description: string;
-    imageUrl: string;
-    students: Student[];
-    lessons: Lesson[];
-    quizzes: Quiz[];
-    tests: Test[];
-    submissions: Submission[];
-    courseEvents: CourseEvent[];
-  }
-
-  interface Assessment {
-    id: string;
-    title: string;
-    courseId: string;
-    dueDate: string;
-    createdAt: string;
-    completedBy: AssessmentCompletion[];
-  }
-
-  interface Quiz extends Assessment {
-    type: "quiz";
-  }
-
-  interface Test extends Assessment {
-    id: string;
-    title: string;
-    description: string;
-    preTestInstructions?: string;
-    courseId: string;
-    courseName: string;
-    dueDate: Date;
-    timeLimit?: number; // in minutes
-    totalPoints: number;
-    questions: Array<{
-      id: string;
-      question: string;
-      type: QuestionType;
-      points: number;
-      options?: string[];
-      correctAnswer?: string;
+  namespace AppTypes {
+    // Base model types
+    type User = Prisma.UserGetPayload<object>;
+    type Tutor = Prisma.TutorGetPayload<{
+      include: { courses: true };
     }>;
-    submissions: Array<{
-      id: string;
-      studentId: string;
-      studentName: string;
-      submittedAt: Date;
-      // @ts-expect-error type any
-      answers: Record<string, any>;
-      uploadedFiles?: {
-        questionId: string;
-        fileUrl: string;
-        fileType: string;
-      }[];
-      score?: number;
-      feedback?: string;
-      status: "submitted" | "graded" | "late";
+    type Student = Prisma.StudentGetPayload<{
+      include: { courses: true; TestSubmission: true };
     }>;
-    createdAt: string;
-    isActive: boolean;
-  }
+    type Course = Prisma.CourseGetPayload<{
+      include: {
+        tutor: true;
+        students: true;
+        lessons: {
+          include: { 
+            completions: true; 
+            attachmentUrls: true 
+          };
+        };
+        quizzes: true;
+        tests: true;
+        submissions: true;
+        courseEvents: true;
+      };
+    }>;
+    type Lesson = Prisma.LessonGetPayload<{
+      include: { completions: true; attachmentUrls: true };
+    }>;
+    type Attachment = Prisma.AttachmentGetPayload<object>;
+    type LessonCompletion = Prisma.LessonCompletionGetPayload<object>;
+    type CourseEvent = Prisma.CourseEventGetPayload<object>;
+    type Quiz = Prisma.QuizGetPayload<{
+      include: { completions: true };
+    }>;
+    type Test = Prisma.TestGetPayload<{
+      include: { 
+        questions: true; 
+        submissions: {
+          include: {
+            uploadedFiles: true;
+          }
+        } 
+      };
+    }>;
+    type TestQuestion = Prisma.TestQuestionGetPayload<object>;
+    type TestSubmission = Prisma.TestSubmissionGetPayload<{
+      include: { uploadedFiles: true };
+    }>;
+    type UploadedFile = Prisma.UploadedFileGetPayload<object>;
+    type AssessmentCompletion = Prisma.AssessmentCompletionGetPayload<object>;
+    type Submission = Prisma.SubmissionGetPayload<{
+      include: { entries: true };
+    }>;
+    type SubmissionEntry = Prisma.SubmissionEntryGetPayload<object>;
+    type Resource = Prisma.ResourceGetPayload<object>;
+    type Grade = Prisma.GradeGetPayload<object>;
+    type Notification = Prisma.NotificationGetPayload<object>;
 
-  interface Submission {
-    id: string;
-    title: string;
-    courseId: string;
-    dueDate: string;
-    fileType: "pdf" | "docx" | "zip" | "other";
-    completions: SubmissionEntry[];
-  }
+    // Enums
+    type Role = $Enums.Role;
+    type QuestionType = $Enums.QuestionType;
+    type FileType = $Enums.FileType;
+    type SubmissionStatus = $Enums.SubmissionStatus;
 
-  interface AssessmentCompletion {
-    studentId: string;
-    startedAt: string;
-    completedAt?: string;
-    score?: number;
-  }
+    // Derived app-specific types
+    interface CourseSearchOptions {
+      searchTerm: string;
+      filter: string;
+      sort: string;
+    }
 
-  interface SubmissionEntry {
-    studentId: string;
-    submittedAt: string;
-    fileUrl: string;
-    grade?: number;
-  }
-
-  export interface Lesson {
-    id: string;
-    title: string;
-    courseId: string;
-    description: string;
-    videoUrl?: string[];
-    resourceLinks: { title: string; url: string }[];
-    completions: {
+    interface TestTimerData {
+      startedAt: Date;
+      durationMinutes: number;
+      testId: string;
       studentId: string;
-      completedAt: string;
-    }[];
-  }
+    }
 
-  export interface LessonCompletion {
-    studentId: string;
-    lessonId: string;
-    completedAt: string;
+    type AnswerObject =
+      | { type: "MULTIPLE_CHOICE"; value: string }
+      | { type: "SHORT_ANSWER"; value: string }
+      | { type: "ESSAY"; value: string }
+      | { type: "FILE_UPLOAD"; value: null }
+      | { type: "CHECKBOX"; value: string[] }
+      | { type: "CODE"; value: string }
+      | { type: "NUMERIC"; value: number }
+      | { type: "REORDER"; value: string[] }
+      | { type: "MATCHING"; value: Array<{ left: string; right: string }> }
+      | { type: "FILL_IN_THE_BLANK"; value: string[] };
   }
 }

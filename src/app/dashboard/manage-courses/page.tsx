@@ -12,7 +12,7 @@ import TutorCourseCardSkeleton from './skeletons/tutor-skeleton-course-card';
 
 export default function ManageCoursesPage() {
   const [isOpen, setIsOpen] = useState(false);
-  const [localCourses, setLocalCourses] = useState<Course[]>([]);
+  const [localCourses, setLocalCourses] = useState<AppTypes.Course[]>([]);
   const [formData, setFormData] = useState({
     courseName: '',
     description: '',
@@ -21,7 +21,7 @@ export default function ManageCoursesPage() {
   });
 
   const { profile } = useProfile();
-  const tutorProfile = profile as Tutor;
+  const tutorProfile = profile as AppTypes.Tutor;
   const { students } = useStudent();
   const { courses, loading: coursesLoading, createCourse, message } = useCourses();
 
@@ -39,7 +39,7 @@ export default function ManageCoursesPage() {
   // Show toast/feedback
   useEffect(() => {
     if (message) {
-      setFeedback(message);
+      setFeedback(message.content);
       const timeout = setTimeout(() => setFeedback(null), 3000);
       return () => clearTimeout(timeout);
     }
@@ -59,8 +59,9 @@ export default function ManageCoursesPage() {
     setCreating(true);
 
     const enrolled = students.filter(s => formData.selectedStudentIds.includes(s.id));
-    const newCourse: Course = {
+    const newCourse: AppTypes.Course = {
       id: crypto.randomUUID(),
+      tutorId: tutorProfile.id,
       name: formData.courseName,
       description: formData.description,
       imageUrl: formData.courseImageUrl,

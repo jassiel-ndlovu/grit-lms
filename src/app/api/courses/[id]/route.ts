@@ -4,9 +4,12 @@ import { getToken } from 'next-auth/jwt';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req });
+  const { params } = context;
+
+  const id = (await params).id;
 
   if (!token || token.role !== 'TUTOR') {
     return new NextResponse('Unauthorized', { status: 403 });
@@ -15,7 +18,7 @@ export async function PUT(
   const data = await req.json();
 
   const updated = await prisma.course.update({
-    where: { id: params.id },
+    where: { id: id },
     data,
     include: {
       tutor: true,
@@ -33,16 +36,19 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req });
+  const { params } =  context;
+
+  const id = (await params).id;
 
   if (!token || token.role !== 'TUTOR') {
     return new NextResponse('Unauthorized', { status: 403 });
   }
 
   await prisma.course.delete({
-    where: { id: params.id },
+    where: { id: id },
   });
 
   return new NextResponse('Deleted', { status: 204 });

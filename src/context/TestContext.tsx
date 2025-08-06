@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { createContext, useContext, ReactNode, useState, useCallback } from "react";
@@ -5,8 +7,8 @@ import axios from "axios";
 import { Message } from "@/lib/message.class";
 
 interface TestContextType {
-  tests: Test[];
-  currentTest: Test | null;
+  tests: AppTypes.Test[];
+  currentTest: AppTypes.Test | null;
   loading: boolean;
   updating: boolean;
   message: Message | null;
@@ -14,8 +16,8 @@ interface TestContextType {
   fetchTestById: (testId: string) => Promise<void>;
   fetchTestsByStudentId: (studentId: string) => Promise<void>;
   fetchTestsByCourse: (courseIds: string[]) => Promise<void>;
-  createTest: (courseId: string, testData: Partial<Test>) => Promise<Test | void>;
-  updateTest: (testId: string, updates: Partial<Test>) => Promise<Test | void>;
+  createTest: (courseId: string, testData: Partial<AppTypes.Test>) => Promise<AppTypes.Test | void>;
+  updateTest: (testId: string, updates: Partial<AppTypes.Test>) => Promise<AppTypes.Test | void>;
   deleteTest: (testId: string) => Promise<void>;
   clearMessage: () => void;
 }
@@ -29,8 +31,8 @@ export const useTests = () => {
 };
 
 export const TestProvider = ({ children }: { children: ReactNode }) => {
-  const [tests, setTests] = useState<Test[]>([]);
-  const [currentTest, setCurrentTest] = useState<Test | null>(null);
+  const [tests, setTests] = useState<AppTypes.Test[]>([]);
+  const [currentTest, setCurrentTest] = useState<AppTypes.Test | null>(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
@@ -44,7 +46,6 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await axios.get(`/api/tests?tutorId=${tutorId}`);
       setTests(res.data);
-      // @ts-ignore
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to fetch tests',
@@ -60,7 +61,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await axios.get(`/api/tests?studentId=${studentId}`);
       setTests(res.data);
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to fetch tests',
@@ -76,7 +77,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await axios.get(`/api/tests?testId=${testId}`);
       setCurrentTest(res.data);
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to fetch tests',
@@ -98,7 +99,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
         }
       });
       setTests(res.data);
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to fetch tests',
@@ -109,7 +110,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const createTest = useCallback(async (courseId: string, testData: Partial<Test>) => {
+  const createTest = useCallback(async (courseId: string, testData: Partial<AppTypes.Test>) => {
     setLoading(true);
     clearMessage();
     try {
@@ -120,7 +121,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
         { duration: 3000 }
       ));
       return res.data;
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to create test',
@@ -131,7 +132,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [clearMessage]);
 
-  const updateTest = useCallback(async (testId: string, updates: Partial<Test>) => {
+  const updateTest = useCallback(async (testId: string, updates: Partial<AppTypes.Test>) => {
     setLoading(true);
     setUpdating(true);
     clearMessage();
@@ -164,7 +165,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
         'Test deleted successfully',
         { duration: 3000 }
       ));
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to delete test',

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 'use client';
 
 import React, { useState } from 'react';
@@ -7,17 +9,20 @@ interface CreateLessonDialogProps {
   courseId: string;
   courseName: string;
   onClose: () => void;
-  onSave: (lesson: Partial<Lesson>) => Promise<void>;
+  onSave: (lesson: Partial<AppTypes.Lesson>) => Promise<void>;
   loading?: boolean;
   serverError?: string | null;
 }
 
 export default function CreateLessonDialog({ courseId, courseName, onClose, onSave, loading = false, serverError }: CreateLessonDialogProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<AppTypes.Lesson>>({
     title: '',
     description: '',
     videoUrl: [''],
-    resourceLinks: [{ title: '', url: '' }]
+    attachmentUrls: [
+      // @ts-expect-error id and lessonId are not required for creation
+      { title: '', url: '' }
+    ]
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -25,23 +30,23 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.title.trim()) {
+    if (!(formData.title as string).trim()) {
       newErrors.title = 'Lesson title is required';
     }
 
-    if (!formData.description.trim()) {
+    if (!(formData.description as string).trim()) {
       newErrors.description = 'Lesson description is required';
     }
 
     // Validate video URLs
-    formData.videoUrl.forEach((url, index) => {
+    (formData.videoUrl as string[]).forEach((url, index) => {
       if (url.trim() && !isValidUrl(url)) {
         newErrors[`video_${index}`] = 'Please enter a valid URL';
       }
     });
 
     // Validate resource links
-    formData.resourceLinks.forEach((resource, index) => {
+    (formData.attachmentUrls as AppTypes.Attachment[]).forEach((resource, index) => {
       if (resource.title.trim() && !resource.url.trim()) {
         newErrors[`resource_url_${index}`] = 'URL is required when title is provided';
       }
@@ -62,7 +67,8 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
       new URL(string);
       return true;
     } catch (e) {
-      e
+      console.error('Invalid URL:', string, e);
+      setErrors(prev => ({ ...prev, video_0: 'Invalid URL format' }));
       return false;
     }
   };
@@ -73,12 +79,12 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
     }
 
     // Clean up the data before saving
-    const cleanedData: Partial<Lesson> = {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
+    const cleanedData: Partial<AppTypes.Lesson> = {
+      title: (formData.title as string).trim(),
+      description: (formData.description as string).trim(),
       courseId,
-      videoUrl: formData.videoUrl.filter(url => url.trim() !== ''),
-      resourceLinks: formData.resourceLinks.filter(
+      videoUrl: (formData.videoUrl as string[]).filter(url => url.trim() !== ''),
+      attachmentUrls: (formData.attachmentUrls as AppTypes.Attachment[]).filter(
         resource => resource.title.trim() !== '' && resource.url.trim() !== ''
       ),
     };
@@ -100,16 +106,16 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
   };
 
   const addVideoUrl = () => {
-    updateFormData('videoUrl', [...formData.videoUrl, '']);
+    updateFormData('videoUrl', [...(formData.videoUrl as string[]), '']);
   };
 
   const removeVideoUrl = (index: number) => {
-    const updated = formData.videoUrl.filter((_, i) => i !== index);
+    const updated = (formData.videoUrl as string[]).filter((_, i) => i !== index);
     updateFormData('videoUrl', updated.length ? updated : ['']);
   };
 
   const updateVideoUrl = (index: number, value: string) => {
-    const updated = [...formData.videoUrl];
+    const updated = [...(formData.videoUrl as string[])];
     updated[index] = value;
     updateFormData('videoUrl', updated);
     // Clear specific video error
@@ -119,16 +125,16 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
   };
 
   const addResourceLink = () => {
-    updateFormData('resourceLinks', [...formData.resourceLinks, { title: '', url: '' }]);
+    updateFormData('resourceLinks', [...(formData.attachmentUrls as AppTypes.Attachment[]), { title: '', url: '' }]);
   };
 
   const removeResourceLink = (index: number) => {
-    const updated = formData.resourceLinks.filter((_, i) => i !== index);
+    const updated = (formData.attachmentUrls as AppTypes.Attachment[]).filter((_, i) => i !== index);
     updateFormData('resourceLinks', updated.length ? updated : [{ title: '', url: '' }]);
   };
 
   const updateResourceLink = (index: number, field: 'title' | 'url', value: string) => {
-    const updated = [...formData.resourceLinks];
+    const updated = [...(formData.attachmentUrls as AppTypes.Attachment[])];
     updated[index][field] = value;
     updateFormData('resourceLinks', updated);
     // Clear specific resource errors
@@ -205,7 +211,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
             </label>
             <textarea
               id="lesson-description"
-              value={formData.description}
+              value={formData.description as string}
               onChange={(e) => updateFormData('description', e.target.value)}
               placeholder="Write your lesson description in Markdown format...
 
@@ -249,7 +255,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
               </button>
             </div>
             <div className="space-y-3">
-              {formData.videoUrl.map((url, index) => (
+              {(formData.videoUrl as string[]).map((url, index) => (
                 <div key={index} className="flex items-start gap-2">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -263,7 +269,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
                           }`}
                         disabled={loading}
                       />
-                      {formData.videoUrl.length > 1 && (
+                      {(formData.videoUrl as string[]).length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeVideoUrl(index)}
@@ -303,7 +309,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
               </button>
             </div>
             <div className="space-y-3">
-              {formData.resourceLinks.map((resource, index) => (
+              {(formData.attachmentUrls as AppTypes.Attachment[]).map((resource, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex items-start gap-2">
                     <Link className="w-4 h-4 text-gray-400 mt-2.5 flex-shrink-0" />
@@ -328,7 +334,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
                         disabled={loading}
                       />
                     </div>
-                    {formData.resourceLinks.length > 1 && (
+                    {(formData.attachmentUrls as AppTypes.Attachment[]).length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeResourceLink(index)}
@@ -372,7 +378,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || !formData.title.trim() || !formData.description.trim()}
+            disabled={loading || !(formData.title as string).trim() || !(formData.description as string).trim()}
             className="px-6 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? (

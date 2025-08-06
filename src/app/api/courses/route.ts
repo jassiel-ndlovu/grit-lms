@@ -2,20 +2,71 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getToken } from "next-auth/jwt";
 
-export async function GET() {
-  const courses = await prisma.course.findMany({
-    include: {
-      tutor: true,
-      students: true,
-      lessons: true,
-      quizzes: true,
-      tests: true,
-      submissions: true,
-      courseEvents: true,
-    },
-  });
+export async function GET(req: NextRequest) {
+  const tutorId = req.nextUrl.searchParams.get("tutorId");
+  const studentId = req.nextUrl.searchParams.get("studentId");
+  const courseIds = req.nextUrl.searchParams.get("courseIds");
 
-  return NextResponse.json(courses);
+  if (!tutorId && !studentId && !courseIds) {
+    const courses = await prisma.course.findMany({
+      include: {
+        tutor: true,
+        students: true,
+        lessons: true,
+        quizzes: true,
+        tests: true,
+        submissions: true,
+        courseEvents: true,
+      },
+    });
+
+    return NextResponse.json(courses);
+  }
+
+  if (tutorId) {
+    const courses = await prisma.course.findMany({
+      where: { tutorId },
+      include: {
+        tutor: true,
+        students: true,
+        lessons: true,
+        quizzes: true,
+        tests: true,
+        submissions: true,
+        courseEvents: true,
+      },
+    });
+    return NextResponse.json(courses);
+  } else if (studentId) {
+    const courses = await prisma.course.findMany({
+      where: { students: { some: { id: studentId } } },
+      include: {
+        tutor: true,
+        students: true,
+        lessons: true,
+        quizzes: true,
+        tests: true,
+        submissions: true,
+        courseEvents: true,
+      },
+    });
+    return NextResponse.json(courses);
+  } else if (courseIds) {
+    const courseIdsArray = courseIds.split(",").filter(Boolean);
+    const courses = await prisma.course.findMany({
+      where: { id: { in: courseIdsArray } },
+      include: {
+        tutor: true,
+        students: true,
+        lessons: true,
+        quizzes: true,
+        tests: true,
+        submissions: true,
+        courseEvents: true,
+      },
+    });
+    return NextResponse.json(courses);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -44,7 +95,9 @@ export async function POST(req: NextRequest) {
         connect: { id: tutor?.id },
       },
       students: {
-        connect: data.enrolledStudents?.map((s: Student) => ({ id: s.id })) || [],
+        connect:
+          data.enrolledStudents?.map((s: AppTypes.Student) => ({ id: s.id })) ||
+          [],
       },
     },
     include: {

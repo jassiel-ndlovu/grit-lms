@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react";
 
 type StudentManagerDialogProps = {
-  allStudents: Student[];
-  enrolled: Student[];
+  allStudents: AppTypes.Course["students"];
+  enrolled: AppTypes.Course["students"];
   courseLoading: boolean;
   message?: string | null;
   onClose: () => void;
-  onSave: (selected: Student[]) => Promise<void>;
+  onSave: (selected: AppTypes.Course["students"]) => Promise<void>;
 }
 
 export default function StudentManagerDialog({ allStudents, message, enrolled, onClose, onSave, courseLoading }: StudentManagerDialogProps) {
-  const [selected, setSelected] = useState<Student[]>(enrolled);
+  const [selected, setSelected] = useState<AppTypes.Course["students"]>(enrolled);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const toggleStudent = (student: Student) => {
+  const toggleStudent = (student: AppTypes.Course["students"]) => {
     setSelected(prev =>
-      prev.find(s => s.id === student.id)
-        ? prev.filter(s => s.id !== student.id)
-        : [...prev, student]
+      prev.find(s => s.id === student[0].id)
+        ? prev.filter(s => s.id !== student[0].id)
+        : [...prev, student[0]]
     );
   };
 
-  const isSelected = (student: Student) => selected.some(s => s.id === student.id);
+  const isSelected = (student: AppTypes.Course["students"]) => selected.some(s => s.id === student[0].id);
 
   const handleSave = async () => {
     setSubmitting(true);
@@ -60,8 +60,8 @@ export default function StudentManagerDialog({ allStudents, message, enrolled, o
         {feedback && (
           <div
             className={`mb-3 text-sm rounded px-3 py-2 ${feedback.toLowerCase().includes('fail')
-                ? 'bg-red-100 text-red-700'
-                : 'bg-green-100 text-green-700'
+              ? 'bg-red-100 text-red-700'
+              : 'bg-green-100 text-green-700'
               }`}
           >
             {feedback}
@@ -73,10 +73,10 @@ export default function StudentManagerDialog({ allStudents, message, enrolled, o
           {allStudents.map(student => (
             <button
               key={student.id}
-              onClick={() => toggleStudent(student)}
+              onClick={() => toggleStudent([student])}
               disabled={submitting}
               className={`flex items-center gap-3 p-3 border rounded-md transition
-                ${isSelected(student)
+                ${isSelected([student])
                   ? "bg-blue-100 border-blue-400"
                   : "bg-white hover:bg-gray-50"}`}
             >
@@ -88,7 +88,7 @@ export default function StudentManagerDialog({ allStudents, message, enrolled, o
                 <p className="text-xs text-gray-500">{student.email}</p>
               </div>
               <span className="ml-auto">
-                {isSelected(student) && (
+                {isSelected([student]) && (
                   <span className="text-blue-600 font-semibold text-sm">✓</span>
                 )}
               </span>

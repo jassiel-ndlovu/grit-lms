@@ -1,12 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Timer, Send, ChevronLeft, ChevronRight, Flag, Save, Eye, EyeOff, Upload, Trash2 } from 'lucide-react';
 import { useTests } from '@/context/TestContext';
-import { useProfile } from '@/context/ProfileContext';
-import { TestTakingPageSkeleton } from '../models/test-taking-skeleton';
+import { TestTakingPageSkeleton } from '../models/skeletons/test-taking-skeleton';
 import { formatTime } from '@/lib/functions';
+import { useCourses } from '@/context/CourseContext';
 
 type TestTakingPageProps = {
   params: Promise<{ id: string }>;
@@ -16,9 +18,9 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   const { id } = use(params);
   const router = useRouter();
   const { currentTest: test, fetchTestById } = useTests();
+  const { courses, fetchCoursesByIds } = useCourses();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  // @ts-ignore
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
@@ -29,6 +31,12 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   useEffect(() => {
     fetchTestById(id);
   }, [id, fetchTestById]);
+
+  useEffect(() => {
+    if (test) {
+      fetchCoursesByIds([test.courseId]);
+    }
+  }, [test, fetchCoursesByIds]);
 
   // Initialize timer when test loads
   useEffect(() => {
@@ -76,7 +84,6 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
   const currentQuestion = test.questions[currentQuestionIndex];
 
-  // @ts-ignore
   const handleAnswerChange = (questionId: string, answer: any) => {
     setAnswers(prev => ({
       ...prev,
@@ -124,8 +131,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     }
   };
 
-  // @ts-ignore
-  const renderQuestionInput = (question: any) => {
+  const renderQuestionInput = (question: AppTypes.TestQuestion) => {
     const answer = answers[question.id] || '';
 
     switch (question.type) {
@@ -242,7 +248,9 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
               <h1 className="text-lg font-semibold text-gray-900">
                 {test.title}
               </h1>
-              <p className="text-sm text-gray-500">{test.courseName}</p>
+              <p className="text-sm text-gray-500">
+                {courses[0].name}
+              </p>
             </div>
 
             <div className="flex items-center gap-4">

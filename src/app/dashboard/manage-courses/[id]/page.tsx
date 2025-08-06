@@ -15,7 +15,7 @@ export default function EditCoursePage() {
   const { updating: courseUpdateLoading, loading: courseLoading, message, courses, updateCourse } = useCourses();
   const { students } = useStudent();
 
-  const [course, setCourse] = useState<Course | null>(null);
+  const [course, setCourse] = useState<AppTypes.Course | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [studentDialogOpen, setStudentDialogOpen] = useState<boolean>(false);
 

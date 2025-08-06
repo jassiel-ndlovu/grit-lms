@@ -1,16 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 'use client';
 
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { Message } from '@/lib/message.class';
 
 type StudentContextType = {
-  students: Student[];
+  students: AppTypes.Student[];
   loading: boolean;
   updating: boolean;
   message: Message | null;
   fetchStudents: () => Promise<void>;
-  addStudent: (student: Partial<Student>) => Promise<Student | void>;
-  updateStudent: (id: string, student: Partial<Student>) => Promise<Student | void>;
+  fetchStudentsById: (ids: string[]) => Promise<AppTypes.Student[]>;
+  addStudent: (student: Partial<AppTypes.Student>) => Promise<AppTypes.Student | void>;
+  updateStudent: (id: string, student: Partial<AppTypes.Student>) => Promise<AppTypes.Student | void>;
   deleteStudent: (id: string) => Promise<void>;
   clearMessage: () => void;
 };
@@ -18,7 +21,7 @@ type StudentContextType = {
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
 export const StudentProvider = ({ children }: { children: ReactNode }) => {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<AppTypes.Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
@@ -44,7 +47,25 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const addStudent = useCallback(async (student: Partial<Student>) => {
+  const fetchStudentsById = useCallback(async (ids: string[]) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/students?ids=${ids.join(',')}`);
+      if (!res.ok) throw new Error('Failed to fetch students by ID');
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.message || 'Failed to fetch students by ID',
+        { title: 'Fetch Error', duration: 5000 }
+      ));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const addStudent = useCallback(async (student: Partial<AppTypes.Student>) => {
     setLoading(true);
     clearMessage();
     try {
@@ -61,7 +82,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         { duration: 3000 }
       ));
       return newStudent;
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to add student',
@@ -72,7 +93,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [clearMessage]);
 
-  const updateStudent = useCallback(async (id: string, student: Partial<Student>) => {
+  const updateStudent = useCallback(async (id: string, student: Partial<AppTypes.Student>) => {
     setLoading(true);
     setUpdating(true);
     clearMessage();
@@ -90,7 +111,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         { duration: 3000 }
       ));
       return updated;
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to update student',
@@ -106,8 +127,8 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     clearMessage();
     try {
-      const res = await fetch(`/api/students/${id}`, { 
-        method: 'DELETE' 
+      const res = await fetch(`/api/students/${id}`, {
+        method: 'DELETE'
       });
       if (!res.ok) throw new Error('Failed to delete student');
       setStudents(prev => prev.filter(s => s.id !== id));
@@ -115,7 +136,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         'Student deleted successfully',
         { duration: 3000 }
       ));
-      // @ts-ignore
+
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to delete student',
@@ -138,6 +159,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         updating,
         message,
         fetchStudents,
+        fetchStudentsById,
         addStudent,
         updateStudent,
         deleteStudent,

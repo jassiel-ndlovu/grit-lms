@@ -3,9 +3,11 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
 export default withAuth(
-  // @ts-ignore
   function middleware(req) {
-    // You can add additional logic here if needed
+    const token = req.nextauth.token;
+    if (!token) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
     return NextResponse.next();
   },
   {

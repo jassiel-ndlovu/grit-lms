@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useCourses } from "@/context/CourseContext";
 import { QuestionType, TestQuestion } from "@/generated/prisma";
 import { parseDateTimeLocal, formatForDateTimeLocal } from "@/lib/functions";
@@ -6,19 +8,20 @@ import { useState } from "react";
 
 interface CreateTestDialogProps {
   onClose: () => void;
-  onSave: (courseId: string, testData: Partial<Test>) => Promise<void>;
+  onSave: (courseId: string, testData: Partial<AppTypes.Test>) => Promise<void>;
   loading?: boolean;
 }
 
 export default function CreateTestDialog({ onClose, onSave, loading = false }: CreateTestDialogProps) {
   const { courses } = useCourses();
-  const [formData, setFormData] = useState<Partial<Test & { questions: Partial<TestQuestion>[] }>>({
+  const [formData, setFormData] = useState<Partial<AppTypes.Test & { questions: Partial<TestQuestion>[] }>>({
     title: '',
     description: '',
     preTestInstructions: '',
     courseId: '',
     dueDate: new Date(),
     timeLimit: undefined,
+    // @ts-expect-error testId is not required for creation
     questions: [{
       id: "1",
       question: '',
@@ -30,6 +33,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
   });
 
   const addQuestion = () => {
+    // @ts-expect-error testid is not required for creation
     setFormData(prev => ({
       ...prev,
       questions: [
@@ -53,7 +57,6 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
     }));
   };
 
-  // @ts-ignore
   const updateQuestion = (index: number, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -64,7 +67,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
   const handleSubmit = async () => {
     const totalPoints = (formData.questions || []).reduce((sum, q) => sum + (q.points || 0), 0);
 
-    const testData: Partial<Test> = {
+    const testData: Partial<AppTypes.Test> = {
       title: formData.title,
       description: formData.description,
       preTestInstructions: formData.preTestInstructions,
@@ -257,7 +260,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
                         ))}
                         <input
                           type="text"
-                          value={question.correctAnswer || ''}
+                          value={question.answer?.toString() || ''}
                           onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
                           placeholder="Correct answer"
                           className="w-full text-sm px-3 py-2 border border-green-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"

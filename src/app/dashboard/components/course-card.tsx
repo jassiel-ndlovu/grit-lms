@@ -2,8 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 type CourseCardProps = {
-  course: Course;
-  lessons: Lesson[];
+  course: AppTypes.Course;
+  lessons: AppTypes.Lesson[];
 };
 
 export default function CourseCard({ course }: CourseCardProps) {

@@ -3,7 +3,7 @@ import { getYouTubeId } from "@/lib/functions";
 import { FileText, Video } from "lucide-react";
 
 type ViewLessonContentProps = {
-  lesson: Partial<Lesson>;
+  lesson: Partial<AppTypes.Lesson>;
   onEdit: () => void;
 }
 
@@ -56,11 +56,11 @@ export default function ViewLessonContent({ lesson, onEdit }: ViewLessonContentP
         </div>
       )}
 
-      {lesson.resourceLinks && lesson.resourceLinks.length > 0 ? (
+      {lesson.attachmentUrls && lesson.attachmentUrls.length > 0 ? (
         <div className="mt-12 pt-4 border-t border-t-gray-200">
           <h3 className="text-lg font-semibold mb-3">Resources</h3>
           <ul className="space-y-2">
-            {lesson.resourceLinks.map((resource, idx) =>
+            {lesson.attachmentUrls.map((resource, idx) =>
               resource?.url ? (
                 <li key={idx} className="flex items-center gap-3">
                   <FileText className="w-4 h-4 text-gray-600 shrink-0" />

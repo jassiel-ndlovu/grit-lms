@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import StartTestConfirmationDialog from "../../models/start-test-confirmation";
 import { useTests } from "@/context/TestContext";
-import { useProfile } from "@/context/ProfileContext";
 import { formatDate } from "@/lib/functions";
-import { PreTestInstructionsPageSkeleton } from "../../models/pre-test-skeleton";
+import { PreTestInstructionsPageSkeleton } from "../../models/skeletons/pre-test-skeleton";
 import LessonMarkdown from "@/app/components/markdown";
+import { useCourses } from "@/context/CourseContext";
 
 type PreTestInstructionsPageProps = {
   params: Promise<{ id: string }>;
@@ -18,6 +18,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   const { id } = use(params);
   const router = useRouter();
   const { currentTest, fetchTestById } = useTests();
+  const { courses, fetchCoursesByIds } = useCourses();;
 
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -25,6 +26,12 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   useEffect(() => {
     fetchTestById(id);
   }, []);
+
+  useEffect(() => {
+    if (currentTest) {
+      fetchCoursesByIds([currentTest.courseId]);
+    }
+  }, [currentTest, fetchCoursesByIds]);
 
   const test = currentTest;
   console.log(currentTest);
@@ -53,7 +60,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
                 <h1 className="text-2xl font-bold">{test.title}</h1>
                 <div className="flex items-center gap-2 mt-1">
                   <BookOpen className="w-4 h-4 opacity-80" />
-                  <span className="opacity-90">{test.courseName}</span>
+                  <span className="opacity-90">{courses[0].name}</span>
                 </div>
               </div>
             </div>

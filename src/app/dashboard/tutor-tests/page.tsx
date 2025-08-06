@@ -14,9 +14,9 @@ export default function TutorTestsPage() {
   const { tests, fetchTestsByTutorId, createTest, deleteTest, loading: testLoading } = useTests();
   const { profile } = useProfile();
 
-  const tutorProfile: Tutor = profile as Tutor;
+  const tutorProfile: AppTypes.Tutor = profile as AppTypes.Tutor;
 
-  const [filteredTests, setFilteredTests] = useState<Test[]>([]);
+  const [filteredTests, setFilteredTests] = useState<AppTypes.Test[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -65,7 +65,7 @@ export default function TutorTestsPage() {
     return () => clearTimeout(timeout);
   }, [searchTerm, selectedCourse]);
 
-  const handleCreateTest = async (courseId: string, testData: Partial<Test>) => {
+  const handleCreateTest = async (courseId: string, testData: Partial<AppTypes.Test>) => {
     setLoading(true);
     try {
       await createTest(courseId, testData);

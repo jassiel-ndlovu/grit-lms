@@ -6,7 +6,7 @@ import { useLesson } from '@/context/LessonContext';
 interface NoLessonsFoundProps {
   courseId: string;
   courseName: string;
-  onLessonCreated?: (lesson: Lesson) => void;
+  onLessonCreated?: (lesson: AppTypes.Lesson) => void;
 }
 
 export default function NoLessonsFound({ courseId, courseName, onLessonCreated }: NoLessonsFoundProps) {
@@ -16,7 +16,7 @@ export default function NoLessonsFound({ courseId, courseName, onLessonCreated }
 
   const { createLesson } = useLesson();
 
-  const handleCreateLesson = async (lessonData: Partial<Lesson>) => {
+  const handleCreateLesson = async (lessonData: Partial<AppTypes.Lesson>) => {
     setCreating(true);
     setServerError(null);
 
@@ -51,7 +51,7 @@ export default function NoLessonsFound({ courseId, courseName, onLessonCreated }
           <div>
             <h2 className="text-xl font-semibold text-gray-800 mb-2">No Lessons Found</h2>
             <p className="text-gray-600 text-sm">
-              The course &quot;{courseName}&quot; doesn't have any lessons yet. Create your first lesson to get started.
+              The course &quot;{courseName}&quot; doesn&apos;t have any lessons yet. Create your first lesson to get started.
             </p>
           </div>
           <div className="space-y-3">

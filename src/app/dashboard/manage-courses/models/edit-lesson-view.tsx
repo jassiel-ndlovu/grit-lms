@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Plus, Save } from "lucide-react";
 
 type EditLessonViewProps = {
-  lesson: Partial<Lesson>;
-  // @ts-ignore
-  onUpdate: (key: keyof Lesson, value: any) => void;
+  lesson: Partial<AppTypes.Lesson>;
+  onUpdate: (key: keyof AppTypes.Lesson, value: any) => void;
   onSave: () => void;
   onCancel: () => void;
   onAddVideo: () => void;
@@ -93,16 +94,16 @@ export default function EditLessonView({ lesson, onUpdate, onSave, onCancel, onA
             Add Resource
           </button>
         </div>
-        {lesson.resourceLinks && lesson.resourceLinks.length > 0 ? (
-          lesson.resourceLinks.map((resource, idx) => (
+        {lesson.attachmentUrls && lesson.attachmentUrls.length > 0 ? (
+          lesson.attachmentUrls.map((resource, idx) => (
             <div key={idx} className="flex items-center gap-2">
               <input
                 type="text"
                 value={resource?.title || ''}
                 onChange={(e) => {
-                  const updated = [...(lesson.resourceLinks || [])];
+                  const updated = [...(lesson.attachmentUrls || [])];
                   updated[idx] = { ...updated[idx], title: e.target.value };
-                  onUpdate("resourceLinks", updated);
+                  onUpdate("attachmentUrls", updated);
                 }}
                 placeholder="Resource title"
                 className="w-1/3 text-sm border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none focus:border-blue-500"
@@ -111,9 +112,9 @@ export default function EditLessonView({ lesson, onUpdate, onSave, onCancel, onA
                 type="url"
                 value={resource?.url || ''}
                 onChange={(e) => {
-                  const updated = [...(lesson.resourceLinks || [])];
+                  const updated = [...(lesson.attachmentUrls || [])];
                   updated[idx] = { ...updated[idx], url: e.target.value };
-                  onUpdate("resourceLinks", updated);
+                  onUpdate("attachmentUrls", updated);
                 }}
                 placeholder="https://example.com"
                 className="w-2/3 text-sm border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none focus:border-blue-500"

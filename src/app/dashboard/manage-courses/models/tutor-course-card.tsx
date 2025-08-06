@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { FileText, ImageIcon, Layers, Pencil, Users } from "lucide-react";
 import Image from "next/image";
 
-export default function TutorCourseCard({ c }: { c: Course }) {
+export default function TutorCourseCard({ c }: { c: AppTypes.Course }) {
   const router = useRouter();
 
   return (

@@ -1,4 +1,4 @@
-import Skeleton from "../../components/skeleton";
+import Skeleton from "@/app/dashboard/components/skeleton";
 
 export const PreTestInstructionsPageSkeleton = () => {
   return (

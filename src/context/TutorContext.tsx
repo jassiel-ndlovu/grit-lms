@@ -1,16 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { Message } from '@/lib/message.class';
 
 type TutorContextType = {
-  tutors: Tutor[];
+  tutors: AppTypes.Tutor[];
   loading: boolean;
   updating: boolean;
   message: Message | null;
   fetchTutors: () => Promise<void>;
-  addTutor: (tutor: Partial<Tutor>) => Promise<Tutor | void>;
-  updateTutor: (id: string, tutor: Partial<Tutor>) => Promise<Tutor | void>;
+  addTutor: (tutor: Partial<AppTypes.Tutor>) => Promise<AppTypes.Tutor | void>;
+  updateTutor: (id: string, tutor: Partial<AppTypes.Tutor>) => Promise<AppTypes.Tutor | void>;
   deleteTutor: (id: string) => Promise<void>;
   clearMessage: () => void;
 };
@@ -18,7 +20,7 @@ type TutorContextType = {
 const TutorContext = createContext<TutorContextType | undefined>(undefined);
 
 export const TutorProvider = ({ children }: { children: ReactNode }) => {
-  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [tutors, setTutors] = useState<AppTypes.Tutor[]>([]);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
@@ -34,7 +36,6 @@ export const TutorProvider = ({ children }: { children: ReactNode }) => {
       if (!res.ok) throw new Error('Failed to fetch tutors');
       const data = await res.json();
       setTutors(data);
-      // @ts-ignore
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to load tutors',
@@ -45,7 +46,7 @@ export const TutorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const addTutor = useCallback(async (tutor: Partial<Tutor>) => {
+  const addTutor = useCallback(async (tutor: Partial<AppTypes.Tutor>) => {
     setLoading(true);
     clearMessage();
     try {
@@ -72,7 +73,7 @@ export const TutorProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [clearMessage]);
 
-  const updateTutor = useCallback(async (id: string, tutor: Partial<Tutor>) => {
+  const updateTutor = useCallback(async (id: string, tutor: Partial<AppTypes.Tutor>) => {
     setLoading(true);
     setUpdating(true);
     clearMessage();
@@ -90,7 +91,6 @@ export const TutorProvider = ({ children }: { children: ReactNode }) => {
         { duration: 3000 }
       ));
       return updated;
-      // @ts-ignore
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to update tutor',
@@ -115,7 +115,6 @@ export const TutorProvider = ({ children }: { children: ReactNode }) => {
         'Tutor deleted successfully',
         { duration: 3000 }
       ));
-      // @ts-ignore
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to delete tutor',

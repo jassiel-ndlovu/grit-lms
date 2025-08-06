@@ -1,7 +1,7 @@
 import { PlayCircle, Shield } from "lucide-react";
 
 type StartTestConfirmationDialogProps = {
-  test: Test;
+  test: AppTypes.Test;
   onConfirm: () => void;
   onCancel: () => void;
 }

@@ -132,15 +132,19 @@ model Test {
 }
 
 model TestQuestion {
-  id     String @id @default(cuid())
-  testId String
-  test   Test   @relation(fields: [testId], references: [id])
-
+  id           String         @id @default(uuid())
+  testId       String
+  test         Test           @relation(fields: [testId], references: [id])
   question     String
   type         QuestionType
   points       Int
-  options      String[] // for MCQ only
-  answer       String? // correct answer for MCQ or short-answer
+  options      String[] // For MULTIPLE_CHOICE or MULTI_SELECT
+  answer       Json? // Flexible: string, array, number, depending on type
+  language     String? // For CODE (e.g. "Java", "Python")
+  matchPairs   Json? // For MATCHING: e.g. [{ left: "TCP", right: "Reliable" }]
+  reorderItems String[] // For REORDER: e.g. ["Step A", "Step B", ...]
+  blankCount   Int? // For FILL_IN_THE_BLANK (optional helper for front-end)
+  createdAt    DateTime       @default(now())
   UploadedFile UploadedFile[]
 }
 
@@ -148,6 +152,7 @@ model TestSubmission {
   id          String           @id @default(cuid())
   testId      String
   studentId   String
+  startedAt   DateTime
   submittedAt DateTime
   answers     Json
   score       Float?
@@ -172,9 +177,16 @@ model UploadedFile {
 
 enum QuestionType {
   MULTIPLE_CHOICE
+  TRUE_FALSE
   SHORT_ANSWER
   ESSAY
   FILE_UPLOAD
+  MULTI_SELECT     
+  CODE                 
+  MATCHING          
+  REORDER            
+  FILL_IN_THE_BLANK    
+  NUMERIC  
 }
 
 enum SubmissionStatus {

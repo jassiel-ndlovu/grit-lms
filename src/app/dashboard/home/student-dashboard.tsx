@@ -5,12 +5,13 @@ import { redirect, useRouter } from "next/navigation";
 import { useCourses } from "@/context/CourseContext";
 import { useTests } from "@/context/TestContext";
 import { useProfile } from "@/context/ProfileContext";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import CourseCard from "../components/course-card";
 import Link from "next/link";
 import DashboardSkeleton from "../components/dashboard-skeleton";
 import { formatDate } from "@/lib/functions";
+import { useStudent } from "@/context/StudentContext";
 
 export default function StudentDashboard() {
   const { courses, loading: coursesLoading } = useCourses();
@@ -18,7 +19,7 @@ export default function StudentDashboard() {
   const { profile, loading: profileLoading } = useProfile();
 
   // Derived data
-  const studentProfile = profile as Student;
+  const studentProfile = profile as AppTypes.Student;
 
   // Memoized computations
   const continueCourses = useMemo(() => courses.filter(course => !course.students.find(s => s.id === studentProfile.id)) ?? [], [courses]);
@@ -147,7 +148,9 @@ export default function StudentDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <CourseEventSection events={events} />
         <CourseAssessmentSection assessments={studentTests} />
-        <CourseSubmissionSection submissions={studentSubmissions} />
+        <CourseSubmissionSection
+          submissions={studentSubmissions}
+        />
       </div>
     </div>
   );
@@ -162,7 +165,7 @@ function SkeletonCard() {
   );
 }
 
-function CourseEventSection({ events, loading = false }: { events: CourseEvent[]; loading?: boolean }) {
+function CourseEventSection({ events, loading = false }: { events: AppTypes.CourseEvent[]; loading?: boolean }) {
   const router = useRouter();
   return (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -192,7 +195,7 @@ function CourseEventSection({ events, loading = false }: { events: CourseEvent[]
   );
 }
 
-function CourseAssessmentSection({ assessments, loading = false }: { assessments: Test[] | null; loading?: boolean }) {
+function CourseAssessmentSection({ assessments, loading = false }: { assessments: AppTypes.Test[] | null; loading?: boolean }) {
 
   return (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -218,24 +221,30 @@ function CourseAssessmentSection({ assessments, loading = false }: { assessments
   );
 }
 
-type Sub = {
-  id: string;
-  studentId: string;
-  studentName: string;
-  submittedAt: Date;
-  // @ts-ignore
-  answers: Record<string, any>;
-  uploadedFiles?: {
-    questionId: string;
-    fileUrl: string;
-    fileType: string;
-  }[];
-  score?: number;
-  feedback?: string;
-  status: "submitted" | "graded" | "late";
-}
+function CourseSubmissionSection({ submissions, loading = false }: { submissions: AppTypes.TestSubmission[] | null; loading?: boolean }) {
+  const { fetchStudentsById } = useStudent();
 
-function CourseSubmissionSection({ submissions, loading = false }: { submissions: Sub[] | null; loading?: boolean }) {
+  const [studentRecords, setStudentRecords] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetch = async () => {
+      if (submissions && submissions.length > 0) {
+        const students = await fetchStudentsById(
+          Array.from(new Set(submissions.map(s => s.studentId)))
+        );
+        setStudentRecords(prev => {
+          const newRecords: Record<string, string> = {};
+          students.forEach(s => {
+            newRecords[s.id] = s.fullName;
+          });
+          return { ...prev, ...newRecords };
+        });
+      }
+    }
+
+    fetch();
+  }, [submissions, fetchStudentsById]);
+
   return (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
       <h2 className="text-md font-semibold text-emerald-600 mb-4 flex items-center gap-2">
@@ -250,7 +259,7 @@ function CourseSubmissionSection({ submissions, loading = false }: { submissions
         ) : (
           submissions?.map(s => (
             <div key={s.id} className="bg-gray-50 p-3 rounded hover:bg-emerald-50 transition">
-              <p className="text-sm font-medium text-gray-800">{s.studentName}</p>
+              <p className="text-sm font-medium text-gray-800">{studentRecords[s.studentId]}</p>
               <p className="text-xs text-gray-500">Due: {s.status}</p>
             </div>
           ))

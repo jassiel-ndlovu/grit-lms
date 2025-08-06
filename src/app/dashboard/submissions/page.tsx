@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 'use client';
 
 import Image from 'next/image';
@@ -89,7 +91,6 @@ export default function SubmissionsPage() {
   );
 }
 
-// @ts-ignore
 function NoSubmissions({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center p-10 text-center text-gray-500 bg-white shadow rounded">

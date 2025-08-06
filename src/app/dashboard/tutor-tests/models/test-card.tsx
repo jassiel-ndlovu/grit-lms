@@ -13,12 +13,13 @@ import {
 import ViewSubmissionsDialog from './dialogs/view-submission-dialog';
 import DeleteConfirmationDialog from './dialogs/delete-confirmation-dialog';
 import TestDetailsDialog from './dialogs/test-datails-dialog';
+import { $Enums } from '@/generated/prisma';
 
-const getSubmissionStats = (test: Test) => {
+const getSubmissionStats = (test: AppTypes.Test) => {
   if (test.submissions) {
     const total = test.submissions.length;
-    const graded = test.submissions.filter(s => s.status === 'graded').length;
-    const submitted = test.submissions.filter(s => s.status === 'submitted').length;
+    const graded = test.submissions.filter(s => s.status === $Enums.SubmissionStatus.GRADED).length;
+    const submitted = test.submissions.filter(s => s.status === $Enums.SubmissionStatus.SUBMITTED).length;
     return { total, graded, submitted };
   } else {
     return { 
@@ -40,8 +41,8 @@ const formatDate = (date: Date) => {
 };
 
 type TestCardProps = {
-  test: Test;
-  course?: Course;
+  test: AppTypes.Test;
+  course?: AppTypes.Course;
   deleteTest: (testId: string) => Promise<void>;
 };
 
@@ -63,7 +64,7 @@ export default function TestCard({ test, course, deleteTest }: TestCardProps) {
       <div className="bg-white border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-200 group">
         <TestCardHeader
           test={test}
-          course={course as Course}
+          course={course as AppTypes.Course}
           onViewSubmissions={() => setShowSubmissionsDialog(true)}
           onDelete={() => setShowDeleteDialog(true)}
         />
@@ -90,7 +91,7 @@ export default function TestCard({ test, course, deleteTest }: TestCardProps) {
       {showSubmissionsDialog && (
         <ViewSubmissionsDialog
           test={test}
-          course={course as Course}
+          course={course as AppTypes.Course}
           onClose={() => setShowSubmissionsDialog(false)}
         />
       )}
@@ -106,7 +107,7 @@ export default function TestCard({ test, course, deleteTest }: TestCardProps) {
       {showDetailsDialog && (
         <TestDetailsDialog
           test={test}
-          course={course as Course}
+          course={course as AppTypes.Course}
           onClose={() => setShowDetailsDialog(false)}
         />
       )}
@@ -115,7 +116,7 @@ export default function TestCard({ test, course, deleteTest }: TestCardProps) {
 }
 
 type TestCardFooterProps = {
-  test: Test;
+  test: AppTypes.Test;
   stats: ReturnType<typeof getSubmissionStats>;
   onViewSubmissions: () => void;
   onViewDetails: () => void;
@@ -146,7 +147,7 @@ const TestCardFooter = ({ test, stats, onViewDetails }: TestCardFooterProps) => 
   </div>
 );
 
-const TestCardDates = ({ test, isOverdue }: { test: Test; isOverdue: boolean }) => (
+const TestCardDates = ({ test, isOverdue }: { test: AppTypes.Test; isOverdue: boolean }) => (
   <div className="space-y-2 text-sm">
     <div className="flex items-center gap-2">
       <Calendar className="w-4 h-4 text-gray-400" />
@@ -185,7 +186,7 @@ const TestCardProgress = ({ stats }: { stats: ReturnType<typeof getSubmissionSta
   ) : null;
 };
 
-const TestCardStats = ({ test, stats }: { test: Test; stats: ReturnType<typeof getSubmissionStats> }) => (
+const TestCardStats = ({ test, stats }: { test: AppTypes.Test; stats: ReturnType<typeof getSubmissionStats> }) => (
   <div className="grid grid-cols-3 gap-3 mb-4">
     <div className="text-center p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
       <div className="text-lg font-bold text-gray-900">{test.questions.length}</div>
@@ -202,7 +203,7 @@ const TestCardStats = ({ test, stats }: { test: Test; stats: ReturnType<typeof g
   </div>
 );
 
-const TestCardStatus = ({ test, isOverdue }: { test: Test; isOverdue: boolean }) => (
+const TestCardStatus = ({ test, isOverdue }: { test: AppTypes.Test; isOverdue: boolean }) => (
   <div className="mt-3 flex items-center justify-between">
     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${test.isActive
       ? 'bg-green-100 text-green-700'
@@ -231,8 +232,8 @@ const TestCardStatus = ({ test, isOverdue }: { test: Test; isOverdue: boolean })
 );
 
 type TestCardHeaderProps = {
-  test: Test;
-  course: Course;
+  test: AppTypes.Test;
+  course: AppTypes.Course;
   onViewSubmissions: () => void;
   onDelete: () => void;
 }

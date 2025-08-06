@@ -4,13 +4,13 @@ import DialogHeader from "./dialog-header";
 import { useState } from "react";
 
 type ViewSubmissionsDialogProps = {
-  test: Test; 
-  course: Course; 
+  test: AppTypes.Test; 
+  course: AppTypes.Course; 
   onClose: () => void;
 }
 const ViewSubmissionsDialog = ({ test, course, onClose }: ViewSubmissionsDialogProps) => {
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
-  selectedSubmission;
+  const [selectedSubmission, setSelectedSubmission] = useState<AppTypes.TestSubmission | null>(null);
+  console.log(selectedSubmission);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -77,7 +77,7 @@ const ViewSubmissionsDialog = ({ test, course, onClose }: ViewSubmissionsDialogP
                         <User className="w-5 h-5 text-blue-600" />
                       </div>
                       <div>
-                        <h4 className="font-medium text-gray-900">{submission.studentName}</h4>
+                        <h4 className="font-medium text-gray-900">{submission.studentId}</h4>
                         <p className="text-sm text-gray-500">
                           Submitted: {new Date(submission.submittedAt).toLocaleDateString()} at{' '}
                           {new Date(submission.submittedAt).toLocaleTimeString()}
@@ -92,13 +92,13 @@ const ViewSubmissionsDialog = ({ test, course, onClose }: ViewSubmissionsDialogP
                       
                       <div className="text-right">
                         <p className="font-medium text-gray-900">
-                          {formatScore(submission.score, test.totalPoints)}
+                          {formatScore(submission.score as number, test.totalPoints)}
                         </p>
                         {submission.score !== undefined && (
                           <div className="flex items-center gap-1">
                             <Star className="w-3 h-3 text-yellow-500 fill-current" />
                             <span className="text-xs text-gray-500">
-                              {Math.round((submission.score / test.totalPoints) * 100)}%
+                              {Math.round(((submission.score as number) / test.totalPoints) * 100)}%
                             </span>
                           </div>
                         )}

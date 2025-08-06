@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { useState, use, useEffect } from "react";
@@ -25,9 +27,9 @@ export default function ManageLessons({ params }: CoursePageProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [course, setCourse] = useState<Course | null>(null);
-  const [lessons, setLessons] = useState<Partial<Lesson>[] | null>(null);
-  const [updatedLesson, setUpdatedLesson] = useState<Partial<Lesson> | null>(null);
+  const [course, setCourse] = useState<AppTypes.Course | null>(null);
+  const [lessons, setLessons] = useState<Partial<AppTypes.Lesson>[] | null>(null);
+  const [updatedLesson, setUpdatedLesson] = useState<Partial<AppTypes.Lesson> | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -48,7 +50,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
     }
   }, [id, courses, courseLoading]);
 
-  const handleDeleteLesson = (lesson: Partial<Lesson>, index: number, e: React.MouseEvent) => {
+  const handleDeleteLesson = (lesson: Partial<AppTypes.Lesson>, index: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selecting the lesson
     setDeleteConfirmation({
       lessonId: lesson.id as string,
@@ -77,7 +79,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
     }
   };
 
-  const handleCreateLesson = async (newLesson: Partial<Lesson>) => {
+  const handleCreateLesson = async (newLesson: Partial<AppTypes.Lesson>) => {
     if (!course) return;
 
     try {
@@ -101,13 +103,12 @@ export default function ManageLessons({ params }: CoursePageProps) {
     }
   };
 
-  // @ts-ignore
-  const handleUpdate = (key: keyof Lesson, value: any) => {
+  const handleUpdate = (key: keyof AppTypes.Lesson, value: any) => {
     setUpdatedLesson((prev) =>
     ({
       ...(prev ?? {}),
       [key]: value,
-    } as Lesson)
+    } as AppTypes.Lesson)
     );
 
   };
@@ -123,7 +124,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
         title: updatedLesson.title,
         description: updatedLesson.description,
         videoUrl: updatedLesson.videoUrl,
-        resourceLinks: updatedLesson.resourceLinks,
+        attachmentUrls: updatedLesson.attachmentUrls,
       });
 
       alert("Lesson updated successfully ✅");
@@ -186,8 +187,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
     />;
   }
 
-  // @ts-ignore
-  const updateCurrentLesson = (key: keyof Lesson, value: any) => {
+  const updateCurrentLesson = (key: keyof AppTypes.Lesson, value: any) => {
     if (!lessons) return;
 
     setLessons(prev =>
@@ -204,9 +204,9 @@ export default function ManageLessons({ params }: CoursePageProps) {
     ]);
   };
 
-  const addResourceLink = () => {
-    updateCurrentLesson("resourceLinks", [
-      ...(currentLesson.resourceLinks || []),
+  const addAttachmentUrl = () => {
+    updateCurrentLesson("attachmentUrls", [
+      ...(currentLesson.attachmentUrls || []),
       { title: "", url: "" }
     ]);
   };
@@ -218,9 +218,9 @@ export default function ManageLessons({ params }: CoursePageProps) {
   };
 
   const removeResourceLink = (index: number) => {
-    const updated = [...(currentLesson.resourceLinks || [])];
+    const updated = [...(currentLesson.attachmentUrls || [])];
     updated.splice(index, 1);
-    updateCurrentLesson("resourceLinks", updated);
+    updateCurrentLesson("attachmentUrls", updated);
   };
 
   return (
@@ -355,7 +355,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
               onCancel={() => setEditMode(false)}
               onAddVideo={addVideoUrl}
               onRemoveVideo={removeVideoUrl}
-              onAddResource={addResourceLink}
+              onAddResource={addAttachmentUrl}
               onRemoveResource={removeResourceLink}
             />
           ) : (
@@ -389,7 +389,7 @@ function InvalidLessonIndex({
         <div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">Invalid Lesson</h2>
           <p className="text-gray-600">
-            The requested lesson doesn't exist in &quot;{courseName}&quot;.
+            The requested lesson doesn&apos;t exist in &quot;{courseName}&quot;.
             This course has {totalLessons} lesson{totalLessons !== 1 ? 's' : ''}.
           </p>
         </div>

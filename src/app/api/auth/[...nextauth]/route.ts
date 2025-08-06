@@ -18,7 +18,7 @@ const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials): Promise<GritUser | null> {
+      async authorize(credentials): Promise<AppTypes.User | null> {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Missing email or password.");
         }
@@ -41,7 +41,7 @@ const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email,
           role: user.role,
-        } as GritUser;
+        } as AppTypes.User;
       },
     }),
   ],

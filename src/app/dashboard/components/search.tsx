@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface CourseSearchBarProps {
-  onSearch: (options: CourseSearchOptions) => void;
+  onSearch: (options: AppTypes.CourseSearchOptions) => void;
 }
 
 const CourseSearchBar: React.FC<CourseSearchBarProps> = ({ onSearch }) => {
