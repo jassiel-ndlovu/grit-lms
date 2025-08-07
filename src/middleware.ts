@@ -1,13 +1,10 @@
-// middleware.ts
+// eslint-disable @typescript-eslint/no-unused-vars
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    const token = req.nextauth.token;
-    if (!token) {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
+
     return NextResponse.next();
   },
   {

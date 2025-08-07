@@ -134,7 +134,7 @@ model Test {
 model TestQuestion {
   id           String         @id @default(uuid())
   testId       String
-  test         Test           @relation(fields: [testId], references: [id])
+  test         Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
   question     String
   type         QuestionType
   points       Int
@@ -159,7 +159,7 @@ model TestSubmission {
   feedback    String?
   status      SubmissionStatus
 
-  test          Test           @relation(fields: [testId], references: [id])
+  test          Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
   student       Student        @relation(fields: [studentId], references: [id])
   uploadedFiles UploadedFile[]
 }
@@ -181,12 +181,12 @@ enum QuestionType {
   SHORT_ANSWER
   ESSAY
   FILE_UPLOAD
-  MULTI_SELECT     
-  CODE                 
-  MATCHING          
-  REORDER            
-  FILL_IN_THE_BLANK    
-  NUMERIC  
+  MULTI_SELECT
+  CODE
+  MATCHING
+  REORDER
+  FILL_IN_THE_BLANK
+  NUMERIC
 }
 
 enum SubmissionStatus {
@@ -214,7 +214,7 @@ model AssessmentCompletion {
 
   student Student @relation(fields: [studentId], references: [id])
   quiz    Quiz?   @relation(fields: [quizId], references: [id])
-  test    Test?   @relation(fields: [testId], references: [id])
+  test    Test?   @relation(fields: [testId], references: [id], onDelete: Cascade)
 }
 
 model Submission {

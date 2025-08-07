@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 
 export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState<boolean>(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -71,9 +71,9 @@ type HeaderUserProfileProps = {
 function HeaderUserProfile({ menuOpen, setMenuOpen }: HeaderUserProfileProps) {
   const { profile, status } = useProfile();
 
-  if (status === 'loading') return <LoadingPopup />;
+  if (status === 'loading') 
+    return <LoadingPopup />;
   if (!profile) {
-    console.log("Profile not found");
     return null;
   }
 

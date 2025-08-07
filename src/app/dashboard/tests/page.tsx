@@ -11,14 +11,22 @@ import Skeleton from '../components/skeleton';
 
 export default function TestsPage() {  
   const { tests, fetchTestsByCourse, loading: testsLoading } = useTests();
-  const { courses, loading: coursesLoading } = useCourses();
+  const { courses, fetchCoursesByStudentId, loading: coursesLoading } = useCourses();
   const { profile, loading: profileLoading } = useProfile();
+
+  const [studentCourses, setStudentCourses] = useState<AppTypes.Course[]>([]);
 
   // Memoize student profile once
   const studentProfile = useMemo(() => profile as AppTypes.Student, [profile]);
 
-  // Memoize courses without creating new arrays unnecessarily
-  const studentCourses = useMemo(() => courses.filter(course => !course.students.find(s => s.id === studentProfile.id)) ?? [], [courses]);
+  // Fetch student courses
+  useEffect(() => {
+    if (studentProfile?.id) {
+      // Fetch courses for the student
+      fetchCoursesByStudentId(studentProfile.id);
+      setStudentCourses(courses);
+    }
+  }, [studentProfile?.id, fetchCoursesByStudentId]);
 
   // Fetch tests ONLY when necessary
   useEffect(() => {
@@ -34,6 +42,8 @@ export default function TestsPage() {
       studentCourses.some(c => c.id === test.courseId)
     );
   }, [tests, studentCourses]);
+
+  console.log("Student tests:", studentTests);
 
   // Group by course
   const groupedByCourse = useMemo(() => {
@@ -89,6 +99,10 @@ export default function TestsPage() {
 }
 
 function TestContent({ test }: { test: AppTypes.Test }) {
+  const { profile } = useProfile();
+  
+  console.log("Rendering test:", test.title, "for profile:", profile?.id);
+
   const [timeLeft, setTimeLeft] = useState<string>('Calculating...');
   const [isExpired, setIsExpired] = useState(false);
 
@@ -98,10 +112,20 @@ function TestContent({ test }: { test: AppTypes.Test }) {
     if (!test.timeLimit) return;
 
     const calculateTimeLeft = () => {
-      const now = new Date();
+      const studentSub = test.submissions.find(s => s.studentId === profile?.id);
+
+      let startTime = new Date();
+
+      if (studentSub) {
+        startTime = new Date(studentSub.startedAt);
+      } else {
+        // Now
+        startTime = new Date(Date.now());
+      }
+
       const endTime = new Date(test.createdAt);
       endTime.setMinutes(endTime.getMinutes() + (test.timeLimit as number));
-      const distance = endTime.getTime() - now.getTime();
+      const distance = endTime.getTime() - startTime.getTime();
 
       if (distance < 0) {
         setIsExpired(true);

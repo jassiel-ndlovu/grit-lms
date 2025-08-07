@@ -115,7 +115,7 @@ export default function EditCoursePage() {
           <ActionCard
             title="Manage Assessments"
             icon={FileText}
-            href={`/dashboard/tutor-tests/${id}`}
+            href={`/dashboard/tutor-tests`}
             description="Create and monitor quizzes or tests"
           />
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, FileText, Send } from "lucide-react";
-import { redirect, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCourses } from "@/context/CourseContext";
 import { useTests } from "@/context/TestContext";
 import { useProfile } from "@/context/ProfileContext";
@@ -14,15 +14,26 @@ import { formatDate } from "@/lib/functions";
 import { useStudent } from "@/context/StudentContext";
 
 export default function StudentDashboard() {
-  const { courses, loading: coursesLoading } = useCourses();
+  const { courses, loading: coursesLoading, fetchCoursesByStudentId } = useCourses();
   const { tests, fetchTestsByCourse, loading: testsLoading } = useTests();
   const { profile, loading: profileLoading } = useProfile();
+
+  // const [continueCourses, setContinueCourses] = useState<AppTypes.Course[]>([]);
 
   // Derived data
   const studentProfile = profile as AppTypes.Student;
 
+  useEffect(() => {
+    if (studentProfile) {
+      fetchCoursesByStudentId(studentProfile.id);
+  //     console.log("Courses:", courses);
+  // console.log("Continue Courses:", continueCourses);
+  //     setContinueCourses(courses);
+    } 
+  }, [studentProfile, fetchCoursesByStudentId]);
+
   // Memoized computations
-  const continueCourses = useMemo(() => courses.filter(course => !course.students.find(s => s.id === studentProfile.id)) ?? [], [courses]);
+  const continueCourses = useMemo(() => courses, [courses]);
 
   const events = useMemo(() =>
     courses?.flatMap(course => course.courseEvents ?? []) ?? [],
@@ -57,11 +68,6 @@ export default function StudentDashboard() {
     return <DashboardSkeleton />;
   }
 
-  // Early return if no profile
-  if (!studentProfile) {
-    redirect("/");
-  }
-
   return (
     <div className="h-full px-6 pt-6 pb-10 space-y-12 bg-gray-50 overflow-y-auto">
       {/* Banner */}
@@ -86,7 +92,7 @@ export default function StudentDashboard() {
           Continue Working
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {isLoading || !continueCourses.length
+          {isLoading
             ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
             : continueCourses.length > 0
               ? continueCourses.map(course => (
@@ -103,8 +109,10 @@ export default function StudentDashboard() {
 
       {/* Enrolled Courses */}
       <section>
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Enrolled Courses</h2>
-        {isLoading || !continueCourses.length ? (
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          Enrolled Courses
+        </h2>
+        {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
@@ -136,7 +144,7 @@ export default function StudentDashboard() {
             </p>
             <Link
               href="/dashboard/browse-courses"
-              className="inline-block px-5 py-2 rounded bg-blue-500 text-white text-sm font-medium hover:bg-blue-400 transition"
+              className="inline-block px-5 py-2 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
             >
               Browse Courses
             </Link>

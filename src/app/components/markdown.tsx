@@ -1,34 +1,43 @@
+import React from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { HTMLAttributes } from "react";
+
+interface CodeProps extends HTMLAttributes<HTMLElement> {
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
 
 export default function LessonMarkdown({ content }: { content: string }) {
   return (
-    <ReactMarkdown
-      components={{
-        h1: ({ children }) => <h1 className="text-xl font-bold mb-6">{children}</h1>,
-        h2: ({ children }) => <h2 className="text-lg font-semibold mb-6">{children}</h2>,
-        ul: ({ children }) => <ul className="list-disc pl-6 mb-4">{children}</ul>,
-        li: ({ children }) => <li className="mb-1">{children}</li>,
-        p: ({ children }) => <p className="mb-4">{children}</p>,
-        code: ({ children, ...props }) => {
-          const isInline = 'inline' in props && props.inline;
-          return isInline ? (
-            <code
-              className="bg-gray-100 text-red-600 px-1 py-0.5 rounded text-sm font-mono"
-              {...props}
-            >
-              {children}
-            </code>
-          ) : (
-            <span className="w-full bg-gray-100 text-gray-800 px-2 py-0.5 rounded border border-gray-200 overflow-x-auto mt-4 mb-4">
-              <code className="font-mono text-sm" {...props}>
-                {children}
-              </code>
-            </span>
-          );
-        },
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+    <div className="prose prose-sm max-w-none leading-relaxed space-y-4">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code({ inline, className, children, ...props }: CodeProps) {
+            if (inline) {
+              return (
+                <code
+                  className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm"
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <pre className="bg-gray-100 p-4 rounded-lg overflow-x-auto">
+                <code className="text-sm" {...props}>
+                  {children}
+                </code>
+              </pre>
+            );
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }

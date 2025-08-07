@@ -58,6 +58,20 @@ export default function ManageCoursesPage() {
   const handleCreateCourse = async () => {
     setCreating(true);
 
+    if (!formData.courseName) {
+      setFeedback("Course name is required.");
+      setIsOpen(false);
+      setCreating(false);
+      return;
+    }
+
+    if (!formData.description) {
+      setFeedback("Description is required.");
+      setIsOpen(false);
+      setCreating(false);
+      return;
+    } 
+
     const enrolled = students.filter(s => formData.selectedStudentIds.includes(s.id));
     const newCourse: AppTypes.Course = {
       id: crypto.randomUUID(),
@@ -73,6 +87,8 @@ export default function ManageCoursesPage() {
       submissions: [],
       courseEvents: [],
     };
+
+    console.log("Creating course:", newCourse);
 
     await createCourse(newCourse);
 

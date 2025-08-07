@@ -94,6 +94,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchCoursesByIds = useCallback(async (courseIds: string[]) => {
     if (!courseIds.length) return;
+    console.log("Fetching courses by IDs:", courseIds);
     setLoading(true);
     try {
       const res = await axios.get('/api/courses', {

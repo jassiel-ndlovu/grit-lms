@@ -78,25 +78,17 @@ export async function POST(req: NextRequest) {
 
   const data = await req.json();
 
-  const user = await prisma.user.findUnique({
-    where: { id: token.id },
-  });
-
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: user?.email },
-  });
-
   const created = await prisma.course.create({
     data: {
-      name: data.courseName,
+      name: data.name,
       description: data.description,
-      imageUrl: data.courseImageUrl,
+      imageUrl: data.imageUrl,
       tutor: {
-        connect: { id: tutor?.id },
+        connect: { email: token.email },
       },
       students: {
         connect:
-          data.enrolledStudents?.map((s: AppTypes.Student) => ({ id: s.id })) ||
+          data.students?.map((s: AppTypes.Student) => ({ id: s.id })) ||
           [],
       },
     },

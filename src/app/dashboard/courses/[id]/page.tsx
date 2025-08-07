@@ -1,35 +1,73 @@
 "use client";
 
-import { notFound } from "next/navigation";
-import { use, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import { use, useEffect, useState } from "react";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, FileText, Send, Calendar, Video, CheckCircle, Circle } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Send, Calendar, Video, CheckCircle, Circle, BookOpen, Plus, AlertTriangle, Home } from "lucide-react";
 import { useCourses } from "@/context/CourseContext";
+import LessonMarkdown from "@/app/components/markdown";
+import { getYouTubeId } from "@/lib/functions";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface CoursePageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function CoursePage({ params }: CoursePageProps) {
-  const { courses } = useCourses();
+  const { courses, fetchCoursesByIds, loading: courseLoading } = useCourses();
+  const { id } = use(params);
 
   const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
+  const [currentLesson, setCurrentLesson] = useState<AppTypes.Lesson | null>(null);
+  const [course, setCourse] = useState<AppTypes.Course | null>(null);
 
-  const { id } = use(params);
-  const course = courses.find((c) => c.id === id);
-  if (!course) return notFound();
+  useEffect(() => {
+    if (!id) return;
 
-  const currentLesson = course.lessons[selectedLessonIndex];
+    console.log("Fetching course with ID:", id);
+    fetchCoursesByIds([id]);
+  }, [id, fetchCoursesByIds]); // Add dependencies
+
+  // Update course and lesson when courses or selected index changes
+  useEffect(() => {
+    if (courses.length > 0 && id) {
+      const foundCourse = courses.find(c => c.id === id);
+      if (foundCourse) {
+        console.log("Course found:", foundCourse);
+        setCourse(foundCourse);
+        setCurrentLesson(foundCourse.lessons[selectedLessonIndex] || null);
+      }
+    }
+  }, [courses, selectedLessonIndex, id]);
+
+  if (courseLoading) {
+    return (
+      <div className="flex flex-col gap-2 items-center h-full">
+        <div className="mt-24 w-10 h-10 border-2 border-blue-600 border-t-white rounded-full p-4 animate-spin">
+
+        </div>
+        <p className="text-sm text-gray-700">Loading course...</p>
+      </div>
+    );
+  }
+
+  // Not found state
+  if (!course) {
+    return <CourseNotFoundPage />;
+  }
+
+  if (!currentLesson) {
+    return <EmptyLessonsPage />;
+  }
 
   const handleComplete = (lessonId: string) => {
     setCompletedLessons((prev) =>
       prev.includes(lessonId)
-        ? prev.filter((id) => id !== lessonId) // Unmark
-        : [...prev, lessonId] // Mark
+        ? prev.filter((id) => id !== lessonId)
+        : [...prev, lessonId]
     );
   };
 
@@ -101,41 +139,58 @@ export default function CoursePage({ params }: CoursePageProps) {
             {currentLesson.title}
           </h2>
           <div className="prose max-w-none text-gray-800 text-md">
-            <ReactMarkdown>
-              {currentLesson.description}
-            </ReactMarkdown>
+            <LessonMarkdown content={currentLesson.description as string} />
           </div>
 
-          {currentLesson.videoUrl?.map((v, idx) => (
-            <video
-              key={idx}
-              className="w-full max-w-3xl rounded border"
-              controls
-            >
-              <source src={v} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          ))}
+          {currentLesson.videoUrl.map((video, idx) =>
+            video ? (
+              <iframe
+                key={idx}
+                className="w-3/4 mx-auto max-w-3xl rounded border aspect-video"
+                src={`https://www.youtube.com/embed/${getYouTubeId(video)}`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            ) : null
+          )}
 
           <div>
             <h3 className="text-md font-semibold mb-2">
               Resources
             </h3>
-            <ul className="space-y-2 text-sm text-blue-600">
-              {currentLesson.attachmentUrls.map((r, idx) => (
-                <li key={idx} className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-gray-600" />
+            {currentLesson.attachmentUrls && currentLesson.attachmentUrls.length > 0 ? (
+        <div className="mt-12 pt-4 border-t border-t-gray-200">
+          <h3 className="text-lg font-semibold mb-3">Resources</h3>
+          <ul className="space-y-2">
+            {currentLesson.attachmentUrls.map((resource, idx) =>
+              resource?.url ? (
+                <li key={idx} className="flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-gray-600 shrink-0" />
                   <a
-                    href={r.url}
+                    href={resource.url}
                     target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:underline"
+                    rel="noreferrer"
+                    className="text-blue-600 text-sm hover:text-blue-700 hover:underline"
                   >
-                    {r.title}
+                    {resource.title || resource.url}
                   </a>
                 </li>
-              ))}
-            </ul>
+              ) : null
+            )}
+          </ul>
+        </div>
+      ) : (
+        <div className="mt-12 pt-4 border-t border-t-gray-200">
+        <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center">
+          <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+          <p className="text-gray-500 text-sm">
+            No additional resources for this lesson
+            </p>
+        </div>
+        </div>
+      )}
           </div>
 
           <button
@@ -161,7 +216,7 @@ export default function CoursePage({ params }: CoursePageProps) {
         </section>
       </main>
 
-      {/* Right Sidebar (optional) */}
+      {/* Right Sidebar */}
       <div className="relative h-full">
         {/* Toggle Button */}
         <button
@@ -209,12 +264,16 @@ export default function CoursePage({ params }: CoursePageProps) {
                 icon={<FileText className="w-4 -4 text-blue-500" />}
               >
                 {[...course.tests, ...course.quizzes].map((a) => (
-                  <div key={a.id}>
-                    <p className="font-medium">{a.title}</p>
-                    <p className="text-xs text-gray-500">
+                  <Link
+                    href={`/dashboard/tests/`}
+                    key={a.id}
+                    className="w-full flex flex-col p-1 hover:shadow-md hover:bg-gray-100 transition rounded"
+                  >
+                    <span className="font-medium">{a.title}</span>
+                    <span className="text-xs text-gray-500">
                       Due: {new Date(a.dueDate).toLocaleDateString()}
-                    </p>
-                  </div>
+                    </span>
+                  </Link>
                 ))}
               </SidebarSection>
             )}
@@ -251,12 +310,67 @@ function SidebarSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 bg-gray-200 border-l-3 border-l-blue-500 rounded-r p-2">
       <h3 className="text-md font-semibold flex items-center gap-2 mb-2">
         {icon}
         {title}
       </h3>
-      <div className="text-sm text-gray-700 space-y-3">{children}</div>
+      <div className="text-sm text-gray-700 space-y-3">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function EmptyLessonsPage() {
+  const router = useRouter();
+  
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <div className="bg-gray-100 rounded-full p-4 mb-6">
+        <BookOpen className="h-10 w-10 text-gray-500" />
+      </div>
+
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">
+        No lessons posted yet
+      </h2>
+
+      <p className="text-gray-600 text-sm max-w-md mb-6">
+        Your tutor has not posted any lessons yet. Please check back later or contact your tutor for more information.
+      </p>
+
+      <button
+        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-sm text-white font-medium px-5 py-2.5 shadow-sm transition"
+        onClick={() => router.push("/dashboard")}
+      >
+        <Home className="h-4 w-4" />
+        Go to Home
+      </button>
+    </div>
+  );
+}
+
+
+function CourseNotFoundPage() {
+  const router = useRouter();
+
+  return (
+    <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">
+      <div className="bg-red-100 rounded-full p-4 mb-6">
+        <AlertTriangle className="h-10 w-10 text-red-600" />
+      </div>
+
+      <h1 className="text-2xl font-bold text-gray-800 mb-2">Course Not Found</h1>
+      <p className="text-gray-600 text-sm max-w-md mb-6">
+        The course you are looking for does not exist or may have been removed.
+      </p>
+
+      <button
+        onClick={() => router.push("/dashboard")}
+        className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+      >
+        Go to Home
+      </button>
     </div>
   );
 }

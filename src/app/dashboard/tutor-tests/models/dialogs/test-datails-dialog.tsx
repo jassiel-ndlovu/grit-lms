@@ -11,7 +11,7 @@ type TestDetailsDialogProps = {
 
 const TestDetailsDialog = ({ test, course, onClose }: TestDetailsDialogProps) => {
   const stats = {
-    total: test.submissions.length,
+    total: test.submissions.length ?? 0,
     graded: test.submissions.filter(s => s.status === $Enums.SubmissionStatus.GRADED).length,
     submitted: test.submissions.filter(s => s.status === $Enums.SubmissionStatus.SUBMITTED).length,
     late: test.submissions.filter(s => s.status === $Enums.SubmissionStatus.LATE).length
