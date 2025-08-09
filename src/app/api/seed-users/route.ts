@@ -7,6 +7,7 @@ export async function GET() {
 
     // Hash passwords
     const tutorPassword = await bcrypt.hash('Jassiel1234#1', 10);
+    const studentTestPassword = await bcrypt.hash('Test1234#1', 10);
     const mbaliPassword = await bcrypt.hash('Mbali1034!42', 10);
     const anesuPassword = await bcrypt.hash('Anesu672$23', 10);
 
@@ -18,6 +19,12 @@ export async function GET() {
           email: 'nkosijassiel@gmail.com',
           password: tutorPassword,
           role: 'TUTOR',
+        },
+        {
+          name: 'Test Student',
+          email: 'test@test.com',
+          password: studentTestPassword,
+          role: 'STUDENT',
         },
         {
           name: 'Mbalienhle Mzimba',
@@ -36,12 +43,13 @@ export async function GET() {
     });
 
     // Create tutor and students
-    await prisma.tutor.create({
+    await prisma.tutor.createMany({
       data: {
         fullName: 'Nkosenhle Jassiel Ndlovu',
         email: 'nkosijassiel@gmail.com',
         bio: 'Mathematics and IT tutor.',
       },
+      skipDuplicates: true,
     });
 
     await prisma.student.createMany({
@@ -53,6 +61,10 @@ export async function GET() {
         {
           fullName: 'Anesu Musungo',
           email: 'anesumusungo3@gmail.com',
+        },
+        {
+          fullName: 'Test Student',
+          email: 'test@test.com',
         },
       ],
       skipDuplicates: true,

@@ -14,38 +14,51 @@ import { formatDate } from "@/lib/functions";
 import { useStudent } from "@/context/StudentContext";
 
 export default function StudentDashboard() {
-  const { courses, loading: coursesLoading, fetchCoursesByStudentId } = useCourses();
-  const { tests, fetchTestsByCourse, loading: testsLoading } = useTests();
+  const { loading: coursesLoading, fetchCoursesByStudentId } = useCourses();
+  const { fetchTestsByStudentId, loading: testsLoading } = useTests();
   const { profile, loading: profileLoading } = useProfile();
 
-  // const [continueCourses, setContinueCourses] = useState<AppTypes.Course[]>([]);
+  const [continueCourses, setContinueCourses] = useState<AppTypes.Course[]>([]);
+  const [studentTests, setStudentTests] = useState<AppTypes.Test[]>([]);
 
   // Derived data
   const studentProfile = profile as AppTypes.Student;
 
+  // Fetch courses for the student
   useEffect(() => {
-    if (studentProfile) {
-      fetchCoursesByStudentId(studentProfile.id);
-  //     console.log("Courses:", courses);
-  // console.log("Continue Courses:", continueCourses);
-  //     setContinueCourses(courses);
-    } 
+    const fetchCourses = async () => {
+      if (studentProfile?.id) {
+        const courses = await fetchCoursesByStudentId(studentProfile.id);
+        setContinueCourses(courses || []);
+      }
+    }
+
+    fetchCourses();
   }, [studentProfile, fetchCoursesByStudentId]);
 
-  // Memoized computations
-  const continueCourses = useMemo(() => courses, [courses]);
+  // Fetch tests
+  useEffect(() => {
+    const fetchTests = async () => {
+      if (studentProfile?.id) {
+        const tests = await fetchTestsByStudentId(studentProfile.id);
+        setStudentTests(tests as AppTypes.Test[] || []);
+      }
+    }
+
+    fetchTests();
+  }, [studentProfile?.id, fetchTestsByStudentId, continueCourses]);
 
   const events = useMemo(() =>
-    courses?.flatMap(course => course.courseEvents ?? []) ?? [],
-    [courses]
+    continueCourses?.flatMap(course => course.courseEvents ?? []) ?? [],
+    [continueCourses]
   );
 
-  const studentTests = useMemo(() =>
-    tests.filter(test =>
-      courses?.some(course => course.id === test.courseId)
-    ) ?? [],
-    [tests, courses]
-  );
+  // const studentTests = useMemo(() =>
+  //   tests.filter(test =>
+  //     continueCourses?.some(course => course.id === test.courseId)
+  //   ) ?? [],
+  //   [tests, continueCourses]
+  // );
 
   const studentSubmissions = useMemo(() =>
     studentTests.flatMap(test =>
@@ -53,14 +66,6 @@ export default function StudentDashboard() {
     ) ?? [],
     [studentTests, studentProfile]
   );
-
-  // Data fetching
-  useEffect(() => {
-    if (studentProfile?.id) {
-      const courseIds = continueCourses.map(course => course.id);
-      fetchTestsByCourse(courseIds);
-    }
-  }, [studentProfile?.id, fetchTestsByCourse, coursesLoading]);
 
   // Loading state
   const isLoading = coursesLoading || testsLoading || profileLoading;

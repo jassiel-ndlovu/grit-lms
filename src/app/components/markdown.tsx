@@ -15,7 +15,7 @@ export default function LessonMarkdown({ content }: { content: string }) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ inline, className, children, ...props }: CodeProps) {
+          code({ inline, children, ...props }: CodeProps) {
             if (inline) {
               return (
                 <code

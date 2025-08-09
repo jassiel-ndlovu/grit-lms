@@ -14,8 +14,8 @@ interface TestContextType {
   message: Message | null;
   fetchTestsByTutorId: (tutorId: string) => Promise<void>;
   fetchTestById: (testId: string) => Promise<void>;
-  fetchTestsByStudentId: (studentId: string) => Promise<void>;
-  fetchTestsByCourse: (courseIds: string[]) => Promise<void>;
+  fetchTestsByStudentId: (studentId: string) => Promise<void | AppTypes.Test[]>;
+  fetchTestsByCourse: (courseIds: string[]) => Promise<void | AppTypes.Test[]>;
   createTest: (courseId: string, testData: Partial<AppTypes.Test>) => Promise<AppTypes.Test | void>;
   updateTest: (testId: string, updates: Partial<AppTypes.Test>) => Promise<AppTypes.Test | void>;
   deleteTest: (testId: string) => Promise<void>;
@@ -61,7 +61,8 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await axios.get(`/api/tests?studentId=${studentId}`);
       setTests(res.data);
-
+      
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to fetch tests',
@@ -100,6 +101,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
       });
       setTests(res.data);
 
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to fetch tests',

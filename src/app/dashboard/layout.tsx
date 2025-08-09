@@ -9,6 +9,7 @@ import { TutorProvider } from '@/context/TutorContext';
 import { CoursesProvider } from '@/context/CourseContext';
 import { LessonProvider } from '@/context/LessonContext';
 import { TestProvider } from '@/context/TestContext';
+import { TestSubmissionProvider } from '@/context/TestSubmissionContext';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -27,7 +28,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <CoursesProvider>
                   <LessonProvider>
                     <TestProvider>
-                      {children}
+                      <TestSubmissionProvider>
+                        {children}
+                      </TestSubmissionProvider>
                     </TestProvider>
                   </LessonProvider>
                 </CoursesProvider>

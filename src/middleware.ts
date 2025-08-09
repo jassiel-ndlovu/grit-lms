@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
+    // You can add custom logic here if needed
+    if (req.nextUrl.pathname.startsWith("/dashboard")) {
+    
+    }
 
     return NextResponse.next();
   },

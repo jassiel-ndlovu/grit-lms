@@ -153,7 +153,7 @@ model TestSubmission {
   testId      String
   studentId   String
   startedAt   DateTime
-  submittedAt DateTime
+  submittedAt DateTime?
   answers     Json
   score       Float?
   feedback    String?
@@ -193,6 +193,9 @@ enum SubmissionStatus {
   SUBMITTED
   GRADED
   LATE
+  IN_PROGRESS
+  NOT_SUBMITTED
+  NOT_STARTED
 }
 
 enum FileType {

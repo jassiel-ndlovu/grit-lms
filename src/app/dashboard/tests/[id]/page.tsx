@@ -9,6 +9,8 @@ import { useTests } from '@/context/TestContext';
 import { TestTakingPageSkeleton } from '../models/skeletons/test-taking-skeleton';
 import { formatTime } from '@/lib/functions';
 import { useCourses } from '@/context/CourseContext';
+import { useProfile } from '@/context/ProfileContext';
+import { useTestSubmissions } from '@/context/TestSubmissionContext';
 
 type TestTakingPageProps = {
   params: Promise<{ id: string }>;
@@ -19,6 +21,10 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   const router = useRouter();
   const { currentTest: test, fetchTestById } = useTests();
   const { courses, fetchCoursesByIds } = useCourses();
+  const { fetchSubmissionByStudentTestId } = useTestSubmissions();
+  const { profile } = useProfile();
+
+  const studentProfile = profile as AppTypes.Student;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -27,6 +33,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
   const [testStartTime, setTestStartTime] = useState<Date | null>(null);
+  // const [submission, setSubmission] = useState<AppTypes.TestSubmission | null>(null);
 
   useEffect(() => {
     fetchTestById(id);
@@ -37,6 +44,23 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       fetchCoursesByIds([test.courseId]);
     }
   }, [test, fetchCoursesByIds]);
+
+  useEffect(() => {
+    const fetchSubmission = async () => {
+      if (test && studentProfile?.id) {
+        const submission = await fetchSubmissionByStudentTestId(studentProfile.id, test.id);
+        
+        if (submission) {
+          // setAnswers();
+          // setCurrentQuestionIndex(submission.currentQuestionIndex || 0);
+          // setTestStartTime(new Date(submission.startedAt));
+          // setTimeRemaining(submission.timeRemaining || null);
+        }
+      }
+    }
+
+    fetchSubmission();
+  }, [test, studentProfile?.id, fetchSubmissionByStudentTestId]);
 
   // Initialize timer when test loads
   useEffect(() => {

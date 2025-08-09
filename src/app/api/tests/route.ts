@@ -3,10 +3,11 @@ import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const tutorId = req.nextUrl.searchParams.get("tutorId");
+  const studentId = req.nextUrl.searchParams.get("studentId");
   const testId = req.nextUrl.searchParams.get("testId");
   const courseIds = req.nextUrl.searchParams.get("courseIds");
 
-  if (!tutorId && !testId && !courseIds)
+  if (!tutorId && !testId && !courseIds && !studentId)
     return NextResponse.json(
       { error: "Course, Test or Tutor ID required" },
       { status: 400 }
@@ -62,6 +63,24 @@ export async function GET(req: NextRequest) {
         { status: 500 }
       );
     }
+  } else if (studentId) {
+    const tests = await prisma.test.findMany({
+      where: {
+        course: {
+          students: {
+            some: {
+              id: studentId,
+            },
+          },
+        },
+      },
+      include: {
+        course: true,
+        submissions: true,
+        questions: true,
+      },
+    });
+    return NextResponse.json(tests);
   }
 }
 

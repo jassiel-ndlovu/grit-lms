@@ -8,13 +8,15 @@ import { useTests } from '@/context/TestContext';
 import { useCourses } from '@/context/CourseContext';
 import { useProfile } from '@/context/ProfileContext';
 import Skeleton from '../components/skeleton';
+import { formatTime } from '@/lib/functions';
 
 export default function TestsPage() {  
-  const { tests, fetchTestsByCourse, loading: testsLoading } = useTests();
-  const { courses, fetchCoursesByStudentId, loading: coursesLoading } = useCourses();
+  const { fetchTestsByCourse, loading: testsLoading } = useTests();
+  const { fetchCoursesByStudentId, loading: coursesLoading } = useCourses();
   const { profile, loading: profileLoading } = useProfile();
 
   const [studentCourses, setStudentCourses] = useState<AppTypes.Course[]>([]);
+  const [studentTests, setStudentTests] = useState<AppTypes.Test[]>([]);
 
   // Memoize student profile once
   const studentProfile = useMemo(() => profile as AppTypes.Student, [profile]);
@@ -23,27 +25,29 @@ export default function TestsPage() {
   useEffect(() => {
     if (studentProfile?.id) {
       // Fetch courses for the student
-      fetchCoursesByStudentId(studentProfile.id);
-      setStudentCourses(courses);
+      const fetchCourses = async () => {
+        const fetchedCourses = await fetchCoursesByStudentId(studentProfile.id);
+        setStudentCourses(fetchedCourses || []);
+      }
+
+      fetchCourses();
     }
   }, [studentProfile?.id, fetchCoursesByStudentId]);
 
   // Fetch tests ONLY when necessary
   useEffect(() => {
     if (studentProfile?.id) {
-      const courseIds = studentCourses.map(course => course.id);
-      fetchTestsByCourse(courseIds);
+      const fetchTests = async () => {
+        if (coursesLoading) return; 
+
+        const courseIds = studentCourses.map(course => course.id);
+        const fetchedTests = await fetchTestsByCourse(courseIds);
+        setStudentTests(fetchedTests || []);
+      }
+
+      fetchTests();
     }
   }, [studentProfile?.id, fetchTestsByCourse, coursesLoading]);
-
-  // Memoize derived test data
-  const studentTests = useMemo(() => {
-    return (tests || []).filter(test => 
-      studentCourses.some(c => c.id === test.courseId)
-    );
-  }, [tests, studentCourses]);
-
-  console.log("Student tests:", studentTests);
 
   // Group by course
   const groupedByCourse = useMemo(() => {
@@ -100,8 +104,6 @@ export default function TestsPage() {
 
 function TestContent({ test }: { test: AppTypes.Test }) {
   const { profile } = useProfile();
-  
-  console.log("Rendering test:", test.title, "for profile:", profile?.id);
 
   const [timeLeft, setTimeLeft] = useState<string>('Calculating...');
   const [isExpired, setIsExpired] = useState(false);
@@ -123,7 +125,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
         startTime = new Date(Date.now());
       }
 
-      const endTime = new Date(test.createdAt);
+      const endTime = new Date(test.dueDate);
       endTime.setMinutes(endTime.getMinutes() + (test.timeLimit as number));
       const distance = endTime.getTime() - startTime.getTime();
 
@@ -133,11 +135,9 @@ function TestContent({ test }: { test: AppTypes.Test }) {
         return;
       }
 
-      const hours = Math.floor(distance / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      const timeLeft: string = formatTime(Math.floor(distance / 1000));
 
-      setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+      setTimeLeft(timeLeft);
     };
 
     // Calculate immediately

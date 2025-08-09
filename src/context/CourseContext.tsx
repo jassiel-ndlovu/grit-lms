@@ -15,7 +15,7 @@ interface CoursesContextType {
   message: Message | null;
   fetchCourses: () => Promise<void>;
   fetchCoursesByTutorId: (tutorId: string) => Promise<void>;
-  fetchCoursesByStudentId: (studentId: string) => Promise<void>;
+  fetchCoursesByStudentId: (studentId: string) => Promise<void | AppTypes.Course[]>;
   fetchCoursesByIds: (courseIds: string[]) => Promise<void>;
   createCourse: (course: Partial<AppTypes.Course>) => Promise<void>;
   updateCourse: (courseId: string, updated: Partial<AppTypes.Course>) => Promise<void>;
@@ -80,8 +80,10 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const res = await axios.get(`/api/courses?studentId=${studentId}`);
+
       setCourses(res.data);
 
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to load courses',
@@ -94,7 +96,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchCoursesByIds = useCallback(async (courseIds: string[]) => {
     if (!courseIds.length) return;
-    console.log("Fetching courses by IDs:", courseIds);
+
     setLoading(true);
     try {
       const res = await axios.get('/api/courses', {

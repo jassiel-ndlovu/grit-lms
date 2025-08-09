@@ -79,8 +79,8 @@ const ViewSubmissionsDialog = ({ test, course, onClose }: ViewSubmissionsDialogP
                       <div>
                         <h4 className="font-medium text-gray-900">{submission.studentId}</h4>
                         <p className="text-sm text-gray-500">
-                          Submitted: {new Date(submission.submittedAt).toLocaleDateString()} at{' '}
-                          {new Date(submission.submittedAt).toLocaleTimeString()}
+                          Submitted: {new Date(submission.submittedAt as Date).toLocaleDateString()} at{' '}
+                          {new Date(submission.submittedAt as Date).toLocaleTimeString()}
                         </p>
                       </div>
                     </div>

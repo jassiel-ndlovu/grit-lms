@@ -9,6 +9,9 @@ import { formatDate } from "@/lib/functions";
 import { PreTestInstructionsPageSkeleton } from "../../models/skeletons/pre-test-skeleton";
 import LessonMarkdown from "@/app/components/markdown";
 import { useCourses } from "@/context/CourseContext";
+import { useTestSubmissions } from "@/context/TestSubmissionContext";
+import { $Enums } from "@/generated/prisma";
+import { useProfile } from "@/context/ProfileContext";
 
 type PreTestInstructionsPageProps = {
   params: Promise<{ id: string }>;
@@ -19,6 +22,10 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   const router = useRouter();
   const { currentTest, fetchTestById } = useTests();
   const { courses, fetchCoursesByIds } = useCourses();;
+  const { message: submissionMessage, createSubmission } = useTestSubmissions();
+  const { profile } = useProfile();
+
+  const studentProfile = profile as AppTypes.Student;
 
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -34,14 +41,25 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   }, [currentTest, fetchCoursesByIds]);
 
   const test = currentTest;
-  console.log(currentTest);
 
   if (!test) return <PreTestInstructionsPageSkeleton />;
 
-  const handleStartTest = () => {
+  const handleStartTest = async () => {
     setIsLoading(true);
 
-    router.push(`/dashboard/tests/${test.id}`);
+    await createSubmission({
+      testId: test.id,
+      studentId: studentProfile.id,
+      status: $Enums.SubmissionStatus.IN_PROGRESS,
+      startedAt: new Date(),
+    });
+
+    if (submissionMessage?.isSuccess) {
+      router.push(`/dashboard/tests/${test.id}`);
+      return;
+    }
+
+    alert(submissionMessage?.content || "An error occurred. Please contact your tutor!");
   };
 
   const isOverdue = new Date(test.dueDate) < new Date();

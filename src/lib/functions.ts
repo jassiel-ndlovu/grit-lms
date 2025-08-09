@@ -15,17 +15,25 @@ export const formatDate = (date: Date) => {
 };
 
 export const formatTime = (seconds: number) => {
-  const hours = Math.floor(seconds / 3600);
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
 
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
+  if (days > 0) {
+    // Example: "4d 12h"
+    return `${days}d ${hours}h`;
   }
+
+  if (hours > 0) {
+    // Example: "12h 5m 33s"
+    return `${hours}h ${minutes}m ${secs}s`;
+  }
+
+  // Example: "05:07"
   return `${minutes}:${secs.toString().padStart(2, "0")}`;
 };
+
 
 export const formatForDateTimeLocal = (date: Date): string => {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000)

@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, FileText, Send, Calendar, Video, CheckCircle, Circle, BookOpen, Plus, AlertTriangle, Home } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Send, Calendar, Video, CheckCircle, Circle, BookOpen, AlertTriangle, Home } from "lucide-react";
 import { useCourses } from "@/context/CourseContext";
 import LessonMarkdown from "@/app/components/markdown";
 import { getYouTubeId } from "@/lib/functions";
