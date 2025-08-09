@@ -22,7 +22,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   const router = useRouter();
   const { currentTest, fetchTestById } = useTests();
   const { courses, fetchCoursesByIds } = useCourses();;
-  const { message: submissionMessage, createSubmission } = useTestSubmissions();
+  const { message: submissionMessage, createSubmission, fetchSubmissionByStudentTestId, updateSubmission } = useTestSubmissions();
   const { profile } = useProfile();
 
   const studentProfile = profile as AppTypes.Student;
@@ -47,14 +47,52 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   const handleStartTest = async () => {
     setIsLoading(true);
 
+    const sub = await fetchSubmissionByStudentTestId(studentProfile.id, test.id);
+
+    if (sub) {
+      const isCompleted = sub.status === $Enums.SubmissionStatus.SUBMITTED;
+      const isOverdue = new Date(test.dueDate) < new Date();
+      
+      const dueDateTime = new Date(test.dueDate).getTime();
+      const testStartTime = (new Date(sub.startedAt)).getTime();
+      const timeExceeded = dueDateTime - testStartTime >= (test.timeLimit as number) * 60 * 1000;
+
+      if (isCompleted) {
+        alert("You have already completed this test.");
+        setIsLoading(false);
+        return;
+      } else if (timeExceeded) {
+        alert("You have exceeded the time limit for this test.");
+
+        await updateSubmission(sub.id, {
+          status: $Enums.SubmissionStatus.LATE,
+          submittedAt: new Date(),
+        });
+
+        setIsLoading(false);
+
+        router.push(`/dashboard/tests`);
+        return;
+      } else if (isOverdue) {
+        alert("This test is overdue. Please contact your tutor for assistance.");
+        setIsLoading(false);
+        return;
+      }
+
+      alert("You have an existing submission for this test. Do you wish to proceed?");
+      router.push(`/dashboard/tests/${test.id}`);
+      return;
+    }
+
     await createSubmission({
       testId: test.id,
       studentId: studentProfile.id,
       status: $Enums.SubmissionStatus.IN_PROGRESS,
       startedAt: new Date(),
+      answers: {},
     });
 
-    if (submissionMessage?.isSuccess) {
+    if (submissionMessage && submissionMessage.isSuccess()) {
       router.push(`/dashboard/tests/${test.id}`);
       return;
     }

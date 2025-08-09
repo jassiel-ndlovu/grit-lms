@@ -11,29 +11,36 @@ import { formatTime } from '@/lib/functions';
 import { useCourses } from '@/context/CourseContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useTestSubmissions } from '@/context/TestSubmissionContext';
+import { $Enums } from '@/generated/prisma';
 
 type TestTakingPageProps = {
   params: Promise<{ id: string }>;
 }
+
+type FileUploadAnswer = {
+  fileUrl: string;
+  fileType: string;
+  fileName: string;
+};
 
 const TestTakingPage = ({ params }: TestTakingPageProps) => {
   const { id } = use(params);
   const router = useRouter();
   const { currentTest: test, fetchTestById } = useTests();
   const { courses, fetchCoursesByIds } = useCourses();
-  const { fetchSubmissionByStudentTestId } = useTestSubmissions();
+  const { fetchSubmissionByStudentTestId, updateSubmission } = useTestSubmissions();
   const { profile } = useProfile();
 
   const studentProfile = profile as AppTypes.Student;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<AppTypes.AnswerMap>({});
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
   const [testStartTime, setTestStartTime] = useState<Date | null>(null);
-  // const [submission, setSubmission] = useState<AppTypes.TestSubmission | null>(null);
+  const [submission, setSubmission] = useState<AppTypes.TestSubmission | null>(null);
 
   useEffect(() => {
     fetchTestById(id);
@@ -48,16 +55,14 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   useEffect(() => {
     const fetchSubmission = async () => {
       if (test && studentProfile?.id) {
-        const submission = await fetchSubmissionByStudentTestId(studentProfile.id, test.id);
-        
-        if (submission) {
-          // setAnswers();
-          // setCurrentQuestionIndex(submission.currentQuestionIndex || 0);
-          // setTestStartTime(new Date(submission.startedAt));
-          // setTimeRemaining(submission.timeRemaining || null);
+        const sub = await fetchSubmissionByStudentTestId(studentProfile.id, test.id);
+        if (sub) {
+          setSubmission(sub);
+          setAnswers((sub.answers as AppTypes.AnswerMap) || {}); // Load existing answers from DB
+          setTestStartTime(new Date(sub.startedAt));
         }
       }
-    }
+    };
 
     fetchSubmission();
   }, [test, studentProfile?.id, fetchSubmissionByStudentTestId]);
@@ -97,7 +102,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       const now = new Date();
       const elapsedSeconds = Math.floor((now.getTime() - testStartTime.getTime()) / 1000);
       const remainingSeconds = ((test.timeLimit as number) * 60) - elapsedSeconds;
-      
+
       return remainingSeconds > 0 ? remainingSeconds : 0;
     };
 
@@ -116,23 +121,53 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   };
 
   const handleSaveProgress = async () => {
-    console.log('Saving progress...', answers);
-    // Implement actual save functionality
+    if (!test || !studentProfile?.id) return;
+
+    const submissionData: Partial<AppTypes.TestSubmission> = {
+      studentId: studentProfile.id,
+      testId: test.id,
+      answers: answers,
+      startedAt: testStartTime || new Date(),
+    };
+
+    try {
+      await updateSubmission(submission?.id || '', submissionData);
+      setSubmission(prev => ({
+        ...prev,
+        ...submissionData
+      } as AppTypes.TestSubmission));
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    }
   };
 
   const handleSubmitTest = async () => {
-    if (isSubmitting) return;
     setIsSubmitting(true);
-    
+    setShowSubmitConfirmation(false);
+
+    if (!test || !studentProfile?.id) {
+      alert("Test or student profile not found!");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const submissionData: Partial<AppTypes.TestSubmission> = {
+      studentId: studentProfile.id,
+      testId: test.id,
+      answers: answers,
+      status: $Enums.SubmissionStatus.SUBMITTED,
+      startedAt: testStartTime || new Date(),
+      submittedAt: new Date(),
+    };
+
     try {
-      console.log('Submitting test...', answers);
-      // Implement actual test submission
-      
-      setTimeout(() => {
-        router.push('/dashboard/tests');
-      }, 2000);
+      await updateSubmission(submission?.id || '', submissionData);
+
+      router.push(`/dashboard/tests`);
     } catch (error) {
-      console.error('Submission error:', error);
+      console.error('Error submitting test:', error);
+      alert("An error occurred while submitting the test. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -200,7 +235,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       case 'SHORT_ANSWER':
         return (
           <textarea
-            value={answer}
+            value={answer as string}
             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
             placeholder="Enter your answer..."
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-24 resize-y"
@@ -210,7 +245,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       case 'ESSAY':
         return (
           <textarea
-            value={answer}
+            value={answer as string}
             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
             placeholder="Write your essay here..."
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-48 resize-y"
@@ -241,7 +276,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
             </label>
             {answer && (
               <div className="mt-3 p-2 bg-gray-50 rounded flex items-center justify-between">
-                <span className="text-sm text-gray-700">{answer.name}</span>
+                <span className="text-sm text-gray-700">{(answer as FileUploadAnswer).fileName}</span>
                 <button
                   onClick={() => handleAnswerChange(question.id, null)}
                   className="text-red-600 hover:text-red-800"
@@ -279,9 +314,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
             <div className="flex items-center gap-4">
               {timeRemaining !== null && (
-                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                  timeRemaining < 300 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-                }`}>
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${timeRemaining < 300 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                  }`}>
                   <Timer className="w-4 h-4" />
                   <span className="font-mono font-medium">
                     {formatTime(timeRemaining)}

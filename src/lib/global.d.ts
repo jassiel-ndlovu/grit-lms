@@ -18,9 +18,9 @@ declare global {
         tutor: true;
         students: true;
         lessons: {
-          include: { 
-            completions: true; 
-            attachmentUrls: true 
+          include: {
+            completions: true;
+            attachmentUrls: true;
           };
         };
         quizzes: true;
@@ -39,19 +39,33 @@ declare global {
       include: { completions: true };
     }>;
     type Test = Prisma.TestGetPayload<{
-      include: { 
-        questions: true; 
+      include: {
+        questions: true;
         submissions: {
           include: {
             uploadedFiles: true;
-          }
-        } 
+          };
+        };
       };
     }>;
     type TestQuestion = Prisma.TestQuestionGetPayload<object>;
     type TestSubmission = Prisma.TestSubmissionGetPayload<{
       include: { uploadedFiles: true };
     }>;
+
+    type TestAnswer =
+      | string // short/essay/multiple choice/single fill-in
+      | string[] // multi-select, reorder, matching (keys)
+      | number // numeric answers
+      | boolean // true/false
+      | { left: string; right: string }[] // matching question pairs
+      | { fileUrl: string; fileType: string; fileName: string } // file upload
+      | null; // unanswered
+
+    type AnswerMap = {
+      [questionId: string]: TestAnswer;
+    };
+
     type UploadedFile = Prisma.UploadedFileGetPayload<object>;
     type AssessmentCompletion = Prisma.AssessmentCompletionGetPayload<object>;
     type Submission = Prisma.SubmissionGetPayload<{

@@ -126,7 +126,7 @@ export async function POST(req: Request) {
         testId: data.testId,
         studentId: data.studentId,
         startedAt: new Date(data.startedAt),
-        submittedAt: new Date(data.submittedAt),
+        // submittedAt: new Date(data.submittedAt),
         answers: data.answers,
         score: data.score ?? null,
         feedback: data.feedback ?? null,
