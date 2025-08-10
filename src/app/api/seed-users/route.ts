@@ -28,7 +28,7 @@ export async function GET() {
         },
         {
           name: 'Mbalienhle Mzimba',
-          email: 'mbalienhlemzimba@gmail.com',
+          email: 'mbalienhle.mzimba@gmail.com',
           password: mbaliPassword,
           role: 'STUDENT',
         },
@@ -56,7 +56,7 @@ export async function GET() {
       data: [
         {
           fullName: 'Mbalienhle Mzimba',
-          email: 'mbalienhlemzimba@gmail.com',
+          email: 'mbalienhle.mzimba@gmail.com',
         },
         {
           fullName: 'Anesu Musungo',

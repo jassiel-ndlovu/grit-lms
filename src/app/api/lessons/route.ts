@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { title, description, videoUrl, resourceLinks, courseId, order } = body;
+  const { title, description, videoUrl, attachmentUrls, courseId, order } = body;
 
   if (!title || !courseId) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       description,
       videoUrl,
       attachmentUrls: {
-        create: resourceLinks
+        create: attachmentUrls
       }, 
       courseId,
       order: order ?? 0,

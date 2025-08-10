@@ -30,6 +30,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
   const [course, setCourse] = useState<AppTypes.Course | null>(null);
   const [lessons, setLessons] = useState<Partial<AppTypes.Lesson>[] | null>(null);
   const [updatedLesson, setUpdatedLesson] = useState<Partial<AppTypes.Lesson> | null>(null);
+  const [currentLesson, setCurrentLesson] = useState<Partial<AppTypes.Lesson> | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -104,13 +105,22 @@ export default function ManageLessons({ params }: CoursePageProps) {
   };
 
   const handleUpdate = (key: keyof AppTypes.Lesson, value: any) => {
-    setUpdatedLesson((prev) =>
-    ({
-      ...(prev ?? {}),
-      [key]: value,
-    } as AppTypes.Lesson)
-    );
+    setUpdatedLesson(prev => {
+      if (!prev) return null;
 
+      return {
+        ...prev,
+        [key]: value
+      };
+    });
+
+    setCurrentLesson(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        [key]: value
+      };
+    });
   };
 
   const handleUpdateSave = async () => {
@@ -152,6 +162,13 @@ export default function ManageLessons({ params }: CoursePageProps) {
     }
   }, [editMode, lessons, selectedLessonIndex]);
 
+  useEffect(() => {
+    if (lessons && lessons[selectedLessonIndex]) {
+      setCurrentLesson(lessons[selectedLessonIndex]);
+      setUpdatedLesson(lessons[selectedLessonIndex]);
+    }
+  }, [lessons, selectedLessonIndex]);
+
   // Loading state
   if (loading || courses.length === 0 || course === undefined) {
     return <ManageLessonsSkeleton />;
@@ -175,8 +192,6 @@ export default function ManageLessons({ params }: CoursePageProps) {
       onReset={() => setSelectedLessonIndex(0)}
     />;
   }
-
-  const currentLesson = lessons[selectedLessonIndex];
 
   // Current lesson is somehow null/undefined
   if (!currentLesson) {
@@ -349,7 +364,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
         <section className="bg-white p-6 space-y-6 border border-gray-200">
           {editMode ? (
             <EditLessonView
-              lesson={currentLesson}
+              lesson={updatedLesson || currentLesson}
               onUpdate={handleUpdate}
               onSave={handleUpdateSave}
               onCancel={() => setEditMode(false)}
@@ -360,7 +375,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
             />
           ) : (
             <ViewLessonContent
-              lesson={currentLesson}
+              lesson={updatedLesson || currentLesson}
               onEdit={() => setEditMode(true)}
             />
           )}
