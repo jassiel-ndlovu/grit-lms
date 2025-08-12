@@ -8,6 +8,8 @@ type ViewLessonContentProps = {
 }
 
 export default function ViewLessonContent({ lesson, onEdit }: ViewLessonContentProps) {
+  console.log("ViewLessonContent", lesson);
+  
   return (
     <>
       <div className="flex items-center justify-between">

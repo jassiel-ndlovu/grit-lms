@@ -14,7 +14,7 @@ interface CodeProps extends HTMLAttributes<HTMLElement> {
 
 export default function LessonMarkdown({ content }: { content: string }) {
   return (
-    <div className="prose prose-sm max-w-none leading-relaxed">
+    <div className="h-full overflow-auto prose prose-sm max-w-none leading-relaxed">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
@@ -26,12 +26,12 @@ export default function LessonMarkdown({ content }: { content: string }) {
 
           // Paragraphs
           strong: ({ ...props }) => <strong className="font-semibold" {...props} />,
-          
+
           // Lists
           ul: ({ ...props }) => <ul className="list-disc pl-5 my-4" {...props} />,
           ol: ({ ...props }) => <ol className="list-decimal pl-5 my-4" {...props} />,
           li: ({ ...props }) => <li className="my-2" {...props} />,
-          
+
           // Code blocks
           code({ inline, className, children, ...props }: CodeProps) {
             if (inline) {

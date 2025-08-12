@@ -97,7 +97,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
     }
   };
 
-  const updateFormData = (field: string, value: any) => {
+  const updateFormData = (field: keyof AppTypes.Lesson, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear related errors
     if (errors[field]) {
@@ -125,18 +125,18 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
   };
 
   const addResourceLink = () => {
-    updateFormData('resourceLinks', [...(formData.attachmentUrls as AppTypes.Attachment[]), { title: '', url: '' }]);
+    updateFormData('attachmentUrls', [...(formData.attachmentUrls as AppTypes.Attachment[]), { title: '', url: '' }]);
   };
 
   const removeResourceLink = (index: number) => {
     const updated = (formData.attachmentUrls as AppTypes.Attachment[]).filter((_, i) => i !== index);
-    updateFormData('resourceLinks', updated.length ? updated : [{ title: '', url: '' }]);
+    updateFormData('attachmentUrls', updated.length ? updated : [{ title: '', url: '' }]);
   };
 
   const updateResourceLink = (index: number, field: 'title' | 'url', value: string) => {
     const updated = [...(formData.attachmentUrls as AppTypes.Attachment[])];
     updated[index][field] = value;
-    updateFormData('resourceLinks', updated);
+    updateFormData('attachmentUrls', updated);
     // Clear specific resource errors
     const errorKey = `resource_${field}_${index}`;
     if (errors[errorKey]) {

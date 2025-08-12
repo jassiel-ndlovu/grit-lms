@@ -12,7 +12,11 @@ export async function GET(req: NextRequest) {
       include: {
         tutor: true,
         students: true,
-        lessons: true,
+        lessons: {
+          include: {
+            attachmentUrls: true,
+          },
+        },
         quizzes: true,
         tests: true,
         submissions: true,
@@ -29,7 +33,11 @@ export async function GET(req: NextRequest) {
       include: {
         tutor: true,
         students: true,
-        lessons: true,
+        lessons: {
+          include: {
+            attachmentUrls: true,
+          },
+        },
         quizzes: true,
         tests: true,
         submissions: true,
@@ -43,7 +51,11 @@ export async function GET(req: NextRequest) {
       include: {
         tutor: true,
         students: true,
-        lessons: true,
+        lessons: {
+          include: {
+            attachmentUrls: true,
+          },
+        },
         quizzes: true,
         tests: true,
         submissions: true,
@@ -58,7 +70,11 @@ export async function GET(req: NextRequest) {
       include: {
         tutor: true,
         students: true,
-        lessons: true,
+        lessons: {
+          include: {
+            attachmentUrls: true,
+          },
+        },
         quizzes: true,
         tests: true,
         submissions: true,

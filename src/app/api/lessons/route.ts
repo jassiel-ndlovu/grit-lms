@@ -3,12 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const courseId = req.nextUrl.searchParams.get("courseId");
-  if (!courseId) return NextResponse.json({ error: "Missing courseId" }, { status: 400 });
+
+  if (!courseId) 
+    return NextResponse.json({ error: "Missing courseId" }, { status: 400 });
 
   const lessons = await prisma.lesson.findMany({
     where: { courseId },
-    orderBy: { order: "asc" },
+    include: {
+      attachmentUrls: true,
+    },
   });
+
+  console.log("Fetched lessons for courseId:", courseId, lessons);
 
   return NextResponse.json(lessons);
 }

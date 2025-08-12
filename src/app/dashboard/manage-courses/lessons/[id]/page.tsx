@@ -45,11 +45,11 @@ export default function ManageLessons({ params }: CoursePageProps) {
       setCourse(found || null);
       setLessons(found?.lessons || []);
       setLoading(false);
-      setSelectedLessonIndex(0);
     } else if (!courseLoading && courses.length === 0) {
       setLoading(false);
     }
-  }, [id, courses, courseLoading]);
+  }, [id, courses, currentLesson, updatedLesson
+    , courseLoading]);
 
   const handleDeleteLesson = (lesson: Partial<AppTypes.Lesson>, index: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selecting the lesson
@@ -241,7 +241,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
   return (
     <div
       className={clsx(
-        "h-[92-vh] grid bg-gray-100",
+        "h-full max-h-[92-vh] grid bg-gray-100",
         sidebarOpen ? "grid-cols-[250px_1fr]" : "grid-cols-[1px_1fr]"
       )}
     >
@@ -350,7 +350,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
       </div>
 
       {/* Main Content */}
-      <main className="h-[92vh] p-8 space-y-6 overflow-y-auto">
+      <main className="h-full max-h-[92vh] p-8 space-y-6 overflow-y-auto">
         <div>
           <h1 className="text-3xl font-bold text-blue-500">{course.name}</h1>
           <p className="text-sm text-gray-500">
