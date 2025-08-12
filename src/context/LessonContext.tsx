@@ -12,6 +12,7 @@ interface LessonContextProps {
   updating: boolean;
   message: Message | null;
   fetchLessons: (courseId: string) => Promise<void>;
+  fetchLessonsByCourseId: (courseId: string) => Promise<AppTypes.Lesson[]>;
   createLesson: (courseId: string, data: Partial<AppTypes.Lesson>) => Promise<AppTypes.Lesson | null>;
   updateLesson: (lessonId: string, data: Partial<AppTypes.Lesson>) => Promise<AppTypes.Lesson | null>;
   deleteLesson: (lessonId: string) => Promise<boolean>;
@@ -51,6 +52,28 @@ export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setLoading(false);
     }
   }, []);
+
+  const fetchLessonsByCourseId = useCallback(async (courseId: string) => {
+    setLoading(true);
+    clearMessage();
+    try {
+      const { data } = await axios.get(`/api/lessons?courseId=${courseId}`);
+      setLessons(data);
+      setMessage(Message.success(
+        'Lessons loaded successfully',
+        { duration: 3000 }
+      ));
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || 'Failed to load lessons',
+        { title: 'Fetch Error', duration: 5000 }
+      ));
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [clearMessage]);
 
   const createLesson = useCallback(async (courseId: string, lesson: Partial<AppTypes.Lesson>) => {
     setLoading(true);
@@ -133,6 +156,7 @@ export const LessonProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         updating,
         message,
         fetchLessons,
+        fetchLessonsByCourseId,
         createLesson,
         updateLesson,
         deleteLesson,

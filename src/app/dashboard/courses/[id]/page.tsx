@@ -3,47 +3,54 @@
 import { use, useEffect, useState } from "react";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, FileText, Send, Calendar, Video, CheckCircle, Circle, BookOpen, AlertTriangle, Home } from "lucide-react";
-import { useCourses } from "@/context/CourseContext";
 import LessonMarkdown from "@/app/components/markdown";
 import { getYouTubeId } from "@/lib/functions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLesson } from "@/context/LessonContext";
+import { useCourses } from "@/context/CourseContext";
 
 interface CoursePageProps {
   params: Promise<{ id: string }>;
 }
 
 export default function CoursePage({ params }: CoursePageProps) {
-  const { courses, fetchCoursesByIds, loading: courseLoading } = useCourses();
+  const { fetchCoursesByIds, loading: courseLoading } = useCourses();
   const { id } = use(params);
+  const { fetchLessonsByCourseId, loading: lessonsLoading } = useLesson();
 
   const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [currentLesson, setCurrentLesson] = useState<AppTypes.Lesson | null>(null);
+  const [lessons, setLessons] = useState<AppTypes.Lesson[]>([]);
   const [course, setCourse] = useState<AppTypes.Course | null>(null);
 
+  // Fetch course
   useEffect(() => {
-    if (!id) return;
+    const fetch = async () => {
+      const courseData = await fetchCoursesByIds([id]) as AppTypes.Course[];
 
-    console.log("Fetching course with ID:", id);
-    fetchCoursesByIds([id]);
-  }, [id, fetchCoursesByIds]); // Add dependencies
+      setCourse(courseData[0]); 
+    };
 
-  // Update course and lesson when courses or selected index changes
+    fetch();
+  })
+
+  // Fetch lessons
   useEffect(() => {
-    if (courses.length > 0 && id) {
-      const foundCourse = courses.find(c => c.id === id);
-      if (foundCourse) {
-        console.log("Course found:", foundCourse);
-        setCourse(foundCourse);
-        setCurrentLesson(foundCourse.lessons[selectedLessonIndex] || null);
-      }
+    const fetch = async () => {
+      const fetchedLessons = await fetchLessonsByCourseId(id);
+      setLessons(fetchedLessons);
+      setCurrentLesson(fetchedLessons[selectedLessonIndex] || null);
     }
-  }, [courses, selectedLessonIndex, id]);
 
-  if (courseLoading) {
+    fetch();
+  }, [id, fetchLessonsByCourseId]);
+
+
+  if (lessonsLoading || courseLoading) {
     return (
       <div className="flex flex-col gap-2 items-center h-full">
         <div className="mt-24 w-10 h-10 border-2 border-blue-600 border-t-white rounded-full p-4 animate-spin">
@@ -55,7 +62,7 @@ export default function CoursePage({ params }: CoursePageProps) {
   }
 
   // Not found state
-  if (!course) {
+  if (!lessons) {
     return <CourseNotFoundPage />;
   }
 
@@ -101,7 +108,7 @@ export default function CoursePage({ params }: CoursePageProps) {
           <aside className="h-full p-4 overflow-y-auto">
             <h2 className="text-lg font-bold mb-4">Lessons</h2>
             <ul className="space-y-2">
-              {course.lessons.map((lesson, i) => (
+              {lessons.map((lesson, i) => (
                 <li
                   key={lesson.id}
                   title={lesson.title}
@@ -127,10 +134,10 @@ export default function CoursePage({ params }: CoursePageProps) {
       <main className="p-8 space-y-8 overflow-y-auto">
         <div>
           <h1 className="text-3xl font-bold text-blue-500">
-            {course.name}
+            {(course as AppTypes.Course).name}
           </h1>
           <p className="text-sm text-gray-500">
-            Tutor: {course.tutor.fullName}
+            Tutor: {(course as AppTypes.Course).tutor.fullName}
           </p>
         </div>
 
@@ -142,56 +149,55 @@ export default function CoursePage({ params }: CoursePageProps) {
             <LessonMarkdown content={currentLesson.description as string} />
           </div>
 
-          {currentLesson.videoUrl.map((video, idx) =>
-            video ? (
-              <iframe
-                key={idx}
-                className="w-3/4 mx-auto max-w-3xl rounded border aspect-video"
-                src={`https://www.youtube.com/embed/${getYouTubeId(video)}`}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            ) : null
-          )}
-
-          <div>
-            <h3 className="text-md font-semibold mb-2">
-              Resources
-            </h3>
-            {currentLesson.attachmentUrls && currentLesson.attachmentUrls.length > 0 ? (
-        <div className="mt-12 pt-4 border-t border-t-gray-200">
-          <h3 className="text-lg font-semibold mb-3">Resources</h3>
-          <ul className="space-y-2">
-            {currentLesson.attachmentUrls.map((resource, idx) =>
-              resource?.url ? (
-                <li key={idx} className="flex items-center gap-3">
-                  <FileText className="w-4 h-4 text-gray-600 shrink-0" />
-                  <a
-                    href={resource.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 text-sm hover:text-blue-700 hover:underline"
-                  >
-                    {resource.title || resource.url}
-                  </a>
-                </li>
+          <div className="mt-12 pt-4 border-t border-t-gray-200">
+            <h3 className="text-lg font-semibold mb-3">Videos</h3>
+            {currentLesson.videoUrl.map((video, idx) =>
+              video ? (
+                <iframe
+                  key={idx}
+                  className="w-3/4 mx-auto max-w-3xl rounded border aspect-video"
+                  src={`https://www.youtube.com/embed/${getYouTubeId(video)}`}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
               ) : null
             )}
-          </ul>
-        </div>
-      ) : (
-        <div className="mt-12 pt-4 border-t border-t-gray-200">
-        <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">
-            No additional resources for this lesson
-            </p>
-        </div>
-        </div>
-      )}
           </div>
+
+          {currentLesson.attachmentUrls && currentLesson.attachmentUrls.length > 0 ? (
+            <div className="mt-12 pt-4 border-t border-t-gray-200">
+              <h3 className="text-lg font-semibold mb-3">Resources</h3>
+              <ul className="space-y-2">
+                {currentLesson.attachmentUrls.map((resource, idx) =>
+                  resource?.url ? (
+                    <li key={idx} className="flex items-center gap-3">
+                      <FileText className="w-4 h-4 text-gray-600 shrink-0" />
+                      <a
+                        href={resource.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 text-sm hover:text-blue-700 hover:underline"
+                      >
+                        {resource.title || resource.url}
+                      </a>
+                    </li>
+                  ) : null
+                )}
+              </ul>
+            </div>
+          ) : (
+            <div className="mt-12 pt-4 border-t border-t-gray-200">
+              <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">
+                  No additional resources for this lesson
+                </p>
+              </div>
+            </div>
+          )}
+
 
           <button
             onClick={() => handleComplete(currentLesson.id)}
@@ -230,7 +236,7 @@ export default function CoursePage({ params }: CoursePageProps) {
           )}
         </button>
 
-        {showRightSidebar && (
+        {showRightSidebar && course && (
           <aside className="h-full p-4 space-y-6 bg-gray-100 border-l overflow-y-auto">
             {course.courseEvents.length > 0 && (
               <SidebarSection
@@ -324,7 +330,7 @@ function SidebarSection({
 
 function EmptyLessonsPage() {
   const router = useRouter();
-  
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
       <div className="bg-gray-100 rounded-full p-4 mb-6">

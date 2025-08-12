@@ -14,8 +14,6 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  console.log("Fetched lessons for courseId:", courseId, lessons);
-
   return NextResponse.json(lessons);
 }
 

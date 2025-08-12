@@ -14,7 +14,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       attachmentUrls: body.attachmentUrls 
       ? {
           deleteMany: {},
-          create: body.attachmentUrls,
+          create: (body.attachmentUrls as AppTypes.Attachment[]).map(({ url, title }) => ({ url, title })),
         }
       : undefined,
       order: body.order ?? 0,

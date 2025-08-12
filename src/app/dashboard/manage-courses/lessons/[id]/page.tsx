@@ -20,8 +20,8 @@ interface CoursePageProps {
 
 export default function ManageLessons({ params }: CoursePageProps) {
   const { id } = use(params);
-  const { loading: courseLoading, courses } = useCourses();
-  const { lessons: backendLessons, updateLesson, deleteLesson, createLesson } = useLesson();
+  const { loading: courseLoading, fetchCoursesByIds } = useCourses();
+  const { lessons: backendLessons, loading: lessonsLoading, fetchLessonsByCourseId, updateLesson, deleteLesson, createLesson } = useLesson();
 
   const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -29,7 +29,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [course, setCourse] = useState<AppTypes.Course | null>(null);
   const [lessons, setLessons] = useState<Partial<AppTypes.Lesson>[] | null>(null);
-  const [updatedLesson, setUpdatedLesson] = useState<Partial<AppTypes.Lesson> | null>(null);
+  const [updating, setUpdating] = useState<boolean>(false);
   const [currentLesson, setCurrentLesson] = useState<Partial<AppTypes.Lesson> | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -39,17 +39,31 @@ export default function ManageLessons({ params }: CoursePageProps) {
     index: number;
   } | null>(null);
 
+  // Fetch course
   useEffect(() => {
-    if (!courseLoading && courses.length > 0 && id && typeof id === 'string') {
-      const found = courses.find(c => c.id === id);
-      setCourse(found || null);
-      setLessons(found?.lessons || []);
+    const fetch = async () => {
+      setLoading(true);
+      const courseData = await fetchCoursesByIds([id]) as AppTypes.Course[];
+
       setLoading(false);
-    } else if (!courseLoading && courses.length === 0) {
+      setCourse(courseData[0]);
+    };
+
+    fetch();
+  }, [id, fetchCoursesByIds]);
+
+  // Fetch lessons
+  useEffect(() => {
+    const fetch = async () => {
+      setLoading(true);
+      const fetchedLessons = await fetchLessonsByCourseId(id);
+      setLessons(fetchedLessons);
+      setCurrentLesson(fetchedLessons[selectedLessonIndex] || null);
       setLoading(false);
     }
-  }, [id, courses, currentLesson, updatedLesson
-    , courseLoading]);
+
+    fetch();
+  }, [id, fetchLessonsByCourseId]);
 
   const handleDeleteLesson = (lesson: Partial<AppTypes.Lesson>, index: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selecting the lesson
@@ -105,14 +119,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
   };
 
   const handleUpdate = (key: keyof AppTypes.Lesson, value: any) => {
-    setUpdatedLesson(prev => {
-      if (!prev) return null;
-
-      return {
-        ...prev,
-        [key]: value
-      };
-    });
+    setUpdating(true);
 
     setCurrentLesson(prev => {
       if (!prev) return null;
@@ -124,17 +131,17 @@ export default function ManageLessons({ params }: CoursePageProps) {
   };
 
   const handleUpdateSave = async () => {
-    if (!updatedLesson || !updatedLesson.id) {
+    if (!currentLesson || !currentLesson.id) {
       alert("No lesson selected or missing ID");
       return;
     }
 
     try {
-      await updateLesson(updatedLesson.id, {
-        title: updatedLesson.title,
-        description: updatedLesson.description,
-        videoUrl: updatedLesson.videoUrl,
-        attachmentUrls: updatedLesson.attachmentUrls,
+      await updateLesson(currentLesson.id, {
+        title: currentLesson.title,
+        description: currentLesson.description,
+        videoUrl: currentLesson.videoUrl,
+        attachmentUrls: currentLesson.attachmentUrls,
       });
 
       alert("Lesson updated successfully ✅");
@@ -142,7 +149,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
       // Refresh local state
       if (lessons) {
         const updatedLessons = lessons.map((l) =>
-          l.id === updatedLesson.id ? updatedLesson : l
+          l.id === currentLesson.id ? currentLesson : l
         );
         setLessons(updatedLessons);
       }
@@ -158,19 +165,18 @@ export default function ManageLessons({ params }: CoursePageProps) {
   // Set lesson to be edited when edit mode starts
   useEffect(() => {
     if (editMode && lessons && lessons[selectedLessonIndex]) {
-      setUpdatedLesson(lessons[selectedLessonIndex]);
+      setCurrentLesson(lessons[selectedLessonIndex]);
     }
   }, [editMode, lessons, selectedLessonIndex]);
 
   useEffect(() => {
     if (lessons && lessons[selectedLessonIndex]) {
       setCurrentLesson(lessons[selectedLessonIndex]);
-      setUpdatedLesson(lessons[selectedLessonIndex]);
     }
   }, [lessons, selectedLessonIndex]);
 
   // Loading state
-  if (loading || courses.length === 0 || course === undefined) {
+  if (loading || courseLoading || lessonsLoading || course === undefined) {
     return <ManageLessonsSkeleton />;
   }
 
@@ -210,6 +216,22 @@ export default function ManageLessons({ params }: CoursePageProps) {
         i === selectedLessonIndex ? { ...lesson, [key]: value } : lesson
       ) : []
     );
+  };
+
+  const moveLesson = (fromIndex: number, toIndex: number) => {
+    setLessons((prev) => {
+      if (!prev) return [];
+
+      const updated = [...prev];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+
+      // Update `order` property so it matches the array index
+      return updated.map((lesson, index) => ({
+        ...lesson,
+        order: index + 1, // start from 1 for readability
+      }));
+    });
   };
 
   const addVideoUrl = () => {
@@ -272,6 +294,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
               {lessons.map((lesson, i) => (
                 <li
                   key={lesson?.id || i}
+                  title={lesson?.title || `Lesson ${i + 1} (Untitled)`}
                   onClick={() => setSelectedLessonIndex(i)}
                   className={clsx(
                     "cursor-pointer flex items-center gap-2 px-3 py-2 rounded hover:bg-blue-500 transition group",
@@ -285,6 +308,26 @@ export default function ManageLessons({ params }: CoursePageProps) {
                   <span className="flex-1 text-sm truncate">
                     {lesson?.title || `Lesson ${i + 1} (Untitled)`}
                   </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveLesson(i, i - 1);
+                    }}
+                    disabled={i === 0}
+                    className="text-sm opacity-0 group-hover:opacity-100 px-1.5  hover:shadow-sm hover:bg-blue-500/80 rounded transition-all"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveLesson(i, i + 1);
+                    }}
+                    className="text-sm opacity-0 group-hover:opacity-100 px-1.5 hover:shadow-sm hover:bg-blue-500/80 rounded transition-all"
+                    disabled={i === lessons.length - 1}
+                  >
+                    ↓
+                  </button>
                   <button
                     onClick={(e) => handleDeleteLesson(lesson, i, e)}
                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500 rounded transition-all"
@@ -364,7 +407,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
         <section className="bg-white p-6 space-y-6 border border-gray-200">
           {editMode ? (
             <EditLessonView
-              lesson={updatedLesson || currentLesson}
+              lesson={currentLesson}
               onUpdate={handleUpdate}
               onSave={handleUpdateSave}
               onCancel={() => setEditMode(false)}
@@ -375,7 +418,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
             />
           ) : (
             <ViewLessonContent
-              lesson={updatedLesson || currentLesson}
+              lesson={currentLesson}
               onEdit={() => setEditMode(true)}
             />
           )}

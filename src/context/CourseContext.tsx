@@ -16,7 +16,7 @@ interface CoursesContextType {
   fetchCourses: () => Promise<void>;
   fetchCoursesByTutorId: (tutorId: string) => Promise<void>;
   fetchCoursesByStudentId: (studentId: string) => Promise<void | AppTypes.Course[]>;
-  fetchCoursesByIds: (courseIds: string[]) => Promise<void>;
+  fetchCoursesByIds: (courseIds: string[]) => Promise<void | AppTypes.Course[]>;
   createCourse: (course: Partial<AppTypes.Course>) => Promise<void>;
   updateCourse: (courseId: string, updated: Partial<AppTypes.Course>) => Promise<void>;
   deleteCourse: (courseId: string) => Promise<void>;
@@ -103,7 +103,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
         params: { ids: courseIds.join(',') },
       });
       setCourses(res.data);
-
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to load courses',
