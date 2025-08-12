@@ -29,7 +29,6 @@ export default function ManageLessons({ params }: CoursePageProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [course, setCourse] = useState<AppTypes.Course | null>(null);
   const [lessons, setLessons] = useState<Partial<AppTypes.Lesson>[] | null>(null);
-  const [updating, setUpdating] = useState<boolean>(false);
   const [currentLesson, setCurrentLesson] = useState<Partial<AppTypes.Lesson> | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -119,8 +118,6 @@ export default function ManageLessons({ params }: CoursePageProps) {
   };
 
   const handleUpdate = (key: keyof AppTypes.Lesson, value: any) => {
-    setUpdating(true);
-
     setCurrentLesson(prev => {
       if (!prev) return null;
       return {
@@ -232,6 +229,8 @@ export default function ManageLessons({ params }: CoursePageProps) {
         order: index + 1, // start from 1 for readability
       }));
     });
+    
+    handleUpdateSave();
   };
 
   const addVideoUrl = () => {
