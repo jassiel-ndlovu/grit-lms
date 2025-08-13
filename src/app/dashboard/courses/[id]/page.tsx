@@ -36,7 +36,7 @@ export default function CoursePage({ params }: CoursePageProps) {
     };
 
     fetch();
-  })
+  }, [fetchCoursesByIds, id]);
 
   // Fetch lessons
   useEffect(() => {
