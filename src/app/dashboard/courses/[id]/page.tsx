@@ -112,7 +112,10 @@ export default function CoursePage({ params }: CoursePageProps) {
                 <li
                   key={lesson.id}
                   title={lesson.title}
-                  onClick={() => setSelectedLessonIndex(i)}
+                  onClick={() => {
+                    setSelectedLessonIndex(i);
+                    setCurrentLesson(lessons[i]);
+                  }}
                   className={clsx(
                     "cursor-pointer flex items-center gap-2 px-3 py-2 rounded hover:bg-blue-500 transition",
                     {
