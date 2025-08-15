@@ -17,3 +17,22 @@ body {
   color: var(--foreground);
   /* font-family: Arial, Helvetica, sans-serif; */
 }
+
+.katex-display {
+  overflow-x: auto hidden;
+  max-width: 100%;
+  margin: 0.5em 0;
+  white-space: normal;
+}
+
+.katex {
+  white-space: normal !important;
+}
+
+.katex-display>.katex {
+  white-space: normal
+}
+
+.katex-display>.base {
+  margin: 0.25em 0
+}

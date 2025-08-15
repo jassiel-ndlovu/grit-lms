@@ -178,7 +178,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
                 value={formData.timeLimit ?? ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, timeLimit: parseInt(e.target.value) }))}
                 className="w-full text-sm px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                placeholder="Optional"
+                placeholder="In minutes"
               />
             </div>
           </div>
@@ -216,8 +216,8 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
                       type="text"
                       value={question.question || ''}
                       onChange={(e) => updateQuestion(index, 'question', e.target.value)}
-                      placeholder="Enter your question..."
-                      className="w-full text-sm px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                      placeholder="Enter your question (markdown allowed)..."
+                      className="w-full font-mono text-sm px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                     />
 
                     <div className="grid grid-cols-2 gap-4">
@@ -255,7 +255,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
                               updateQuestion(index, 'options', newOptions);
                             }}
                             placeholder={`Option ${optIndex + 1}`}
-                            className="w-full text-sm px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                            className="w-full font-mono text-sm px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                           />
                         ))}
                         <input
@@ -263,7 +263,7 @@ export default function CreateTestDialog({ onClose, onSave, loading = false }: C
                           value={question.answer?.toString() || ''}
                           onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
                           placeholder="Correct answer"
-                          className="w-full text-sm px-3 py-2 border border-green-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+                          className="w-full font-mono text-sm px-3 py-2 border border-green-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
                         />
                       </div>
                     )}

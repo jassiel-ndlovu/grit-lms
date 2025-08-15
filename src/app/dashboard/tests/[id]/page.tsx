@@ -12,6 +12,7 @@ import { useCourses } from '@/context/CourseContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useTestSubmissions } from '@/context/TestSubmissionContext';
 import { $Enums } from '@/generated/prisma';
+import LessonMarkdown from '@/app/components/markdown';
 
 type TestTakingPageProps = {
   params: Promise<{ id: string }>;
@@ -160,8 +161,12 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       submittedAt: new Date(),
     };
 
+    console.log("Submission data", submissionData);
+
     try {
       await updateSubmission(submission?.id || '', submissionData);
+
+      alert("Submission complete!");
 
       router.push(`/dashboard/tests`);
     } catch (error) {
@@ -207,7 +212,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
                   onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                   className="w-4 h-4 text-blue-600"
                 />
-                <span className="text-gray-700">{option}</span>
+                <LessonMarkdown content={option} />
               </label>
             ))}
           </div>
@@ -405,9 +410,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
                 </span>
               </div>
 
-              <h2 className="text-lg font-medium text-gray-900 leading-relaxed">
-                {currentQuestion.question}
-              </h2>
+              <LessonMarkdown content={currentQuestion.question} />
+
             </div>
 
             {/* Question Content */}

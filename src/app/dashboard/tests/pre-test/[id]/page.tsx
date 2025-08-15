@@ -42,7 +42,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
 
   const test = currentTest;
 
-  if (!test) return <PreTestInstructionsPageSkeleton />;
+  if (!test || !courses || !courses.length) return <PreTestInstructionsPageSkeleton />;
 
   const handleStartTest = async () => {
     setIsLoading(true);
@@ -51,11 +51,17 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
 
     if (sub) {
       const isCompleted = sub.status === $Enums.SubmissionStatus.SUBMITTED;
-      const isOverdue = new Date(test.dueDate) < new Date();
+      const isOverdue = new Date(test.dueDate) < new Date(Date.now());
       
-      const dueDateTime = new Date(test.dueDate).getTime();
       const testStartTime = (new Date(sub.startedAt)).getTime();
-      const timeExceeded = dueDateTime - testStartTime >= (test.timeLimit as number) * 60 * 1000;
+      const dueDateTime = new Date(testStartTime + (test.timeLimit as number) * 60 * 1000).getTime();
+      const timeExceeded = dueDateTime < (new Date(Date.now())).getTime();
+
+      console.log("isCompleted", isCompleted);
+      console.log("isOverdue", isOverdue);
+      console.log("dueDateTime", test.dueDate);
+      console.log("testStartTime", sub.startedAt);
+      console.log("timeExceeded", timeExceeded);
 
       if (isCompleted) {
         alert("You have already completed this test.");
@@ -80,6 +86,8 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
       }
 
       alert("You have an existing submission for this test. Do you wish to proceed?");
+
+      setIsLoading(false);
       router.push(`/dashboard/tests/${test.id}`);
       return;
     }
@@ -92,12 +100,16 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
       answers: {},
     });
 
+    console.log("Submission message", submissionMessage);
+
     if (submissionMessage && submissionMessage.isSuccess()) {
       router.push(`/dashboard/tests/${test.id}`);
       return;
     }
 
     alert(submissionMessage?.content || "An error occurred. Please contact your tutor!");
+
+    setIsLoading(false);
   };
 
   const isOverdue = new Date(test.dueDate) < new Date();

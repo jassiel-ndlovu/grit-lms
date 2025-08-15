@@ -107,6 +107,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
 
   const [timeLeft, setTimeLeft] = useState<string>('Calculating...');
   const [isExpired, setIsExpired] = useState(false);
+  const [studentSub, setStudentSub] = useState<AppTypes.TestSubmission | undefined>(undefined);
 
   const router = useRouter();
 
@@ -114,26 +115,25 @@ function TestContent({ test }: { test: AppTypes.Test }) {
     if (!test.timeLimit) return;
 
     const calculateTimeLeft = () => {
-      const studentSub = test.submissions.find(s => s.studentId === profile?.id);
+      const sub = test.submissions.find(s => s.studentId === profile?.id);
 
-      let startTime = new Date();
+      setStudentSub(sub);
 
-      if (studentSub) {
-        startTime = new Date(studentSub.startedAt);
-      } else {
-        // Now
-        startTime = new Date(Date.now());
-      }
-
+      const startTime = new Date(Date.now() + 2 * 60 * 60 * 1000); // Time from database is 2 hours behind
+      
       const endTime = new Date(test.dueDate);
+
       endTime.setMinutes(endTime.getMinutes() + (test.timeLimit as number));
       const distance = endTime.getTime() - startTime.getTime();
 
-      if (distance < 0) {
+      if (sub?.status === "SUBMITTED") {
+        setTimeLeft("Complete");
+        return;
+      } else if (distance < 0) {
         setIsExpired(true);
         setTimeLeft('Time expired');
         return;
-      }
+      } 
 
       const timeLeft: string = formatTime(Math.floor(distance / 1000));
 
@@ -177,9 +177,13 @@ function TestContent({ test }: { test: AppTypes.Test }) {
         <button
           onClick={() => router.push(`/dashboard/tests/pre-test/${test.id}`)}
           className="text-sm text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 transition"
-          disabled={isExpired}
+          disabled={isExpired || (studentSub && studentSub.status === "SUBMITTED")}
         >
-          {isExpired ? 'Expired' : 'Continue'}
+          {isExpired ? 'Expired' : (
+            studentSub ? (
+              studentSub.status === "SUBMITTED" ? 'Submitted': 'Continue'
+            ) : 'Continue'
+          )}
         </button>
       </div>
     </div>
