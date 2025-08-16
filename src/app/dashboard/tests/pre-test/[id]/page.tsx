@@ -57,11 +57,6 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
       const dueDateTime = new Date(testStartTime + (test.timeLimit as number) * 60 * 1000).getTime();
       const timeExceeded = dueDateTime < (new Date(Date.now())).getTime();
 
-      console.log("isCompleted", isCompleted);
-      console.log("isOverdue", isOverdue);
-      console.log("dueDateTime", test.dueDate);
-      console.log("testStartTime", sub.startedAt);
-      console.log("timeExceeded", timeExceeded);
 
       if (isCompleted) {
         alert("You have already completed this test.");
@@ -92,7 +87,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
       return;
     }
 
-    await createSubmission({
+    const sub2 = await createSubmission({
       testId: test.id,
       studentId: studentProfile.id,
       status: $Enums.SubmissionStatus.IN_PROGRESS,
@@ -102,7 +97,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
 
     console.log("Submission message", submissionMessage);
 
-    if (submissionMessage && submissionMessage.isSuccess()) {
+    if (sub2 || (submissionMessage && submissionMessage.isSuccess())) {
       router.push(`/dashboard/tests/${test.id}`);
       return;
     }

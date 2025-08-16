@@ -110,7 +110,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     setTimeRemaining(calculateRemainingTime());
   }, [testStartTime, test?.timeLimit]);
 
-  if (!test) return <TestTakingPageSkeleton />;
+  if (!test || !courses || !courses.length) return <TestTakingPageSkeleton />;
 
   const currentQuestion = test.questions[currentQuestionIndex];
 

@@ -44,6 +44,16 @@ export default function LessonMarkdown({ content }: { content: string }) {
           ),
           li: ({ ...props }) => <li className="my-2" {...props} />,
 
+          // Links
+          a: ({ ...props }) => (
+            <a 
+              className="text-blue-600 hover:text-blue-800 hover:underline underline-offset-2" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              {...props} 
+            />
+          ),
+
           // Code blocks
           code({ inline, className, children, ...props }: CodeProps) {
             if (inline) {
