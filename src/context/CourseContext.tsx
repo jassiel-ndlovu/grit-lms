@@ -102,6 +102,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
       const res = await axios.get('/api/courses', {
         params: { ids: courseIds.join(',') },
       });
+      
       setCourses(res.data);
       return res.data;
     } catch (err: any) {

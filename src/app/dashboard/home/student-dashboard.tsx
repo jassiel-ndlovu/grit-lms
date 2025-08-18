@@ -53,13 +53,6 @@ export default function StudentDashboard() {
     [continueCourses]
   );
 
-  // const studentTests = useMemo(() =>
-  //   tests.filter(test =>
-  //     continueCourses?.some(course => course.id === test.courseId)
-  //   ) ?? [],
-  //   [tests, continueCourses]
-  // );
-
   const studentSubmissions = useMemo(() =>
     studentTests.flatMap(test =>
       test.submissions?.filter(sub => sub.studentId === studentProfile?.id) ?? []
@@ -91,8 +84,17 @@ export default function StudentDashboard() {
         </div>
       </div>
 
+      {/* Events, Assessments, Submissions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <CourseEventSection events={events} />
+        <CourseAssessmentSection assessments={studentTests} />
+        <CourseSubmissionSection
+          submissions={studentSubmissions}
+        />
+      </div>
+
       {/* Continue Working */}
-      <section>
+      {/* <section>
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           Continue Working
         </h2>
@@ -110,7 +112,7 @@ export default function StudentDashboard() {
               : <div className="text-sm text-gray-500">No active lessons yet.</div>
           }
         </div>
-      </section>
+      </section> */}
 
       {/* Enrolled Courses */}
       <section>
@@ -156,15 +158,6 @@ export default function StudentDashboard() {
           </div>
         )}
       </section>
-
-      {/* Events, Assessments, Submissions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <CourseEventSection events={events} />
-        <CourseAssessmentSection assessments={studentTests} />
-        <CourseSubmissionSection
-          submissions={studentSubmissions}
-        />
-      </div>
     </div>
   );
 }

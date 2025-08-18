@@ -62,7 +62,7 @@ export default function CoursePage({ params }: CoursePageProps) {
   }
 
   // Not found state
-  if (!lessons) {
+  if (!lessons || !course) {
     return <CourseNotFoundPage />;
   }
 

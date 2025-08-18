@@ -394,7 +394,9 @@ export default function ManageLessons({ params }: CoursePageProps) {
       {/* Main Content */}
       <main className="h-full max-h-[92vh] p-8 space-y-6 overflow-y-auto">
         <div>
-          <h1 className="text-3xl font-bold text-blue-500">{course.name}</h1>
+          <h1 className="text-3xl font-bold text-blue-500">
+            {course.name}
+          </h1>
           <p className="text-sm text-gray-500">
             Tutor: {course.tutor?.fullName || 'Unknown'}
           </p>

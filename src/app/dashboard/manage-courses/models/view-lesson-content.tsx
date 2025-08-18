@@ -7,9 +7,7 @@ type ViewLessonContentProps = {
   onEdit: () => void;
 }
 
-export default function ViewLessonContent({ lesson, onEdit }: ViewLessonContentProps) {
-  console.log("ViewLessonContent", lesson);
-  
+export default function ViewLessonContent({ lesson, onEdit }: ViewLessonContentProps) { 
   return (
     <>
       <div className="flex items-center justify-between">

@@ -5,7 +5,7 @@ import { getToken } from "next-auth/jwt";
 export async function GET(req: NextRequest) {
   const tutorId = req.nextUrl.searchParams.get("tutorId");
   const studentId = req.nextUrl.searchParams.get("studentId");
-  const courseIds = req.nextUrl.searchParams.get("courseIds");
+  const courseIds = req.nextUrl.searchParams.get("ids");
 
   if (!tutorId && !studentId && !courseIds) {
     const courses = await prisma.course.findMany({
@@ -64,7 +64,8 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(courses);
   } else if (courseIds) {
-    const courseIdsArray = courseIds.split(",").filter(Boolean);
+    const courseIdsArray = courseIds.split(",");
+
     const courses = await prisma.course.findMany({
       where: { id: { in: courseIdsArray } },
       include: {
@@ -81,6 +82,7 @@ export async function GET(req: NextRequest) {
         courseEvents: true,
       },
     });
+
     return NextResponse.json(courses);
   }
 }

@@ -1,7 +1,11 @@
+// eslint-disable @typescript-eslint/no-unused-vars
+
 import { GraduationCap, Star, User } from "lucide-react";
 import DialogOverlay from "./dialog-overlay";
 import DialogHeader from "./dialog-header";
 import { useState } from "react";
+import { formatDate } from "@/lib/functions";
+import { $Enums } from "@/generated/prisma";
 
 type ViewSubmissionsDialogProps = {
   test: AppTypes.Test; 
@@ -10,13 +14,19 @@ type ViewSubmissionsDialogProps = {
 }
 const ViewSubmissionsDialog = ({ test, course, onClose }: ViewSubmissionsDialogProps) => {
   const [selectedSubmission, setSelectedSubmission] = useState<AppTypes.TestSubmission | null>(null);
+
   console.log(selectedSubmission);
 
-  const getStatusColor = (status: string) => {
+  // const getStudentName = async (studentId: string): Promise<string> => {
+  //   const students = await fetchStudentsById([studentId]);
+  //   return students[0].fullName
+  // }
+
+  const getStatusColor = (status: $Enums.SubmissionStatus) => {
     switch (status) {
-      case 'graded': return 'bg-green-100 text-green-800';
-      case 'submitted': return 'bg-yellow-100 text-yellow-800';
-      case 'late': return 'bg-red-100 text-red-800';
+      case 'GRADED': return 'bg-green-100 text-green-800';
+      case 'SUBMITTED': return 'bg-yellow-100 text-yellow-800';
+      case 'LATE': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -79,8 +89,12 @@ const ViewSubmissionsDialog = ({ test, course, onClose }: ViewSubmissionsDialogP
                       <div>
                         <h4 className="font-medium text-gray-900">{submission.studentId}</h4>
                         <p className="text-sm text-gray-500">
-                          Submitted: {new Date(submission.submittedAt as Date).toLocaleDateString()} at{' '}
-                          {new Date(submission.submittedAt as Date).toLocaleTimeString()}
+                          {submission.submittedAt ? (
+                            `Submitted: ${formatDate(submission.submittedAt as Date)} at{' '}
+                            ${new Date(submission.submittedAt as Date).toLocaleTimeString()}`
+                          ) :
+                            "No submission date recorded"
+                          }
                         </p>
                       </div>
                     </div>
@@ -106,7 +120,7 @@ const ViewSubmissionsDialog = ({ test, course, onClose }: ViewSubmissionsDialogP
                       
                       <button
                         onClick={() => setSelectedSubmission(submission)}
-                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                        className="px-3 py-1 bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors"
                       >
                         View
                       </button>
