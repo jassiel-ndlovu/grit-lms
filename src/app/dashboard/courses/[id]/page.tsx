@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, FileText, Send, Calendar, Video, CheckCircle, Circle, BookOpen, AlertTriangle, Home } from "lucide-react";
 import LessonMarkdown from "@/app/components/markdown";
-import { getYouTubeId } from "@/lib/functions";
+import { formatDate, getYouTubeId } from "@/lib/functions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLesson } from "@/context/LessonContext";
@@ -273,6 +273,7 @@ export default function CoursePage({ params }: CoursePageProps) {
                 icon={<FileText className="w-4 -4 text-blue-500" />}
               >
                 {[...course.tests, ...course.quizzes].map((a) => (
+                  new Date() < new Date(a.dueDate) &&
                   <Link
                     href={`/dashboard/tests/`}
                     key={a.id}
@@ -280,7 +281,7 @@ export default function CoursePage({ params }: CoursePageProps) {
                   >
                     <span className="font-medium">{a.title}</span>
                     <span className="text-xs text-gray-500">
-                      Due: {new Date(a.dueDate).toLocaleDateString()}
+                      Due: {formatDate(a.dueDate)}
                     </span>
                   </Link>
                 ))}
@@ -292,11 +293,12 @@ export default function CoursePage({ params }: CoursePageProps) {
                 title="Submissions"
                 icon={<Send className="w-4 h-4 text-green-500" />}
               >
-                {course.submissions.map((s) => (
+                {course.submissions.map((s) => 
+                  new Date() < new Date(s.dueDate) && (
                   <div key={s.id}>
                     <p className="font-medium">{s.title}</p>
                     <p className="text-xs text-gray-500">
-                      Due: {new Date(s.dueDate).toLocaleString()}
+                      Due: {formatDate(s.dueDate)}
                     </p>
                   </div>
                 ))}

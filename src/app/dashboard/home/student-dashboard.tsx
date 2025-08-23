@@ -11,14 +11,16 @@ import CourseCard from "../components/course-card";
 import Link from "next/link";
 import DashboardSkeleton from "../components/dashboard-skeleton";
 import { formatDate } from "@/lib/functions";
-import { useStudent } from "@/context/StudentContext";
+import { useSubmission } from "@/context/SubmissionContext";
 
 export default function StudentDashboard() {
   const { loading: coursesLoading, fetchCoursesByStudentId } = useCourses();
   const { fetchTestsByStudentId, loading: testsLoading } = useTests();
   const { profile, loading: profileLoading } = useProfile();
+  const { fetchSubmissionsByStudentId, loading: submissionLoading } = useSubmission();
 
   const [continueCourses, setContinueCourses] = useState<AppTypes.Course[]>([]);
+  const [submissions, setSubmissions] = useState<AppTypes.Submission[]>([]);
   const [studentTests, setStudentTests] = useState<AppTypes.Test[]>([]);
 
   // Derived data
@@ -48,20 +50,29 @@ export default function StudentDashboard() {
     fetchTests();
   }, [studentProfile?.id, fetchTestsByStudentId, continueCourses]);
 
+  // Fetch submissions
+  useEffect(() => {
+    if (!studentProfile) return;
+
+    const fetch = async () => {
+      const subs = await fetchSubmissionsByStudentId(studentProfile.id) as AppTypes.Submission[];
+
+      setSubmissions(subs);
+    }
+
+    fetch();
+  }, [studentProfile, fetchSubmissionsByStudentId]);
+
   const events = useMemo(() =>
     continueCourses?.flatMap(course => course.courseEvents ?? []) ?? [],
     [continueCourses]
   );
 
   const studentSubmissions = useMemo(() =>
-    studentTests.flatMap(test =>
-      test.submissions?.filter(sub => sub.studentId === studentProfile?.id) ?? []
-    ) ?? [],
-    [studentTests, studentProfile]
-  );
+    submissions ?? [], [studentTests, studentProfile]);
 
   // Loading state
-  const isLoading = coursesLoading || testsLoading || profileLoading;
+  const isLoading = coursesLoading || testsLoading || profileLoading || submissionLoading;
   if (isLoading) {
     return <DashboardSkeleton />;
   }
@@ -202,6 +213,7 @@ function CourseEventSection({ events, loading = false }: { events: AppTypes.Cour
 }
 
 function CourseAssessmentSection({ assessments, loading = false }: { assessments: AppTypes.Test[] | null; loading?: boolean }) {
+  const filteredAssessments = assessments?.filter(a => new Date() < new Date(a.dueDate));
 
   return (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -212,13 +224,15 @@ function CourseAssessmentSection({ assessments, loading = false }: { assessments
       <div className="space-y-3">
         {loading ? (
           [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-        ) : assessments?.length === 0 ? (
+        ) : filteredAssessments?.length === 0 ? (
           <p className="text-sm text-gray-500">No upcoming assessments.</p>
         ) : (
-          assessments?.map(a => (
+          filteredAssessments?.map(a => (
             <div key={a.id} className="bg-gray-50 p-3 rounded hover:bg-indigo-50 transition">
               <p className="text-sm font-medium text-gray-800">{a.title}</p>
-              <p className="text-xs text-gray-500">Due: {formatDate(a.dueDate)}</p>
+              <p className="text-xs text-gray-500">
+                Due: {formatDate(a.dueDate)}
+              </p>
             </div>
           ))
         )}
@@ -227,29 +241,8 @@ function CourseAssessmentSection({ assessments, loading = false }: { assessments
   );
 }
 
-function CourseSubmissionSection({ submissions, loading = false }: { submissions: AppTypes.TestSubmission[] | null; loading?: boolean }) {
-  const { fetchStudentsById } = useStudent();
-
-  const [studentRecords, setStudentRecords] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const fetch = async () => {
-      if (submissions && submissions.length > 0) {
-        const students = await fetchStudentsById(
-          Array.from(new Set(submissions.map(s => s.studentId)))
-        );
-        setStudentRecords(prev => {
-          const newRecords: Record<string, string> = {};
-          students.forEach(s => {
-            newRecords[s.id] = s.fullName;
-          });
-          return { ...prev, ...newRecords };
-        });
-      }
-    }
-
-    fetch();
-  }, [submissions, fetchStudentsById]);
+function CourseSubmissionSection({ submissions, loading = false }: { submissions: AppTypes.Submission[] | null; loading?: boolean }) {
+  const filteredSubs = submissions?.filter(s => new Date() < new Date(s.dueDate));
 
   return (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -260,13 +253,18 @@ function CourseSubmissionSection({ submissions, loading = false }: { submissions
       <div className="space-y-3">
         {loading ? (
           [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-        ) : submissions?.length === 0 ? (
+        ) : filteredSubs?.length === 0 ? (
           <p className="text-sm text-gray-500">No upcoming submissions.</p>
         ) : (
-          submissions?.map(s => (
-            <div key={s.id} className="bg-gray-50 p-3 rounded hover:bg-emerald-50 transition">
-              <p className="text-sm font-medium text-gray-800">{studentRecords[s.studentId]}</p>
-              <p className="text-xs text-gray-500">Due: {s.status}</p>
+          filteredSubs?.map(s => (
+            <div
+              key={s.id}
+              className="bg-gray-50 p-3 rounded hover:bg-emerald-50 transition"
+            >
+              <p className="text-sm font-medium text-gray-800">
+                {s.title}
+              </p>
+              <p className="text-xs text-gray-500">Due: {formatDate(s.dueDate)}</p>
             </div>
           ))
         )}
