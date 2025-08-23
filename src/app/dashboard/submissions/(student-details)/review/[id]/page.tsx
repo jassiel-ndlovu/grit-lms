@@ -112,7 +112,7 @@ export default function SubmissionDetails({ params }: SubmissionDetailsProps) {
             <p className="text-gray-700 text-sm whitespace-pre-line mb-4">{submission.description}</p>
           )}
 
-          {(submission.descriptionFiles as AppTypes.DescriptionFile[]).length > 0 && (
+          {submission.descriptionFiles && (submission.descriptionFiles as AppTypes.DescriptionFile[]).length > 0 && (
             <div className="space-y-2">
               {(submission.descriptionFiles as AppTypes.DescriptionFile[]).map((file, i) => (
                 <a
