@@ -10,6 +10,8 @@ import { CoursesProvider } from '@/context/CourseContext';
 import { LessonProvider } from '@/context/LessonContext';
 import { TestProvider } from '@/context/TestContext';
 import { TestSubmissionProvider } from '@/context/TestSubmissionContext';
+import { SubmissionProvider } from '@/context/SubmissionContext';
+import { SubmissionEntryProvider } from '@/context/SubmissionEntryContext';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -29,7 +31,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <LessonProvider>
                     <TestProvider>
                       <TestSubmissionProvider>
-                        {children}
+                        <SubmissionProvider>
+                          <SubmissionEntryProvider>
+                            {children}
+                          </SubmissionEntryProvider>
+                        </SubmissionProvider>
                       </TestSubmissionProvider>
                     </TestProvider>
                   </LessonProvider>

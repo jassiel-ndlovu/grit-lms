@@ -25,7 +25,7 @@ export default function Nav() {
     { icon: Calendar, label: 'Calendar', link: '#' },
     { icon: Book, label: 'Courses', link: '#' },
     { icon: FileText, label: 'Tests', link: '/dashboard/tests' },
-    { icon: FileText, label: 'Submissions', link: '#' },
+    { icon: FileText, label: 'Submissions', link: '/dashboard/submissions' },
     { icon: User, label: 'Account', link: '/dashboard/account' },
     { icon: Settings, label: 'Settings', link: '/dashboard/settings' },
   ];
@@ -35,7 +35,7 @@ export default function Nav() {
     { icon: Calendar, label: 'Calendar', link: '/dashboard/calendar' },
     { icon: Wrench, label: 'Manage Courses', link: '/dashboard/manage-courses' },
     { icon: FileText, label: 'Tests', link: '/dashboard/tutor-tests' },
-    { icon: FileText, label: 'Submissions', link: '/dashboard/tutor-submissions' },
+    { icon: FileText, label: 'Submissions', link: '/dashboard/submissions' },
     { icon: User, label: 'Account', link: '/dashboard/account' },
     { icon: Settings, label: 'Settings', link: '/dashboard/settings' },
   ];

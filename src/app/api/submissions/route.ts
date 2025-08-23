@@ -1,18 +1,67 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// GET /api/submissions?courseId=123
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const courseId = searchParams.get("courseId");
+  const courseIds = searchParams.get("courseIds");
+  const tutorId = searchParams.get("tutorId");
+  const studentId = searchParams.get("studentId");
+  const subId = searchParams.get("id");
 
-  const submissions = await prisma.submission.findMany({
-    where: courseId ? { courseId } : {},
-    include: { entries: true },
-    orderBy: { dueDate: "asc" },
-  });
+  if (courseIds) {
+    const ids = courseIds.split(",");
 
-  return NextResponse.json(submissions);
+    const submissions = await prisma.submission.findMany({
+      where: {
+        courseId: {
+          in: ids,
+        },
+      },
+      include: { entries: true },
+      orderBy: { dueDate: "asc" },
+    });
+
+    return NextResponse.json(submissions);
+  } else if (studentId) {
+    const submissions = await prisma.submission.findMany({
+      where: {
+        course: {
+          students: {
+            some: {
+              id: studentId,
+            },
+          },
+        },
+      },
+      include: { entries: true },
+      orderBy: { dueDate: "asc" },
+    });
+
+    return NextResponse.json(submissions);
+  } else if (tutorId) {
+    const submissions = await prisma.submission.findMany({
+      where: {
+        course: {
+          tutorId: tutorId,
+        },
+      },
+
+      include: { entries: true },
+      orderBy: { dueDate: "asc" },
+    });
+
+    return NextResponse.json(submissions);
+  } else if (subId) {
+    const submission = await prisma.submission.findUnique({
+      where: {
+        id: subId,
+      },
+    });
+
+    return NextResponse.json(submission);
+  }
+
+  return NextResponse.json({ error: "Submission not found" }, { status: 404 });
 }
 
 // POST /api/submissions
@@ -23,6 +72,9 @@ export async function POST(req: Request) {
     data: {
       title: body.title,
       fileType: body.fileType,
+      description: body.description,
+      // descriptionFiles: JSON.parse(JSON.stringify(body.descriptionFiles)),
+      lastDueDate: body.lastDueDate ? new Date(body.lastDueDate): null,
       courseId: body.courseId,
       maxAttempts: body.maxAttempts,
       dueDate: new Date(body.dueDate),

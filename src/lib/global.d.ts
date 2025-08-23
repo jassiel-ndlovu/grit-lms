@@ -68,10 +68,16 @@ declare global {
 
     type UploadedFile = Prisma.UploadedFileGetPayload<object>;
     type AssessmentCompletion = Prisma.AssessmentCompletionGetPayload<object>;
+    
+    type DescriptionFile = {
+      title: string;
+      url: string;
+    };
     type Submission = Prisma.SubmissionGetPayload<{
       include: { entries: true };
     }>;
-    type SubmissionEntry = Prisma.SubmissionEntryGetPayload<object>;
+    
+    type SubmissionEntry = Prisma.SubmissionEntryGetPayload<{object}>;
     type Resource = Prisma.ResourceGetPayload<object>;
     type Grade = Prisma.GradeGetPayload<object>;
     type Notification = Prisma.NotificationGetPayload<object>;

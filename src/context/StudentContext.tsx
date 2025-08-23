@@ -12,6 +12,7 @@ type StudentContextType = {
   message: Message | null;
   fetchStudents: () => Promise<void>;
   fetchStudentsById: (ids: string[]) => Promise<AppTypes.Student[]>;
+  fetchStudentsByCourseId: (courseId: string) => Promise<AppTypes.Student[]>;
   addStudent: (student: Partial<AppTypes.Student>) => Promise<AppTypes.Student | void>;
   updateStudent: (id: string, student: Partial<AppTypes.Student>) => Promise<AppTypes.Student | void>;
   deleteStudent: (id: string) => Promise<void>;
@@ -51,6 +52,24 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/students?ids=${ids.join(',')}`);
+      if (!res.ok) throw new Error('Failed to fetch students by ID');
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.message || 'Failed to fetch students by ID',
+        { title: 'Fetch Error', duration: 5000 }
+      ));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchStudentsByCourseId = useCallback(async (courseId: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/students?courseId=${courseId}`);
       if (!res.ok) throw new Error('Failed to fetch students by ID');
       const data = await res.json();
       return data;
@@ -160,6 +179,7 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
         message,
         fetchStudents,
         fetchStudentsById,
+        fetchStudentsByCourseId,
         addStudent,
         updateStudent,
         deleteStudent,

@@ -14,7 +14,7 @@ interface CoursesContextType {
   updating: boolean;
   message: Message | null;
   fetchCourses: () => Promise<void>;
-  fetchCoursesByTutorId: (tutorId: string) => Promise<void>;
+  fetchCoursesByTutorId: (tutorId: string) => Promise<void | AppTypes.Course[]>;
   fetchCoursesByStudentId: (studentId: string) => Promise<void | AppTypes.Course[]>;
   fetchCoursesByIds: (courseIds: string[]) => Promise<void | AppTypes.Course[]>;
   createCourse: (course: Partial<AppTypes.Course>) => Promise<void>;
@@ -66,6 +66,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
       const res = await axios.get(`/api/courses?tutorId=${tutorId}`);
       setCourses(res.data);
 
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || 'Failed to load courses',

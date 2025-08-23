@@ -58,10 +58,10 @@ export async function GET(req: NextRequest) {
         },
         quizzes: true,
         tests: true,
-        submissions: true,
         courseEvents: true,
       },
     });
+
     return NextResponse.json(courses);
   } else if (courseIds) {
     const courseIdsArray = courseIds.split(",");

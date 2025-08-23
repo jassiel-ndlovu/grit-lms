@@ -1,111 +1,226 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useState, useCallback } from "react";
+import axios from "axios";
+import { Message } from "@/lib/message.class";
 
 type Submission = AppTypes.Submission;
 
-interface SubmissionContextType {
+interface SubmissionContextProps {
   submissions: Submission[];
   loading: boolean;
+  updating: boolean;
+  message: Message | null;
   fetchSubmissions: (courseId: string) => Promise<void>;
-  createSubmission: (data: Partial<Submission>) => Promise<Submission | null>;
+  fetchSubmissionsByTutorId: (tutorId: string) => Promise<AppTypes.Submission[] | void>;
+  fetchSubmissionsByStudentId: (studentId: string) => Promise<AppTypes.Submission[] | void>;
+  fetchSubmissionsByCourseIds: (courseIds: string[]) => Promise<Submission[]>;
+  fetchSubmissionById: (id: string) => Promise<Submission | void>;
+  createSubmission: (courseId: string, data: Partial<Submission>) => Promise<Submission | null>;
   updateSubmission: (id: string, data: Partial<Submission>) => Promise<Submission | null>;
   deleteSubmission: (id: string) => Promise<boolean>;
+  clearMessage: () => void;
 }
 
-const SubmissionContext = createContext<SubmissionContextType | undefined>(undefined);
+const SubmissionContext = createContext<SubmissionContextProps | undefined>(undefined);
 
-export const SubmissionProvider = ({ children }: { children: ReactNode }) => {
+export const useSubmission = () => {
+  const context = useContext(SubmissionContext);
+  if (!context) throw new Error("useSubmission must be used inside SubmissionProvider");
+  return context;
+};
+
+export const SubmissionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [updating, setUpdating] = useState<boolean>(false);
+  const [message, setMessage] = useState<Message | null>(null);
 
-  // Fetch submissions for a course
-  const fetchSubmissions = async (courseId: string) => {
+  const clearMessage = useCallback(() => {
+    setMessage(null);
+  }, []);
+
+  // Fetch all submissions for a course
+  const fetchSubmissions = useCallback(async (courseId: string) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await fetch(`/api/submissions?courseId=${courseId}`);
-      const data = await res.json();
+      const { data } = await axios.get(`/api/submissions?courseId=${courseId}`);
       setSubmissions(data);
-    } catch (error) {
-      console.error("Failed to fetch submissions:", error);
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to load submissions",
+        { title: "Fetch Error", duration: 5000 }
+      ));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Create a new submission
-  const createSubmission = async (submission: Partial<Submission>) => {
+  const fetchSubmissionsByTutorId = useCallback(async (tutorId: string) => {
+    setLoading(true);
+    clearMessage();
     try {
-      const res = await fetch(`/api/submissions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submission),
-      });
-
-      if (!res.ok) return null;
-      const newSubmission = await res.json();
-      setSubmissions((prev) => [...prev, newSubmission]);
-      return newSubmission;
-    } catch (error) {
-      console.error("Failed to create submission:", error);
-      return null;
+      const { data } = await axios.get(`/api/submissions?tutorId=${tutorId}`);
+      setSubmissions(data);
+      setMessage(Message.success("Submissions loaded successfully", { duration: 3000 }));
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to load submissions",
+        { title: "Fetch Error", duration: 5000 }
+      ));
+      return [];
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [clearMessage]);
 
-  // Update an existing submission
-  const updateSubmission = async (id: string, data: Partial<Submission>) => {
+  const fetchSubmissionById = useCallback(async (id: string) => {
+    setLoading(true);
+    clearMessage();
     try {
-      const res = await fetch(`/api/submissions/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      const { data } = await axios.get(`/api/submissions?id=${id}`);
 
-      if (!res.ok) return null;
-      const updatedSubmission = await res.json();
-      setSubmissions((prev) =>
-        prev.map((s) => (s.id === id ? updatedSubmission : s))
-      );
-      return updatedSubmission;
-    } catch (error) {
-      console.error("Failed to update submission:", error);
-      return null;
+      setSubmissions(data);
+      setMessage(Message.success("Submissions loaded successfully", { duration: 3000 }));
+
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to load submissions",
+        { title: "Fetch Error", duration: 5000 }
+      ));
+      return [];
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [clearMessage]);
 
-  // Delete a submission
-  const deleteSubmission = async (id: string) => {
+  const fetchSubmissionsByStudentId = useCallback(async (studentId: string) => {
+    setLoading(true);
+    clearMessage();
     try {
-      const res = await fetch(`/api/submissions/${id}`, { method: "DELETE" });
-      if (!res.ok) return false;
+      const { data } = await axios.get(`/api/submissions?studentId=${studentId}`);
+      
+      setSubmissions(data);
+      setMessage(Message.success("Submissions loaded successfully", { duration: 3000 }));
+
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to load submissions",
+        { title: "Fetch Error", duration: 5000 }
+      ));
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [clearMessage]);
+
+  // Fetch with message feedback
+  const fetchSubmissionsByCourseIds = useCallback(async (courseIds: string[]) => {
+    setLoading(true);
+    clearMessage();
+    try {
+      const ids = courseIds.join(",");
+      const { data } = await axios.get(`/api/submissions?courseId=${ids}`);
+      setSubmissions(data);
+      setMessage(Message.success("Submissions loaded successfully", { duration: 3000 }));
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to load submissions",
+        { title: "Fetch Error", duration: 5000 }
+      ));
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [clearMessage]);
+
+  // Create new submission
+  const createSubmission = useCallback(async (courseId: string, submission: Partial<Submission>) => {
+    setLoading(true);
+    clearMessage();
+    try {
+      const { data } = await axios.post(`/api/submissions`, { ...submission, courseId });
+      setSubmissions((prev) => [...prev, data]);
+      setMessage(Message.success("Submission created successfully", { duration: 3000 }));
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to create submission",
+        { title: "Creation Error" }
+      ));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [clearMessage]);
+
+  // Update existing submission
+  const updateSubmission = useCallback(async (id: string, updatedData: Partial<Submission>) => {
+    setLoading(true);
+    setUpdating(true);
+    clearMessage();
+    try {
+      const { data } = await axios.put(`/api/submissions/${id}`, updatedData);
+      setSubmissions((prev) => prev.map((s) => (s.id === id ? data : s)));
+      setMessage(Message.success("Submission updated successfully", { duration: 3000 }));
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to update submission",
+        { title: "Update Error" }
+      ));
+      return null;
+    } finally {
+      setLoading(false);
+      setUpdating(false);
+    }
+  }, [clearMessage]);
+
+  // Delete submission
+  const deleteSubmission = useCallback(async (id: string) => {
+    setLoading(true);
+    clearMessage();
+    try {
+      await axios.delete(`/api/submissions/${id}`);
       setSubmissions((prev) => prev.filter((s) => s.id !== id));
+      setMessage(Message.success("Submission deleted successfully", { duration: 3000 }));
       return true;
-    } catch (error) {
-      console.error("Failed to delete submission:", error);
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to delete submission",
+        { title: "Deletion Error" }
+      ));
       return false;
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [clearMessage]);
 
   return (
     <SubmissionContext.Provider
       value={{
         submissions,
         loading,
+        updating,
+        message,
         fetchSubmissions,
+        fetchSubmissionsByStudentId,
+        fetchSubmissionsByTutorId,
+        fetchSubmissionsByCourseIds,
+        fetchSubmissionById,
         createSubmission,
         updateSubmission,
         deleteSubmission,
+        clearMessage,
       }}
     >
       {children}
     </SubmissionContext.Provider>
   );
-};
-
-export const useSubmissions = () => {
-  const ctx = useContext(SubmissionContext);
-  if (!ctx) {
-    throw new Error("useSubmissions must be used inside SubmissionProvider");
-  }
-  return ctx;
 };
