@@ -10,9 +10,9 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import ViewSubmissionsDialog from './dialogs/view-submission-dialog';
-import DeleteConfirmationDialog from './dialogs/delete-confirmation-dialog';
-import TestDetailsDialog from './dialogs/test-datails-dialog';
+import ViewSubmissionsDialog from '../dialogs/view-submission-dialog';
+import DeleteConfirmationDialog from '../dialogs/delete-confirmation-dialog';
+import TestDetailsDialog from '../dialogs/test-datails-dialog';
 import { $Enums } from '@/generated/prisma';
 
 const getSubmissionStats = (test: AppTypes.Test) => {
@@ -91,7 +91,7 @@ export default function TestCard({ test, course, deleteTest }: TestCardProps) {
       {showSubmissionsDialog && (
         <ViewSubmissionsDialog
           test={test}
-          course={course as AppTypes.Course}
+          courseName={(course as AppTypes.Course).name}
           onClose={() => setShowSubmissionsDialog(false)}
         />
       )}

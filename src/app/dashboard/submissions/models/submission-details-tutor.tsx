@@ -115,19 +115,29 @@ export default function SubmissionDetailTutor({ courseName, submission, onBack, 
 
         {/* Submission Info */}
         <div className="bg-white p-6 border border-gray-200 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Submission Details</h2>
+          <h2 className="text-lg font-semibold mb-4">
+            Submission Details
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Accepted File Types</p>
-              <p className="text-gray-900">{submission.fileType}</p>
+              <p className="text-sm font-medium text-gray-500 mb-1">
+                Accepted File Types
+              </p>
+              <p className="text-gray-900 text-sm">
+                {submission.fileType}
+              </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Created</p>
-              <p className="text-gray-900">{formatDate(submission.createdAt)}</p>
+              <p className="text-sm font-medium text-gray-500 mb-1">
+                Created
+              </p>
+              <p className="text-gray-900 text-sm">{formatDate(submission.createdAt)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Average Grade</p>
-              <p className="text-gray-900">
+              <p className="text-sm font-medium text-gray-500 mb-1">
+                Average Grade
+              </p>
+              <p className="text-gray-900 text-sm">
                 {(stats as Stats).gradedCount > 0 ? `${averageGrade}%` : 'Not available'}
               </p>
             </div>
@@ -137,7 +147,9 @@ export default function SubmissionDetailTutor({ courseName, submission, onBack, 
         {/* Student Submissions */}
         <div className="bg-white border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold">Student Submissions</h2>
+            <h2 className="text-lg font-semibold">
+              Student Submissions
+            </h2>
           </div>
 
           {submission.entries.length === 0 ? (
@@ -175,10 +187,10 @@ export default function SubmissionDetailTutor({ courseName, submission, onBack, 
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
                             <div className="text-sm font-medium text-gray-900">
-                              {entry.studentId}
+                              {entry.student.fullName}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {entry.studentId}
+                              {entry.student.email}
                             </div>
                           </div>
                         </td>
@@ -199,7 +211,7 @@ export default function SubmissionDetailTutor({ courseName, submission, onBack, 
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {entry.grade !== undefined ? `${entry.grade}%` : 'Not graded'}
+                          {entry.grade ? `${entry.grade}%` : 'Not graded'}
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">

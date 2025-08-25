@@ -10,25 +10,24 @@ export async function GET(req: Request) {
   const studentId = searchParams.get("studentId");
 
   const where: any = {};
-  
+  const include: any = { student: true }
+
   if (submissionId && studentId) {
     const entry = await prisma.submissionEntry.findUnique({
       where: {
         submissionId_studentId: {
           submissionId,
-          studentId
-        }
+          studentId,
+        },
       },
+      include: { student: true },
     });
 
     return NextResponse.json(entry);
-  }
-  else if (submissionId) 
-    where.submissionId = submissionId;
-  else if (studentId) 
-    where.studentId = studentId;
+  } else if (submissionId) where.submissionId = submissionId;
+  else if (studentId) where.studentId = studentId;
 
-  const entries = await prisma.submissionEntry.findMany({ where });
+  const entries = await prisma.submissionEntry.findMany({ where, include });
 
   return NextResponse.json(entries);
 }

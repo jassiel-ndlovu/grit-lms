@@ -74,10 +74,18 @@ declare global {
       url: string;
     };
     type Submission = Prisma.SubmissionGetPayload<{
-      include: { entries: true };
+      include: { 
+        entries: {
+          include: {
+            student: true,
+          }
+        } 
+      };
     }>;
     
-    type SubmissionEntry = Prisma.SubmissionEntryGetPayload<{object}>;
+    type SubmissionEntry = Prisma.SubmissionEntryGetPayload<{
+      include: { student: true },
+    }>;
     type Resource = Prisma.ResourceGetPayload<object>;
     type Grade = Prisma.GradeGetPayload<object>;
     type Notification = Prisma.NotificationGetPayload<object>;

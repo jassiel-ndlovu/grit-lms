@@ -17,7 +17,13 @@ export async function GET(req: Request) {
           in: ids,
         },
       },
-      include: { entries: true },
+      include: {
+        entries: {
+          include: {
+            student: true,
+          },
+        },
+      },
       orderBy: { dueDate: "asc" },
     });
 
@@ -33,7 +39,13 @@ export async function GET(req: Request) {
           },
         },
       },
-      include: { entries: true },
+      include: { 
+        entries: {
+          include: {
+            student: true,
+          }
+        } 
+      },
       orderBy: { dueDate: "asc" },
     });
 
@@ -45,8 +57,13 @@ export async function GET(req: Request) {
           tutorId: tutorId,
         },
       },
-
-      include: { entries: true },
+      include: { 
+        entries: {
+          include: {
+            student: true,
+          }
+        } 
+      },
       orderBy: { dueDate: "asc" },
     });
 
@@ -55,6 +72,13 @@ export async function GET(req: Request) {
     const submission = await prisma.submission.findUnique({
       where: {
         id: subId,
+      },
+      include: { 
+        entries: {
+          include: {
+            student: true,
+          }
+        } 
       },
     });
 
@@ -74,7 +98,7 @@ export async function POST(req: Request) {
       fileType: body.fileType,
       description: body.description,
       // descriptionFiles: JSON.parse(JSON.stringify(body.descriptionFiles)),
-      lastDueDate: body.lastDueDate ? new Date(body.lastDueDate): null,
+      lastDueDate: body.lastDueDate ? new Date(body.lastDueDate) : null,
       courseId: body.courseId,
       maxAttempts: body.maxAttempts,
       dueDate: new Date(body.dueDate),

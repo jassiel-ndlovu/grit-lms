@@ -1,75 +1,126 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { FileText, Plus, Search, Filter } from 'lucide-react';
-import { useCourses } from '@/context/CourseContext';
-import { useTests } from '@/context/TestContext';
-import { useProfile } from '@/context/ProfileContext';
-import CreateTestDialog from './models/create-test-dialog';
-import { TestCardSkeleton } from './models/test-card-skeleton';
-import TestCard from './models/test-card';
+import { BookOpen, CheckCircle, Clock, Plus, Search, Users, XCircle } from "lucide-react";
+import TestActionsMenu from "./models/actions-menu";
+import TutorTestsTableSkeleton from "./skeletons/table-skeleton";
+import { useEffect, useMemo, useState } from "react";
+import { useCourses } from "@/context/CourseContext";
+import { useTests } from "@/context/TestContext";
+import { useProfile } from "@/context/ProfileContext";
+import CreateTestDialog from "./dialogs/create-test-dialog";
+import { formatDate } from "@/lib/functions";
+import ViewSubmissionsDialog from "./dialogs/view-submission-dialog";
 
 export default function TutorTestsPage() {
-  const { courses } = useCourses();
-  const { tests, fetchTestsByTutorId, createTest, deleteTest, loading: testLoading } = useTests();
+  const { fetchCoursesByTutorId, loading: coursesLoading } = useCourses();
+  const { fetchTestsByTutorId, createTest, deleteTest, loading: testLoading } = useTests();
   const { profile } = useProfile();
 
   const tutorProfile: AppTypes.Tutor = profile as AppTypes.Tutor;
 
-  const [filteredTests, setFilteredTests] = useState<AppTypes.Test[]>([]);
+  const [tests, setTests] = useState<AppTypes.Test[]>([]);
+  const [courses, setCourses] = useState<AppTypes.Course[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedTest, setSelectedTest] = useState<AppTypes.Test | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [testsLoading, setTestsLoading] = useState<boolean>(true);
+  const [showSubmissionsDialog, setShowSubmissionsDialog] = useState<boolean>(false);
 
-  const tutorCourses = useMemo(() => {
-    return courses.filter(course => course.tutor.id === tutorProfile.id);
-  }, [courses, tutorProfile]);
-
-  // ✅ Fetch tests when tutorProfile is ready
+  // fetch courses
   useEffect(() => {
-    if (tutorProfile?.id) {
-      fetchTestsByTutorId(tutorProfile.id);
+    if (!tutorProfile) return;
+
+    const fetch = async () => {
+      setLoading(true);
+
+      const fetchedCourses = await fetchCoursesByTutorId(tutorProfile.id) as AppTypes.Course[];
+
+      setCourses(fetchedCourses);
+      setLoading(false);
+    };
+
+    fetch();
+  }, [tutorProfile, fetchCoursesByTutorId]);
+
+  // fetch tests
+  useEffect(() => {
+    if (!tutorProfile) return;
+
+    const fetch = async () => {
+      setLoading(true);
+
+      const fetchedTests = await fetchTestsByTutorId(tutorProfile.id) as AppTypes.Test[];
+
+      setTests(fetchedTests);
+      setLoading(false);
+    };
+
+    fetch();
+  }, [tutorProfile, fetchCoursesByTutorId]);
+
+  // memoized filter function
+  const filteredTests = useMemo(() => {
+    let filtered = tests;
+
+    // Filter by course
+    if (selectedCourse !== 'all') {
+      filtered = filtered.filter(test => test.courseId === selectedCourse);
     }
-  }, [fetchTestsByTutorId, tutorProfile?.id, tutorCourses]);
 
-  const tutorTests = useMemo(() => {
-    return tests.filter(test => tutorCourses.find(c => c.id === test.courseId));
-  }, [tests, tutorCourses]);
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(test =>
+        test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        test.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        courses.find(c => c.id === test.courseId)?.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
-  useEffect(() => {
-    const filtered = tests.filter(test =>
-      tutorCourses.some(course => course.id === test.courseId)
-    );
-    setFilteredTests(filtered);
-  }, [tutorTests]);
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(test => {
+        switch (statusFilter) {
+          case 'active':
+            return test.isActive;
+          case 'inactive':
+            return !test.isActive;
+          case 'upcoming':
+            return test.dueDate > new Date();
+          case 'past':
+            return test.dueDate <= new Date();
+          default:
+            return true;
+        }
+      });
+    }
 
-  // ✅ Handle filtering logic
-  useEffect(() => {
-    setTestsLoading(true);
-    const timeout = setTimeout(() => {
-      let filtered = tutorTests;
-      if (searchTerm) {
-        filtered = filtered.filter(test =>
-          test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          test.description.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-      if (selectedCourse) {
-        filtered = filtered.filter(test => test.courseId === selectedCourse);
-      }
-      setFilteredTests(filtered);
-      setTestsLoading(false);
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [searchTerm, selectedCourse]);
+    return filtered;
+  }, [tests, selectedCourse, searchTerm, statusFilter]);
+
+  // functions
+  const getTestStats = (test: AppTypes.Test) => {
+    const totalStudents = courses.find(c => c.id === test.courseId)?.students?.length || 0;
+    const submittedCount = test.submissions.filter(s => s.submittedAt).length;
+    const gradedCount = test.submissions.filter(s => s.score !== undefined).length;
+    const inProgressCount = test.submissions.filter(s => s.status === 'SUBMITTED').length;
+
+    return { totalStudents, submittedCount, gradedCount, inProgressCount };
+  };
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  };
 
   const handleCreateTest = async (courseId: string, testData: Partial<AppTypes.Test>) => {
     setLoading(true);
     try {
       await createTest(courseId, testData);
       setShowCreateDialog(false);
+      // setView("list");
     } catch (error) {
       console.error('Error creating test:', error);
     } finally {
@@ -77,112 +128,286 @@ export default function TutorTestsPage() {
     }
   };
 
+  const handleEditTest = (test: AppTypes.Test) => {
+    setSelectedTest(test);
+    setShowCreateDialog(true);
+  };
+
+  const handleViewDetails = (test: AppTypes.Test) => {
+    setSelectedTest(test);
+    setShowSubmissionsDialog(true);
+  };
+
   const handleDeleteTest = async (testId: string) => {
     try {
-      await deleteTest(testId);
+      if (confirm('Are you sure you want to delete this test? This action cannot be undone.')) {
+        await deleteTest(testId);
+      }
     } catch (error) {
       console.error('Error deleting test:', error);
     }
   };
 
+  const handleDuplicateTest = (test: AppTypes.Test) => {
+    const duplicated: AppTypes.Test = {
+      ...test,
+      id: `${test.id}_copy_${Date.now()}`,
+      title: `${test.title} (Copy)`,
+      submissions: [],
+      createdAt: new Date(),
+    };
+    setTests(prev => [duplicated, ...prev]);
+  };
+
+  const handleToggleActive = (testId: string) => {
+    setTests(prev => prev.map(test =>
+      test.id === testId ? { ...test, isActive: !test.isActive } : test
+    ));
+  };
+
+  if (loading || testLoading || coursesLoading) {
+    return <TutorTestsTableSkeleton />;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Test Management</h1>
-          <p className="text-gray-600 text-sm">Manage tests for your courses</p>
+    <div className="h-full px-6 pt-6 pb-10 bg-gray-50 overflow-y-auto">
+      {/* Header */}
+      <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Manage Tests
+          </h1>
+          <p className="text-gray-600 text-sm">
+            Create and manage tests and examinations for your courses
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 p-6 bg-white border border-gray-200 flex justify-between items-center">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search tests..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-2 border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+            />
+          </div>
+
+          <select
+            value={selectedCourse}
+            onChange={(e) => setSelectedCourse(e.target.value)}
+            className="px-4 py-2 border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Courses</option>
+            {courses.map(course => (
+              <option key={course.id} value={course.id}>
+                {course.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="past">Past Due</option>
+          </select>
         </div>
 
-        {/* Controls */}
-        <div className="bg-white border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-[calc(50%-2px)] transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search tests..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="text-sm pl-10 pr-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64"
-                />
-              </div>
-              {/* Course Filter */}
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <select
-                  value={selectedCourse}
-                  onChange={(e) => setSelectedCourse(e.target.value)}
-                  className="w-full pl-10 pr-8 py-2 border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:w-48"
-                >
-                  <option value="">All Courses</option>
-                  {tutorCourses.map(course => (
-                    <option key={course.id} value={course.id}>{course.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+        <button
+          onClick={() => setShowCreateDialog(true)}
+          className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Create Test
+        </button>
+      </div>
+
+      {/* Tests Table */}
+      {(!filteredTests.length && !loading) ? (
+        <div className="text-center py-12 bg-white border border-gray-200">
+          <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No tests found
+          </h3>
+          <p className="text-gray-500 text-sm mb-4">
+            {searchTerm || statusFilter !== 'all' || selectedCourse !== 'all'
+              ? "Try adjusting your filters"
+              : "Create your first test to get started"}
+          </p>
+          {(!searchTerm && statusFilter === 'all' && selectedCourse === 'all') && (
             <button
               onClick={() => setShowCreateDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 flex items-center gap-2 mx-auto"
             >
               <Plus className="w-4 h-4" />
-              Create Test
+              Create First Test
             </button>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Test
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Course
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Due Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Duration
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Progress
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredTests.map(test => {
+                  const stats = getTestStats(test);
+                  const isOverdue = new Date() > test.dueDate;
+                  const completionRate = stats.totalStudents > 0
+                    ? Math.round((stats.submittedCount / stats.totalStudents) * 100)
+                    : 0;
+
+                  return (
+                    <tr key={test.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {test.title}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {test.totalPoints} points • Created {new Date(test.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{courses.find(c => c.id === test.courseId)?.name || "Course name not found"}</div>
+                        <div className="text-sm text-gray-500 flex items-center">
+                          <Users className="w-3 h-3 mr-1" />
+                          {stats.totalStudents} students
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {formatDate(test.dueDate)}
+                        </div>
+                        <div className={`text-sm ${isOverdue ? 'text-red-500' : 'text-gray-500'}`}>
+                          {isOverdue ? 'Overdue' : 'Active'}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 flex items-center">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {test.timeLimit ? formatDuration(test.timeLimit) : 'No limit'}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${completionRate}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm text-gray-600">
+                            {stats.submittedCount}/{stats.totalStudents}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-16 overflow-y-auto flex-wrap flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${test.isActive
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                            }`}>
+                            {test.isActive ? 'Active' : 'Inactive'}
+                          </span>
+
+                          {stats.gradedCount > 0 && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {stats.gradedCount} graded
+                            </span>
+                          )}
+
+                          {stats.inProgressCount > 0 && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <Clock className="w-3 h-3 mr-1" />
+                              {stats.inProgressCount} in progress
+                            </span>
+                          )}
+
+                          {stats.submittedCount === 0 && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              <XCircle className="w-3 h-3 mr-1" />
+                              No submissions
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <TestActionsMenu
+                          onView={() => handleViewDetails(test)}
+                          onEdit={() => handleEditTest(test)}
+                          onDelete={() => handleDeleteTest(test.id)}
+                          onDuplicate={() => handleDuplicateTest(test)}
+                          onToggleActive={() => handleToggleActive(test.id)}
+                          isActive={test.isActive}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
 
-        {/* Skeleton while loading */}
-        {testsLoading || testLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <TestCardSkeleton key={i} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTests.map(test => (
-              <TestCard 
-                key={test.id}
-                test={test}
-                course={courses.find(c => c.id === test.courseId)}
-                deleteTest={handleDeleteTest}
-              />
-            ))}
-          </div>
-        )}
-
-        {filteredTests && filteredTests.length === 0 && !testsLoading && (
-          <div className="text-center py-12">
-            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tests found</h3>
-            <p className="text-gray-600 text-sm mb-4">
-              {searchTerm || selectedCourse
-                ? "Try adjusting your search or filter criteria"
-                : "Create your first test to get started"}
-            </p>
-            {!searchTerm && !selectedCourse && (
-              <button
-                onClick={() => setShowCreateDialog(true)}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Create Test
-              </button>
-            )}
-          </div>
-        )}
-
-        {showCreateDialog && (
+      {showCreateDialog && (
           <CreateTestDialog
             onClose={() => setShowCreateDialog(false)}
             onSave={handleCreateTest}
             loading={loading}
           />
         )}
-      </div>
+
+        {showSubmissionsDialog && (
+        <ViewSubmissionsDialog
+          test={selectedTest as AppTypes.Test}
+          courseName={courses.find(c => c.id === selectedTest?.courseId)?.name || "Course Name Not Found"}
+          onClose={() => setShowSubmissionsDialog(false)}
+        />
+      )}
     </div>
   );
 }
