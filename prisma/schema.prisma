@@ -224,7 +224,7 @@ model Submission {
   id               String            @id @default(cuid())
   title            String
   description      String
-  descriptionFiles Json?
+  descriptionFiles String[]
   fileType         String
   courseId         String
   maxAttempts      Int? // null = unlimited attempts, number = limited attempts

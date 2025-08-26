@@ -5,12 +5,13 @@ import { useProfile } from "@/context/ProfileContext";
 import { useSubmission } from "@/context/SubmissionContext";
 import { useSubmissionEntries } from "@/context/SubmissionEntryContext";
 import { $Enums } from "@/generated/prisma";
-import { formatDate } from "@/lib/functions";
+import { cleanUrl, formatDate } from "@/lib/functions";
 import { Download, Eye, FileText, MoveLeft, Upload, Paperclip } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import SubmissionDetailsSkeleton from "../../../skeletons/review-skeleton";
 import { useErrorPages } from "@/app/dashboard/components/error-pages";
+import LessonMarkdown from "@/app/components/markdown";
 
 interface SubmissionDetailsProps {
   params: Promise<{ id: string }>;
@@ -109,26 +110,48 @@ export default function SubmissionDetails({ params }: SubmissionDetailsProps) {
         {<div className="bg-white p-6 border border-gray-200 mb-6">
           <h2 className="text-lg font-semibold mb-4">Instructions</h2>
           {submission.description && (
-            <p className="text-gray-700 text-sm whitespace-pre-line mb-4">{submission.description}</p>
+            <div className="text-sm mb-4">
+              <LessonMarkdown content={submission.description} />
+            </div>
           )}
 
-          {submission.descriptionFiles && (submission.descriptionFiles as AppTypes.DescriptionFile[]).length > 0 && (
+          {submission.descriptionFiles && submission.descriptionFiles.length && (
             <div className="space-y-2">
-              {(submission.descriptionFiles as AppTypes.DescriptionFile[]).map((file, i) => (
+              {submission.descriptionFiles.map((url, i) => (
                 <a
                   key={i}
-                  href={file.url}
+                  href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center text-blue-600 hover:underline"
+                  className="flex items-center text-blue-600 text-sm hover:underline"
                 >
                   <Paperclip className="w-4 h-4 mr-2" />
-                  {file.title}
+                  Download: {cleanUrl(url.split("/").pop() ?? "File")}
                 </a>
               ))}
             </div>
           )}
         </div>}
+        
+        {!entry && (
+          <div className="bg-white p-6 border border-gray-200 mb-6">
+            <h2 className="text-lg font-semibold mb-4">
+              Submission Details
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Due Date</p>
+                <p className="text-gray-900 text-sm">{formatDate(submission.dueDate)}</p>
+              </div>
+              {submission.lastDueDate && <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Last Due Date</p>
+                <p className="text-gray-900 text-sm">{formatDate(submission.lastDueDate)}</p>
+              </div>}
+            </div>
+          </div>
+        )}
+
         {canEdit && !entry && (
           <div className="mt-6 pt-6 border-t border-gray-200">
             <button
@@ -161,10 +184,10 @@ export default function SubmissionDetails({ params }: SubmissionDetailsProps) {
                 <p className="text-sm font-medium text-gray-500 mb-1">Status</p>
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-medium ${entry.status === $Enums.SubmissionStatus.GRADED
-                      ? "bg-green-100 text-green-800"
-                      : entry.status === $Enums.SubmissionStatus.LATE
-                        ? "bg-orange-100 text-orange-800"
-                        : "bg-blue-100 text-blue-800"
+                    ? "bg-green-100 text-green-800"
+                    : entry.status === $Enums.SubmissionStatus.LATE
+                      ? "bg-orange-100 text-orange-800"
+                      : "bg-blue-100 text-blue-800"
                     }`}
                 >
                   {entry.status.replace("_", " ")}

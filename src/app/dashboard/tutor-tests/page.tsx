@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, CheckCircle, Clock, Plus, Search, Users, XCircle } from "lucide-react";
+import { BookOpen, Clock, Plus, Search, Users } from "lucide-react";
 import TestActionsMenu from "./models/actions-menu";
 import TutorTestsTableSkeleton from "./skeletons/table-skeleton";
 import { useEffect, useMemo, useState } from "react";
@@ -10,6 +10,7 @@ import { useProfile } from "@/context/ProfileContext";
 import CreateTestDialog from "./dialogs/create-test-dialog";
 import { formatDate } from "@/lib/functions";
 import ViewSubmissionsDialog from "./dialogs/view-submission-dialog";
+import StatusCheck from "./models/status-menu";
 
 export default function TutorTestsPage() {
   const { fetchCoursesByTutorId, loading: coursesLoading } = useCourses();
@@ -343,35 +344,14 @@ export default function TutorTestsPage() {
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="h-16 overflow-y-auto flex-wrap flex items-center gap-2">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${test.isActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                            }`}>
-                            {test.isActive ? 'Active' : 'Inactive'}
-                          </span>
-
-                          {stats.gradedCount > 0 && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              {stats.gradedCount} graded
-                            </span>
-                          )}
-
-                          {stats.inProgressCount > 0 && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              <Clock className="w-3 h-3 mr-1" />
-                              {stats.inProgressCount} in progress
-                            </span>
-                          )}
-
-                          {stats.submittedCount === 0 && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                              <XCircle className="w-3 h-3 mr-1" />
-                              No submissions
-                            </span>
-                          )}
-                        </div>
+                        <StatusCheck
+                          isActive={test.isActive}
+                          stats={{
+                            gradedCount: stats.gradedCount,
+                            inProgressCount: stats.inProgressCount,
+                            submittedCount: stats.submittedCount
+                          }}
+                        />
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -394,14 +374,14 @@ export default function TutorTestsPage() {
       )}
 
       {showCreateDialog && (
-          <CreateTestDialog
-            onClose={() => setShowCreateDialog(false)}
-            onSave={handleCreateTest}
-            loading={loading}
-          />
-        )}
+        <CreateTestDialog
+          onClose={() => setShowCreateDialog(false)}
+          onSave={handleCreateTest}
+          loading={loading}
+        />
+      )}
 
-        {showSubmissionsDialog && (
+      {showSubmissionsDialog && (
         <ViewSubmissionsDialog
           test={selectedTest as AppTypes.Test}
           courseName={courses.find(c => c.id === selectedTest?.courseId)?.name || "Course Name Not Found"}

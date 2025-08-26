@@ -256,7 +256,7 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
               onDrop={handleDrop}
             >
               <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-lg font-medium text-gray-700 mb-2">
+              <p className="font-medium text-gray-700 mb-2">
                 Drop files here or click to browse
               </p>
               <p className="text-sm text-gray-500 mb-4">

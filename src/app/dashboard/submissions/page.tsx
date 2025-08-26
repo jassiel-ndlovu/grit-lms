@@ -8,7 +8,7 @@ export default function SubmissionsPage() {
   const { profile, session, status } = useProfile();
 
   if (!profile || status === "loading") {
-    return <div className="p-6 text-gray-600">
+    return <div className="p-6 text-gray-600 text-sm">
       Loading submissions...
     </div>;
   }

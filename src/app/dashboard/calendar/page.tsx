@@ -65,7 +65,7 @@ export default function CalendarPage() {
     // })
 
     return result
-  }, [])
+  }, [courses, tests])
 
   return (
     <div className="h-full w-full bg-gray-50 px-6 py-10 overflow-auto">

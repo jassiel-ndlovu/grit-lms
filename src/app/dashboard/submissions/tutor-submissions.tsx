@@ -24,20 +24,15 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [view, setView] = useState<'list' | 'create' | 'edit' | 'detail'>('list');
   const [selectedSubmission, setSelectedSubmission] = useState<AppTypes.Submission | null>(null);
-  const [loading, setLoading] = useState(true);
 
   // fetch courses
   useEffect(() => {
     if (!tutorId) return;
 
     const fetchData = async () => {
-      setLoading(true);
-
       const tutorCourses = (await fetchCoursesByTutorId(tutorId)) as AppTypes.Course[];
 
       setCourses(tutorCourses);
-
-      setLoading(false);
     };
 
     fetchData();
@@ -48,12 +43,8 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
     if (!tutorId) return;
 
     const fetch = async () => {
-      setLoading(true);
-
       const subs = await fetchSubmissionsByTutorId(tutorId) as AppTypes.Submission[];
       setSubmissions(subs);
-
-      setLoading(false);
     }
 
     fetch();
@@ -138,10 +129,6 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
     };
     setSubmissions(prev => [duplicated, ...prev]);
   };
-
-  if (loading || coursesLoading || submissionLoading) {
-    <TutorSubmissionsTableSkeleton />
-  }
 
   if (view === 'create' || view === 'edit') {
     return (
@@ -234,7 +221,9 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
       </div>
 
       {/* Submissions Table */}
-      {((!filteredSubmissions.length || !courses.length) && !loading) ? (
+      {coursesLoading || submissionLoading ? (
+        <TutorSubmissionsTableSkeleton />
+      ): (!filteredSubmissions.length || !courses.length) ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">

@@ -12,7 +12,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  const { url } = await put(file.name, file, { access: "public" });
+  const { url } = await put(file.name, file, { 
+    access: "public",
+    addRandomSuffix: true,
+  });
+  
   return NextResponse.json({ url });
 }
 

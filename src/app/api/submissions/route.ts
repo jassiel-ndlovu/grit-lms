@@ -97,7 +97,7 @@ export async function POST(req: Request) {
       title: body.title,
       fileType: body.fileType,
       description: body.description,
-      // descriptionFiles: JSON.parse(JSON.stringify(body.descriptionFiles)),
+      descriptionFiles: body.descriptionFiles,
       lastDueDate: body.lastDueDate ? new Date(body.lastDueDate) : null,
       courseId: body.courseId,
       maxAttempts: body.maxAttempts,

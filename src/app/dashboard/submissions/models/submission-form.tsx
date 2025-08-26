@@ -1,7 +1,9 @@
+import LessonMarkdown from "@/app/components/markdown";
 import { $Enums } from "@/generated/prisma";
+import { uploadFile } from "@/lib/blob";
 import { formatForDateTimeLocal, parseDateTimeLocal } from "@/lib/functions";
-import { MoveLeft } from "lucide-react";
-import { useState } from "react";
+import { MoveLeft, Download } from "lucide-react";
+import { useState, useRef } from "react";
 
 interface SubmissionFormProps {
   courses: AppTypes.Course[];
@@ -39,11 +41,14 @@ export default function SubmissionForm({
   const [maxAttempts, setMaxAttempts] = useState<number>(formData.maxAttempts || 1);
   const [files, setFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const newErrors: Record<string, string> = {};
+
     if (!(formData.title as string).trim()) newErrors.title = "Title is required";
     if (!formData.description) newErrors.description = "Description is required";
     if (!formData.courseId) newErrors.courseId = "Course is required";
@@ -55,23 +60,52 @@ export default function SubmissionForm({
       return;
     }
 
-    const submissionData: AppTypes.Submission = {
-      id: submission?.id || `submission_${Date.now()}`,
-      title: formData.title as string,
-      description: formData.description as string,
-      descriptionFiles: files.map(f => (
-        { title: f.name, url: "http://localhost:3000" }
-      )) || [],
-      fileType: formData.fileType as $Enums.FileType,
-      courseId: formData.courseId as string,
-      maxAttempts: maxAttemptsOption === "Limited" ? maxAttempts : null,
-      dueDate: new Date(formData.dueDate as Date),
-      lastDueDate: formData.lastDueDate ? new Date(formData.lastDueDate as Date) : null,
-      entries: submission?.entries || [],
-      createdAt: submission?.createdAt || new Date()
-    };
+    setIsUploading(true);
 
-    onSave(submissionData);
+    try {
+      // Upload files and get their URLs
+      const uploadedFileUrls = await Promise.all(
+        files.map(async (file) => {
+          try {
+            const url = await uploadFile(file);
+            return url;
+          } catch (error) {
+            console.error(`Failed to upload file ${file.name}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // Filter out failed uploads
+      const successfulUploads = uploadedFileUrls.filter(url => url !== null) as string[];
+
+      // Combine with existing files if editing
+      const allDescriptionFiles = [
+        ...(formData.descriptionFiles || []),
+        ...successfulUploads
+      ];
+
+      const submissionData: AppTypes.Submission = {
+        id: submission?.id || `submission_${Date.now()}`,
+        title: formData.title as string,
+        description: formData.description as string,
+        descriptionFiles: allDescriptionFiles,
+        fileType: formData.fileType as $Enums.FileType,
+        courseId: formData.courseId as string,
+        maxAttempts: maxAttemptsOption === "Limited" ? maxAttempts : null,
+        dueDate: new Date(formData.dueDate as Date),
+        lastDueDate: formData.lastDueDate ? new Date(formData.lastDueDate as Date) : null,
+        entries: submission?.entries || [],
+        createdAt: submission?.createdAt || new Date()
+      };
+
+      onSave(submissionData);
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      alert("Failed to upload some files. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -84,10 +118,18 @@ export default function SubmissionForm({
     if (!e.target.files) return;
     const selectedFiles = Array.from(e.target.files);
     setFiles((prev) => [...prev, ...selectedFiles]);
+    e.target.value = ''; // Reset input
   };
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeUploadedFile = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      descriptionFiles: (prev.descriptionFiles || []).filter((_, i) => i !== index)
+    }));
   };
 
   const fileTypeOptions = [
@@ -134,20 +176,31 @@ export default function SubmissionForm({
               {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
             </div>
 
-            {/* Description */}
+            {/* Description with Markdown support */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Description *
               </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                className={`w-full px-3 py-2 font-mono text-sm border ${errors.description ? "border-red-500" : "border-gray-300"
-                  } focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-transparent`}
-                rows={4}
-                placeholder="Enter assignment description or instructions (Markdown Allowed)..."
-              />
+              <div className="relative">
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  onDragOver={(e) => e.preventDefault()}
+                  className={`w-full px-3 py-2 font-mono text-sm border ${errors.description ? "border-red-500" : "border-gray-300"
+                    } focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-transparent`}
+                  rows={4}
+                  placeholder="Enter assignment description or instructions (Markdown Allowed)..."
+                />
+              </div>
               {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+
+              {/* Markdown Preview */}
+              <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Preview:</label>
+                <div className="text-sm">
+                  <LessonMarkdown content={formData.description || "*Type your description above...*"} />
+                </div>
+              </div>
             </div>
 
             {/* Description Files */}
@@ -156,7 +209,39 @@ export default function SubmissionForm({
                 Instruction Files (Optional)
               </label>
 
-              {/* Dropzone */}
+              {/* Existing uploaded files */}
+              {(formData.descriptionFiles && formData.descriptionFiles.length > 0) && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Files:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.descriptionFiles.map((fileUrl, index) => (
+                      <span
+                        key={index}
+                        className="flex items-center gap-2 px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm"
+                      >
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline flex items-center gap-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          File {index + 1}
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => removeUploadedFile(index)}
+                          className="text-red-500 hover:text-red-700 text-xs"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dropzone for new files */}
               <div
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
@@ -168,30 +253,35 @@ export default function SubmissionForm({
                   onChange={handleFileSelect}
                   className="hidden"
                   id="fileInput"
+                  ref={fileInputRef}
                 />
-                <label htmlFor="fileInput" className="cursor-pointer text-sm">
+                <label htmlFor="fileInput" className="cursor-pointer text-sm text-center">
                   Drop files here or <span className="text-blue-600">browse</span>
+                  <p className="text-xs text-gray-400 mt-1">Files will be uploaded and available to students</p>
                 </label>
               </div>
 
-              {/* Pills */}
+              {/* New files to be uploaded */}
               {files.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {files.map((file, index) => (
-                    <span
-                      key={index}
-                      className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                    >
-                      {file.name}
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="text-red-500 hover:text-red-700 text-xs"
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Files to upload:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {files.map((file, index) => (
+                      <span
+                        key={index}
+                        className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                       >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
+                        {file.name}
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="text-red-500 hover:text-red-700 text-xs"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -318,10 +408,14 @@ export default function SubmissionForm({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700"
+                disabled={loading || isUploading}
+                className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? (
-                  <div className="w-3 h-3 p-1 rounded-full border border-white border-t-transparent animate-spin"></div>
+                {loading || isUploading ? (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    {isUploading ? "Uploading..." : "Saving..."}
+                  </div>
                 ) : isEditing ? (
                   "Update Submission"
                 ) : (

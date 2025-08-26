@@ -45,3 +45,26 @@ export const parseDateTimeLocal = (dateString: string): Date => {
   const localDate = new Date(dateString);
   return new Date(localDate.getTime());
 };
+
+export const extractImageUrlsFromMarkdown = (markdown: string): string[] => {
+  const imageRegex = /!\[.*?\]\((.*?)\)/g;
+  const urls: string[] = [];
+  let match;
+  
+  while ((match = imageRegex.exec(markdown)) !== null) {
+    urls.push(match[1]);
+  }
+  
+  return urls;
+};
+
+export function cleanUrl(slug: string): string {
+  let decoded = decodeURIComponent(slug);
+
+  const lastHyphenIndex = decoded.lastIndexOf("-");
+  if (lastHyphenIndex !== -1) {
+    decoded = decoded.substring(0, lastHyphenIndex);
+  }
+
+  return decoded.replace(/-/g, " ").trim();
+}
