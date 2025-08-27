@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Timer, Send, ChevronLeft, ChevronRight, Flag, Save, Eye, EyeOff, Upload, Trash2 } from 'lucide-react';
+import { AlertCircle, Timer, Send, ChevronLeft, ChevronRight, Flag, Save, Eye, EyeOff, Upload, Trash2, ImageIcon, FileText } from 'lucide-react';
 import { useTests } from '@/context/TestContext';
 import { TestTakingPageSkeleton } from '../models/skeletons/test-taking-skeleton';
 import { formatTime } from '@/lib/functions';
@@ -13,6 +13,8 @@ import { useProfile } from '@/context/ProfileContext';
 import { useTestSubmissions } from '@/context/TestSubmissionContext';
 import { $Enums } from '@/generated/prisma';
 import LessonMarkdown from '@/app/components/markdown';
+import { JsonArray } from '@prisma/client/runtime/library';
+import { deleteFile, uploadFile } from '@/lib/blob';
 
 type TestTakingPageProps = {
   params: Promise<{ id: string }>;
@@ -35,13 +37,15 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   const studentProfile = profile as AppTypes.Student;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [answers, setAnswers] = useState<AppTypes.AnswerMap>({});
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAnswers, setShowAnswers] = useState(false);
+  const [showSubmitConfirmation, setShowSubmitConfirmation] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showAnswers, setShowAnswers] = useState<boolean>(false);
   const [testStartTime, setTestStartTime] = useState<Date | null>(null);
   const [submission, setSubmission] = useState<AppTypes.TestSubmission | null>(null);
+  const [matchingAnswers, setMatchingAnswers] = useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
     fetchTestById(id);
@@ -121,6 +125,22 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     }));
   };
 
+  const handleMatchingAnswerChange = (questionId: string, leftItem: string, rightItem: string) => {
+    setMatchingAnswers(prev => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId],
+        [leftItem]: rightItem
+      }
+    }));
+
+    // Convert the matching answers to the format expected by the backend
+    const formattedAnswer = Object.entries(matchingAnswers[questionId] || {})
+      .map(([left, right]) => ({ left, right }));
+
+    handleAnswerChange(questionId, formattedAnswer);
+  };
+
   const handleSaveProgress = async () => {
     if (!test || !studentProfile?.id) return;
 
@@ -144,7 +164,6 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
   const handleSubmitTest = async () => {
     setIsSubmitting(true);
-    setShowSubmitConfirmation(false);
 
     if (!test || !studentProfile?.id) {
       alert("Test or student profile not found!");
@@ -160,8 +179,6 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       startedAt: testStartTime || new Date(),
       submittedAt: new Date(),
     };
-
-    console.log("Submission data", submissionData);
 
     try {
       await updateSubmission(submission?.id || '', submissionData);
@@ -195,6 +212,25 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     }
   };
 
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes('image')) {
+      return <ImageIcon className="w-4 h-4 text-blue-600" />;
+    } else if (fileType.includes('pdf')) {
+      return <FileText className="w-4 h-4 text-red-600" />;
+    } else if (fileType.includes('word') || fileType.includes('document')) {
+      return <FileText className="w-4 h-4 text-blue-600" />;
+    }
+    return <FileText className="w-4 h-4 text-gray-600" />;
+  };
+
+  // Helper function to format file type for display
+  const formatFileType = (fileType: string) => {
+    if (fileType.includes('image')) return 'Image';
+    if (fileType.includes('pdf')) return 'PDF';
+    if (fileType.includes('word') || fileType.includes('document')) return 'Word Document';
+    return fileType;
+  };
+
   const renderQuestionInput = (question: AppTypes.TestQuestion) => {
     const answer = answers[question.id] || '';
 
@@ -212,7 +248,9 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
                   onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                   className="w-4 h-4 text-blue-600"
                 />
-                <LessonMarkdown content={option} />
+                <div className="text-sm">
+                  <LessonMarkdown content={option} />
+                </div>
               </label>
             ))}
           </div>
@@ -231,7 +269,9 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
                   onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                   className="w-4 h-4 text-blue-600"
                 />
-                <span className="text-gray-700">{option}</span>
+                <div className="inline-flex text-gray-700">
+                  <LessonMarkdown content={option} />
+                </div>
               </label>
             ))}
           </div>
@@ -243,7 +283,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
             value={answer as string}
             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
             placeholder="Enter your answer..."
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-24 resize-y"
+            className="w-full p-3 text-sm border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none focus:border-blue-500 min-h-24 resize-y"
           />
         );
 
@@ -253,44 +293,298 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
             value={answer as string}
             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
             placeholder="Write your essay here..."
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-48 resize-y"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500 min-h-48 resize-y"
           />
         );
 
       case 'FILE_UPLOAD':
+        // Type guard to check if answer is a FileUploadAnswer array
+        const isFileUploadAnswer = (ans: any): ans is FileUploadAnswer[] => {
+          return Array.isArray(ans) && ans.every(item =>
+            item && typeof item === 'object' && 'fileName' in item && 'fileUrl' in item
+          );
+        };
+
+        const fileUploadAnswer = isFileUploadAnswer(answer) ? answer : [];
+        const allowedFileTypes = ['.png', '.jpeg', '.jpg', '.pdf', '.docx'];
+        const maxFileSize = 4 * 1024 * 1024; // 4MB in bytes
+
+        const handleFileUpload = async (files: FileList | null) => {
+          if (!files) return;
+
+          setIsUploading(true);
+
+          const newFiles: FileUploadAnswer[] = [];
+          const errors: string[] = [];
+
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+
+            // Validate file type
+            const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+            if (!allowedFileTypes.includes(fileExtension || '')) {
+              errors.push(`${file.name}: Invalid file type. Allowed: ${allowedFileTypes.join(', ')}`);
+              continue;
+            }
+
+            // Validate file size
+            if (file.size > maxFileSize) {
+              errors.push(`${file.name}: File too large. Maximum size is 4MB`);
+              continue;
+            }
+
+            try {
+              // Upload to blob storage
+              const fileUrl = await uploadFile(file);
+              newFiles.push({
+                fileName: file.name,
+                fileType: file.type,
+                fileUrl: fileUrl
+              });
+            } catch (error) {
+              errors.push(`${file.name}: Upload failed`);
+              console.error('File upload error:', error);
+            }
+          }
+
+          setIsUploading(false);
+
+          // Show validation errors
+          if (errors.length > 0) {
+            alert(`Upload errors:\n${errors.join('\n')}`);
+          }
+
+          // Update answers with new files
+          if (newFiles.length > 0) {
+            handleAnswerChange(question.id, [...fileUploadAnswer, ...newFiles]);
+          }
+        };
+
+        const handleFileDelete = async (fileUrl: string, index: number) => {
+          setIsUploading(true);
+
+          try {
+            // Delete from blob storage
+            await deleteFile(fileUrl);
+
+            // Remove from answers
+            const updatedFiles = fileUploadAnswer.filter((_, i) => i !== index);
+            handleAnswerChange(question.id, updatedFiles.length > 0 ? updatedFiles : null);
+          } catch (error) {
+            console.error('File deletion error:', error);
+            alert('Failed to delete file. Please try again.');
+          } finally {
+            setIsUploading(false);
+          }
+        };
+
         return (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600 text-sm mb-4">Upload your file here</p>
-            <input
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleAnswerChange(question.id, file);
-                }
-              }}
-              className="hidden"
-              id={`file-${question.id}`}
-            />
-            <label
-              htmlFor={`file-${question.id}`}
-              className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 cursor-pointer inline-block"
-            >
-              Choose File
-            </label>
-            {answer && (
-              <div className="mt-3 p-2 bg-gray-50 rounded flex items-center justify-between">
-                <span className="text-sm text-gray-700">{(answer as FileUploadAnswer).fileName}</span>
-                <button
-                  onClick={() => handleAnswerChange(question.id, null)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+          <div className="border border-dashed border-gray-300 rounded-lg p-6">
+            <div className="text-center mb-4">
+              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-600 text-sm mb-2">Upload your files here</p>
+              <p className="text-xs text-gray-500 mb-4">
+                Allowed formats: PNG, JPG, JPEG, PDF, DOCX (Max 4MB each)
+              </p>
+              <input
+                type="file"
+                multiple
+                onChange={(e) => handleFileUpload(e.target.files)}
+                accept=".png,.jpeg,.jpg,.pdf,.docx"
+                className="hidden"
+                id={`file-${question.id}`}
+              />
+              <label
+                htmlFor={`file-${question.id}`}
+                className={`px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 cursor-pointer inline-block ${isUploading ? "animate-bounce" : "animate-none"}`}
+              >
+                {isUploading ? "Uploading..." : "Choose Files"}
+              </label>
+            </div>
+
+            {fileUploadAnswer.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-gray-700">Uploaded Files:</h4>
+                {fileUploadAnswer.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                        {getFileIcon(file.fileType)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 truncate max-w-xs">
+                          {file.fileName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatFileType(file.fileType)}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleFileDelete(file.fileUrl, index)}
+                      disabled={isUploading}
+                      className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
+                      title="Delete file"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
+        );
+
+      case 'MULTI_SELECT':
+        const multiSelectAnswer = Array.isArray(answer) ? answer : [];
+        return (
+          <div className="space-y-3">
+            {question.options?.map((option: string, index: number) => (
+              <label key={index} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name={question.id}
+                  value={option}
+                  checked={(multiSelectAnswer as string[]).includes(option)}
+                  onChange={(e) => {
+                    const newAnswer = e.target.checked
+                      ? [...multiSelectAnswer, option]
+                      : (multiSelectAnswer as string[]).filter((item: string) => item !== option);
+                    handleAnswerChange(question.id, newAnswer);
+                  }}
+                  className="w-4 h-4 text-blue-600"
+                />
+                {/* <LessonMarkdown content={option} /> */}
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+        );
+
+      case 'CODE':
+        return (
+          <div className="space-y-3">
+            {question.language && (
+              <div className="text-sm text-gray-500">
+                Language: {question.language}
+              </div>
+            )}
+            <textarea
+              value={answer as string}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              placeholder="Write your code here..."
+              className="w-full p-3 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none focus:border-blue-500 min-h-48 resize-y font-mono text-sm"
+            />
+          </div>
+        );
+
+      case 'MATCHING':
+        const matchPairs = question.matchPairs || [];
+        const currentMatchingAnswers = matchingAnswers[question.id] || {};
+
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="font-medium text-gray-700">Items</div>
+              <div className="font-medium text-gray-700">Matches</div>
+
+              {(matchPairs as JsonArray).map((pair: any, index: number) => (
+                <React.Fragment key={index}>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <LessonMarkdown content={pair.left} />
+                  </div>
+                  <select
+                    value={currentMatchingAnswers[pair.left] || ''}
+                    onChange={(e) => handleMatchingAnswerChange(question.id, pair.left, e.target.value)}
+                    className="p-3 border border-gray-300 text-sm focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select a match</option>
+                    {(matchPairs as JsonArray).map((p: any, idx: number) => (
+                      <option key={idx} value={p.right}>
+                        <LessonMarkdown content={p.right} />
+                      </option>
+                    ))}
+                  </select>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'REORDER':
+        const reorderItems = question.reorderItems || [];
+        const reorderAnswer = Array.isArray(answer) ? answer : [];
+
+        return (
+          <div className="space-y-3">
+            <div className="text-sm text-gray-500 mb-4">
+              Drag to reorder the items into the correct sequence
+            </div>
+            <div className="space-y-2">
+              {reorderItems.map((item: string, index: number) => (
+                <div
+                  key={index}
+                  className="p-3 border border-gray-300 bg-white flex items-center gap-3 cursor-move"
+                  draggable
+                  onDragStart={(e) => e.dataTransfer.setData('text/plain', index.toString())}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIndex = index;
+                    const newOrder = [...reorderAnswer.length ? reorderAnswer : reorderItems];
+                    const [movedItem] = newOrder.splice(fromIndex, 1);
+                    newOrder.splice(toIndex, 0, movedItem);
+                    handleAnswerChange(question.id, newOrder);
+                  }}
+                >
+                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-sm text-gray-600">
+                    {index + 1}
+                  </div>
+                  <LessonMarkdown content={item} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'FILL_IN_THE_BLANK':
+        const blankCount = question.blankCount || 1;
+        const blankAnswer = Array.isArray(answer) ? answer : new Array(blankCount).fill('');
+
+        return (
+          <div className="space-y-4">
+            <LessonMarkdown content={question.question} />
+            <div className="grid gap-3">
+              {Array.from({ length: blankCount }).map((_, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">Blank {index + 1}:</span>
+                  <input
+                    type="text"
+                    value={blankAnswer[index] || ''}
+                    onChange={(e) => {
+                      const newAnswer = [...blankAnswer];
+                      newAnswer[index] = e.target.value;
+                      handleAnswerChange(question.id, newAnswer);
+                    }}
+                    className="flex-1 p-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={`Answer for blank ${index + 1}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'NUMERIC':
+        return (
+          <input
+            type="number"
+            value={answer as string}
+            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+            className="w-full p-3 border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter a number"
+            step="any"
+          />
         );
 
       default:
@@ -330,6 +624,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
               <button
                 onClick={handleSaveProgress}
+                disabled={isUploading}
                 className="flex items-center gap-2 px-3 py-2 text-gray-600 text-sm hover:text-gray-800 border border-gray-300 hover:bg-gray-50"
               >
                 <Save className="w-4 h-4" />
@@ -339,10 +634,16 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
               <button
                 onClick={() => setShowSubmitConfirmation(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm hover:bg-green-700"
-                disabled={timeRemaining === 0}
+                disabled={timeRemaining === 0 || isUploading}
               >
-                <Send className="w-4 h-4" />
-                {timeRemaining === 0 ? 'Time Expired' : 'Submit Test'}
+                {isSubmitting ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    {timeRemaining === 0 ? 'Time Expired' : 'Submit Test'}
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -406,7 +707,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
                   </span>
                 </div>
                 <span className="text-xs text-gray-500 capitalize bg-gray-100 px-2 py-1 rounded">
-                  {currentQuestion.type.replace('_', ' ')}
+                  {currentQuestion.type.replace('_', ' ').toLowerCase()}
                 </span>
               </div>
 
@@ -423,8 +724,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
             <div className="p-6 border-t border-gray-200 flex items-center justify-between">
               <button
                 onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
-                disabled={currentQuestionIndex === 0}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentQuestionIndex === 0 || isUploading}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 text-sm hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Previous
@@ -439,8 +740,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
               <button
                 onClick={() => setCurrentQuestionIndex(Math.min(test.questions.length - 1, currentQuestionIndex + 1))}
-                disabled={currentQuestionIndex === test.questions.length - 1}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentQuestionIndex === test.questions.length - 1 || isUploading}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 text-sm hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
                 <ChevronRight className="w-4 h-4" />
@@ -453,15 +754,19 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       {/* Submit Confirmation Dialog */}
       {showSubmitConfirmation && (
         <div className="fixed inset-0 bg-black/30 bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white shadow-xl max-w-md w-full">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                   <Send className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Submit Test</h2>
-                  <p className="text-gray-500">Review your answers before submitting</p>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Submit Test
+                  </h2>
+                  <p className="text-gray-500">
+                    Review your answers before submitting
+                  </p>
                 </div>
               </div>
 
@@ -504,7 +809,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
                 </button>
                 <button
                   onClick={handleSubmitTest}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploading}
                   className="px-6 py-2 bg-green-600 text-white text-sm hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
                   {isSubmitting ? (

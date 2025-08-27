@@ -52,7 +52,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
     if (sub) {
       const isCompleted = sub.status === $Enums.SubmissionStatus.SUBMITTED;
       const isOverdue = new Date(test.dueDate) < new Date(Date.now());
-      
+
       const testStartTime = (new Date(sub.startedAt)).getTime();
       const dueDateTime = new Date(testStartTime + (test.timeLimit as number) * 60 * 1000).getTime();
       const timeExceeded = dueDateTime < (new Date(Date.now())).getTime();
@@ -113,8 +113,8 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto py-8 px-4">
         {/* Header */}
-        <div className="bg-white rounded-lg  border border-gray-200 mb-6">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg p-6">
+        <div className="bg-white border border-gray-200 mb-6">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                 <FileText className="w-6 h-6" />
@@ -127,10 +127,6 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
                 </div>
               </div>
             </div>
-
-            {test.description && (
-              <p className="text-sm opacity-90 text-blue-50">{test.description}</p>
-            )}
           </div>
 
           {/* Test Overview */}
@@ -179,6 +175,20 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
           </div>
         </div>
 
+        {/* Test Description and Scope */}
+        {test.description && (
+          <div className="bg-white border border-gray-200 mb-6">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Test Description and Scope
+              </h2>
+              <p className="text-sm text-gray-700">
+                {test.description}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Instructions */}
         <div className="bg-white border border-gray-200 mb-6">
           <div className="p-6">
@@ -187,19 +197,21 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
             </h2>
 
             {test.preTestInstructions ? (
-              <LessonMarkdown content={test.preTestInstructions} />
+              <div className="text-sm">
+                <LessonMarkdown content={test.preTestInstructions} />
+              </div>
             ) : (
-              <div className="space-y-4 text-gray-700">
+              <div className="space-y-4 text-gray-700 text-sm">
                 <p>Please read the following instructions carefully before starting the test:</p>
                 <ul className="space-y-2 list-disc list-inside">
-                  <li>Answer all questions to the best of your ability</li>
-                  <li>Make sure you have a stable internet connection</li>
+                  <li>Answer all questions to the best of your ability.</li>
+                  <li>Make sure you have a stable internet connection.</li>
                   {test.timeLimit && (
-                    <li>You have {test.timeLimit} minutes to complete this test</li>
+                    <li>You have <strong>{test.timeLimit} minutes</strong> to complete this test.</li>
                   )}
-                  <li>Save your progress frequently by clicking the &quot;Save Progress&quot; button</li>
-                  <li>You can navigate between questions using the navigation panel</li>
-                  <li>Review your answers before submitting</li>
+                  <li>Save your progress frequently by clicking the <strong>&quot;Save Progress&quot; button</strong>.</li>
+                  <li>You can navigate between questions using the navigation panel.</li>
+                  <li>Review your answers before submitting.</li>
                 </ul>
               </div>
             )}
