@@ -4,9 +4,9 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Timer, Send, ChevronLeft, ChevronRight, Flag, Save, Eye, EyeOff, Upload, Trash2, ImageIcon, FileText } from 'lucide-react';
+import { AlertCircle, Timer, Send, ChevronLeft, ChevronRight, Flag, Save, Eye, EyeOff, Upload, Trash2, ImageIcon, FileText, Eraser } from 'lucide-react';
 import { useTests } from '@/context/TestContext';
-import { TestTakingPageSkeleton } from '../models/skeletons/test-taking-skeleton';
+import { TestTakingPageSkeleton } from '../skeletons/test-taking-skeleton';
 import { formatTime } from '@/lib/functions';
 import { useCourses } from '@/context/CourseContext';
 import { useProfile } from '@/context/ProfileContext';
@@ -38,6 +38,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [answers, setAnswers] = useState<AppTypes.AnswerMap>({});
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState<boolean>(false);
@@ -118,6 +119,45 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
   const currentQuestion = test.questions[currentQuestionIndex];
 
+  // functions
+  const handleClearFileUploadAnswer = async (questionId: string) => {
+    const answer = answers[questionId];
+
+    // Type guard to check if it's a FileUploadAnswer array
+    const isFileUploadAnswerArray = (ans: any): ans is FileUploadAnswer[] => {
+      return Array.isArray(ans) && ans.every(item =>
+        item && typeof item === 'object' && 'fileUrl' in item
+      );
+    };
+
+    // If it's a file upload answer, delete files from blob storage
+    if (isFileUploadAnswerArray(answer)) {
+      try {
+        // Delete all files from blob storage
+        await Promise.allSettled(
+          answer.map(file =>
+            deleteFile(file.fileUrl).catch(err => {
+              console.error(`Failed to delete file ${file.fileUrl}:`, err);
+            })
+          )
+        );
+      } catch (error) {
+        console.error('Error deleting files:', error);
+      }
+    }
+
+    // Clear the answer from state
+    handleClearAnswer(questionId);
+  };
+
+  const handleClearAnswer = (questionId: string) => {
+    setAnswers(prev => {
+      const newAnswers = { ...prev };
+      delete newAnswers[questionId];
+      return newAnswers;
+    });
+  };
+
   const handleAnswerChange = (questionId: string, answer: any) => {
     setAnswers(prev => ({
       ...prev,
@@ -144,6 +184,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   const handleSaveProgress = async () => {
     if (!test || !studentProfile?.id) return;
 
+    setIsSaving(true);
+
     const submissionData: Partial<AppTypes.TestSubmission> = {
       studentId: studentProfile.id,
       testId: test.id,
@@ -159,6 +201,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       } as AppTypes.TestSubmission));
     } catch (error) {
       console.error('Error saving progress:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -185,7 +229,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
       alert("Submission complete!");
 
-      router.push(`/dashboard/tests`);
+      router.push(`/dashboard/tests/review/${test.id}`);
     } catch (error) {
       console.error('Error submitting test:', error);
       alert("An error occurred while submitting the test. Please try again.");
@@ -454,8 +498,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
                   }}
                   className="w-4 h-4 text-blue-600"
                 />
-                {/* <LessonMarkdown content={option} /> */}
-                <span>{option}</span>
+                <LessonMarkdown content={option} />
+                {/* <span>{option}</span> */}
               </label>
             ))}
           </div>
@@ -501,7 +545,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
                     <option value="">Select a match</option>
                     {(matchPairs as JsonArray).map((p: any, idx: number) => (
                       <option key={idx} value={p.right}>
-                        <LessonMarkdown content={p.right} />
+                        {/* <LessonMarkdown content={p.right} /> */}
+                        {p.right}
                       </option>
                     ))}
                   </select>
@@ -624,11 +669,20 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
               <button
                 onClick={handleSaveProgress}
-                disabled={isUploading}
+                disabled={isUploading || isSubmitting || isSaving}
                 className="flex items-center gap-2 px-3 py-2 text-gray-600 text-sm hover:text-gray-800 border border-gray-300 hover:bg-gray-50"
               >
-                <Save className="w-4 h-4" />
-                Save Progress
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-gray-800 border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Progress
+                  </>
+                )}
               </button>
 
               <button
@@ -724,23 +778,47 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
             <div className="p-6 border-t border-gray-200 flex items-center justify-between">
               <button
                 onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
-                disabled={currentQuestionIndex === 0 || isUploading}
+                disabled={currentQuestionIndex === 0 || isUploading || isSubmitting}
                 className="flex items-center gap-2 px-4 py-2 text-gray-600 text-sm hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Previous
               </button>
 
-              <div className="flex items-center gap-2">
-                <Flag className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500">
-                  {answeredCount} answered, {test.questions.length - answeredCount} remaining
-                </span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Flag className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-500">
+                    {answeredCount} answered, {test.questions.length - answeredCount} remaining
+                  </span>
+                </div>
+
+                {/* Clear Answer Button */}
+                {answers[currentQuestion.id] !== undefined && answers[currentQuestion.id] !== '' && answers[currentQuestion.id] !== null && (
+                  <button
+                    onClick={() => {
+                      if (answers[currentQuestion.id]) {
+                        if (currentQuestion.type === 'FILE_UPLOAD') {
+                          handleClearFileUploadAnswer(currentQuestion.id);
+                        } else {
+                          handleClearAnswer(currentQuestion.id);
+                        }
+                      } else {
+                        alert("This action can't be performed at the moment.");
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 text-sm transition-colors"
+                    title="Clear answer"
+                  >
+                    <Eraser className="w-4 h-4" />
+                    Clear Answer
+                  </button>
+                )}
               </div>
 
               <button
                 onClick={() => setCurrentQuestionIndex(Math.min(test.questions.length - 1, currentQuestionIndex + 1))}
-                disabled={currentQuestionIndex === test.questions.length - 1 || isUploading}
+                disabled={currentQuestionIndex === test.questions.length - 1 || isUploading || isSubmitting}
                 className="flex items-center gap-2 px-4 py-2 text-gray-600 text-sm hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next

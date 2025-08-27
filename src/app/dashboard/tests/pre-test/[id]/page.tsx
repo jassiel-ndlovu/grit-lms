@@ -6,7 +6,7 @@ import { use, useEffect, useState } from "react";
 import StartTestConfirmationDialog from "../../models/start-test-confirmation";
 import { useTests } from "@/context/TestContext";
 import { formatDate } from "@/lib/functions";
-import { PreTestInstructionsPageSkeleton } from "../../models/skeletons/pre-test-skeleton";
+import { PreTestInstructionsPageSkeleton } from "../../skeletons/pre-test-skeleton";
 import LessonMarkdown from "@/app/components/markdown";
 import { useCourses } from "@/context/CourseContext";
 import { useTestSubmissions } from "@/context/TestSubmissionContext";

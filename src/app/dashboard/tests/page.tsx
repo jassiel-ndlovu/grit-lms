@@ -10,7 +10,7 @@ import { useProfile } from '@/context/ProfileContext';
 import Skeleton from '../components/skeleton';
 import { formatTime } from '@/lib/functions';
 
-export default function TestsPage() {  
+export default function TestsPage() {
   const { fetchTestsByCourse, loading: testsLoading } = useTests();
   const { fetchCoursesByStudentId, loading: coursesLoading } = useCourses();
   const { profile, loading: profileLoading } = useProfile();
@@ -38,7 +38,7 @@ export default function TestsPage() {
   useEffect(() => {
     if (studentProfile?.id) {
       const fetchTests = async () => {
-        if (coursesLoading) return; 
+        if (coursesLoading) return;
 
         const courseIds = studentCourses.map(course => course.id);
         const fetchedTests = await fetchTestsByCourse(courseIds);
@@ -88,8 +88,8 @@ export default function TestsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {course.tests.map(test => (
-                  <TestContent 
-                    key={test.id} 
+                  <TestContent
+                    key={test.id}
                     test={test}
                   />
                 ))}
@@ -120,7 +120,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
       setStudentSub(sub);
 
       const startTime = new Date(Date.now() + 2 * 60 * 60 * 1000); // Time from database is 2 hours behind
-      
+
       const endTime = new Date(test.dueDate);
 
       endTime.setMinutes(endTime.getMinutes() + (test.timeLimit as number));
@@ -133,7 +133,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
         setIsExpired(true);
         setTimeLeft('Time expired');
         return;
-      } 
+      }
 
       const timeLeft: string = formatTime(Math.floor(distance / 1000));
 
@@ -161,9 +161,8 @@ function TestContent({ test }: { test: AppTypes.Test }) {
       </div>
 
       {test.timeLimit && (
-        <div className={`flex items-center gap-2 text-sm mb-2 ${
-          isExpired ? 'text-red-500' : 'text-gray-500'
-        }`}>
+        <div className={`flex items-center gap-2 text-sm mb-2 ${isExpired ? 'text-red-500' : 'text-gray-500'
+          }`}>
           <Clock className="w-4 h-4" />
           Time left: {timeLeft}
         </div>
@@ -175,13 +174,19 @@ function TestContent({ test }: { test: AppTypes.Test }) {
         </span>
 
         <button
-          onClick={() => router.push(`/dashboard/tests/pre-test/${test.id}`)}
+          onClick={() => {
+            if ((studentSub && studentSub.status === "SUBMITTED")) {
+              router.push(`/dashboard/tests/review/${test.id}`)
+            } else {
+              router.push(`/dashboard/tests/pre-test/${test.id}`)
+            }
+          }}
           className="text-sm text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 transition"
-          disabled={isExpired || (studentSub && studentSub.status === "SUBMITTED")}
+          disabled={isExpired}
         >
           {isExpired ? 'Expired' : (
             studentSub ? (
-              studentSub.status === "SUBMITTED" ? 'Submitted': 'Continue'
+              studentSub.status === "SUBMITTED" ? 'Submitted' : 'Continue'
             ) : 'Continue'
           )}
         </button>
