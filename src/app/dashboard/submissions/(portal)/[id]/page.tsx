@@ -140,7 +140,7 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
       } else {
         // Create a new submission entry
         await createEntry({
-          studentId: (profile as AppTypes.Student).id,               
+          studentId: (profile as AppTypes.Student).id,
           submissionId: (submission as AppTypes.Submission).id,
           submittedAt: new Date(),
           status: "SUBMITTED",
@@ -173,15 +173,18 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
   };
 
   const getAcceptedFileTypes = (submission: AppTypes.Submission) => {
-    return submission.fileType.split(',').map(type => {
-      switch (type.trim()) {
-        case 'PDF': return '.pdf';
-        case 'DOCX': return '.docx,.doc';
-        case 'ZIP': return '.zip';
-        case 'JPEG': return '.jpg,.jpeg';
-        default: return '';
-      }
-    }).join(',');
+    return [
+      ...submission.fileType.split(',').map(type => {
+        switch (type.trim()) {
+          case 'PDF': return '.pdf';
+          case 'DOCX': return '.docx,.doc';
+          case 'ZIP': return '.zip';
+          case 'JPEG': return '.jpg,.jpeg';
+          default: return '';
+        }
+      }),
+      "application/zip",
+    ].join(",");
   }
 
   if (courseLoading || entryLoading || submissionLoading || !submission || !course) {
@@ -260,7 +263,7 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
                 Drop files here or click to browse
               </p>
               <p className="text-sm text-gray-500 mb-4">
-                Accepted formats: {submission.fileType}
+                Accepted formats: {`submission.fileType, .ZIP`}
               </p>
               <input
                 type="file"
