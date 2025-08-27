@@ -148,7 +148,7 @@ export default function CoursePage({ params }: CoursePageProps) {
           <h2 className="text-xl font-semibold">
             {currentLesson.title}
           </h2>
-          <div className="prose max-w-none text-gray-800 text-md">
+          <div className="prose max-w-none text-gray-800 text-sm">
             <LessonMarkdown content={currentLesson.description as string} />
           </div>
 

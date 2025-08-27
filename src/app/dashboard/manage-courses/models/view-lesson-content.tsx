@@ -7,7 +7,7 @@ type ViewLessonContentProps = {
   onEdit: () => void;
 }
 
-export default function ViewLessonContent({ lesson, onEdit }: ViewLessonContentProps) { 
+export default function ViewLessonContent({ lesson, onEdit }: ViewLessonContentProps) {
   return (
     <>
       <div className="flex items-center justify-between">
@@ -23,30 +23,32 @@ export default function ViewLessonContent({ lesson, onEdit }: ViewLessonContentP
       </div>
 
       {lesson.description ? (
-        <LessonMarkdown content={lesson.description} />
+        <div className="text-sm">
+          <LessonMarkdown content={lesson.description} />
+        </div>
       ) : (
         <p className="text-gray-500 italic">No description provided</p>
       )}
 
       {lesson.videoUrl && lesson.videoUrl.length > 0 ? (
-          <div className="space-y-4 mt-12 pt-4 border-t border-t-gray-200">
-            <h3 className="text-lg font-semibold">
-              Videos
-            </h3>
-            {lesson.videoUrl.map((video, idx) =>
-              video ? (
-                <iframe
-                  key={idx}
-                  className="w-3/4 mx-auto max-w-3xl rounded border aspect-video"
-                  src={`https://www.youtube.com/embed/${getYouTubeId(video)}`}
-                  title="YouTube video player"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
-              ) : null
-            )}
-          </div>
+        <div className="space-y-4 mt-12 pt-4 border-t border-t-gray-200">
+          <h3 className="text-lg font-semibold">
+            Videos
+          </h3>
+          {lesson.videoUrl.map((video, idx) =>
+            video ? (
+              <iframe
+                key={idx}
+                className="w-3/4 mx-auto max-w-3xl rounded border aspect-video"
+                src={`https://www.youtube.com/embed/${getYouTubeId(video)}`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            ) : null
+          )}
+        </div>
       ) : (
         <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-8 text-center">
           <Video className="w-10 h-10 text-gray-400 mx-auto mb-2" />
@@ -79,12 +81,12 @@ export default function ViewLessonContent({ lesson, onEdit }: ViewLessonContentP
         </div>
       ) : (
         <div className="mt-12 pt-4 border-t border-t-gray-200">
-        <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">
-            No additional resources for this lesson
+          <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+            <p className="text-gray-500 text-sm">
+              No additional resources for this lesson
             </p>
-        </div>
+          </div>
         </div>
       )}
     </>

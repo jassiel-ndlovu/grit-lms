@@ -41,7 +41,7 @@ export default function SubmissionForm({
   const [maxAttempts, setMaxAttempts] = useState<number>(formData.maxAttempts || 1);
   const [files, setFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {

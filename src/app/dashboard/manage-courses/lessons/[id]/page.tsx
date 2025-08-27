@@ -24,8 +24,8 @@ export default function ManageLessons({ params }: CoursePageProps) {
   const { lessons: backendLessons, loading: lessonsLoading, fetchLessonsByCourseId, updateLesson, deleteLesson, createLesson } = useLesson();
 
   const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [editMode, setEditMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [editMode, setEditMode] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [course, setCourse] = useState<AppTypes.Course | null>(null);
   const [lessons, setLessons] = useState<Partial<AppTypes.Lesson>[] | null>(null);
@@ -127,7 +127,13 @@ export default function ManageLessons({ params }: CoursePageProps) {
     });
   };
 
-  const handleUpdateSave = async () => {
+  const handleUpdateSave = async (updatedAttachmentUrls?: AppTypes.Attachment[]) => {
+    // Use the passed value if available, otherwise fall back to currentLesson
+    const attachmentUrlsToSave = currentLesson?.attachmentUrls ? ([
+      ...currentLesson.attachmentUrls, 
+      ...(updatedAttachmentUrls ?? [])
+    ]): updatedAttachmentUrls;
+
     if (!currentLesson || !currentLesson.id) {
       alert("No lesson selected or missing ID");
       return;
@@ -138,20 +144,10 @@ export default function ManageLessons({ params }: CoursePageProps) {
         title: currentLesson.title,
         description: currentLesson.description,
         videoUrl: currentLesson.videoUrl,
-        attachmentUrls: currentLesson.attachmentUrls,
+        attachmentUrls: attachmentUrlsToSave, // Use the updated value
       });
 
       alert("Lesson updated successfully ✅");
-
-      // Refresh local state
-      if (lessons) {
-        const updatedLessons = lessons.map((l) =>
-          l.id === currentLesson.id ? currentLesson : l
-        );
-        setLessons(updatedLessons);
-      }
-
-      // Exit edit mode
       setEditMode(false);
     } catch (error) {
       console.error("Failed to save lesson:", error);
@@ -229,7 +225,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
         order: index + 1, // start from 1 for readability
       }));
     });
-    
+
     handleUpdateSave();
   };
 

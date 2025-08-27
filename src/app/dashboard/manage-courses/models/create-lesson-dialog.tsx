@@ -2,8 +2,10 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, BookOpen, Plus, Trash2, Link, Video } from 'lucide-react';
+import { uploadFile } from '@/lib/blob';
+import { cleanUrl } from '@/lib/functions';
 
 interface CreateLessonDialogProps {
   courseId: string;
@@ -26,6 +28,9 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -62,6 +67,37 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
     return Object.keys(newErrors).length === 0;
   };
 
+  const uploadUrls = async () => {
+    setIsUploading(true);
+
+    try {
+      // Upload files and get their URLs
+      const uploadedFileUrls = await Promise.all(
+        files.map(async (file) => {
+          try {
+            const url = await uploadFile(file);
+            return url;
+          } catch (error) {
+            console.error(`Failed to upload file ${file.name}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // Filter out failed uploads
+      const successfulUploads = uploadedFileUrls.filter(url => url !== null) as string[];
+
+      return successfulUploads;
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      alert("Failed to upload some files. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+
+    return null;
+  }
+
   const isValidUrl = (string: string) => {
     try {
       new URL(string);
@@ -78,15 +114,29 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
       return;
     }
 
+    // clean attachment URLS
+    (formData.attachmentUrls as AppTypes.Attachment[]).filter(
+      resource => resource.title.trim() !== '' && resource.url.trim() !== ''
+    );
+
+    // Upload files
+    const successfulUploads = await uploadUrls();
+
+    formData.attachmentUrls = formData.attachmentUrls ? [
+      ...formData.attachmentUrls.filter(a => a.title.trim() !== "" && a.url.trim() !== ""), 
+      ...(successfulUploads?.map(url => ({
+        title: cleanUrl(url?.split("/").pop() ?? "Undefined URL"),
+        url: url,
+      } as AppTypes.Attachment)) ?? []),
+    ] : [];
+
     // Clean up the data before saving
     const cleanedData: Partial<AppTypes.Lesson> = {
       title: (formData.title as string).trim(),
       description: (formData.description as string).trim(),
       courseId,
       videoUrl: (formData.videoUrl as string[]).filter(url => url.trim() !== ''),
-      attachmentUrls: (formData.attachmentUrls as AppTypes.Attachment[]).filter(
-        resource => resource.title.trim() !== '' && resource.url.trim() !== ''
-      ),
+      attachmentUrls: formData.attachmentUrls,
     };
 
     try {
@@ -103,6 +153,23 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setFiles((prev) => [...prev, ...droppedFiles]);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const selectedFiles = Array.from(e.target.files);
+    setFiles((prev) => [...prev, ...selectedFiles]);
+    e.target.value = ''; // Reset input
   };
 
   const addVideoUrl = () => {
@@ -169,7 +236,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
           </div>
           <button
             onClick={onClose}
-            disabled={loading}
+            disabled={loading || isUploading}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
             aria-label="Close dialog"
           >
@@ -181,10 +248,10 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
         <div className="p-6 space-y-6 max-h-[calc(90vh-140px)] overflow-y-auto">
           {/* Lesson Title */}
           {serverError && (
-              <div className="text-red-600 bg-red-100 border border-red-300 rounded px-4 py-2 mb-4 text-sm">
-                {serverError}
-              </div>
-            )}
+            <div className="text-red-600 bg-red-100 border border-red-300 rounded px-4 py-2 mb-4 text-sm">
+              {serverError}
+            </div>
+          )}
           <div>
             <label htmlFor="lesson-title" className="block text-sm font-medium text-gray-700 mb-2">
               Lesson Title *
@@ -232,7 +299,7 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
             {errors.description && (
               <p className="mt-1 text-sm text-red-600" role="alert">{errors.description}</p>
             )}
-            
+
             <p className="mt-1 text-xs text-gray-500">
               You can use Markdown formatting for rich text content
             </p>
@@ -298,71 +365,134 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
               <label className="block text-sm font-medium text-gray-700">
                 Resource Links (Optional)
               </label>
-              <button
-                type="button"
-                onClick={addResourceLink}
-                disabled={loading}
-                className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                <Plus className="w-4 h-4" />
-                Add Resource
-              </button>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={addResourceLink}
+                  disabled={loading || isUploading}
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Resource
+                </button>
+
+                {/* Import Files */}
+                <label
+                  htmlFor="fileInput"
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  Import File
+                </label>
+              </div>
             </div>
-            <div className="space-y-3">
-              {(formData.attachmentUrls as AppTypes.Attachment[]).map((resource, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Link className="w-4 h-4 text-gray-400 mt-2.5 flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <input
-                        type="text"
-                        value={resource.title}
-                        onChange={(e) => updateResourceLink(index, 'title', e.target.value)}
-                        placeholder="Resource title (e.g., Additional Reading, Practice Exercises)"
-                        className={`w-full px-3 py-2 border text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors ${errors[`resource_title_${index}`] ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        disabled={loading}
-                        maxLength={100}
-                      />
-                      <input
-                        type="url"
-                        value={resource.url}
-                        onChange={(e) => updateResourceLink(index, 'url', e.target.value)}
-                        placeholder="https://example.com"
-                        className={`w-full px-3 py-2 border text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors ${errors[`resource_url_${index}`] ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                        disabled={loading}
-                      />
-                    </div>
-                    {(formData.attachmentUrls as AppTypes.Attachment[]).length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeResourceLink(index)}
-                        disabled={loading}
-                        className="p-2 text-red-500 text-sm hover:text-red-700 hover:bg-red-50 mt-1 transition-colors disabled:opacity-50"
-                        aria-label={`Remove resource ${index + 1}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+          </div>
+
+          {/* Dropzone for new files */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            className="flex flex-col items-center justify-center border border-dashed border-gray-300 rounded-lg p-6 text-gray-500 cursor-pointer hover:border-blue-400 hover:text-blue-500"
+          >
+            <input
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              id="fileInput"
+              ref={fileInputRef}
+            />
+            <label htmlFor="fileInput" className="cursor-pointer text-sm text-center">
+              Drop files here or <span className="text-blue-600">browse</span>
+              <p className="text-xs text-gray-400 mt-1">Files will be uploaded and available to students</p>
+            </label>
+          </div>
+
+          {/* New files to be uploaded */}
+          {files.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Files to upload:</h4>
+              <div className="flex flex-wrap gap-2">
+                {files.map((file, index) => (
+                  <span
+                    key={index}
+                    className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  >
+                    {file.name}
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="text-red-500 hover:text-red-700 text-xs"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="text-gray-700 text-sm flex items-center">
+            <div className="w-1/2 h-0 border-b border-b-gray-200" />
+            <span className="mx-4 text-gray-700 font-medium">OR</span>
+            <div className="w-1/2 h-0 border-t border-t-gray-200" />
+          </div>
+
+          {/* Manual File Additions */}
+          <div className="space-y-3">
+            {(formData.attachmentUrls as AppTypes.Attachment[]).map((resource, index) => (
+              <div key={index} className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <Link className="w-4 h-4 text-gray-400 mt-2.5 flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      value={resource.title}
+                      onChange={(e) => updateResourceLink(index, 'title', e.target.value)}
+                      placeholder="Resource title (e.g., Additional Reading, Practice Exercises)"
+                      className={`w-full px-3 py-2 border text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors ${errors[`resource_title_${index}`] ? 'border-red-300' : 'border-gray-300'
+                        }`}
+                      disabled={loading || isUploading}
+                      maxLength={100}
+                    />
+                    <input
+                      type="url"
+                      value={resource.url}
+                      onChange={(e) => updateResourceLink(index, 'url', e.target.value)}
+                      placeholder="https://example.com"
+                      className={`w-full px-3 py-2 border text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors ${errors[`resource_url_${index}`] ? 'border-red-300' : 'border-gray-300'
+                        }`}
+                      disabled={loading}
+                    />
                   </div>
-                  {(errors[`resource_title_${index}`] || errors[`resource_url_${index}`]) && (
-                    <div className="ml-6 space-y-1">
-                      {errors[`resource_title_${index}`] && (
-                        <p className="text-sm text-red-600" role="alert">
-                          {errors[`resource_title_${index}`]}
-                        </p>
-                      )}
-                      {errors[`resource_url_${index}`] && (
-                        <p className="text-sm text-red-600" role="alert">
-                          {errors[`resource_url_${index}`]}
-                        </p>
-                      )}
-                    </div>
+                  {(formData.attachmentUrls as AppTypes.Attachment[]).length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeResourceLink(index)}
+                      disabled={loading || isUploading}
+                      className="p-2 text-red-500 text-sm hover:text-red-700 hover:bg-red-50 mt-1 transition-colors disabled:opacity-50"
+                      aria-label={`Remove resource ${index + 1}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
-              ))}
-            </div>
+                {(errors[`resource_title_${index}`] || errors[`resource_url_${index}`]) && (
+                  <div className="ml-6 space-y-1">
+                    {errors[`resource_title_${index}`] && (
+                      <p className="text-sm text-red-600" role="alert">
+                        {errors[`resource_title_${index}`]}
+                      </p>
+                    )}
+                    {errors[`resource_url_${index}`] && (
+                      <p className="text-sm text-red-600" role="alert">
+                        {errors[`resource_url_${index}`]}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -371,14 +501,14 @@ export default function CreateLessonDialog({ courseId, courseName, onClose, onSa
           <button
             type="button"
             onClick={onClose}
-            disabled={loading}
+            disabled={loading || isUploading}
             className="px-4 py-2 text-gray-700 text-sm border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || !(formData.title as string).trim() || !(formData.description as string).trim()}
+            disabled={loading || !(formData.title as string).trim() || !(formData.description as string).trim() || isUploading}
             className="px-6 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {loading ? (
