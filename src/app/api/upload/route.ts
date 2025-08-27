@@ -1,20 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-
 import { NextRequest, NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file") as File;
+  const folder = formData.get("folder") as string | null;
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  const { url } = await put(file.name, file, { 
+  // Construct file path: prepend folder if provided
+  const filePath = folder ? `${folder}/${file.name}` : file.name;
+
+  const { url } = await put(filePath, file, { 
     access: "public",
-    addRandomSuffix: true,
+    addRandomSuffix: true, // still ensures uniqueness
   });
   
   return NextResponse.json({ url });

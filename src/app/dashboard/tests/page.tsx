@@ -186,7 +186,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
         >
           {isExpired ? 'Expired' : (
             studentSub ? (
-              studentSub.status === "SUBMITTED" ? 'Submitted' : 'Continue'
+              studentSub.status === "SUBMITTED" ? 'Review' : 'Continue'
             ) : 'Continue'
           )}
         </button>

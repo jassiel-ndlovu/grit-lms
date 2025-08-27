@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import LessonMarkdown from "@/app/components/markdown";
-import { CheckCircle, ChevronDown, ChevronRight, Download, FileText, XCircle } from "lucide-react";
+import LessonMarkdown from "@/app/components/markdown"; import { ArrowRight, CheckCircle, ChevronDown, ChevronRight, Download, FileText, XCircle } from "lucide-react";
 import { useState } from "react";
 
 const QuestionReview: React.FC<{
@@ -21,7 +20,7 @@ const QuestionReview: React.FC<{
             {question.options?.map((option, index) => {
               const isSelected = studentAnswer === option;
               const isCorrectAnswer = question.answer === option;
-              let bgColor = 'bg-gray-50';
+              let bgColor = 'bg-gray-50 border-gray-200';
 
               if (isCorrectAnswer) bgColor = 'bg-green-50 border-green-200';
               else if (isSelected && !isCorrectAnswer) bgColor = 'bg-red-50 border-red-200';
@@ -65,7 +64,7 @@ const QuestionReview: React.FC<{
             {question.options?.map((option, index) => {
               const isSelected = selectedAnswers.includes(option);
               const isCorrect = correctAnswers.includes(option);
-              let bgColor = 'bg-gray-50';
+              let bgColor = 'bg-gray-50 border-gray-200';
 
               if (isCorrect) bgColor = 'bg-green-50 border-green-200';
               else if (isSelected && !isCorrect) bgColor = 'bg-red-50 border-red-200';
@@ -194,16 +193,149 @@ const QuestionReview: React.FC<{
         );
 
       case 'FILE_UPLOAD':
+        const uploadedFiles = Array.isArray(studentAnswer) ? studentAnswer : [];
         return (
           <div className="space-y-4">
             <div className="bg-blue-50 p-4 rounded border border-blue-200">
               <h4 className="font-medium text-blue-900 mb-2">
                 Your Submission:
               </h4>
-              <div className="flex items-center gap-2 text-sm">
-                <FileText className="w-4 h-4" />
-                <span>document.pdf</span>
-                <Download className="w-4 h-4 text-blue-600 cursor-pointer" />
+              {uploadedFiles.length === 0 ? (
+                <p className="text-gray-600 text-sm">No files uploaded</p>
+              ) : (
+                <div className="space-y-2">
+                  {uploadedFiles.map((file, index) => (
+                    <a
+                      key={index}
+                      href={file.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm p-2 bg-white hover:bg-gray-50 transition border border-gray-200"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span className="flex-1 truncate">{file.fileName}</span>
+
+                      <Download className="w-4 h-4 text-blue-600 hover:text-blue-800" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'MATCHING':
+        const studentMatches = Array.isArray(studentAnswer) ? studentAnswer : [];
+        const correctMatches = Array.isArray(question.answer) ? question.answer : [];
+
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium text-blue-900 mb-2">Your Matching:</h4>
+                {studentMatches.length === 0 ? (
+                  <p className="text-gray-600 text-sm">No matching attempted</p>
+                ) : (
+                  <div className="space-y-2">
+                    {studentMatches.map((match, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-white border rounded">
+                        <span className="text-sm font-medium">{match.left}</span>
+                        <ArrowRight className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm">{match.right}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="font-medium text-green-900 mb-2">Correct Matching:</h4>
+                <div className="space-y-2">
+                  {correctMatches.map((match, index) => {
+                    const m = match as { left: string; right: string };
+                    const left = m.left ? m.left : "Undefined Left";
+                    const right = m.right ? m.right : "Undefined Right";
+                    return (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                        <div className="text-sm font-medium">
+                          <LessonMarkdown content={left} />
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-green-700">{right}</span>
+                      </div>
+                    )
+                  }
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'REORDER':
+        const studentOrder = Array.isArray(studentAnswer) ? studentAnswer : [];
+        const correctOrder = Array.isArray(question.answer) ? question.answer : [];
+
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium text-blue-900 mb-2">Your Order:</h4>
+                {studentOrder.length === 0 ? (
+                  <p className="text-gray-600 text-sm">No ordering attempted</p>
+                ) : (
+                  <div className="space-y-2">
+                    {studentOrder.map((item, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-white border rounded">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium">
+                          {index + 1}
+                        </div>
+                        <span className="text-sm">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="font-medium text-green-900 mb-2">Correct Order:</h4>
+                <div className="space-y-2">
+                  {correctOrder.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs font-medium text-green-700">
+                        {index + 1}
+                      </div>
+                      <span className="text-sm text-green-700">{item as string}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'FILL_IN_THE_BLANK':
+        const studentBlanks = Array.isArray(studentAnswer) ? studentAnswer : [studentAnswer];
+        const correctBlanks = Array.isArray(question.answer) ? question.answer : [question.answer];
+
+        return (
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded border border-blue-200">
+              <h4 className="font-medium text-blue-900 mb-2">Your Answers:</h4>
+              <div className="space-y-2">
+                {studentBlanks.map((blank, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Blank {index + 1}:</span>
+                    <span className={`text-sm ${blank === correctBlanks[index] ? 'text-green-700' : 'text-red-700'}`}>
+                      {blank || '[blank]'}
+                    </span>
+                    {blank !== correctBlanks[index] && (
+                      <span className="text-sm text-green-700">
+                        (Correct: {correctBlanks[index] as string})
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>

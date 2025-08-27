@@ -1,6 +1,10 @@
-export async function uploadFile(file: File): Promise<string> {
+export async function uploadFile(file: File, folder?: string): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
+
+  if (folder) {
+    formData.append("folder", folder);
+  }
 
   const res = await fetch("/api/upload", {
     method: "POST",
@@ -29,12 +33,16 @@ export async function deleteFile(fileUrl: string): Promise<boolean> {
   return true;
 }
 
-export async function updateFile(oldUrl: string, newFile: File): Promise<string> {
+export async function updateFile(
+  oldUrl: string,
+  newFile: File,
+  folder?: string
+): Promise<string> {
   // 1. Delete old file
   await deleteFile(oldUrl);
 
-  // 2. Upload new one
-  const newUrl = await uploadFile(newFile);
+  // 2. Upload new one (to same folder if provided)
+  const newUrl = await uploadFile(newFile, folder);
 
   return newUrl;
 }
