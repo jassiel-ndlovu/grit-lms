@@ -263,7 +263,7 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
                 Drop files here or click to browse
               </p>
               <p className="text-sm text-gray-500 mb-4">
-                Accepted formats: {`submission.fileType, .ZIP`}
+                Accepted formats: {`${submission.fileType}, .ZIP`}
               </p>
               <input
                 type="file"

@@ -108,8 +108,18 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       const now = new Date();
       const elapsedSeconds = Math.floor((now.getTime() - testStartTime.getTime()) / 1000);
       const remainingSeconds = ((test.timeLimit as number) * 60) - elapsedSeconds;
+      const secondsToDueDate = Math.floor((new Date(test.dueDate).getTime() - now.getTime()) / 1000);
 
-      return remainingSeconds > 0 ? remainingSeconds : 0;
+      // take the smallest of the two times
+      if (secondsToDueDate > 0 && remainingSeconds > 0) {
+        return Math.min(secondsToDueDate, remainingSeconds);
+      } else if (secondsToDueDate > 0) {
+        return secondsToDueDate;
+      } else if (remainingSeconds) {
+        return remainingSeconds;
+      }
+
+      return 0;
     };
 
     setTimeRemaining(calculateRemainingTime());

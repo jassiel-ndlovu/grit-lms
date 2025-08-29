@@ -115,7 +115,7 @@ export default function SubmissionDetails({ params }: SubmissionDetailsProps) {
             </div>
           )}
 
-          {submission.descriptionFiles && submission.descriptionFiles.length && (
+          {submission.descriptionFiles && submission.descriptionFiles.length >= 0 && (
             <div className="space-y-2">
               {submission.descriptionFiles.map((url, i) => (
                 <a
