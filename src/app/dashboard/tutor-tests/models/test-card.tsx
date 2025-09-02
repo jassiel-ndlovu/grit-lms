@@ -91,6 +91,7 @@ export default function TestCard({ test, course, deleteTest }: TestCardProps) {
       {showSubmissionsDialog && (
         <ViewSubmissionsDialog
           test={test}
+          courseId={(course as AppTypes.Course).id}
           courseName={(course as AppTypes.Course).name}
           onClose={() => setShowSubmissionsDialog(false)}
         />

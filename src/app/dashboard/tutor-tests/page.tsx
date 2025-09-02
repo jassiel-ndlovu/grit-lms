@@ -59,7 +59,7 @@ export default function TutorTestsPage() {
     };
 
     fetch();
-  }, [tutorProfile, fetchCoursesByTutorId]);
+  }, [tutorProfile, fetchTestsByTutorId]);
 
   // memoized filter function
   const filteredTests = useMemo(() => {
@@ -98,7 +98,7 @@ export default function TutorTestsPage() {
     }
 
     return filtered;
-  }, [tests, selectedCourse, searchTerm, statusFilter]);
+  }, [tests, courses, selectedCourse, searchTerm, statusFilter]);
 
   // functions
   const getTestStats = (test: AppTypes.Test) => {
@@ -384,6 +384,7 @@ export default function TutorTestsPage() {
       {showSubmissionsDialog && (
         <ViewSubmissionsDialog
           test={selectedTest as AppTypes.Test}
+          courseId={selectedTest?.courseId as string}
           courseName={courses.find(c => c.id === selectedTest?.courseId)?.name || "Course Name Not Found"}
           onClose={() => setShowSubmissionsDialog(false)}
         />

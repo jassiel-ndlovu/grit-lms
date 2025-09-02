@@ -73,7 +73,7 @@ export default function SubmissionDetails({ params }: SubmissionDetailsProps) {
       setCourse(courses[0]);
     };
     fetch();
-  }, [id, submission]);
+  }, [id, submission, fetchCoursesByIds]);
 
   if (courseLoading || submissionLoading || entryLoading || !course || !submission || !studentProfile) {
     return <SubmissionDetailsSkeleton />;

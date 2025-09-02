@@ -47,7 +47,7 @@ export default function CoursePage({ params }: CoursePageProps) {
     }
 
     fetch();
-  }, [id, fetchLessonsByCourseId]);
+  }, [id, selectedLessonIndex, fetchLessonsByCourseId]);
 
 
   if (lessonsLoading || courseLoading) {

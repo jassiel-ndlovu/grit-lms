@@ -54,6 +54,28 @@ export default function LessonMarkdown({ content }: { content: string }) {
             />
           ),
 
+          // Tables
+          table: ({ ...props }) => (
+            <div className="overflow-x-auto my-6">
+              <table className="min-w-full border-collapse border border-gray-300" {...props} />
+            </div>
+          ),
+          thead: ({ ...props }) => (
+            <thead className="bg-gray-100" {...props} />
+          ),
+          tbody: ({ ...props }) => (
+            <tbody {...props} />
+          ),
+          tr: ({ ...props }) => (
+            <tr className="border-b border-gray-200" {...props} />
+          ),
+          th: ({ ...props }) => (
+            <th className="border border-gray-300 px-4 py-2 font-semibold text-left" {...props} />
+          ),
+          td: ({ ...props }) => (
+            <td className="border border-gray-300 px-4 py-2" {...props} />
+          ),
+
           // Code blocks
           code({ inline, className, children, ...props }: CodeProps) {
             if (inline) {
@@ -85,7 +107,6 @@ export default function LessonMarkdown({ content }: { content: string }) {
       >
         {content}
       </ReactMarkdown>
-
     </div>
   );
 }

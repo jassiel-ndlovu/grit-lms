@@ -140,7 +140,7 @@ export const TestSubmissionProvider = ({ children }: { children: ReactNode }) =>
   }, [clearMessage]);
 
   const updateSubmission = useCallback(async (id: string, data: Partial<AppTypes.TestSubmission>) => {
-    setUpdating(true);
+    // setUpdating(true);
     clearMessage();
     try {
       const res = await axios.put<AppTypes.TestSubmission>(`/api/test-submission/${id}`, data);

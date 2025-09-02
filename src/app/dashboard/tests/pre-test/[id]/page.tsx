@@ -32,7 +32,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
 
   useEffect(() => {
     fetchTestById(id);
-  }, []);
+  }, [id, fetchTestById]);
 
   useEffect(() => {
     if (currentTest) {

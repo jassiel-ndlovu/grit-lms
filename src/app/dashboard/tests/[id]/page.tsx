@@ -81,6 +81,38 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     }
   }, [test]);
 
+  const handleSubmitTest = async () => {
+    setIsSubmitting(true);
+
+    if (!test || !studentProfile?.id) {
+      alert("Test or student profile not found!");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const submissionData: Partial<AppTypes.TestSubmission> = {
+      studentId: studentProfile.id,
+      testId: test.id,
+      answers: answers,
+      status: $Enums.SubmissionStatus.SUBMITTED,
+      startedAt: testStartTime || new Date(),
+      submittedAt: new Date(),
+    };
+
+    try {
+      await updateSubmission(submission?.id || '', submissionData);
+
+      alert("Submission complete!");
+
+      router.push(`/dashboard/tests/review/${test.id}`);
+    } catch (error) {
+      console.error('Error submitting test:', error);
+      alert("An error occurred while submitting the test. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Timer effect - runs every second
   useEffect(() => {
     if (timeRemaining === null || timeRemaining <= 0) return;
@@ -113,17 +145,13 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       // take the smallest of the two times
       if (secondsToDueDate > 0 && remainingSeconds > 0) {
         return Math.min(secondsToDueDate, remainingSeconds);
-      } else if (secondsToDueDate > 0) {
-        return secondsToDueDate;
-      } else if (remainingSeconds) {
-        return remainingSeconds;
-      }
+      } 
 
-      return 0;
+      return 5;
     };
 
     setTimeRemaining(calculateRemainingTime());
-  }, [testStartTime, test?.timeLimit]);
+  }, [testStartTime, test?.dueDate, test?.timeLimit]);
 
   if (!test || !courses || !courses.length) return <TestTakingPageSkeleton />;
 
@@ -213,38 +241,6 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
       console.error('Error saving progress:', error);
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleSubmitTest = async () => {
-    setIsSubmitting(true);
-
-    if (!test || !studentProfile?.id) {
-      alert("Test or student profile not found!");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const submissionData: Partial<AppTypes.TestSubmission> = {
-      studentId: studentProfile.id,
-      testId: test.id,
-      answers: answers,
-      status: $Enums.SubmissionStatus.SUBMITTED,
-      startedAt: testStartTime || new Date(),
-      submittedAt: new Date(),
-    };
-
-    try {
-      await updateSubmission(submission?.id || '', submissionData);
-
-      alert("Submission complete!");
-
-      router.push(`/dashboard/tests/review/${test.id}`);
-    } catch (error) {
-      console.error('Error submitting test:', error);
-      alert("An error occurred while submitting the test. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -544,7 +540,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
               {(matchPairs as JsonArray).map((pair: any, index: number) => (
                 <React.Fragment key={index}>
-                  <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="p-3 bg-gray-50 text-sm">
                     <LessonMarkdown content={pair.left} />
                   </div>
                   <select
@@ -603,7 +599,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
         );
 
       case 'FILL_IN_THE_BLANK':
-        const blankCount = question.blankCount || 1;
+        const blankCount = question.blankCount || (question.question.match(/_{3,}/g)?.length || 1) || 1;
         const blankAnswer = Array.isArray(answer) ? answer : new Array(blankCount).fill('');
 
         return (

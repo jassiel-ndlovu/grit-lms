@@ -4,6 +4,7 @@
 
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { Message } from '@/lib/message.class';
+import axios from 'axios';
 
 type StudentContextType = {
   students: AppTypes.Student[];
@@ -69,10 +70,9 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const fetchStudentsByCourseId = useCallback(async (courseId: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/students?courseId=${courseId}`);
-      if (!res.ok) throw new Error('Failed to fetch students by ID');
-      const data = await res.json();
-      return data;
+      const res = await axios.get(`/api/students?courseId=${courseId}`);
+
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to fetch students by ID',

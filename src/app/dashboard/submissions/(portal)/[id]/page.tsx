@@ -77,7 +77,7 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
     }
 
     fetch();
-  }, [id, submission]);
+  }, [id, submission, fetchCoursesByIds]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

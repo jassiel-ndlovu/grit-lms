@@ -62,7 +62,7 @@ export default function ManageLessons({ params }: CoursePageProps) {
     }
 
     fetch();
-  }, [id, fetchLessonsByCourseId]);
+  }, [id, selectedLessonIndex, fetchLessonsByCourseId]);
 
   const handleDeleteLesson = (lesson: Partial<AppTypes.Lesson>, index: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selecting the lesson

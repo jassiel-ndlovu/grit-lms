@@ -46,6 +46,7 @@ export async function PUT(
       where: { id: id },
       data: {
         score: data.score ?? undefined,
+        submittedAt: data.submittedAt ?? new Date(),
         feedback: data.feedback ?? undefined,
         status: data.status ?? undefined,
         answers: data.answers ?? undefined,

@@ -47,7 +47,7 @@ export default function TestsPage() {
 
       fetchTests();
     }
-  }, [studentProfile?.id, fetchTestsByCourse, coursesLoading]);
+  }, [studentProfile?.id, studentCourses, fetchTestsByCourse, coursesLoading]);
 
   // Group by course
   const groupedByCourse = useMemo(() => {
@@ -148,7 +148,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
 
     // Cleanup interval on unmount
     return () => clearInterval(timer);
-  }, [test.timeLimit, test.createdAt]);
+  }, [test.timeLimit, test.createdAt, profile?.id, test.dueDate, test.submissions]);
 
   return (
     <div className="border border-gray-300 rounded-md p-4 bg-gray-50 hover:shadow transition">

@@ -9,6 +9,7 @@ import { use, useEffect, useState } from "react";
 import { useTests } from "@/context/TestContext";
 import { useTestSubmissions } from "@/context/TestSubmissionContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useRouter } from "next/navigation";
 
 type TestReviewPageProps = {
   params: Promise<{ id: string }>;
@@ -20,6 +21,7 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
   const { loading: testLoading, fetchTestById } = useTests();
   const { loading: submissionLoading, fetchSubmissionByStudentTestId } = useTestSubmissions();
   const { profile } = useProfile();
+  const router = useRouter();
 
   const studentProfile = profile as AppTypes.Student;
 
@@ -267,7 +269,9 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
 
         {/* Navigation */}
         <div className="mt-8 flex justify-center">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+          <button 
+          onClick={() => router.push("/dashboard/tests")}
+          className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-6 py-3 transition-colors">
             Return to Course
           </button>
         </div>

@@ -48,7 +48,7 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
     }
 
     fetch();
-  }, [tutorId, fetchCoursesByTutorId]);
+  }, [tutorId, fetchSubmissionsByTutorId]);
 
   const filteredSubmissions = useMemo(() => {
     let filtered = submissions;

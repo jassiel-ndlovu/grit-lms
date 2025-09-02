@@ -114,7 +114,7 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [clearMessage]);
+  }, []);
 
   const createCourse = useCallback(async (course: Partial<AppTypes.Course>) => {
     setLoading(true);

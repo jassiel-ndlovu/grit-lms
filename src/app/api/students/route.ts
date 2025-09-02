@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({students});
+    return NextResponse.json(students);
   }
 }
 
