@@ -2,7 +2,7 @@
 
 "use client";
 
-import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useState, useCallback } from 'react';
 import { Message } from '@/lib/message.class';
 
 type TutorContextType = {
@@ -124,10 +124,6 @@ export const TutorProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   }, [clearMessage]);
-
-  useEffect(() => {
-    fetchTutors();
-  }, [fetchTutors]);
 
   return (
     <TutorContext.Provider

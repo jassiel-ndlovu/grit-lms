@@ -117,6 +117,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
     const calculateTimeLeft = () => {
       const sub = test.submissions.find(s => s.studentId === profile?.id);
 
+      // @ts-expect-error make independent sub fetches
       setStudentSub(sub);
 
       const startTime = new Date(Date.now() + 2 * 60 * 60 * 1000); // Time from database is 2 hours behind

@@ -9,7 +9,7 @@ interface LoadingPopupProps {
 
 export default function LoadingPopup({ message = 'Logging in...' }: LoadingPopupProps) {
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center">
       <motion.div
         className="bg-white p-6 flex flex-col items-center space-y-4 max-w-xs w-full"
         initial={{ opacity: 0, scale: 0.9 }}

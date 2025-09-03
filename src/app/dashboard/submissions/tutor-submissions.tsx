@@ -85,7 +85,7 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
 
     const totalStudents = course[0].students?.length || 0;
     const submittedCount = submission.entries.length;
-    const gradedCount = submission.entries.filter(e => e.grade !== undefined).length;
+    const gradedCount = NaN;//submission.entries.filter(e => e.grade !== undefined).length;
     const lateCount = submission.entries.filter(e => e.status === $Enums.SubmissionStatus.LATE).length;
 
     return { totalStudents, submittedCount, gradedCount, lateCount };

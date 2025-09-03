@@ -1,26 +1,26 @@
-'use client'
+'use client';
 
-import LoadingPopup from '@/app/components/loading'
-import { useProfile } from '@/context/ProfileContext'
-import { Bell, ChevronDown, ChevronUp, LogOut, User } from 'lucide-react'
-import { signOut } from 'next-auth/react'
-import Image from 'next/image'
-import Link from 'next/link'
+import LoadingPopup from '@/app/components/loading';
+import { useProfile } from '@/context/ProfileContext';
+import { Bell, ChevronDown, ChevronUp, LogOut, User } from 'lucide-react';
+import { signOut } from 'next-auth/react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react'
 
 export default function Header() {
-  const [menuOpen, setMenuOpen] = useState<boolean>(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false)
+        setMenuOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className="w-full flex items-center justify-between bg-gray-100 border-b border-b-gray-300 pt-3 pb-2 px-4">

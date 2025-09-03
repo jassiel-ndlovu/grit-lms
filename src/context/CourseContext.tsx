@@ -2,10 +2,8 @@
 
 'use client';
 
-import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useState, useCallback } from 'react';
 import axios from 'axios';
-import { useSession } from 'next-auth/react';
-import { useProfile } from './ProfileContext';
 import { Message } from '@/lib/message.class';
 
 interface CoursesContextType {
@@ -36,9 +34,6 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [updating, setUpdating] = useState<boolean>(false);
   const [message, setMessage] = useState<Message | null>(null);
-
-  const { status } = useSession();
-  const { profile } = useProfile();
 
   const clearMessage = useCallback(() => {
     setMessage(null);
@@ -192,12 +187,6 @@ export const CoursesProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   }, [clearMessage]);
-
-  useEffect(() => {
-    if (status === 'authenticated' && profile) {
-      fetchCourses();
-    }
-  }, [status, profile, fetchCourses]);
 
   return (
     <CoursesContext.Provider

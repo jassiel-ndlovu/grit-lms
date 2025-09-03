@@ -69,7 +69,7 @@ export default function StudentDashboard() {
   );
 
   const studentSubmissions = useMemo(() =>
-    submissions ?? [], [submissions, studentTests, studentProfile]);
+    submissions ?? [], [submissions]);
 
   // Loading state
   const isLoading = coursesLoading || testsLoading || profileLoading || submissionLoading;

@@ -211,7 +211,8 @@ export default function SubmissionDetailTutor({ courseName, submission, onBack, 
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {entry.grade ? `${entry.grade}%` : 'Not graded'}
+                          {/* {entry.grade ? `${entry.grade}%` : 'Not graded'} */}
+                          Bug fix in Progress
                         </td>
 
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">

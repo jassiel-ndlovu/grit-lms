@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Timer, Send, ChevronLeft, ChevronRight, Flag, Save, Eye, EyeOff, Upload, Trash2, ImageIcon, FileText, Eraser } from 'lucide-react';
 import { useTests } from '@/context/TestContext';
@@ -81,7 +81,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     }
   }, [test]);
 
-  const handleSubmitTest = async () => {
+  const handleSubmitTest = useCallback(async () => {
     setIsSubmitting(true);
 
     if (!test || !studentProfile?.id) {
@@ -111,7 +111,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [answers, router, studentProfile?.id, submission?.id, test, testStartTime, updateSubmission]);
 
   // Timer effect - runs every second
   useEffect(() => {
@@ -130,7 +130,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining]);
+  }, [timeRemaining, handleSubmitTest]);
 
   // Calculate remaining time if page is refreshed
   useEffect(() => {

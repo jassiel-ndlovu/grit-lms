@@ -3,8 +3,9 @@ import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const courseId = req.nextUrl.searchParams.get("courseId");
+  const studentIds = req.nextUrl.searchParams.get("ids");
 
-  if (!courseId) {
+  if (!courseId && !studentIds) {
     const students = await prisma.student.findMany();
     return NextResponse.json(students);
   }
@@ -17,6 +18,16 @@ export async function GET(req: NextRequest) {
             id: courseId,
           },
         },
+      },
+    });
+
+    return NextResponse.json(students);
+  } else if (studentIds) {
+    const idArray = studentIds.split(",");
+
+    const students = await prisma.student.findMany({
+      where: {
+        id: { in: idArray }
       },
     });
 

@@ -59,16 +59,17 @@ export default function SubmissionDetails({ submission, studentId, onBack, onEdi
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">Status</p>
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${entry.status === $Enums.SubmissionStatus.GRADED
-                  ? 'bg-green-100 text-green-800'
-                  : entry.status === $Enums.SubmissionStatus.LATE
-                    ? 'bg-orange-100 text-orange-800'
-                    : 'bg-blue-100 text-blue-800'
+                ? 'bg-green-100 text-green-800'
+                : entry.status === $Enums.SubmissionStatus.LATE
+                  ? 'bg-orange-100 text-orange-800'
+                  : 'bg-blue-100 text-blue-800'
                 }`}>
                 {entry.status.replace('_', ' ')}
               </span>
             </div>
 
-            {entry.grade !== undefined && (
+            Bug Fix in Progress
+            {/* {entry.grade !== undefined && (
               <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">Grade</p>
                 {entry.grade ? (
@@ -80,7 +81,7 @@ export default function SubmissionDetails({ submission, studentId, onBack, onEdi
                 )}
 
               </div>
-            )}
+            )} */}
           </div>
 
           {canEdit && (

@@ -50,7 +50,11 @@ declare global {
     }>;
     type TestQuestion = Prisma.TestQuestionGetPayload<object>;
     type TestSubmission = Prisma.TestSubmissionGetPayload<{
-      include: { uploadedFiles: true };
+      include: {
+        uploadedFiles: true;
+        grade: true;
+        questionGrades: true;
+      };
     }>;
 
     type TestAnswer =
@@ -68,26 +72,31 @@ declare global {
 
     type UploadedFile = Prisma.UploadedFileGetPayload<object>;
     type AssessmentCompletion = Prisma.AssessmentCompletionGetPayload<object>;
-    
+
     type DescriptionFile = {
       title: string;
       url: string;
     };
     type Submission = Prisma.SubmissionGetPayload<{
-      include: { 
+      include: {
         entries: {
           include: {
-            student: true,
-          }
-        } 
+            student: true;
+          };
+        };
       };
     }>;
-    
+
     type SubmissionEntry = Prisma.SubmissionEntryGetPayload<{
-      include: { student: true },
+      include: {
+        student: true;
+        questionGrades: true;
+        grade: true;
+      };
     }>;
     type Resource = Prisma.ResourceGetPayload<object>;
     type Grade = Prisma.GradeGetPayload<object>;
+    type QuestionGrade = Prisma.QuestionGradeGetPayload<object>;
     type Notification = Prisma.NotificationGetPayload<object>;
 
     // Enums

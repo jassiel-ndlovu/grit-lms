@@ -7,15 +7,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useCourses } from "@/context/CourseContext";
 import { useTests } from "@/context/TestContext";
 import { useProfile } from "@/context/ProfileContext";
-import CreateTestDialog from "./dialogs/create-test-dialog";
 import { formatDate } from "@/lib/functions";
 import ViewSubmissionsDialog from "./dialogs/view-submission-dialog";
 import StatusCheck from "./models/status-menu";
+import { useRouter } from "next/navigation";
 
 export default function TutorTestsPage() {
   const { fetchCoursesByTutorId, loading: coursesLoading } = useCourses();
-  const { fetchTestsByTutorId, createTest, deleteTest, loading: testLoading } = useTests();
+  const { fetchTestsByTutorId, deleteTest, loading: testLoading } = useTests();
   const { profile } = useProfile();
+  const router = useRouter();
 
   const tutorProfile: AppTypes.Tutor = profile as AppTypes.Tutor;
 
@@ -26,7 +27,6 @@ export default function TutorTestsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTest, setSelectedTest] = useState<AppTypes.Test | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showSubmissionsDialog, setShowSubmissionsDialog] = useState<boolean>(false);
 
   // fetch courses
@@ -116,22 +116,9 @@ export default function TutorTestsPage() {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
-  const handleCreateTest = async (courseId: string, testData: Partial<AppTypes.Test>) => {
-    setLoading(true);
-    try {
-      await createTest(courseId, testData);
-      setShowCreateDialog(false);
-      // setView("list");
-    } catch (error) {
-      console.error('Error creating test:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEditTest = (test: AppTypes.Test) => {
     setSelectedTest(test);
-    setShowCreateDialog(true);
+    router.push(`/dashboard/tutor-tests/create/${test.id}`);
   };
 
   const handleViewDetails = (test: AppTypes.Test) => {
@@ -225,7 +212,7 @@ export default function TutorTestsPage() {
         </div>
 
         <button
-          onClick={() => setShowCreateDialog(true)}
+          onClick={() => router.push("/dashboard/tutor-tests/create")}
           className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
@@ -247,7 +234,7 @@ export default function TutorTestsPage() {
           </p>
           {(!searchTerm && statusFilter === 'all' && selectedCourse === 'all') && (
             <button
-              onClick={() => setShowCreateDialog(true)}
+              onClick={() => router.push("/dashboard/tutor-tests/create")}
               className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 flex items-center gap-2 mx-auto"
             >
               <Plus className="w-4 h-4" />
@@ -371,14 +358,6 @@ export default function TutorTestsPage() {
             </table>
           </div>
         </div>
-      )}
-
-      {showCreateDialog && (
-        <CreateTestDialog
-          onClose={() => setShowCreateDialog(false)}
-          onSave={handleCreateTest}
-          loading={loading}
-        />
       )}
 
       {showSubmissionsDialog && (

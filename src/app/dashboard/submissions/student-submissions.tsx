@@ -191,11 +191,12 @@ export default function StudentSubmissionsPage({ studentId }: StudentSubmissions
                     </div>
                   )}
 
-                  {entry?.grade !== undefined && (
+                  {/* {entry?.grade !== undefined && (
                     <div className="flex items-center text-sm text-gray-600">
                       <span className="font-medium">Grade: {entry.grade}%</span>
                     </div>
-                  )}
+                  )} */}
+                  Bug Fix in Progress
                 </div>
 
                 <div className="flex justify-between items-center">

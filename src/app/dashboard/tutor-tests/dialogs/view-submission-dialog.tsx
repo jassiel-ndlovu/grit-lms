@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/functions";
 import { $Enums } from "@/generated/prisma";
 import { useStudent } from "@/context/StudentContext";
+import { useRouter } from "next/navigation";
 
 type ViewSubmissionsDialogProps = {
   test: AppTypes.Test;
@@ -16,6 +17,7 @@ type ViewSubmissionsDialogProps = {
 }
 const ViewSubmissionsDialog = ({ test, courseName, courseId, onClose }: ViewSubmissionsDialogProps) => {
   const { loading: studentsLoading, fetchStudentsByCourseId } = useStudent();
+  const router = useRouter();
 
   const [students, setStudents] = useState<AppTypes.Student[]>([]);
   // const [selectedSubmission, setSelectedSubmission] = useState<AppTypes.TestSubmission | null>(null);
@@ -182,8 +184,11 @@ const ViewSubmissionsDialog = ({ test, courseName, courseId, onClose }: ViewSubm
         >
           Close
         </button>
-        <button className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors">
-          Export Results
+        <button 
+        onClick={() => router.push(`/dashboard/tutor-tests/submissions/${test.id}`)}
+        className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors"
+        >
+          Open Expanded View
         </button>
       </div>
     </DialogOverlay>

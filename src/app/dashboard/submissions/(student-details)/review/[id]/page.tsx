@@ -198,7 +198,7 @@ export default function SubmissionDetails({ params }: SubmissionDetailsProps) {
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Grade</p>
                   {entry.grade ? (
-                    <p className="text-2xl font-bold text-green-600">{entry.grade}%</p>
+                    <p className="text-2xl font-bold text-green-600">{entry.id}%</p>
                   ) : (
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-200">
                       Not Graded

@@ -162,6 +162,9 @@ model TestSubmission {
   test          Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
   student       Student        @relation(fields: [studentId], references: [id])
   uploadedFiles UploadedFile[]
+
+  grade          Grade?
+  questionGrades QuestionGrade[]
 }
 
 model UploadedFile {
@@ -244,10 +247,12 @@ model SubmissionEntry {
   attemptNumber Int
   fileUrl       String[]
   feedback      String
-  grade         Float?
 
   student    Student    @relation(fields: [studentId], references: [id])
   submission Submission @relation(fields: [submissionId], references: [id])
+
+  grade          Grade?
+  questionGrades QuestionGrade[]
 
   @@unique([submissionId, studentId])
 }
@@ -261,15 +266,42 @@ model Resource {
   uploadedBy  String // could reference tutor or admin
 }
 
-model Grade {
-  id        String   @id @default(cuid())
-  studentId String
-  courseId  String
-  type      String // e.g. "Quiz", "Test", "Final Mark"
-  title     String // e.g. "June Test"
-  value     Float
-  outOf     Float
+model QuestionGrade {
+  id         String  @id @default(cuid())
+  questionId String? // For tests; null for file-based assignment items
+  score      Float
+  outOf      Float
+  feedback   String? // markdown
+
+  // Polymorphic-ish: exactly one of these should be set (enforced in app logic)
+  testSubmissionId String?
+  testSubmission   TestSubmission? @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
+
+  submissionEntryId String?
+  submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Grade {
+  id            String   @id @default(cuid())
+  studentId     String
+  courseId      String
+  type          String // e.g. "Test", "Assignment"
+  title         String // e.g. "June Test"
+  score         Float // total awarded
+  outOf         Float // total possible
+  finalComments String? // markdown
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Attach to exactly ONE of these (enforced in app logic)
+  testSubmissionId String?         @unique
+  testSubmission   TestSubmission? @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
+
+  submissionEntryId String?          @unique
+  submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
 
   student Student @relation(fields: [studentId], references: [id])
   course  Course  @relation(fields: [courseId], references: [id])

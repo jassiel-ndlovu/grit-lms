@@ -12,6 +12,8 @@ import { TestProvider } from '@/context/TestContext';
 import { TestSubmissionProvider } from '@/context/TestSubmissionContext';
 import { SubmissionProvider } from '@/context/SubmissionContext';
 import { SubmissionEntryProvider } from '@/context/SubmissionEntryContext';
+import { GradeProvider } from '@/context/GradeContext';
+import { QuestionGradeProvider } from '@/context/QuestionGradeContext';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -26,21 +28,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <Header />
           <div className="h-full max-h-[92vh]">
             <StudentProvider>
-              <TutorProvider>
-                <CoursesProvider>
-                  <LessonProvider>
-                    <TestProvider>
-                      <TestSubmissionProvider>
-                        <SubmissionProvider>
-                          <SubmissionEntryProvider>
-                            {children}
-                          </SubmissionEntryProvider>
-                        </SubmissionProvider>
-                      </TestSubmissionProvider>
-                    </TestProvider>
-                  </LessonProvider>
-                </CoursesProvider>
-              </TutorProvider>
+            <TutorProvider>
+            <CoursesProvider>
+            <LessonProvider>
+            <TestProvider>
+            <TestSubmissionProvider>
+            <SubmissionProvider>
+            <SubmissionEntryProvider>
+            <GradeProvider>
+            <QuestionGradeProvider>
+              {children}
+            </QuestionGradeProvider>
+            </GradeProvider>
+            </SubmissionEntryProvider>
+            </SubmissionProvider>
+            </TestSubmissionProvider>
+            </TestProvider>
+            </LessonProvider>
+            </CoursesProvider>
+            </TutorProvider>
             </StudentProvider>
           </div>
         </main>

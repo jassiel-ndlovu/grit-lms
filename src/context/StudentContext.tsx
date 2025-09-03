@@ -2,7 +2,7 @@
 
 'use client';
 
-import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useState, useCallback } from 'react';
 import { Message } from '@/lib/message.class';
 import axios from 'axios';
 
@@ -52,10 +52,9 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const fetchStudentsById = useCallback(async (ids: string[]) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/students?ids=${ids.join(',')}`);
-      if (!res.ok) throw new Error('Failed to fetch students by ID');
-      const data = await res.json();
-      return data;
+      const res = await axios.get(`/api/students?ids=${ids.join(',')}`);
+      
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to fetch students by ID',
@@ -165,10 +164,6 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   }, [clearMessage]);
-
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
 
   return (
     <StudentContext.Provider
