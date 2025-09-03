@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useCourses } from "@/context/CourseContext";
 import { useSubmission } from "@/context/SubmissionContext";
 import { useRouter } from "next/navigation";
+import { useSubmissionEntries } from "@/context/SubmissionEntryContext";
 
 interface StudentSubmissionsPageProps {
   studentId: string;
@@ -12,9 +13,11 @@ interface StudentSubmissionsPageProps {
 export default function StudentSubmissionsPage({ studentId }: StudentSubmissionsPageProps) {
   const { loading: coursesLoading, fetchCoursesByStudentId } = useCourses();
   const { loading: submissionLoading, fetchSubmissionsByStudentId } = useSubmission();
+  const { loading: entriesLoading, fetchEntriesByStudentId } = useSubmissionEntries();
   const router = useRouter();
 
   const [submissions, setSubmissions] = useState<AppTypes.Submission[]>([]);
+  const [entries, setEntries] = useState<AppTypes.SubmissionEntry[]>([]);
   const [courses, setCourses] = useState<AppTypes.Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(true);
@@ -53,13 +56,28 @@ export default function StudentSubmissionsPage({ studentId }: StudentSubmissions
     fetch();
   }, [studentId, fetchSubmissionsByStudentId]);
 
+  // fetch student submissions
+  useEffect(() => {
+    if (!studentId) return;
+
+    (async () => {
+      setLoading(true);
+
+      const fetchedEntries = await fetchEntriesByStudentId(studentId) as AppTypes.SubmissionEntry[];
+
+      setEntries(fetchedEntries);
+      setLoading(false);
+    })();
+  }, []);
+
   const filteredSubmissions = useMemo(() => {
     if (selectedCourse === 'all') return submissions;
     return submissions.filter(sub => sub.courseId === selectedCourse);
   }, [submissions, selectedCourse]);
 
-  const getSubmissionStatus = (submission: AppTypes.Submission): AppTypes.SubmissionStatus => {
-    const entry = submission.entries.find(e => e.studentId === studentId);
+  const getSubmissionStatus = (submission: AppTypes.Submission) => {
+    const entry = entries.find(e => e.submissionId === submission.id);
+
     if (!entry) {
       return new Date() > submission.dueDate
         ? $Enums.SubmissionStatus.NOT_SUBMITTED
@@ -131,7 +149,7 @@ export default function StudentSubmissionsPage({ studentId }: StudentSubmissions
       </div>
 
       {/* Submissions Grid */}
-      {loading || coursesLoading || submissionLoading ? (
+      {loading || coursesLoading || submissionLoading || entriesLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse">
@@ -157,7 +175,7 @@ export default function StudentSubmissionsPage({ studentId }: StudentSubmissions
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSubmissions.map(submission => {
             const status = getSubmissionStatus(submission);
-            const entry = submission.entries.find(e => e.studentId === studentId);
+            const entry = entries.find(e => e.submissionId === submission.id);
             const isOverdue = new Date() > submission.dueDate && !entry;
 
             return (
