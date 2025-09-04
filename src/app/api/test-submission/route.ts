@@ -8,16 +8,19 @@ export async function GET(req: NextRequest) {
   const testId = req.nextUrl.searchParams.get("testId");
   const submissionIds = req.nextUrl.searchParams.get("submissionIds");
 
+  const include: any = {
+    student: true,
+    uploadedFiles: true,
+    grade: true,
+    questionGrades: true,
+  };
+
   // Fetch specific submission by testId and studentId
   if (testId && studentId) {
     try {
       const submission = await prisma.testSubmission.findFirst({
         where: { testId, studentId },
-        include: {
-          test: true,
-          student: true,
-          uploadedFiles: true,
-        },
+        include,
       });
 
       if (!submission) {
@@ -39,11 +42,7 @@ export async function GET(req: NextRequest) {
     // Return all submissions if no filters are provided
     try {
       const submissions = await prisma.testSubmission.findMany({
-        include: {
-          test: true,
-          student: true,
-          uploadedFiles: true,
-        },
+        include,
         orderBy: { submittedAt: "desc" },
       });
       return NextResponse.json(submissions);
@@ -60,11 +59,7 @@ export async function GET(req: NextRequest) {
     try {
       const submissions = await prisma.testSubmission.findMany({
         where: { testId },
-        include: {
-          test: true,
-          student: true,
-          uploadedFiles: true,
-        },
+        include,
         orderBy: { submittedAt: "desc" },
       });
       return NextResponse.json(submissions);
@@ -80,11 +75,7 @@ export async function GET(req: NextRequest) {
     try {
       const submissions = await prisma.testSubmission.findMany({
         where: { id: { in: ids } },
-        include: {
-          test: true,
-          student: true,
-          uploadedFiles: true,
-        },
+        include,
       });
       return NextResponse.json(submissions);
     } catch (error) {
@@ -98,11 +89,7 @@ export async function GET(req: NextRequest) {
     try {
       const submissions = await prisma.testSubmission.findMany({
         where: { studentId },
-        include: {
-          test: true,
-          student: true,
-          uploadedFiles: true,
-        },
+        include,
         orderBy: { submittedAt: "desc" },
       });
       return NextResponse.json(submissions);

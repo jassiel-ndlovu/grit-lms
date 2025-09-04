@@ -68,7 +68,7 @@ export default function StudentSubmissionsPage({ studentId }: StudentSubmissions
       setEntries(fetchedEntries);
       setLoading(false);
     })();
-  }, []);
+  }, [studentId, fetchEntriesByStudentId]);
 
   const filteredSubmissions = useMemo(() => {
     if (selectedCourse === 'all') return submissions;
@@ -209,12 +209,11 @@ export default function StudentSubmissionsPage({ studentId }: StudentSubmissions
                     </div>
                   )}
 
-                  {/* {entry?.grade !== undefined && (
+                  {entry?.grade !== undefined && (
                     <div className="flex items-center text-sm text-gray-600">
-                      <span className="font-medium">Grade: {entry.grade}%</span>
+                      <span className="font-medium">{entry.grade ? `Grade: ${Math.round(entry.grade.score / entry.grade.outOf)}` : "Not Graded"}</span>
                     </div>
-                  )} */}
-                  Bug Fix in Progress
+                  )}
                 </div>
 
                 <div className="flex justify-between items-center">

@@ -1,13 +1,13 @@
 import { $Enums } from "@/generated/prisma";
 import { AlertCircle, CheckCircle, FileText, Plus, Search, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import SubmissionForm from "./models/submission-form";
-import SubmissionDetailTutor from "./models/submission-details-tutor";
 import { TutorSubmissionsTableSkeleton } from "./skeletons/tutor-submissions-skeletons";
-import SubmissionActionsMenu from "./models/actions-menu";
 import { useCourses } from "@/context/CourseContext";
 import { useSubmission } from "@/context/SubmissionContext";
 import { formatDate } from "@/lib/functions";
+import { useSubmissionEntries } from "@/context/SubmissionEntryContext";
+import { useRouter } from "next/navigation";
+import ActionsMenu from "./models/actions-menu";
 
 interface TutorSubmissionsPageProps {
   tutorId: string;
@@ -15,15 +15,16 @@ interface TutorSubmissionsPageProps {
 
 export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPageProps) {
   const { loading: coursesLoading, fetchCoursesByTutorId } = useCourses();
-  const { loading: submissionLoading, fetchSubmissionsByTutorId, createSubmission } = useSubmission();
+  const { loading: submissionLoading, fetchSubmissionsByTutorId, deleteSubmission } = useSubmission();
+  const { loading: entriesLoading, fetchEntriesBySubmissionId } = useSubmissionEntries();
+  const router = useRouter();
 
   const [submissions, setSubmissions] = useState<AppTypes.Submission[]>([]);
   const [courses, setCourses] = useState<AppTypes.Course[]>([]);
+  const [entries, setEntries] = useState<AppTypes.SubmissionEntry[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [view, setView] = useState<'list' | 'create' | 'edit' | 'detail'>('list');
-  const [selectedSubmission, setSelectedSubmission] = useState<AppTypes.Submission | null>(null);
 
   // fetch courses
   useEffect(() => {
@@ -50,6 +51,19 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
     fetch();
   }, [tutorId, fetchSubmissionsByTutorId]);
 
+  // fetch entries
+  useEffect(() => {
+    if (!tutorId && !submissions) return;
+
+    (async () => {
+      const entries = await Promise.all(
+        submissions.map((s) => fetchEntriesBySubmissionId(s.id))
+      );
+
+      setEntries(entries.flat() as AppTypes.SubmissionEntry[])
+    })();
+  }, [tutorId, submissions, fetchEntriesBySubmissionId]);
+
   const filteredSubmissions = useMemo(() => {
     let filtered = submissions;
 
@@ -69,54 +83,48 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
     // Filter by status
     if (statusFilter !== 'all') {
       filtered = filtered.filter(sub => {
-        const hasStatus = sub.entries.some(entry => entry.status === statusFilter);
+        const hasStatus = entries.some(entry => sub.id === entry.submissionId && entry.status === statusFilter);
+
         if (statusFilter === 'not_submitted') {
-          return sub.entries.length === 0 || !hasStatus;
+          return entries.filter(e => e.submissionId === sub.id).length === 0 || !hasStatus;
         }
         return hasStatus;
       });
     }
 
     return filtered;
-  }, [submissions, selectedCourse, searchTerm, statusFilter]);
+  }, [submissions, selectedCourse, searchTerm, statusFilter, entries]);
 
   const getSubmissionStats = (submission: AppTypes.Submission) => {
     const course = courses.filter((c) => c.id === submission.courseId);
 
+    const subEntries = entries.filter((e) => e.submissionId === submission.id);
+
     const totalStudents = course[0].students?.length || 0;
-    const submittedCount = submission.entries.length;
-    const gradedCount = NaN;//submission.entries.filter(e => e.grade !== undefined).length;
-    const lateCount = submission.entries.filter(e => e.status === $Enums.SubmissionStatus.LATE).length;
+    const submittedCount = subEntries.length;
+    const gradedCount = subEntries.filter(e => e.grade !== undefined).length;
+    const lateCount = subEntries.filter(e => e.status === $Enums.SubmissionStatus.LATE).length;
 
     return { totalStudents, submittedCount, gradedCount, lateCount };
   };
 
-  const handleSave = async (submission: Partial<AppTypes.Submission>) => {
-    if (!submission) alert("Invalid Submission created");
-
-    await createSubmission(submission.courseId as string, submission);
-    setView('list');
-  }
-
   const handleCreateSubmission = () => {
-    setSelectedSubmission(null);
-    setView('create');
+    router.push('/dashboard/submissions/create');
   };
 
   const handleEditSubmission = (submission: AppTypes.Submission) => {
-    setSelectedSubmission(submission);
-    setView('edit');
+    router.push(`/dashboard/submissions/create/${submission.id}`);
   };
 
   const handleViewDetails = (submission: AppTypes.Submission) => {
-    setSelectedSubmission(submission);
-    setView('detail');
+    router.push(`/dashboard/submissions/overview/${submission.id}`);
   };
 
   const handleDeleteSubmission = async (submissionId: string) => {
     if (confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
       // API call to delete submission
       setSubmissions(prev => prev.filter(sub => sub.id !== submissionId));
+      await deleteSubmission(submissionId);
     }
   };
 
@@ -129,34 +137,6 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
     };
     setSubmissions(prev => [duplicated, ...prev]);
   };
-
-  if (view === 'create' || view === 'edit') {
-    return (
-      <SubmissionForm
-        loading={submissionLoading}
-        courses={courses}
-        submission={selectedSubmission}
-        isEditing={view === 'edit'}
-        onSave={handleSave}
-        onCancel={() => setView('list')}
-      />
-    );
-  }
-
-  if (view === 'detail' && selectedSubmission) {
-    return (
-      <SubmissionDetailTutor
-        courseName={courses.find(c => c.id === selectedSubmission.courseId)?.name ?? "Unknown Course Name"}
-        submission={selectedSubmission}
-        onBack={() => setView('list')}
-        onEdit={() => setView('edit')}
-        onDelete={() => {
-          handleDeleteSubmission(selectedSubmission.id);
-          setView('list');
-        }}
-      />
-    );
-  }
 
   return (
     <div className="h-full px-6 pt-6 pb-10 bg-gray-50 overflow-y-auto">
@@ -221,9 +201,9 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
       </div>
 
       {/* Submissions Table */}
-      {coursesLoading || submissionLoading ? (
+      {coursesLoading || submissionLoading || entriesLoading ? (
         <TutorSubmissionsTableSkeleton />
-      ): (!filteredSubmissions.length || !courses.length) ? (
+      ) : (!filteredSubmissions.length || !courses.length) ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -345,12 +325,28 @@ export default function TutorSubmissionsPage({ tutorId }: TutorSubmissionsPagePr
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <SubmissionActionsMenu
-                          onView={() => handleViewDetails(submission)}
-                          onEdit={() => handleEditSubmission(submission)}
-                          onDelete={() => handleDeleteSubmission(submission.id)}
-                          onDuplicate={() => handleDuplicateSubmission(submission)}
-                        />
+                        <ActionsMenu title="Submission Actions" actions={[
+                          {
+                            label: 'View Details',
+                            icon: <FileText className="w-4 h-4" />,
+                            onClick: () => handleViewDetails(submission),
+                          },
+                          { label: 'Edit Submission',
+                            icon: <FileText className="w-4 h-4" />,
+                            onClick: () => handleEditSubmission(submission),
+                          },
+                          {
+                            label: 'Duplicate Submission',
+                            icon: <FileText className="w-4 h-4" />,
+                            onClick: () => handleDuplicateSubmission(submission),
+                          },
+                          {
+                            label: 'Delete Submission',
+                            icon: <XCircle className="w-4 h-4" />,
+                            onClick: () => handleDeleteSubmission(submission.id),
+                            danger: true,
+                          },
+                        ]} />
                       </td>
                     </tr>
                   );

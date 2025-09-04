@@ -17,13 +17,6 @@ export async function GET(req: Request) {
           in: ids,
         },
       },
-      include: {
-        entries: {
-          include: {
-            student: true,
-          },
-        },
-      },
       orderBy: { dueDate: "asc" },
     });
 
@@ -39,13 +32,6 @@ export async function GET(req: Request) {
           },
         },
       },
-      include: { 
-        entries: {
-          include: {
-            student: true,
-          }
-        } 
-      },
       orderBy: { dueDate: "asc" },
     });
 
@@ -57,13 +43,6 @@ export async function GET(req: Request) {
           tutorId: tutorId,
         },
       },
-      include: { 
-        entries: {
-          include: {
-            student: true,
-          }
-        } 
-      },
       orderBy: { dueDate: "asc" },
     });
 
@@ -72,13 +51,6 @@ export async function GET(req: Request) {
     const submission = await prisma.submission.findUnique({
       where: {
         id: subId,
-      },
-      include: { 
-        entries: {
-          include: {
-            student: true,
-          }
-        } 
       },
     });
 
@@ -101,6 +73,8 @@ export async function POST(req: Request) {
       lastDueDate: body.lastDueDate ? new Date(body.lastDueDate) : null,
       courseId: body.courseId,
       maxAttempts: body.maxAttempts,
+      totalPoints: body.totalPoints,
+      isActive: body.isActive,
       dueDate: new Date(body.dueDate),
       createdAt: new Date(Date.now()),
     },

@@ -5,7 +5,10 @@ import axios from "axios";
 
 type QuestionGradeContextType = {
   questionGrades: AppTypes.QuestionGrade[];
-  fetchQuestionGradesBySubmission: (submissionId: string) => Promise<AppTypes.QuestionGrade[]>;
+  fetchQuestionGradesBySubmissionId: (submissionId: string) => Promise<AppTypes.QuestionGrade[]>;
+  fetchQuestionGradesByTestId: (testId: string) => Promise<AppTypes.QuestionGrade[]>;
+  fetchQuestionGradesByStudentIdSubmissionId: (studentId: string, submissionId: string) => Promise<AppTypes.QuestionGrade[]>;
+  fetchQuestionGradesByStudentIdTestId: (studentId: string, testId: string) => Promise<AppTypes.QuestionGrade[]>;
   createQuestionGrade: (data: Partial<AppTypes.QuestionGrade>) => Promise<AppTypes.QuestionGrade>;
   updateQuestionGrade: (id: string, data: Partial<AppTypes.QuestionGrade>) => Promise<AppTypes.QuestionGrade>;
   deleteQuestionGrade: (id: string) => Promise<void>;
@@ -16,8 +19,26 @@ const QuestionGradeContext = createContext<QuestionGradeContextType | undefined>
 export function QuestionGradeProvider({ children }: { children: React.ReactNode }) {
   const [questionGrades, setQuestionGrades] = useState<AppTypes.QuestionGrade[]>([]);
 
-  const fetchQuestionGradesBySubmission = useCallback(async (submissionId: string) => {
+  const fetchQuestionGradesBySubmissionId = useCallback(async (submissionId: string) => {
     const res = await axios.get(`/api/question-grades/submission/${submissionId}`);
+    setQuestionGrades(res.data);
+    return res.data;
+  }, []);
+
+  const fetchQuestionGradesByTestId = useCallback(async (testId: string) => {
+    const res = await axios.get(`/api/question-grades/test/${testId}`);
+    setQuestionGrades(res.data);
+    return res.data;
+  }, []);
+
+  const fetchQuestionGradesByStudentIdSubmissionId = useCallback(async (studentId: string, submissionId: string) => {
+    const res = await axios.get(`/api/question-grades?studentId=${studentId}&submissionId=${submissionId}`);
+    setQuestionGrades(res.data);
+    return res.data;
+  }, []);
+
+  const fetchQuestionGradesByStudentIdTestId = useCallback(async (studentId: string, testId: string) => {
+    const res = await axios.get(`/api/question-grades?studentId=${studentId}&testId=${testId}`);
     setQuestionGrades(res.data);
     return res.data;
   }, []);
@@ -45,7 +66,10 @@ export function QuestionGradeProvider({ children }: { children: React.ReactNode 
     <QuestionGradeContext.Provider
       value={{
         questionGrades,
-        fetchQuestionGradesBySubmission,
+        fetchQuestionGradesBySubmissionId,
+        fetchQuestionGradesByTestId,
+        fetchQuestionGradesByStudentIdSubmissionId,
+        fetchQuestionGradesByStudentIdTestId,
         createQuestionGrade,
         updateQuestionGrade,
         deleteQuestionGrade,

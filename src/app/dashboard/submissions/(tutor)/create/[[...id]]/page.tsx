@@ -1,48 +1,95 @@
+"use client";
+
 import LessonMarkdown from "@/app/components/markdown";
+import { useCourses } from "@/context/CourseContext";
+import { useProfile } from "@/context/ProfileContext";
+import { useSubmission } from "@/context/SubmissionContext";
 import { $Enums } from "@/generated/prisma";
 import { uploadFile } from "@/lib/blob";
 import { formatForDateTimeLocal, parseDateTimeLocal } from "@/lib/functions";
-import { MoveLeft, Download } from "lucide-react";
-import { useState, useRef } from "react";
-
-interface SubmissionFormProps {
-  courses: AppTypes.Course[];
-  loading: boolean;
-  submission?: AppTypes.Submission | null;
-  isEditing: boolean;
-  onSave: (submission: AppTypes.Submission) => void;
-  onCancel: () => void;
-}
+import { ArrowLeft, Download } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useState, useRef, useEffect, useMemo } from "react";
+import SubmissionFormSkeleton from "../../../skeletons/submission-form-skeleton";
 
 type MaxAttemptOptions = "Limited" | "Unlimited";
 
-export default function SubmissionForm({
-  courses,
-  loading,
-  submission,
-  isEditing,
-  onSave,
-  onCancel
-}: SubmissionFormProps) {
+export default function SubmissionForm() {
+  const { id } = useParams();
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+
+  useMemo(() => {
+    if (id) {
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
+  }, [id]);
+
+  // Contexts
+  const { loading: coursesLoading, fetchCoursesByTutorId } = useCourses();
+  const { loading: submissionLoading, fetchSubmissionById, createSubmission } = useSubmission();
+  const { profile } = useProfile();
+  const router = useRouter();
+
+  // States
   const [formData, setFormData] = useState<Partial<AppTypes.Submission>>({
-    title: submission?.title || "",
-    description: submission?.description || "",
-    descriptionFiles: submission?.descriptionFiles || [],
-    courseId: submission?.courseId || (courses[0]?.id || ""),
-    fileType: submission?.fileType || "PDF",
-    dueDate: submission?.dueDate || undefined,
-    lastDueDate: submission?.lastDueDate || undefined,
-    maxAttempts: submission?.maxAttempts || 1,
+    title: "",
+    description: "",
+    descriptionFiles: [],
+    courseId: "",
+    fileType: "PDF",
+    dueDate: new Date(),
+    lastDueDate: new Date(),
+    maxAttempts: 1,
+    totalPoints: 1,
+    isActive: true,
   });
 
   const [maxAttemptsOption, setMaxAttemptsOption] = useState<MaxAttemptOptions>(
     formData.maxAttempts === null ? "Unlimited" : "Limited"
   );
+  const [courses, setCourses] = useState<AppTypes.Course[]>([]);
+  const [submission, setSubmission] = useState<AppTypes.Submission | null>(null);
   const [maxAttempts, setMaxAttempts] = useState<number>(formData.maxAttempts || 1);
   const [files, setFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // fetch courses
+  useEffect(() => {
+    if (!profile) return;
+    (async () => {
+      const courses = await fetchCoursesByTutorId(profile.id) as AppTypes.Course[];
+      setCourses(courses);
+    })();
+  }, [profile, fetchCoursesByTutorId]);
+
+  // fetch submission if editing
+  useEffect(() => {
+    if (!id) return;
+
+    (async () => {
+      const sub = await fetchSubmissionById(id as string) as AppTypes.Submission;
+      setSubmission(sub);
+      setFormData({
+        title: sub.title,
+        description: sub.description,
+        descriptionFiles: sub.descriptionFiles || [],
+        courseId: sub.courseId,
+        fileType: sub.fileType,
+        dueDate: sub.dueDate,
+        lastDueDate: sub.lastDueDate || undefined,
+        maxAttempts: sub.maxAttempts,
+        totalPoints: sub.totalPoints,
+        isActive: sub.isActive,
+      });
+      setMaxAttempts(sub.maxAttempts || 1);
+      setMaxAttemptsOption(sub.maxAttempts === null ? "Unlimited" : "Limited");
+    })();
+  }, [id, fetchSubmissionById]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +100,7 @@ export default function SubmissionForm({
     if (!formData.description) newErrors.description = "Description is required";
     if (!formData.courseId) newErrors.courseId = "Course is required";
     if (!formData.dueDate) newErrors.dueDate = "Due date is required";
+    if (!formData.totalPoints || formData.totalPoints < 1) newErrors.totalPoints = "Total points must be at least 1";
     if (maxAttemptsOption === "Limited" && !formData.maxAttempts) newErrors.maxAttempts = "Max attempts is required";
 
     if (Object.keys(newErrors).length > 0) {
@@ -92,6 +140,8 @@ export default function SubmissionForm({
         descriptionFiles: allDescriptionFiles,
         fileType: formData.fileType as $Enums.FileType,
         courseId: formData.courseId as string,
+        totalPoints: formData.totalPoints as number,
+        isActive: true,
         maxAttempts: maxAttemptsOption === "Limited" ? maxAttempts : null,
         dueDate: new Date(formData.dueDate as Date),
         lastDueDate: formData.lastDueDate ? new Date(formData.lastDueDate as Date) : null,
@@ -99,7 +149,11 @@ export default function SubmissionForm({
         createdAt: submission?.createdAt || new Date()
       };
 
-      onSave(submissionData);
+      if (!submission) {
+        alert("Invalid Submission created")
+      } else {
+        await createSubmission(submission.courseId as string, submissionData);
+      }
     } catch (error) {
       console.error("Error uploading files:", error);
       alert("Failed to upload some files. Please try again.");
@@ -140,16 +194,20 @@ export default function SubmissionForm({
     { value: "PDF,DOCX,ZIP,JPEG", label: "All supported formats" }
   ];
 
+  if (coursesLoading || submissionLoading) {
+    return <SubmissionFormSkeleton />;
+  }
+
   return (
     <div className="h-full px-6 pt-6 pb-10 bg-gray-50 overflow-y-auto">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
-          <button
-            onClick={onCancel}
+          <Link
+            href="/dashboard/submissions"
             className="text-blue-600 hover:text-blue-800 mb-4 flex items-center"
           >
-            <MoveLeft className="w-4 h-4 mr-3" /> Back to Submissions
-          </button>
+            <ArrowLeft className="w-4 h-4 mr-3" size={40} /> Back to Submissions
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             {isEditing ? "Edit Submission" : "Create New Submission"}
           </h1>
@@ -193,6 +251,34 @@ export default function SubmissionForm({
                 />
               </div>
               {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+
+              {/* Markdown Preview */}
+              <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Preview:</label>
+                <div className="text-sm">
+                  <LessonMarkdown content={formData.description || "*Type your description above...*"} />
+                </div>
+              </div>
+            </div>
+
+            {/* Total Points */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Total Points *
+              </label>
+              <div className="relative">
+                <input
+                  value={formData.totalPoints}
+                  type="number"
+                  min={1}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, totalPoints: Number(e.target.value) }))}
+                  onDragOver={(e) => e.preventDefault()}
+                  className={`w-full px-3 py-2 text-sm border ${errors.totalPoints ? "border-red-500" : "border-gray-300"
+                    } focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-transparent`}
+                  placeholder="Enter Total Points for the Assignment..."
+                />
+              </div>
+              {errors.totalPoints && <p className="mt-1 text-sm text-red-600">{errors.totalPoints}</p>}
 
               {/* Markdown Preview */}
               <div className="mt-2 p-3 bg-gray-50 rounded-md">
@@ -401,17 +487,17 @@ export default function SubmissionForm({
             <div className="flex justify-end space-x-4 pt-6">
               <button
                 type="button"
-                onClick={onCancel}
+                onClick={() => router.push("/dashboard/submissions")}
                 className="px-4 py-2 text-gray-700 border border-gray-300 text-sm hover:bg-gray-50"
               >
-                Cancel
+                Back to Submissions
               </button>
               <button
                 type="submit"
-                disabled={loading || isUploading}
+                disabled={coursesLoading || submissionLoading || isUploading}
                 className="px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading || isUploading ? (
+                {submissionLoading || isUploading ? (
                   <div className="flex items-center">
                     <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     {isUploading ? "Uploading..." : "Saving..."}

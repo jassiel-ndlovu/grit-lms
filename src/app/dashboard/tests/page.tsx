@@ -9,6 +9,7 @@ import { useCourses } from '@/context/CourseContext';
 import { useProfile } from '@/context/ProfileContext';
 import Skeleton from '../components/skeleton';
 import { formatTime } from '@/lib/functions';
+import { useTestSubmissions } from '@/context/TestSubmissionContext';
 
 export default function TestsPage() {
   const { fetchTestsByCourse, loading: testsLoading } = useTests();
@@ -34,7 +35,7 @@ export default function TestsPage() {
     }
   }, [studentProfile?.id, fetchCoursesByStudentId]);
 
-  // Fetch tests ONLY when necessary
+  // Fetch tests
   useEffect(() => {
     if (studentProfile?.id) {
       const fetchTests = async () => {
@@ -104,6 +105,7 @@ export default function TestsPage() {
 
 function TestContent({ test }: { test: AppTypes.Test }) {
   const { profile } = useProfile();
+  const { fetchSubmissionByStudentTestId } = useTestSubmissions();
 
   const [timeLeft, setTimeLeft] = useState<string>('Calculating...');
   const [isExpired, setIsExpired] = useState(false);
@@ -111,15 +113,22 @@ function TestContent({ test }: { test: AppTypes.Test }) {
 
   const router = useRouter();
 
+  // fetch submission
   useEffect(() => {
-    if (!test.timeLimit) return;
+    if (!profile?.id) return;
+
+    (async () => {
+      const sub = await fetchSubmissionByStudentTestId(profile.id, test.id) as AppTypes.TestSubmission;
+
+      setStudentSub(sub);
+    })();
+  }, [profile?.id, test.id, fetchSubmissionByStudentTestId]);
+
+  // test time calculations
+  useEffect(() => {
+    if (!test.timeLimit || !studentSub) return;
 
     const calculateTimeLeft = () => {
-      const sub = test.submissions.find(s => s.studentId === profile?.id);
-
-      // @ts-expect-error make independent sub fetches
-      setStudentSub(sub);
-
       const startTime = new Date(Date.now() + 2 * 60 * 60 * 1000); // Time from database is 2 hours behind
 
       const endTime = new Date(test.dueDate);
@@ -127,7 +136,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
       endTime.setMinutes(endTime.getMinutes() + (test.timeLimit as number));
       const distance = endTime.getTime() - startTime.getTime();
 
-      if (sub?.status === "SUBMITTED") {
+      if (studentSub?.status === "SUBMITTED") {
         setTimeLeft("Complete");
         return;
       } else if (distance < 0) {
@@ -149,7 +158,7 @@ function TestContent({ test }: { test: AppTypes.Test }) {
 
     // Cleanup interval on unmount
     return () => clearInterval(timer);
-  }, [test.timeLimit, test.createdAt, profile?.id, test.dueDate, test.submissions]);
+  }, [test.timeLimit, test.createdAt, profile?.id, test.dueDate, test.submissions, studentSub]);
 
   return (
     <div className="border border-gray-300 rounded-md p-4 bg-gray-50 hover:shadow transition">

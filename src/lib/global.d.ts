@@ -79,11 +79,7 @@ declare global {
     };
     type Submission = Prisma.SubmissionGetPayload<{
       include: {
-        entries: {
-          include: {
-            student: true;
-          };
-        };
+        entries: true
       };
     }>;
 

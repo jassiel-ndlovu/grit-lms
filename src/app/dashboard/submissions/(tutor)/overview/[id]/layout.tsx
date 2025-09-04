@@ -11,14 +11,14 @@ export default function TestLayout({
 }) {
   const { id, studentId } = useParams();
 
-  const [goBackUrl, setGoBackUrl] = useState<string>("/dashboard/tutor-tests");
+  const [goBackUrl, setGoBackUrl] = useState<string>("/dashboard/submissions");
 
   useMemo(() => {
     if (!id) return;
     if (!studentId) {
-      setGoBackUrl("/dashboard/tutor-tests");
+      setGoBackUrl("/dashboard/submissions");
     } else if (id && studentId) {
-      setGoBackUrl(`/dashboard/tutor-tests/submissions/${id}`);
+      setGoBackUrl(`/dashboard/submissions/overview/${id}`);
     }
   }, [id, studentId]);
 
@@ -38,7 +38,7 @@ export default function TestLayout({
             </button>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <FileText className="text-blue-600 bg-blue-100 rounded p-2" size={40} />
-              Test Submissions
+              Submissions
             </h1>
           </div>
         </div>

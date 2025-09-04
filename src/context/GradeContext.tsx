@@ -14,6 +14,7 @@ interface GradeContextType {
   fetchGrades: () => Promise<void>;
   fetchGradesByStudentId: (studentId: string) => Promise<AppTypes.Grade[] | void>;
   fetchGradesByStudentIdTestSubId: (studentId: string, submissionId: string) => Promise<AppTypes.Grade | void>;
+  fetchGradesByStudentIdEntryId: (studentId: string, submissionId: string) => Promise<AppTypes.Grade | void>;
   fetchGradesByCourseId: (courseId: string) => Promise<AppTypes.Grade[] | void>;
   fetchGradesByType: (type: string) => Promise<AppTypes.Grade[] | void>;
   createGrade: (data: Partial<AppTypes.Grade>) => Promise<AppTypes.Grade | void>;
@@ -59,6 +60,21 @@ export const GradeProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await axios.get<AppTypes.Grade[]>(`/api/grades?studentId=${studentId}`);
       setGrades(res.data);
+      return res.data;
+    } catch (err: any) {
+      setMessage(
+        Message.error(err.response?.data?.message || "Failed to fetch grades by student", { title: "Fetch Error", duration: 5000 })
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchGradesByStudentIdEntryId = useCallback(async (studentId: string, entryId: string) => {
+    setLoading(true);
+    try {
+      const res = await axios.get<AppTypes.Grade>(`/api/grades/submission?studentId=${studentId}&entryId=${entryId}`);
+      setGrades([res.data]);
       return res.data;
     } catch (err: any) {
       setMessage(
@@ -173,6 +189,7 @@ export const GradeProvider = ({ children }: { children: ReactNode }) => {
         message,
         fetchGrades,
         fetchGradesByStudentId,
+        fetchGradesByStudentIdEntryId,
         fetchGradesByStudentIdTestSubId,
         fetchGradesByCourseId,
         fetchGradesByType,

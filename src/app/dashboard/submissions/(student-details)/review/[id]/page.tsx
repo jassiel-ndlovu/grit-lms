@@ -13,11 +13,11 @@ import SubmissionDetailsSkeleton from "../../../skeletons/review-skeleton";
 import { useErrorPages } from "@/app/dashboard/components/error-pages";
 import LessonMarkdown from "@/app/components/markdown";
 
-interface SubmissionDetailsProps {
+interface SubmissionReviewPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function SubmissionDetails({ params }: SubmissionDetailsProps) {
+export default function SubmissionReviewPage({ params }: SubmissionReviewPageProps) {
   const { id } = use(params);
 
   const { loading: courseLoading, fetchCoursesByIds } = useCourses();

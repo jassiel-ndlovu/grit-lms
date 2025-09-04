@@ -8,12 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  STUDENT
-  TUTOR
-  ADMIN
-}
-
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -37,13 +31,13 @@ model Student {
   fullName              String
   email                 String                 @unique
   imageUrl              String?
-  courses               Course[]               @relation("CourseEnrollments")
-  lessonCompletions     LessonCompletion[]
   assessmentCompletions AssessmentCompletion[]
-  submissionEntries     SubmissionEntry[]
   Grade                 Grade[]
+  lessonCompletions     LessonCompletion[]
   Notification          Notification[]
+  submissionEntries     SubmissionEntry[]
   TestSubmission        TestSubmission[]
+  courses               Course[]               @relation("CourseEnrollments")
 }
 
 model Course {
@@ -53,24 +47,24 @@ model Course {
   imageUrl     String
   tutorId      String
   tutor        Tutor          @relation(fields: [tutorId], references: [id])
-  students     Student[]      @relation("CourseEnrollments")
-  lessons      Lesson[]
-  quizzes      Quiz[]
-  tests        Test[]
-  submissions  Submission[]
   courseEvents CourseEvent[]
   Grade        Grade[]
+  lessons      Lesson[]
   Notification Notification[]
+  quizzes      Quiz[]
+  submissions  Submission[]
+  tests        Test[]
+  students     Student[]      @relation("CourseEnrollments")
 }
 
 model Lesson {
   id             String             @id @default(cuid())
   title          String
   description    String?
-  videoUrl       String[]           @default([])
-  attachmentUrls Attachment[]
   order          Int
   courseId       String
+  videoUrl       String[]           @default([])
+  attachmentUrls Attachment[]
   course         Course             @relation(fields: [courseId], references: [id])
   completions    LessonCompletion[]
 }
@@ -79,8 +73,8 @@ model Attachment {
   id       String @id @default(cuid())
   title    String
   url      String
-  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 }
 
 model LessonCompletion {
@@ -88,9 +82,8 @@ model LessonCompletion {
   studentId   String
   lessonId    String
   completedAt DateTime
-
-  student Student @relation(fields: [studentId], references: [id])
-  lesson  Lesson  @relation(fields: [lessonId], references: [id])
+  lesson      Lesson   @relation(fields: [lessonId], references: [id])
+  student     Student  @relation(fields: [studentId], references: [id])
 }
 
 model CourseEvent {
@@ -106,76 +99,179 @@ model Quiz {
   id          String                 @id @default(cuid())
   title       String
   courseId    String
-  course      Course                 @relation(fields: [courseId], references: [id])
   dueDate     DateTime
   createdAt   DateTime               @default(now())
   completions AssessmentCompletion[]
+  course      Course                 @relation(fields: [courseId], references: [id])
 }
 
 model Test {
-  id                  String   @id @default(cuid())
-  title               String
-  description         String
-  preTestInstructions String?
-  dueDate             DateTime
-  timeLimit           Int?
-  totalPoints         Int
-  isActive            Boolean  @default(true)
-  createdAt           DateTime @default(now())
-
-  courseId String
-  course   Course @relation(fields: [courseId], references: [id])
-
+  id                   String                 @id @default(cuid())
+  title                String
+  courseId             String
+  dueDate              DateTime
+  createdAt            DateTime               @default(now())
+  description          String
+  isActive             Boolean                @default(true)
+  preTestInstructions  String?
+  timeLimit            Int?
+  totalPoints          Int
+  AssessmentCompletion AssessmentCompletion[]
+  course               Course                 @relation(fields: [courseId], references: [id])
   questions            TestQuestion[]
   submissions          TestSubmission[]
-  AssessmentCompletion AssessmentCompletion[]
 }
 
 model TestQuestion {
   id           String         @id @default(uuid())
   testId       String
-  test         Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
   question     String
   type         QuestionType
   points       Int
-  options      String[] // For MULTIPLE_CHOICE or MULTI_SELECT
-  answer       Json? // Flexible: string, array, number, depending on type
-  language     String? // For CODE (e.g. "Java", "Python")
-  matchPairs   Json? // For MATCHING: e.g. [{ left: "TCP", right: "Reliable" }]
-  reorderItems String[] // For REORDER: e.g. ["Step A", "Step B", ...]
-  blankCount   Int? // For FILL_IN_THE_BLANK (optional helper for front-end)
+  options      String[]
+  answer       Json?
+  language     String?
+  matchPairs   Json?
+  reorderItems String[]
+  blankCount   Int?
   createdAt    DateTime       @default(now())
+  test         Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
   UploadedFile UploadedFile[]
 }
 
 model TestSubmission {
-  id          String           @id @default(cuid())
-  testId      String
-  studentId   String
-  startedAt   DateTime
-  submittedAt DateTime?
-  answers     Json
-  score       Float?
-  feedback    String?
-  status      SubmissionStatus
-
-  test          Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
-  student       Student        @relation(fields: [studentId], references: [id])
-  uploadedFiles UploadedFile[]
-
+  id             String           @id @default(cuid())
+  testId         String
+  studentId      String
+  startedAt      DateTime
+  submittedAt    DateTime?
+  answers        Json
+  score          Float?
+  feedback       String?
+  status         SubmissionStatus
   grade          Grade?
   questionGrades QuestionGrade[]
+  student        Student          @relation(fields: [studentId], references: [id])
+  test           Test             @relation(fields: [testId], references: [id], onDelete: Cascade)
+  uploadedFiles  UploadedFile[]
 }
 
 model UploadedFile {
-  id           String   @id @default(cuid())
+  id           String         @id @default(cuid())
   fileUrl      String
   fileType     FileType
   questionId   String
   submissionId String
+  question     TestQuestion   @relation(fields: [questionId], references: [id])
+  submission   TestSubmission @relation(fields: [submissionId], references: [id])
+}
 
-  question   TestQuestion   @relation(fields: [questionId], references: [id])
-  submission TestSubmission @relation(fields: [submissionId], references: [id])
+model AssessmentCompletion {
+  id          String    @id @default(cuid())
+  studentId   String
+  quizId      String?
+  testId      String?
+  startedAt   DateTime
+  completedAt DateTime?
+  score       Float?
+  quiz        Quiz?     @relation(fields: [quizId], references: [id])
+  student     Student   @relation(fields: [studentId], references: [id])
+  test        Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)
+}
+
+model Submission {
+  id               String            @id @default(cuid())
+  title            String
+  courseId         String
+  dueDate          DateTime
+  createdAt        DateTime
+  fileType         String
+  maxAttempts      Int?
+  lastDueDate      DateTime?
+  description      String
+  descriptionFiles String[]
+  totalPoints      Int               @default(1)
+  isActive         Boolean?          @default(true)
+  course           Course            @relation(fields: [courseId], references: [id])
+  entries          SubmissionEntry[]
+}
+
+model SubmissionEntry {
+  id             String           @id @default(cuid())
+  studentId      String
+  submissionId   String
+  submittedAt    DateTime
+  attemptNumber  Int
+  status         SubmissionStatus
+  feedback       String
+  fileUrl        String[]
+  grade          Grade?
+  questionGrades QuestionGrade[]
+  student        Student          @relation(fields: [studentId], references: [id])
+  submission     Submission       @relation(fields: [submissionId], references: [id])
+
+  @@unique([submissionId, studentId])
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  url         String
+  uploadedAt  DateTime @default(now())
+  uploadedBy  String
+}
+
+model QuestionGrade {
+  id                String           @id @default(cuid())
+  questionId        String?
+  score             Float
+  outOf             Float
+  feedback          String?
+  testSubmissionId  String?
+  submissionEntryId String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
+  testSubmission    TestSubmission?  @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
+}
+
+model Grade {
+  id                String           @id @default(cuid())
+  studentId         String
+  courseId          String
+  type              String
+  title             String
+  outOf             Float
+  createdAt         DateTime         @default(now())
+  finalComments     String?
+  submissionEntryId String?          @unique
+  testSubmissionId  String?          @unique
+  updatedAt         DateTime         @updatedAt
+  score             Float
+  course            Course           @relation(fields: [courseId], references: [id])
+  student           Student          @relation(fields: [studentId], references: [id])
+  submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
+  testSubmission    TestSubmission?  @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  link      String?
+  studentId String?
+  courseId  String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  course    Course?  @relation(fields: [courseId], references: [id])
+  student   Student? @relation(fields: [studentId], references: [id])
+}
+
+enum Role {
+  STUDENT
+  TUTOR
+  ADMIN
 }
 
 enum QuestionType {
@@ -207,116 +303,4 @@ enum FileType {
   ZIP
   JPEG
   OTHER
-}
-
-model AssessmentCompletion {
-  id          String    @id @default(cuid())
-  studentId   String
-  quizId      String?
-  testId      String?
-  startedAt   DateTime
-  completedAt DateTime?
-  score       Float?
-
-  student Student @relation(fields: [studentId], references: [id])
-  quiz    Quiz?   @relation(fields: [quizId], references: [id])
-  test    Test?   @relation(fields: [testId], references: [id], onDelete: Cascade)
-}
-
-model Submission {
-  id               String            @id @default(cuid())
-  title            String
-  description      String
-  descriptionFiles String[]
-  fileType         String
-  courseId         String
-  maxAttempts      Int? // null = unlimited attempts, number = limited attempts
-  course           Course            @relation(fields: [courseId], references: [id])
-  dueDate          DateTime
-  lastDueDate      DateTime?
-  createdAt        DateTime
-  entries          SubmissionEntry[]
-}
-
-model SubmissionEntry {
-  id            String           @id @default(cuid())
-  studentId     String
-  submissionId  String
-  submittedAt   DateTime
-  status        SubmissionStatus
-  attemptNumber Int
-  fileUrl       String[]
-  feedback      String
-
-  student    Student    @relation(fields: [studentId], references: [id])
-  submission Submission @relation(fields: [submissionId], references: [id])
-
-  grade          Grade?
-  questionGrades QuestionGrade[]
-
-  @@unique([submissionId, studentId])
-}
-
-model Resource {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  url         String
-  uploadedAt  DateTime @default(now())
-  uploadedBy  String // could reference tutor or admin
-}
-
-model QuestionGrade {
-  id         String  @id @default(cuid())
-  questionId String? // For tests; null for file-based assignment items
-  score      Float
-  outOf      Float
-  feedback   String? // markdown
-
-  // Polymorphic-ish: exactly one of these should be set (enforced in app logic)
-  testSubmissionId String?
-  testSubmission   TestSubmission? @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
-
-  submissionEntryId String?
-  submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Grade {
-  id            String   @id @default(cuid())
-  studentId     String
-  courseId      String
-  type          String // e.g. "Test", "Assignment"
-  title         String // e.g. "June Test"
-  score         Float // total awarded
-  outOf         Float // total possible
-  finalComments String? // markdown
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Attach to exactly ONE of these (enforced in app logic)
-  testSubmissionId String?         @unique
-  testSubmission   TestSubmission? @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
-
-  submissionEntryId String?          @unique
-  submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
-
-  student Student @relation(fields: [studentId], references: [id])
-  course  Course  @relation(fields: [courseId], references: [id])
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  title     String
-  message   String
-  link      String?
-  studentId String? // null = global notification
-  courseId  String?
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  student Student? @relation(fields: [studentId], references: [id])
-  course  Course?  @relation(fields: [courseId], references: [id])
 }

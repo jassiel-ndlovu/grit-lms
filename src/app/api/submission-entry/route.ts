@@ -10,7 +10,11 @@ export async function GET(req: Request) {
   const studentId = searchParams.get("studentId");
 
   const where: any = {};
-  const include: any = { student: true }
+  const include: any = {
+    student: true,
+    grade: true,
+    questionGrades: true,
+  };
 
   if (submissionId && studentId) {
     const entry = await prisma.submissionEntry.findUnique({
@@ -20,7 +24,7 @@ export async function GET(req: Request) {
           studentId,
         },
       },
-      include: { student: true },
+      include,
     });
 
     return NextResponse.json(entry);

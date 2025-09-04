@@ -3,15 +3,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
 
-  const entry = await prisma.submissionEntry.findUnique({ where: { id: id } });
-  if (!entry) return NextResponse.json({ message: "Not found" }, { status: 404 });
+  const entry = await prisma.submissionEntry.findUnique({
+    where: { id: id },
+    include: {
+      student: true,
+      grade: true,
+      questionGrades: true,
+    },
+  });
+  
+  if (!entry)
+    return NextResponse.json({ message: "Not found" }, { status: 404 });
   return NextResponse.json(entry);
 }
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
 
   try {
@@ -26,7 +41,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { id } = await params;
   try {
     await prisma.submissionEntry.delete({ where: { id: id } });
