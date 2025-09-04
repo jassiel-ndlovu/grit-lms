@@ -32,7 +32,7 @@ export default function CoursePage({ params }: CoursePageProps) {
     const fetch = async () => {
       const courseData = await fetchCoursesByIds([id]) as AppTypes.Course[];
 
-      setCourse(courseData[0]); 
+      setCourse(courseData[0]);
     };
 
     fetch();
@@ -43,11 +43,16 @@ export default function CoursePage({ params }: CoursePageProps) {
     const fetch = async () => {
       const fetchedLessons = await fetchLessonsByCourseId(id);
       setLessons(fetchedLessons);
-      setCurrentLesson(fetchedLessons[selectedLessonIndex] || null);
+      setSelectedLessonIndex(0);
+
+      if (fetchedLessons.length > 0) {
+        setCurrentLesson(fetchedLessons[0]);
+      }
+
     }
 
     fetch();
-  }, [id, selectedLessonIndex, fetchLessonsByCourseId]);
+  }, [id, fetchLessonsByCourseId]);
 
 
   if (lessonsLoading || courseLoading) {
@@ -293,15 +298,15 @@ export default function CoursePage({ params }: CoursePageProps) {
                 title="Submissions"
                 icon={<Send className="w-4 h-4 text-green-500" />}
               >
-                {course.submissions.map((s) => 
+                {course.submissions.map((s) =>
                   new Date() < new Date(s.dueDate) && (
-                  <div key={s.id}>
-                    <p className="font-medium">{s.title}</p>
-                    <p className="text-xs text-gray-500">
-                      Due: {formatDate(s.dueDate)}
-                    </p>
-                  </div>
-                ))}
+                    <div key={s.id}>
+                      <p className="font-medium">{s.title}</p>
+                      <p className="text-xs text-gray-500">
+                        Due: {formatDate(s.dueDate)}
+                      </p>
+                    </div>
+                  ))}
               </SidebarSection>
             )}
           </aside>

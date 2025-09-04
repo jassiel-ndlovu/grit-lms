@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, use, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Video, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Video, AlertTriangle, Plus, Trash2, FileText } from "lucide-react";
 import clsx from "clsx";
 import { useCourses } from "@/context/CourseContext";
 import ManageLessonsSkeleton from "../../skeletons/manage-lesson-skeleton";
@@ -57,12 +57,30 @@ export default function ManageLessons({ params }: CoursePageProps) {
       setLoading(true);
       const fetchedLessons = await fetchLessonsByCourseId(id);
       setLessons(fetchedLessons);
-      setCurrentLesson(fetchedLessons[selectedLessonIndex] || null);
+      if (fetchedLessons.length > 0){
+        setCurrentLesson(fetchedLessons[0]);
+      }
+
+      setSelectedLessonIndex(0);
       setLoading(false);
     }
 
     fetch();
-  }, [id, selectedLessonIndex, fetchLessonsByCourseId]);
+  }, [id, fetchLessonsByCourseId]);
+
+  // Set lesson to be edited when edit mode starts
+  useEffect(() => {
+    if (editMode && lessons && lessons[selectedLessonIndex]) {
+      setCurrentLesson(lessons[selectedLessonIndex]);
+    }
+  }, [editMode, lessons, selectedLessonIndex]);
+
+  // Update current lesson when selected index or lessons change
+  useEffect(() => {
+    if (lessons && lessons[selectedLessonIndex]) {
+      setCurrentLesson(lessons[selectedLessonIndex]);
+    }
+  }, [selectedLessonIndex, lessons]);
 
   const handleDeleteLesson = (lesson: Partial<AppTypes.Lesson>, index: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent selecting the lesson
@@ -120,6 +138,13 @@ export default function ManageLessons({ params }: CoursePageProps) {
   const handleUpdate = (key: keyof AppTypes.Lesson, value: any) => {
     setCurrentLesson(prev => {
       if (!prev) return null;
+
+      if (key === "attachmentUrls" || key === "videoUrl") {
+        return {
+          ...prev,
+          [key]: [...(prev[key] || []), ...value]
+        }
+      }
       return {
         ...prev,
         [key]: value
@@ -154,19 +179,6 @@ export default function ManageLessons({ params }: CoursePageProps) {
       alert("Failed to save lesson");
     }
   };
-
-  // Set lesson to be edited when edit mode starts
-  useEffect(() => {
-    if (editMode && lessons && lessons[selectedLessonIndex]) {
-      setCurrentLesson(lessons[selectedLessonIndex]);
-    }
-  }, [editMode, lessons, selectedLessonIndex]);
-
-  useEffect(() => {
-    if (lessons && lessons[selectedLessonIndex]) {
-      setCurrentLesson(lessons[selectedLessonIndex]);
-    }
-  }, [lessons, selectedLessonIndex]);
 
   // Loading state
   if (loading || courseLoading || lessonsLoading || course === undefined) {
@@ -299,7 +311,10 @@ export default function ManageLessons({ params }: CoursePageProps) {
                     }
                   )}
                 >
-                  <Video className="shrink-0 w-4 h-4" />
+                  {lesson?.videoUrl && lesson.videoUrl.length > 0 ?
+                    <Video className="shrink-0 w-4 h-4 text-white" /> :
+                    <FileText className="shrink-0 w-4 h-4 text-gray-400" />  
+                  }
                   <span className="flex-1 text-sm truncate">
                     {lesson?.title || `Lesson ${i + 1} (Untitled)`}
                   </span>

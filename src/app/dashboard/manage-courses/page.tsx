@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, ImageIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import Image from 'next/image';
 import { useProfile } from '@/context/ProfileContext';
@@ -11,6 +11,13 @@ import TutorCourseCard from './models/tutor-course-card';
 import TutorCourseCardSkeleton from './skeletons/tutor-skeleton-course-card';
 
 export default function ManageCoursesPage() {
+  const { profile } = useProfile();
+  const { students } = useStudent();
+  const { loading: coursesLoading, fetchCoursesByTutorId, createCourse, message } = useCourses();
+
+  // Memoize tutor profile once
+  const tutorProfile = useMemo(() => profile as AppTypes.Tutor, [profile]);
+
   const [isOpen, setIsOpen] = useState(false);
   const [localCourses, setLocalCourses] = useState<AppTypes.Course[]>([]);
   const [formData, setFormData] = useState({
@@ -20,21 +27,20 @@ export default function ManageCoursesPage() {
     selectedStudentIds: [] as string[],
   });
 
-  const { profile } = useProfile();
-  const tutorProfile = profile as AppTypes.Tutor;
-  const { students } = useStudent();
-  const { courses, loading: coursesLoading, createCourse, message } = useCourses();
-
   const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  // Filter courses
+  // fetch courses
   useEffect(() => {
-    if (tutorProfile?.id && courses?.length) {
-      const filtered = courses.filter(c => c.tutor.id === tutorProfile.id);
-      setLocalCourses(filtered);
-    }
-  }, [courses, tutorProfile]);
+    if (!tutorProfile?.id) return;
+
+    const fetch = async () => {
+      const tutorCourses = await fetchCoursesByTutorId(tutorProfile.id) as AppTypes.Course[];
+      setLocalCourses(tutorCourses);
+    };
+
+    fetch();
+  }, [tutorProfile?.id, fetchCoursesByTutorId]);
 
   // Show toast/feedback
   useEffect(() => {
@@ -70,7 +76,7 @@ export default function ManageCoursesPage() {
       setIsOpen(false);
       setCreating(false);
       return;
-    } 
+    }
 
     const enrolled = students.filter(s => formData.selectedStudentIds.includes(s.id));
     const newCourse: AppTypes.Course = {
@@ -87,8 +93,6 @@ export default function ManageCoursesPage() {
       submissions: [],
       courseEvents: [],
     };
-
-    console.log("Creating course:", newCourse);
 
     await createCourse(newCourse);
 
@@ -123,33 +127,28 @@ export default function ManageCoursesPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {coursesLoading ? (
-          <>
-            <TutorCourseCardSkeleton />
-            <TutorCourseCardSkeleton />
-            <TutorCourseCardSkeleton />
-            <TutorCourseCardSkeleton />
-          </>
-        ) : localCourses.length ? (
-          localCourses.map((c, index) => (
-            <TutorCourseCard key={index} c={c} />
-          ))
-        ) : (
-          <div className="col-span-full flex flex-col items-center justify-center p-10 bg-white border border-dashed border-gray-300 rounded-lg text-center shadow-sm">
-            <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
-            <h3 className="text-lg font-semibold text-gray-700">No Courses Available</h3>
-            <p className="text-sm text-gray-500 mt-1 mb-4">
-              You haven’t created any courses yet. Start by clicking the “Create Course” button above.
-            </p>
-            <button
-              onClick={() => setIsOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-500 transition"
-            >
-              <Plus className="w-4 h-4" />
-              Create Your First Course
-            </button>
-          </div>
-        )}
+        {coursesLoading
+          ? Array.from({ length: 4 }).map((_, i) => <TutorCourseCardSkeleton key={i} />)
+          : localCourses.length ? (
+            localCourses.map((c, index) => (
+              <TutorCourseCard key={index} c={c} />
+            ))
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center p-10 bg-white border border-dashed border-gray-300 rounded-lg text-center shadow-sm">
+              <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
+              <h3 className="text-lg font-semibold text-gray-700">No Courses Available</h3>
+              <p className="text-sm text-gray-500 mt-1 mb-4">
+                You haven&apos;t created any courses yet. Start by clicking the &apos;Create Course&apos; button above.
+              </p>
+              <button
+                onClick={() => setIsOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm hover:bg-blue-500 transition"
+              >
+                <Plus className="w-4 h-4" />
+                Create Your First Course
+              </button>
+            </div>
+          )}
       </div>
 
       {/* Dialog */}
