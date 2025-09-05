@@ -60,7 +60,7 @@ function SkeletonCard() {
   );
 }
 
-function SkeletonSection({ icon, title, color }: { 
+export function SkeletonSection({ icon, title, color }: { 
   icon: React.ReactNode; 
   title: string; 
   color: 'blue' | 'indigo' | 'emerald' 

@@ -129,6 +129,11 @@ export default function CoursePage({ params }: CoursePageProps) {
                     }
                   )}
                 >
+                  {lesson.videoUrl && lesson.videoUrl.length > 0 ? (
+                    <Video className="shrink-0 w-4 h-4 text-white" />
+                  ) : (
+                    <FileText className="shrink-0 w-4 h-4 text-gray-400" />
+                  )}
                   <Video className="shrink-0 w-4 h-4" />
                   <span className="w-full text-sm truncate">{lesson.title}</span>
                 </li>

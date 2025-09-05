@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import CourseCard from "../components/course-card";
 import Link from "next/link";
-import DashboardSkeleton from "../components/dashboard-skeleton";
+import DashboardSkeleton, { SkeletonSection } from "../components/dashboard-skeleton";
 import { formatDate } from "@/lib/functions";
 import { useSubmission } from "@/context/SubmissionContext";
 
@@ -71,9 +71,7 @@ export default function StudentDashboard() {
   const studentSubmissions = useMemo(() =>
     submissions ?? [], [submissions]);
 
-  // Loading state
-  const isLoading = coursesLoading || testsLoading || profileLoading || submissionLoading;
-  if (isLoading) {
+  if (profileLoading) {
     return <DashboardSkeleton />;
   }
 
@@ -97,10 +95,17 @@ export default function StudentDashboard() {
 
       {/* Events, Assessments, Submissions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <CourseEventSection events={events} />
-        <CourseAssessmentSection assessments={studentTests} />
+        <CourseEventSection
+          events={events}
+          loading={coursesLoading}
+        />
+        <CourseAssessmentSection
+          assessments={studentTests}
+          loading={testsLoading}
+        />
         <CourseSubmissionSection
           submissions={studentSubmissions}
+          loading={submissionLoading}
         />
       </div>
 
@@ -130,7 +135,7 @@ export default function StudentDashboard() {
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           Enrolled Courses
         </h2>
-        {isLoading ? (
+        {coursesLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
@@ -175,7 +180,7 @@ export default function StudentDashboard() {
 
 function SkeletonCard() {
   return (
-    <div className="h-32 bg-white border border-gray-200 rounded-xl shadow-sm p-4 animate-pulse">
+    <div className="h-10 bg-white border border-gray-200 rounded-xl shadow-sm p-4 animate-pulse">
       <div className="h-4 w-2/3 bg-gray-200 rounded mb-2"></div>
       <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
     </div>
@@ -184,16 +189,20 @@ function SkeletonCard() {
 
 function CourseEventSection({ events, loading = false }: { events: AppTypes.CourseEvent[]; loading?: boolean }) {
   const router = useRouter();
-  return (
+  return loading ? (
+    <SkeletonSection
+      icon={<Calendar className="w-5 h-5 text-blue-500" />}
+      title="Upcoming Meetings"
+      color="blue"
+    />
+  ) : (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
       <h2 className="text-md font-semibold text-blue-600 mb-4 flex items-center gap-2">
         <Calendar className="w-5 h-5 text-blue-500" />
         Upcoming Meetings
       </h2>
       <div className="space-y-3">
-        {loading ? (
-          [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-        ) : events.length === 0 ? (
+        {events.length === 0 ? (
           <p className="text-sm text-gray-500">No meetings scheduled.</p>
         ) : (
           events.slice(0, 3).map(event => (
@@ -215,16 +224,20 @@ function CourseEventSection({ events, loading = false }: { events: AppTypes.Cour
 function CourseAssessmentSection({ assessments, loading = false }: { assessments: AppTypes.Test[] | null; loading?: boolean }) {
   const filteredAssessments = assessments?.filter(a => new Date() < new Date(a.dueDate));
 
-  return (
+  return loading ? (
+    <SkeletonSection
+      icon={<FileText className="w-5 h-5 text-indigo-600" />}
+      title="Upcoming Assessments"
+      color="indigo"
+    />
+  ) : (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
       <h2 className="text-md font-semibold text-indigo-600 mb-4 flex items-center gap-2">
         <FileText className="w-5 h-5 text-indigo-600" />
         Upcoming Assessments
       </h2>
       <div className="space-y-3">
-        {loading ? (
-          [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-        ) : filteredAssessments?.length === 0 ? (
+        {filteredAssessments?.length === 0 ? (
           <p className="text-sm text-gray-500">No upcoming assessments.</p>
         ) : (
           filteredAssessments?.map(a => (
@@ -244,16 +257,20 @@ function CourseAssessmentSection({ assessments, loading = false }: { assessments
 function CourseSubmissionSection({ submissions, loading = false }: { submissions: AppTypes.Submission[] | null; loading?: boolean }) {
   const filteredSubs = submissions?.filter(s => new Date() < new Date(s.dueDate));
 
-  return (
+  return loading ? (
+    <SkeletonSection
+      icon={<Send className="w-5 h-5 text-emerald-600" />}
+      title="Upcoming Submissions"
+      color="emerald"
+    />
+  ) : (
     <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
       <h2 className="text-md font-semibold text-emerald-600 mb-4 flex items-center gap-2">
         <Send className="w-5 h-5 text-emerald-600" />
         Upcoming Submissions
       </h2>
       <div className="space-y-3">
-        {loading ? (
-          [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-        ) : filteredSubs?.length === 0 ? (
+        {filteredSubs?.length === 0 ? (
           <p className="text-sm text-gray-500">No upcoming submissions.</p>
         ) : (
           filteredSubs?.map(s => (
