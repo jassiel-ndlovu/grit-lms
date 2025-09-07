@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       const tsub = await prisma.testSubmission.findUnique({
         where: { id: grade.testSubmissionId },
       });
-      url += `/tests/${tsub?.testId}`;
+      url += `/tests/review/${tsub?.testId}`;
     } else if (grade.submissionEntryId) {
       const entry = await prisma.submissionEntry.findUnique({
         where: { id: grade.submissionEntryId },

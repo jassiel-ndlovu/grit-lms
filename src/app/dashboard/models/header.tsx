@@ -274,7 +274,7 @@ export default function ModernStudentHeader() {
                             <div className="flex items-center gap-2">
                               <Clock className="w-3 h-3 text-gray-400" />
                               <span className="text-xs text-gray-400">
-                                {formatNotificationTime(notification.createdAt.toLocaleDateString())}
+                                {formatNotificationTime(new Date(notification.createdAt).toLocaleDateString())}
                               </span>
                               {!notification.isRead && (
                                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>

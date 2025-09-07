@@ -71,7 +71,7 @@ export default function Nav() {
     {
       icon: Award,
       label: 'Grades',
-      link: '/dashboard/grades',
+      link: '#',
       color: 'yellow',
       description: 'Performance tracking'
     },

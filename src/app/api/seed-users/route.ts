@@ -10,6 +10,7 @@ export async function GET() {
     const studentTestPassword = await bcrypt.hash('Test1234#1', 10);
     const mbaliPassword = await bcrypt.hash('Mbali1034!42', 10);
     const anesuPassword = await bcrypt.hash('Anesu672$23', 10);
+    const bethelPassword = await bcrypt.hash('Bethel982*452', 10);
 
     // Create users
     await prisma.user.createMany({
@@ -38,6 +39,12 @@ export async function GET() {
           password: anesuPassword,
           role: 'STUDENT',
         },
+        {
+          name: "Bethel Musungo",
+          email: "Bethmusungo@gmail.com",
+          password: bethelPassword,
+          role: 'STUDENT',
+        }
       ],
       skipDuplicates: true,
     });
@@ -66,6 +73,10 @@ export async function GET() {
           fullName: 'Test Student',
           email: 'test@test.com',
         },
+        {
+          fullName: 'Bethel Musungo',
+          email: 'Bethmusungo@gmail.com'
+        }
       ],
       skipDuplicates: true,
     });

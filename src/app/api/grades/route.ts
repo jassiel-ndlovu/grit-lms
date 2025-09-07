@@ -123,12 +123,12 @@ async function createNotificationAndRespond(grade: any) {
     const tsub = await prisma.testSubmission.findUnique({
       where: { id: grade.testSubmissionId },
     });
-    url = `/tests/${tsub?.testId}`;
+    url += `/tests/review/${tsub?.testId}`;
   } else if (grade.submissionEntryId) {
     const entry = await prisma.submissionEntry.findUnique({
       where: { id: grade.submissionEntryId },
     });
-    url = `/submissions/${entry?.submissionId}`;
+    url += `/submissions/${entry?.submissionId}`;
     ntype = "SUBMISSION_GRADED";
   }
 

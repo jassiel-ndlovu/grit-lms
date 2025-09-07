@@ -163,8 +163,7 @@ export default function StudentCourse({ params }: StudentCourseProps) {
   }, [
     profile?.id,
     courseId,
-    entries,
-    testSubmissions,
+    progressPercentage,
     fetchCoursesByIds,
     fetchLessonsByCourseId,
     fetchCompletionByStudentAndLesson,
@@ -172,7 +171,6 @@ export default function StudentCourse({ params }: StudentCourseProps) {
     fetchEntriesByStudentId,
     fetchTestsByStudentIdCourseId,
     fetchSubmissionByStudentTestId,
-    progressPercentage
   ]);
 
   if (!profile || !course || courseLoading) return <StudentCourseSkeleton />;
