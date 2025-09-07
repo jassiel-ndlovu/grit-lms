@@ -15,6 +15,7 @@ import { $Enums } from '@/generated/prisma';
 import LessonMarkdown from '@/app/components/markdown';
 import { JsonArray } from '@prisma/client/runtime/library';
 import { deleteFile, uploadFile } from '@/lib/blob';
+import { useErrorPages } from '../../components/error-pages';
 
 type TestTakingPageProps = {
   params: Promise<{ id: string }>;
@@ -33,6 +34,7 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   const { courses, fetchCoursesByIds } = useCourses();
   const { fetchSubmissionByStudentTestId, updateSubmission } = useTestSubmissions();
   const { profile } = useProfile();
+  const { renderAccessDeniedPage, renderErrorPage } = useErrorPages();
 
   const studentProfile = profile as AppTypes.Student;
 
@@ -47,41 +49,141 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   const [testStartTime, setTestStartTime] = useState<Date | null>(null);
   const [submission, setSubmission] = useState<AppTypes.TestSubmission | null>(null);
   const [matchingAnswers, setMatchingAnswers] = useState<Record<string, Record<string, string>>>({});
+  const [loadingState, setLoadingState] = useState<'loading' | 'success' | 'error' | 'timeout' | 'expired'>('loading');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [hasInternet, setHasInternet] = useState<boolean>(true);
 
+  // Check internet connection
   useEffect(() => {
-    fetchTestById(id);
+    const handleOnline = () => setHasInternet(true);
+    const handleOffline = () => setHasInternet(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    setHasInternet(navigator.onLine);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // 30 second timeout for test loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loadingState === 'loading') {
+        setLoadingState('timeout');
+        setErrorMessage('Test loading timed out. Please try again.');
+      }
+    }, 30000);
+
+    return () => clearTimeout(timeout);
+  }, [loadingState]);
+
+  // Fetch test data
+  useEffect(() => {
+    const loadTestData = async () => {
+      try {
+        setLoadingState('loading');
+        const fetchedTest = await fetchTestById(id);
+
+        // Check due date immediately after fetching test
+        if (fetchedTest?.dueDate) {
+          const dueDate = new Date(fetchedTest.dueDate);
+          const now = new Date();
+
+          if (dueDate < now) {
+            setLoadingState('expired');
+            setErrorMessage('This test is no longer available. The due date has passed.');
+          }
+        }
+      } catch (error) {
+        setLoadingState('error');
+        setErrorMessage('Failed to load test. Please try again.');
+        console.error('Error fetching test:', error);
+      }
+    };
+
+    loadTestData();
   }, [id, fetchTestById]);
 
+  // Fetch course data only if test is valid and not expired
   useEffect(() => {
-    if (test) {
+    if (test && loadingState !== 'expired') {
       fetchCoursesByIds([test.courseId]);
     }
-  }, [test, fetchCoursesByIds]);
+  }, [test, fetchCoursesByIds, loadingState]);
 
+  // Fetch submission data only if test is valid and not expired
   useEffect(() => {
-    const fetchSubmission = async () => {
-      if (test && studentProfile?.id) {
-        const sub = await fetchSubmissionByStudentTestId(studentProfile.id, test.id);
-        if (sub) {
-          setSubmission(sub);
-          setAnswers((sub.answers as AppTypes.AnswerMap) || {}); // Load existing answers from DB
-          setTestStartTime(new Date(sub.startedAt));
+    const fetchSubmissionData = async () => {
+      if (test && studentProfile?.id && loadingState !== 'expired') {
+        try {
+          const sub = await fetchSubmissionByStudentTestId(studentProfile.id, test.id);
+
+          if (sub) {
+            // Check if submission is already submitted
+            if (sub.status === 'SUBMITTED' || sub.status === 'GRADED') {
+              setLoadingState('error');
+              setErrorMessage('You have already submitted this test.');
+              return;
+            }
+
+            setSubmission(sub);
+            setAnswers((sub.answers as AppTypes.AnswerMap) || {});
+            setTestStartTime(new Date(sub.startedAt));
+            setLoadingState('success');
+          } else {
+            setLoadingState('expired');
+            setErrorMessage('Please go to the pre-test page for instructions before you being this assessment.');
+            return;
+          }
+        } catch (error) {
+          setLoadingState('error');
+          setErrorMessage('Failed to load your test submission. Please try again.');
+          console.error('Error fetching submission:', error);
         }
       }
     };
 
-    fetchSubmission();
-  }, [test, studentProfile?.id, fetchSubmissionByStudentTestId]);
-
-  // Initialize timer when test loads
-  useEffect(() => {
-    if (test?.timeLimit) {
-      setTestStartTime(new Date()); // Record when the test was started
-      setTimeRemaining(test.timeLimit * 60); // Convert minutes to seconds
+    if (test && loadingState === 'loading') {
+      fetchSubmissionData();
     }
-  }, [test]);
+  }, [test, studentProfile?.id, fetchSubmissionByStudentTestId, loadingState]);
+
+  const calculateInitialTimeRemaining = useCallback(() => {
+    if (!testStartTime || !test?.timeLimit || loadingState === 'expired') return null;
+
+    const now = new Date();
+    const elapsedSeconds = Math.floor((now.getTime() - testStartTime.getTime()) / 1000);
+    const timeLimitSeconds = test.timeLimit * 60;
+
+    // Calculate time until due date
+    const dueDate = new Date(test.dueDate);
+    const secondsToDueDate = Math.floor((dueDate.getTime() - now.getTime()) / 1000);
+
+    // Return the minimum of time limit remaining or time until due date
+    const remainingFromStart = Math.max(0, timeLimitSeconds - elapsedSeconds);
+    const remainingTime = Math.min(remainingFromStart, secondsToDueDate);
+
+    return Math.max(0, remainingTime);
+  }, [testStartTime, test?.timeLimit, test?.dueDate, loadingState]);
+
+  // Initialize timer only if test is valid and not expired
+  useEffect(() => {
+    if (test?.timeLimit && testStartTime && loadingState !== 'expired') {
+      const initialTimeRemaining = calculateInitialTimeRemaining();
+      setTimeRemaining(initialTimeRemaining);
+    }
+  }, [test, testStartTime, loadingState, calculateInitialTimeRemaining]);
 
   const handleSubmitTest = useCallback(async () => {
+    if (!hasInternet) {
+      alert('No internet connection. Please check your connection and try again.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     if (!test || !studentProfile?.id) {
@@ -101,9 +203,6 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
 
     try {
       await updateSubmission(submission?.id || '', submissionData);
-
-      alert("Submission complete!");
-
       router.push(`/dashboard/tests/review/${test.id}`);
     } catch (error) {
       console.error('Error submitting test:', error);
@@ -111,18 +210,19 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [answers, router, studentProfile?.id, submission?.id, test, testStartTime, updateSubmission]);
+  }, [answers, router, studentProfile?.id, submission?.id, test, testStartTime, updateSubmission, hasInternet]);
 
-  // Timer effect - runs every second
+  // Timer effect
   useEffect(() => {
     if (timeRemaining === null || timeRemaining <= 0) return;
 
     const timer = setInterval(() => {
       setTimeRemaining(prev => {
-        if (prev === null) return null;
-        if (prev <= 1) {
+        if (prev === null || prev <= 1) {
           clearInterval(timer);
-          handleSubmitTest();
+          if (prev !== null && prev <= 1) {
+            handleSubmitTest();
+          }
           return 0;
         }
         return prev - 1;
@@ -132,28 +232,92 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     return () => clearInterval(timer);
   }, [timeRemaining, handleSubmitTest]);
 
-  // Calculate remaining time if page is refreshed
+  // Auto-save progress
   useEffect(() => {
-    if (!testStartTime || !test?.timeLimit) return;
+    const autoSave = async () => {
+      if (!test || !studentProfile?.id || !testStartTime || Object.keys(answers).length === 0) return;
 
-    const calculateRemainingTime = () => {
-      const now = new Date();
-      const elapsedSeconds = Math.floor((now.getTime() - testStartTime.getTime()) / 1000);
-      const remainingSeconds = ((test.timeLimit as number) * 60) - elapsedSeconds;
-      const secondsToDueDate = Math.floor((new Date(test.dueDate).getTime() - now.getTime()) / 1000);
+      try {
+        setIsSaving(true);
+        const submissionData: Partial<AppTypes.TestSubmission> = {
+          studentId: studentProfile.id,
+          testId: test.id,
+          answers: answers,
+          startedAt: testStartTime,
+        };
 
-      // take the smallest of the two times
-      if (secondsToDueDate > 0 && remainingSeconds > 0) {
-        return Math.min(secondsToDueDate, remainingSeconds);
-      } 
-
-      return 5;
+        await updateSubmission(submission?.id || '', submissionData);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      } finally {
+        setIsSaving(false);
+      }
     };
 
-    setTimeRemaining(calculateRemainingTime());
-  }, [testStartTime, test?.dueDate, test?.timeLimit]);
+    // Debounce auto-save to prevent too many requests
+    const timeoutId = setTimeout(autoSave, 5000); // Save every 5 seconds after changes
+    return () => clearTimeout(timeoutId);
+  }, [answers, test, studentProfile?.id, testStartTime, submission?.id, updateSubmission]);
 
-  if (!test || !courses || !courses.length) return <TestTakingPageSkeleton />;
+  // Render different states
+if (loadingState === 'expired') {
+  return renderErrorPage({
+      errorType: "timeout",
+      message: errorMessage || "This test is no longer available. The due date has passed.",
+      title: "Test Not Available",
+      showGoBack: true,
+      showGoHome: true,
+      onGoHome: () => router.push("/dashboard"),
+      onGoBack: () => router.push("/dashboard/tests"),
+    });
+  }
+
+  if (!hasInternet) {
+    return renderAccessDeniedPage({
+      reason: "No internet connection. Please check your connection and try again.",
+      resourceType: "test",
+      onGoBack: () => router.push('/dashboard/tests')
+    });
+  }
+
+  if (loadingState === 'timeout') {
+    return renderErrorPage({
+      errorType: "timeout",
+      message: errorMessage || "Test loading timed out. Please go back and try again.",
+      title: "Test Timed Out",
+      showContactSupport: true,
+      showGoBack: true,
+      onGoBack: () => router.push("/dashboard/tests"),
+    });
+  }
+
+  if (loadingState === 'error') {
+    return renderErrorPage({
+      errorType: "generic",
+      message: errorMessage || "Unable to load the test. Please contact your tutor if this persists.",
+      title: "Could not load Test",
+      showRetry: true,
+      showGoBack: true,
+      onGoBack: () => router.push("/dashboard/tests"),
+    });
+  }
+
+  if (loadingState === 'loading' || !test || !courses.length) {
+    return <TestTakingPageSkeleton />;
+  }
+
+  // Add an additional check here to prevent rendering if due date passed
+  if (test.dueDate && new Date(test.dueDate) < new Date()) {
+    return renderErrorPage({
+      errorType: "timeout",
+      message: errorMessage || "This test is no longer available. The due date has passed.",
+      title: "Test Not Available",
+      showGoBack: true,
+      showGoHome: true,
+      onGoHome: () => router.push("/dashboard"),
+      onGoBack: () => router.push("/dashboard/tests"),
+    });
+  }
 
   const currentQuestion = test.questions[currentQuestionIndex];
 

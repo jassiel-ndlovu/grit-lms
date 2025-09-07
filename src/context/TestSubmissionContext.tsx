@@ -13,7 +13,7 @@ interface TestSubmissionContextType {
   message: Message | null;
   fetchSubmissions: () => Promise<void>;
   fetchSubmissionsByTestId: (testId: string) => Promise<void | AppTypes.TestSubmission[]>;
-  fetchSubmissionsByStudentId: (studentId: string) => Promise<void>;
+  fetchSubmissionsByStudentId: (studentId: string) => Promise<void | AppTypes.TestSubmission[]>;
   fetchSubmissionByStudentTestId: (studentId: string, testId: string) => Promise<AppTypes.TestSubmission | void>;
   fetchSubmissionByIds: (ids: string[]) => Promise<AppTypes.TestSubmission | void>;
   createSubmission: (data: Partial<AppTypes.TestSubmission>) => Promise<AppTypes.TestSubmission | void>;
@@ -94,6 +94,7 @@ export const TestSubmissionProvider = ({ children }: { children: ReactNode }) =>
     try {
       const res = await axios.get<AppTypes.TestSubmission[]>(`/api/test-submission?studentId=${studentId}`);
       setTestSubmissions(res.data);
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.response?.data?.message || "Failed to fetch submissions by student ID",

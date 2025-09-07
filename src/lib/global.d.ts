@@ -94,6 +94,7 @@ declare global {
     type Grade = Prisma.GradeGetPayload<object>;
     type QuestionGrade = Prisma.QuestionGradeGetPayload<object>;
     type Notification = Prisma.NotificationGetPayload<object>;
+    type ActivityLog = Prisma.ActivityLogGetPayload<object>;
 
     // Enums
     type Role = $Enums.Role;

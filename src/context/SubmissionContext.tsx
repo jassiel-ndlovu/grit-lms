@@ -16,6 +16,7 @@ interface SubmissionContextProps {
   fetchSubmissions: (courseId: string) => Promise<void>;
   fetchSubmissionsByTutorId: (tutorId: string) => Promise<AppTypes.Submission[] | void>;
   fetchSubmissionsByStudentId: (studentId: string) => Promise<AppTypes.Submission[] | void>;
+  fetchSubmissionsByStudentIdCourseId: (studentId: string, courseId: string) => Promise<AppTypes.Submission[] | void>;
   fetchSubmissionsByCourseIds: (courseIds: string[]) => Promise<Submission[]>;
   fetchSubmissionById: (id: string) => Promise<Submission | void>;
   createSubmission: (courseId: string, data: Partial<Submission>) => Promise<Submission | null>;
@@ -65,6 +66,27 @@ export const SubmissionProvider: React.FC<{ children: ReactNode }> = ({ children
       const { data } = await axios.get(`/api/submissions?tutorId=${tutorId}`);
       setSubmissions(data);
       setMessage(Message.success("Submissions loaded successfully", { duration: 3000 }));
+      return data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || "Failed to load submissions",
+        { title: "Fetch Error", duration: 5000 }
+      ));
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [clearMessage]);
+
+  const fetchSubmissionsByStudentIdCourseId = useCallback(async (studentId: string, courseId: string) => {
+    setLoading(true);
+    clearMessage();
+    try {
+      const { data } = await axios.get(`/api/submissions?studentId=${studentId}&courseId=${courseId}`);
+      
+      setSubmissions(data);
+      setMessage(Message.success("Submissions loaded successfully", { duration: 3000 }));
+
       return data;
     } catch (err: any) {
       setMessage(Message.error(
@@ -211,6 +233,7 @@ export const SubmissionProvider: React.FC<{ children: ReactNode }> = ({ children
         message,
         fetchSubmissions,
         fetchSubmissionsByStudentId,
+        fetchSubmissionsByStudentIdCourseId,
         fetchSubmissionsByTutorId,
         fetchSubmissionsByCourseIds,
         fetchSubmissionById,

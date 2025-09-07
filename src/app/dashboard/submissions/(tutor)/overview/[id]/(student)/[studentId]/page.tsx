@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { Calendar, Download, Eye, FileText, Flag, Mail, Save } from "lucide-react";
+import { use, useCallback, useEffect, useState } from "react";
+import { Calendar, Download, Eye, FileText, Flag, Mail, Save, X, CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSubmission } from "@/context/SubmissionContext";
 import { useSubmissionEntries } from "@/context/SubmissionEntryContext";
@@ -11,6 +11,7 @@ import { useCourses } from "@/context/CourseContext";
 import { useGrades } from "@/context/GradeContext";
 import Link from "next/link";
 import SubmissionGradingPageSkeleton from "@/app/dashboard/submissions/skeletons/student-grading-page-skeleton";
+import { Dialog, useDialog } from "@/app/dashboard/components/pop-up";
 
 type SubmissionGradingPageProps = {
   params: Promise<{ id: string; studentId: string }>;
@@ -19,50 +20,71 @@ type SubmissionGradingPageProps = {
 export default function SubmissionGradingPage({ params }: SubmissionGradingPageProps) {
   const { id: submissionId, studentId } = use(params);
   const { loading: submissionLoading, fetchSubmissionById } = useSubmission();
-  const { loading: entriesLoading, fetchEntryByStudentIdSubId } = useSubmissionEntries();
+  const { loading: entriesLoading, fetchEntryByStudentIdSubId, updateEntry } = useSubmissionEntries();
   const { loading: coursesLoading, fetchCoursesByIds } = useCourses();
-  const { loading: gradesLoading, fetchGradesByStudentIdEntryId } = useGrades();
+  const { loading: gradesLoading, fetchGradesByStudentIdEntryId, createGrade, updateGrade } = useGrades();
+  const { dialogState, showDialog, hideDialog } = useDialog();
   const router = useRouter();
 
   const [mode, setMode] = useState<"view" | "grade">("view");
   const [submission, setSubmission] = useState<AppTypes.Submission | null>(null);
   const [entry, setEntry] = useState<AppTypes.SubmissionEntry | null>(null);
   const [course, setCourse] = useState<AppTypes.Course | null>(null);
+  const [existingGrade, setExistingGrade] = useState<AppTypes.Grade | null>(null);
 
   const [totalScore, setTotalScore] = useState<number>(0);
   const [totalOutOf, setTotalOutOf] = useState<number>(1);
   const [finalComments, setFinalComments] = useState<string>("");
   const [questionGrades, setQuestionGrades] = useState<AppTypes.QuestionGrade[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Memoized error handler to prevent infinite loops
+  const showErrorDialog = useCallback(() => {
+    showDialog({
+      type: 'error',
+      title: 'Error',
+      message: 'Failed to load submission data. Please try again.',
+      confirmText: 'OK',
+      onConfirm: () => router.push('/dashboard/submissions')
+    });
+  }, [showDialog, router]);
 
   // Fetch submission and entry
   useEffect(() => {
     if (!submissionId || !studentId) return;
 
-    (async () => {
-      const fetchedSubmission = await fetchSubmissionById(submissionId) as AppTypes.Submission;
-      setSubmission(fetchedSubmission);
+    const fetchData = async () => {
+      try {
+        const fetchedSubmission = await fetchSubmissionById(submissionId) as AppTypes.Submission;
+        setSubmission(fetchedSubmission);
 
-      const fetchedEntry = await fetchEntryByStudentIdSubId(studentId, submissionId) as AppTypes.SubmissionEntry;
-      setEntry(fetchedEntry);
+        const fetchedEntry = await fetchEntryByStudentIdSubId(studentId, submissionId) as AppTypes.SubmissionEntry;
+        setEntry(fetchedEntry);
 
-      const fetchedCourses = await fetchCoursesByIds([fetchedSubmission.courseId]) as AppTypes.Course[];
-      setCourse(fetchedCourses[0] || null);
+        const fetchedCourses = await fetchCoursesByIds([fetchedSubmission.courseId]) as AppTypes.Course[];
+        setCourse(fetchedCourses[0] || null);
 
-      const fetchedGrades = await fetchGradesByStudentIdEntryId(studentId, fetchedEntry.id) as AppTypes.Grade;
-      if (fetchedGrades) {
-        setFinalComments(fetchedGrades.finalComments || "");
-        setTotalScore(fetchedGrades.score || 0);
-        setTotalOutOf(fetchedSubmission.totalPoints);
-        setQuestionGrades(fetchedEntry.questionGrades || []);
-      } else {
-        setFinalComments("");
-        setTotalScore(0);
-        setTotalOutOf(1);
-        setQuestionGrades([]);
+        const fetchedGrades = await fetchGradesByStudentIdEntryId(studentId, fetchedEntry.id) as AppTypes.Grade;
+        if (fetchedGrades) {
+          setExistingGrade(fetchedGrades);
+          setFinalComments(fetchedGrades.finalComments || "");
+          setTotalScore(fetchedGrades.score || 0);
+          setTotalOutOf(fetchedSubmission.totalPoints);
+          setQuestionGrades(fetchedEntry.questionGrades || []);
+        } else {
+          setFinalComments("");
+          setTotalScore(0);
+          setTotalOutOf(fetchedSubmission.totalPoints);
+          setQuestionGrades(fetchedEntry.questionGrades || []);
+        }
+      } catch (error) {
+        showErrorDialog();
+        console.error(error);
       }
+    };
 
-    })();
-  }, [submissionId, studentId, fetchSubmissionById, fetchEntryByStudentIdSubId, fetchCoursesByIds, fetchGradesByStudentIdEntryId]);
+    fetchData();
+  }, [submissionId, studentId]);
 
   // helper functions
   const getStatusColor = (status: $Enums.SubmissionStatus) => {
@@ -76,7 +98,7 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
 
   const updateQuestionGrade = (id: string, field: string, value: string) => {
     setQuestionGrades(prev => prev.map(grade =>
-      grade.id === id ? { ...grade, [field]: value } : grade
+      grade.id === id ? { ...grade, [field]: field === 'score' || field === 'outOf' ? parseFloat(value) || 0 : value } : grade
     ));
   };
 
@@ -84,15 +106,125 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
     const total = questionGrades.reduce((sum, grade) => sum + (grade.score || 0), 0);
     const maxTotal = questionGrades.reduce((sum, grade) => sum + (grade.outOf || 0), 0);
     setTotalScore(total);
-    setTotalOutOf(maxTotal);
+    setTotalOutOf(maxTotal || 1);
+  };
+
+  const handleSaveGrade = async () => {
+    if (!submission || !entry) return;
+
+    setIsSaving(true);
+    try {
+      const percentage = Math.round((totalScore / totalOutOf) * 100);
+
+      if (existingGrade) {
+        // Update existing grade
+        await updateGrade(existingGrade.id, {
+          score: totalScore,
+          outOf: totalOutOf,
+          finalComments: finalComments
+        });
+      } else {
+        // Create new grade
+        await createGrade({
+          studentId: entry.studentId,
+          courseId: submission.courseId,
+          type: 'SUBMISSION',
+          title: `${submission.title} - ${entry.student.fullName}`,
+          score: totalScore,
+          outOf: totalOutOf,
+          submissionEntryId: entry.id,
+          finalComments: finalComments
+        });
+      }
+
+      // Update entry status to GRADED
+      await updateEntry(entry.id, {
+        status: $Enums.SubmissionStatus.GRADED
+      });
+
+      // Show success dialog
+      showDialog({
+        type: 'success',
+        title: 'Grade Saved',
+        message: `Grade saved successfully: ${percentage}%`,
+        autoClose: 3000,
+        onConfirm: () => {
+          setMode('view');
+          // Refresh the data by re-fetching
+          if (submissionId && studentId) {
+            fetchSubmissionById(submissionId).then(sub => setSubmission(sub as AppTypes.Submission));
+            fetchEntryByStudentIdSubId(studentId, submissionId).then(entry => setEntry(entry as AppTypes.SubmissionEntry));
+            fetchGradesByStudentIdEntryId(studentId, entry.id).then(grade => {
+              if (grade) setExistingGrade(grade);
+            });
+          }
+        }
+      });
+
+    } catch (error) {
+      showDialog({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to save grade. Please try again.',
+        confirmText: 'OK'
+      });
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const confirmSaveGrade = () => {
+    console.log("We arrived here");
+    const percentage = Math.round((totalScore / totalOutOf) * 100);
+
+    showDialog({
+      type: 'warning',
+      title: 'Confirm Grade',
+      message: `Are you sure you want to save this grade? The student will receive a score of ${percentage}%.`,
+      showCancel: true,
+      confirmText: 'Save Grade',
+      cancelText: 'Cancel',
+      onConfirm: handleSaveGrade,
+      onCancel: hideDialog
+    });
+  };
+
+  const handleCancelGrading = () => {
+    if (existingGrade) {
+      // Reset to existing grade values
+      setTotalScore(existingGrade.score || 0);
+      setTotalOutOf(existingGrade.outOf || submission?.totalPoints || 100);
+      setFinalComments(existingGrade.finalComments || "");
+    } else {
+      // Reset to default values
+      setTotalScore(0);
+      setTotalOutOf(submission?.totalPoints || 100);
+      setFinalComments("");
+    }
+    setMode('view');
   };
 
   if (submissionLoading || entriesLoading || !submission || !course || coursesLoading || gradesLoading || !entry) {
     return <SubmissionGradingPageSkeleton />;
   }
 
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Dialog
+        isOpen={dialogState.isOpen}
+        onClose={hideDialog}
+        title={dialogState.title}
+        message={dialogState.message}
+        type={dialogState.type}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        showCancel={dialogState.showCancel}
+        autoClose={dialogState.autoClose}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
       {/* Header */}
       <div className="bg-white border border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,22 +239,47 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
             </div>
             <div className="flex items-center space-x-3">
               {mode === "grade" && (
-                <button className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm hover:bg-green-700">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Grade
-                </button>
+                <>
+                  <button
+                    onClick={handleCancelGrading}
+                    className="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm hover:bg-gray-700"
+                    disabled={isSaving}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmSaveGrade}
+                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm hover:bg-green-700 disabled:opacity-50"
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Grade
+                      </>
+                    )}
+                  </button>
+                </>
               )}
 
               <div className="flex border overflow-hidden">
                 <button
                   onClick={() => setMode("view")}
                   className={`px-4 py-2 text-sm ${mode === "view" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
+                  disabled={mode === "grade" && isSaving}
                 >
                   Review
                 </button>
                 <button
                   onClick={() => setMode("grade")}
                   className={`px-4 py-2 text-sm ${mode === "grade" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
+                  disabled={mode === "grade" && isSaving}
                 >
                   Grade
                 </button>
@@ -153,6 +310,10 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
                   <div className="flex items-center text-gray-600">
                     <FileText className="h-4 w-4 mr-2" />
                     Type: {submission.fileType}
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Total Points: {submission.totalPoints}
                   </div>
                 </div>
               </div>
@@ -208,6 +369,7 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
                   <button
                     onClick={calculateTotalFromQuestions}
                     className="text-sm text-blue-600 hover:text-blue-800"
+                    disabled={isSaving}
                   >
                     Calculate Total
                   </button>
@@ -225,6 +387,8 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
                               onChange={(e) => updateQuestionGrade(grade.id, 'score', e.target.value)}
                               className="w-16 px-2 py-1 text-sm border border-gray-300 rounded"
                               step="0.5"
+                              min="0"
+                              disabled={isSaving}
                             />
                             <span className="text-gray-500">of</span>
                             <input
@@ -233,6 +397,8 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
                               onChange={(e) => updateQuestionGrade(grade.id, 'outOf', e.target.value)}
                               className="w-16 px-2 py-1 text-sm border border-gray-300 rounded"
                               step="0.5"
+                              min="0"
+                              disabled={isSaving}
                             />
                           </div>
                         </div>
@@ -242,6 +408,7 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
                           placeholder="Feedback for this question..."
                           className="w-full p-2 text-sm border border-gray-300 rounded-md resize-none"
                           rows={2}
+                          disabled={isSaving}
                         />
                       </div>
                     ))}
@@ -283,16 +450,21 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
                           type="number"
                           value={totalScore}
                           onChange={(e) => setTotalScore(parseFloat(e.target.value) || 0)}
-                          className="w-20 px-3 py-2 text-sm border border-gray-300"
-                          step="1"
+                          className="w-20 px-3 py-2 text-sm border border-gray-300 rounded"
+                          step="0.5"
+                          min="0"
+                          max={totalOutOf}
+                          disabled={isSaving}
                         />
                         <span className="text-gray-500">of</span>
                         <input
                           type="number"
                           value={totalOutOf}
                           onChange={(e) => setTotalOutOf(parseFloat(e.target.value) || 100)}
-                          className="w-20 px-3 py-2 border border-gray-300 text-sm"
+                          className="w-20 px-3 py-2 border border-gray-300 text-sm rounded"
                           step="0.5"
+                          min="1"
+                          disabled={isSaving}
                         />
                       </div>
                       <div className="px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium">
@@ -307,8 +479,9 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
                         value={finalComments}
                         onChange={(e) => setFinalComments(e.target.value)}
                         placeholder="Overall feedback for the student..."
-                        className="w-full p-3 border border-gray-300 text-sm"
+                        className="w-full p-3 border border-gray-300 text-sm rounded"
                         rows={4}
+                        disabled={isSaving}
                       />
                     </div>
                   </div>
@@ -366,25 +539,25 @@ export default function SubmissionGradingPage({ params }: SubmissionGradingPageP
               </div>
               <div className="px-6 py-4 space-y-2">
                 <button className="w-full flex items-center  text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
-                 onClick={() => {
-                  entry.fileUrl.forEach(file => {
-                    const link = document.createElement('a');
-                    link.href = file;
-                    link.setAttribute('download', 'filename');
-                    link.setAttribute('target', '_blank');
-                    link.setAttribute('rel', 'noopener noreferrer');
+                  onClick={() => {
+                    entry.fileUrl.forEach(file => {
+                      const link = document.createElement('a');
+                      link.href = file;
+                      link.setAttribute('download', 'filename');
+                      link.setAttribute('target', '_blank');
+                      link.setAttribute('rel', 'noopener noreferrer');
 
-                    link.download = file.split('/').pop() || 'download';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  });
-                 }}
+                      link.download = file.split('/').pop() || 'download';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    });
+                  }}
                 >
                   <Download className="h-3 w-3 inline-block mr-2" />
                   Download All Files
                 </button>
-                <button 
+                <button
                   className="w-full flex items-center text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                   onClick={() => router.push(`mailto:${entry.student.email}`)}
                 >

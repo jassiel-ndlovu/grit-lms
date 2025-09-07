@@ -85,6 +85,7 @@ export default function ManageCoursesPage() {
       name: formData.courseName,
       description: formData.description,
       imageUrl: formData.courseImageUrl,
+      createdAt: new Date(),
       tutor: tutorProfile,
       students: enrolled,
       lessons: [],

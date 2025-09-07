@@ -15,6 +15,31 @@ model User {
   password  String
   role      Role     @default(STUDENT)
   createdAt DateTime @default(now())
+
+  preferences UserPreferences?
+  activities  ActivityLog[]
+}
+
+model UserPreferences {
+  id                        String   @id @default(cuid())
+  userId                    String   @unique
+  emailNotifications        Boolean  @default(true)
+  pushNotifications         Boolean  @default(true)
+  notificationFrequency     NotificationFrequency @default(IMMEDIATE)
+  notifyOnCourseUpdate      Boolean  @default(true)
+  notifyOnNewLesson         Boolean  @default(true)
+  notifyOnNewTest           Boolean  @default(true)
+  notifyOnDueDateReminder   Boolean  @default(true)
+  notifyOnGrades            Boolean  @default(true)
+  notifyOnMessages          Boolean  @default(true)
+  darkMode                  Boolean  @default(false)
+  preferredLanguage         String   @default("EN")
+  timeZone                  String?  
+  preferredView             PreferredView @default(LIST)
+  studyReminders            Boolean  @default(false)
+  defaultDashboardTab       DashboardTab @default(COURSES)
+
+  user                      User     @relation(fields: [userId], references: [id])
 }
 
 model Tutor {
@@ -46,6 +71,7 @@ model Course {
   description  String?
   imageUrl     String
   tutorId      String
+  createdAt    DateTime       @default(now())
   tutor        Tutor          @relation(fields: [tutorId], references: [id])
   courseEvents CourseEvent[]
   Grade        Grade[]
@@ -63,6 +89,8 @@ model Lesson {
   description    String?
   order          Int
   courseId       String
+  createdAt      DateTime           @default(now())
+  duration       Int?
   videoUrl       String[]           @default([])
   attachmentUrls Attachment[]
   course         Course             @relation(fields: [courseId], references: [id])
@@ -87,12 +115,14 @@ model LessonCompletion {
 }
 
 model CourseEvent {
-  id       String   @id @default(cuid())
-  title    String
-  date     DateTime
-  link     String
-  courseId String
-  course   Course   @relation(fields: [courseId], references: [id])
+  id        String    @id @default(cuid())
+  title     String
+  type      EventType
+  date      DateTime
+  link      String
+  createdAt DateTime  @default(now())
+  courseId  String
+  course    Course    @relation(fields: [courseId], references: [id])
 }
 
 model Quiz {
@@ -100,6 +130,7 @@ model Quiz {
   title       String
   courseId    String
   dueDate     DateTime
+  maxAttempts Int?
   createdAt   DateTime               @default(now())
   completions AssessmentCompletion[]
   course      Course                 @relation(fields: [courseId], references: [id])
@@ -256,16 +287,67 @@ model Grade {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  title     String
-  message   String
-  link      String?
-  studentId String?
-  courseId  String?
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  course    Course?  @relation(fields: [courseId], references: [id])
-  student   Student? @relation(fields: [studentId], references: [id])
+  id          String                @id @default(cuid())
+  title       String
+  message     String
+  link        String?
+  type        NotificationType
+  priority    NotificationPriority  @default(NORMAL)
+  isRead      Boolean               @default(false)
+  createdAt   DateTime              @default(now())
+  readAt      DateTime?
+  studentId   String?
+  courseId    String?
+
+  course      Course?               @relation(fields: [courseId], references: [id])
+  student     Student?              @relation(fields: [studentId], references: [id])
+}
+
+model ActivityLog {
+  id        String       @id @default(cuid())
+  userId    String
+  action    ActivityType
+  targetId  String?
+  meta      Json?
+  createdAt DateTime     @default(now())
+
+  user      User         @relation(fields: [userId], references: [id])
+}
+
+enum NotificationType {
+  COURSE_UPDATE
+  LESSON_CREATED
+  TEST_CREATED
+  TEST_DELETED
+  TEST_UPDATED
+  QUIZ_CREATED
+  SUBMISSION_CREATED
+  SUBMISSION_DUE
+  SUBMISSION_UPDATED
+  SUBMISSION_DELETED
+  SUBMISSION_GRADED
+  TEST_DUE
+  TEST_GRADED
+  MESSAGE
+  SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ActivityType {
+  LESSON_COMPLETED
+  TEST_COMPLETED
+  ASSIGNMENT_SUBMITTED
+  GRADE_RECEIVED
+  MESSAGE_SENT
+  MESSAGE_RECEIVED
+  LOGIN
+  LOGOUT
 }
 
 enum Role {
@@ -297,10 +379,39 @@ enum SubmissionStatus {
   NOT_STARTED
 }
 
+enum EventType {
+  LECTURE
+  SUBMISSION
+  LIVE
+  EXAM
+  MEETING
+  HOLIDAY
+}
+
 enum FileType {
   PDF
   DOCX
   ZIP
   JPEG
   OTHER
+}
+
+enum NotificationFrequency {
+  IMMEDIATE
+  DAILY
+  WEEKLY
+  NONE
+}
+
+enum PreferredView {
+  LIST
+  GRID
+  TIMELINE
+}
+
+enum DashboardTab {
+  COURSES
+  NOTIFICATIONS
+  CALENDAR
+  GRADES
 }

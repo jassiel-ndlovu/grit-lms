@@ -6,7 +6,6 @@ import Header from './models/header';
 import Nav from './models/nav';
 import { StudentProvider } from '@/context/StudentContext';
 import { TutorProvider } from '@/context/TutorContext';
-import { CoursesProvider } from '@/context/CourseContext';
 import { LessonProvider } from '@/context/LessonContext';
 import { TestProvider } from '@/context/TestContext';
 import { TestSubmissionProvider } from '@/context/TestSubmissionContext';
@@ -14,6 +13,8 @@ import { SubmissionProvider } from '@/context/SubmissionContext';
 import { SubmissionEntryProvider } from '@/context/SubmissionEntryContext';
 import { GradeProvider } from '@/context/GradeContext';
 import { QuestionGradeProvider } from '@/context/QuestionGradeContext';
+import { LessonCompletionProvider } from '@/context/LessonCompletionContext';
+import { EventProvider } from '@/context/EventContext';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -29,7 +30,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="h-full max-h-[92vh]">
             <StudentProvider>
             <TutorProvider>
-            <CoursesProvider>
             <LessonProvider>
             <TestProvider>
             <TestSubmissionProvider>
@@ -37,7 +37,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <SubmissionEntryProvider>
             <GradeProvider>
             <QuestionGradeProvider>
+            <LessonCompletionProvider>
+            <EventProvider>
               {children}
+            </EventProvider>
+            </LessonCompletionProvider>
             </QuestionGradeProvider>
             </GradeProvider>
             </SubmissionEntryProvider>
@@ -45,7 +49,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </TestSubmissionProvider>
             </TestProvider>
             </LessonProvider>
-            </CoursesProvider>
             </TutorProvider>
             </StudentProvider>
           </div>

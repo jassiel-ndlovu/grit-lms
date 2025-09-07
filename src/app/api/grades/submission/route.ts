@@ -30,6 +30,26 @@ export async function POST(req: NextRequest) {
   const data = await req.json();
   try {
     const grade = await prisma.grade.create({ data });
+
+    let url: string = "/dashboard";
+
+    if (grade.submissionEntryId) {
+      const entry = await prisma.submissionEntry.findUnique({
+        where: { id: grade.submissionEntryId },
+      });
+      url += `/submissions/${entry?.submissionId}`;
+    }
+
+    await prisma.notification.create({
+      data: {
+        title: "Grade Released",
+        message: `You received ${grade.score}/${grade.outOf} for "${grade.title}".`,
+        link: url,
+        type: "SUBMISSION_GRADED",
+        studentId: grade.studentId,
+      },
+    });
+
     return NextResponse.json(grade, { status: 201 });
   } catch (error) {
     console.error(error);

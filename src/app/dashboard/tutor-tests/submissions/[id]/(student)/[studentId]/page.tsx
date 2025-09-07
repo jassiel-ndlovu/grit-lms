@@ -2,7 +2,7 @@
 
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { useTests } from "@/context/TestContext";
 import { useTestSubmissions } from "@/context/TestSubmissionContext";
 import { useStudent } from "@/context/StudentContext";
@@ -10,6 +10,8 @@ import LessonMarkdown from "@/app/components/markdown";
 import { formatDate } from "@/lib/functions";
 import { CheckCircle, XCircle, FileText, Download, Clock, Calendar, Trophy } from "lucide-react";
 import { useGrades } from "@/context/GradeContext";
+import { useQuestionGrades } from "@/context/QuestionGradeContext";
+import { Dialog, useDialog } from "@/app/dashboard/components/pop-up";
 
 type Mode = "view" | "grade";
 
@@ -22,9 +24,12 @@ export default function StudentSubmissionPage({
   const { fetchTestById } = useTests();
   const { fetchSubmissionByStudentTestId } = useTestSubmissions();
   const { fetchStudentsById } = useStudent();
-  const { createGrade, fetchGradesByStudentIdTestSubId } = useGrades(); 
+  const { createGrade, fetchGradesByStudentIdTestSubId, updateGrade } = useGrades();
+  const { questionGrades, createQuestionGrade, updateQuestionGrade, fetchQuestionGradesByTestId } = useQuestionGrades();
+  const { dialogState, showDialog, hideDialog } = useDialog();
 
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [mode, setMode] = useState<Mode>("view");
 
   const [test, setTest] = useState<AppTypes.Test | null>(null);
@@ -38,7 +43,7 @@ export default function StudentSubmissionPage({
 
   const totalPossible = useMemo(
     () => (test?.questions ?? []).reduce((sum, q) => sum + (q.points ?? 0), 0),
-  [test]);
+    [test]);
 
   const totalAwarded = useMemo(
     () =>
@@ -46,13 +51,22 @@ export default function StudentSubmissionPage({
         const s = questionScores[q.id] ?? 0;
         return sum + Math.max(0, Math.min(s, q.points ?? 0));
       }, 0),
-  [test, questionScores]);
+    [test, questionScores]);
 
   const percentageScore = useMemo(() => {
     return totalPossible > 0 ? Math.round((totalAwarded / totalPossible) * 100) : 0;
   }, [totalAwarded, totalPossible]);
 
-  // fetch test, test sub and student
+  const showErrorDialog = useCallback(() => {
+    showDialog({
+      type: 'error',
+      title: 'Error',
+      message: 'Failed to load submission data. Please try again.',
+      confirmText: 'OK'
+    });
+  }, [showDialog])
+
+  // consolidated version
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -67,74 +81,130 @@ export default function StudentSubmissionPage({
         setSubmission(sub as AppTypes.TestSubmission);
         setStudent(stu[0] as AppTypes.Student);
 
-        // Seed question grades if submission has them
-        const existingQ = (sub as AppTypes.TestSubmission)?.questionGrades ?? [];
-        const initScores: Record<string, number> = {};
-        const initFb: Record<string, string> = {};
+        if (sub) {
+          // Load the grade and question grades in parallel
+          const [grade, qGrades] = await Promise.all([
+            fetchGradesByStudentIdTestSubId(studentId, sub.id) as Promise<AppTypes.Grade>,
+            fetchQuestionGradesByTestId(sub.testId) as Promise<AppTypes.QuestionGrade[]>
+          ]);
 
-        for (const qg of existingQ) {
-          if (qg.questionId) {
-            initScores[qg.questionId] = qg.score;
-            initFb[qg.questionId] = qg.feedback ?? "";
+          setSubmissionGrade(grade);
+
+          if (grade) {
+            setFinalComments(grade.finalComments ?? "");
           }
-        }
 
-        setQuestionScores(initScores);
-        setQuestionFeedback(initFb);
+          // Seed question grades
+          const initScores: Record<string, number> = {};
+          const initFb: Record<string, string> = {};
+
+          for (const qg of qGrades) {
+            if (qg.questionId) {
+              initScores[qg.questionId] = qg.score;
+              initFb[qg.questionId] = qg.feedback ?? "";
+            }
+          }
+
+          setQuestionScores(initScores);
+          setQuestionFeedback(initFb);
+        }
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        showErrorDialog();
       } finally {
         setLoading(false);
       }
     })();
-  }, [testId, studentId, fetchTestById, fetchSubmissionByStudentTestId, fetchStudentsById]);
-
-  // fetch grade, if it exists
-  useEffect(() => {
-    if (!studentId || !submission) return;
-
-    (async () => {
-      setLoading(true);
-
-      try {
-        // could be null
-        const grade = await fetchGradesByStudentIdTestSubId(studentId, submission.id) as AppTypes.Grade;
-
-        setSubmissionGrade(grade);
-
-        // Seed existing grade if available
-        if (submissionGrade) {
-          setFinalComments(submissionGrade.finalComments ?? "");
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [studentId, submission, fetchGradesByStudentIdTestSubId, submissionGrade]);
+  }, [testId, studentId]);
 
   const handleScoreChange = (questionId: string, points: number, max: number) => {
     const clamped = Math.max(0, Math.min(points, max));
     setQuestionScores((prev) => ({ ...prev, [questionId]: clamped }));
   };
 
+  const confirmSaveGrade = () => {
+    showDialog({
+      type: 'warning',
+      title: 'Confirm Grade Submission',
+      message: `Are you sure you want to submit this grade? The student will receive a score of ${totalAwarded}/${totalPossible} (${percentageScore}%). This action cannot be undone.`,
+      showCancel: true,
+      confirmText: 'Submit Grade',
+      cancelText: 'Cancel',
+      onConfirm: saveGrade,
+      onCancel: hideDialog
+    });
+  };
+
   const saveGrade = async () => {
-    if (!submission || !student) return;
+    if (!submission || !student || !test) return;
 
+    setIsSaving(true);
     try {
-      await createGrade({
-        testSubmissionId: submission.id,
-        studentId: student.id,
-        courseId: test?.courseId,
-        score: totalAwarded,
-        outOf: totalPossible,
-        finalComments: finalComments,
-      });
+      // First save question grades
+      for (const question of test.questions ?? []) {
+        const existingQuestionGrade = questionGrades.find(qg => qg.questionId === question.id);
+        const score = questionScores[question.id] ?? 0;
+        const feedback = questionFeedback[question.id] ?? "";
 
-      const grade = await fetchGradesByStudentIdTestSubId(studentId, submission.id) as AppTypes.Grade; // refresh context
+        if (existingQuestionGrade) {
+          await updateQuestionGrade(existingQuestionGrade.id, {
+            score,
+            feedback,
+            outOf: question.points ?? 0
+          });
+        } else {
+          await createQuestionGrade({
+            questionId: question.id,
+            testSubmissionId: submission.id,
+            score,
+            feedback,
+            outOf: question.points ?? 0
+          });
+        }
+      }
+
+      // Then save the overall grade
+      if (submissionGrade) {
+        await updateGrade(submissionGrade.id, {
+          score: totalAwarded,
+          outOf: totalPossible,
+          finalComments: finalComments,
+        });
+      } else {
+        await createGrade({
+          testSubmissionId: submission.id,
+          studentId: student.id,
+          courseId: test.courseId,
+          score: totalAwarded,
+          outOf: totalPossible,
+          finalComments: finalComments,
+          title: `${test.title} - ${student.fullName}`,
+          type: 'TEST'
+        });
+      }
+
+      // Refresh the grade
+      const grade = await fetchGradesByStudentIdTestSubId(studentId, submission.id) as AppTypes.Grade;
       setSubmissionGrade(grade);
 
-      alert("Grade saved successfully!");
-      setMode("view");
+      // Show success dialog
+      showDialog({
+        type: 'success',
+        title: 'Grade Saved',
+        message: `Grade saved successfully! Student received ${totalAwarded}/${totalPossible} (${percentageScore}%).`,
+        autoClose: 3000,
+        onConfirm: () => setMode("view")
+      });
+
     } catch (e: any) {
-      alert(e?.response?.data?.message || "Failed to save grade.");
+      showDialog({
+        type: 'error',
+        title: 'Error',
+        message: e?.response?.data?.message || "Failed to save grade. Please try again.",
+        confirmText: 'OK'
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -147,19 +217,18 @@ export default function StudentSubmissionPage({
             {question.options?.map((option, index) => {
               const isSelected = studentAnswer === option;
               const isCorrect = question.answer === option;
-              
+
               return (
                 <div
                   key={index}
-                  className={`p-3 rounded border flex items-center gap-3 ${
-                    isSelected
-                      ? isCorrect
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-red-50 border-red-200'
-                      : isCorrect
+                  className={`p-3 rounded border flex items-center gap-3 ${isSelected
+                    ? isCorrect
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-red-50 border-red-200'
+                    : isCorrect
                       ? 'bg-green-50 border-green-200'
                       : 'bg-gray-50 border-gray-200'
-                  }`}
+                    }`}
                 >
                   {isSelected && (
                     isCorrect ? (
@@ -184,25 +253,24 @@ export default function StudentSubmissionPage({
       case 'MULTI_SELECT':
         const selectedAnswers = Array.isArray(studentAnswer) ? studentAnswer : [];
         const correctAnswers = Array.isArray(question.answer) ? question.answer : [];
-        
+
         return (
           <div className="space-y-2">
             {question.options?.map((option, index) => {
               const isSelected = selectedAnswers.includes(option);
               const isCorrect = correctAnswers.includes(option);
-              
+
               return (
                 <div
                   key={index}
-                  className={`p-3 rounded border flex items-center gap-3 ${
-                    isSelected
-                      ? isCorrect
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-red-50 border-red-200'
-                      : isCorrect
+                  className={`p-3 rounded border flex items-center gap-3 ${isSelected
+                    ? isCorrect
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-red-50 border-red-200'
+                    : isCorrect
                       ? 'bg-green-50 border-green-200'
                       : 'bg-gray-50 border-gray-200'
-                  }`}
+                    }`}
                 >
                   {isSelected && (
                     isCorrect ? (
@@ -238,11 +306,10 @@ export default function StudentSubmissionPage({
       case 'NUMERIC':
         return (
           <div className="flex gap-4">
-            <div className={`p-3 rounded border ${
-              studentAnswer === question.answer 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
-            }`}>
+            <div className={`p-3 rounded border ${studentAnswer === question.answer
+              ? 'bg-green-50 border-green-200'
+              : 'bg-red-50 border-red-200'
+              }`}>
               <span className="text-sm font-medium">Student&apos;s Answer: </span>
               <span className={studentAnswer === question.answer ? 'text-green-700' : 'text-red-700'}>
                 {studentAnswer}
@@ -276,9 +343,9 @@ export default function StudentSubmissionPage({
                 <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded">
                   <FileText className="w-4 h-4" />
                   <span className="text-sm flex-1 truncate">{file.fileName}</span>
-                  <a 
-                    href={file.fileUrl} 
-                    target="_blank" 
+                  <a
+                    href={file.fileUrl}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-800"
                   >
@@ -312,6 +379,19 @@ export default function StudentSubmissionPage({
 
   return (
     <div className="h-full space-y-6 p-6">
+      <Dialog
+        isOpen={dialogState.isOpen}
+        onClose={hideDialog}
+        title={dialogState.title}
+        message={dialogState.message}
+        type={dialogState.type}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        showCancel={dialogState.showCancel}
+        autoClose={dialogState.autoClose}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -323,7 +403,7 @@ export default function StudentSubmissionPage({
             Submitted: {submission.submittedAt ? formatDate(submission.submittedAt) : 'Not submitted'}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <div className="text-right">
             <div className="text-2xl font-bold text-gray-900">
@@ -333,7 +413,7 @@ export default function StudentSubmissionPage({
               {percentageScore}%
             </div>
           </div>
-          
+
           <div className="flex border overflow-hidden">
             <button
               onClick={() => setMode("view")}
@@ -364,7 +444,7 @@ export default function StudentSubmissionPage({
                   <span className="text-sm font-medium">Time Spent</span>
                 </div>
                 <div className="text-lg font-semibold">
-                  {submission.startedAt && submission.submittedAt 
+                  {submission.startedAt && submission.submittedAt
                     ? `${Math.round((new Date(submission.submittedAt).getTime() - new Date(submission.startedAt).getTime()) / 60000)} minutes`
                     : 'N/A'
                   }
@@ -398,8 +478,8 @@ export default function StudentSubmissionPage({
             <h2 className="text-lg font-semibold mb-4">Student Answers</h2>
             <div className="space-y-6">
               {test.questions?.map((question, index) => {
-                const studentAnswer = submission.answers && typeof submission.answers === 'object' 
-                  ? (submission.answers as Record<string, any>)[question.id] 
+                const studentAnswer = submission.answers && typeof submission.answers === 'object'
+                  ? (submission.answers as Record<string, any>)[question.id]
                   : null;
 
                 return (
@@ -447,8 +527,8 @@ export default function StudentSubmissionPage({
             <h2 className="text-lg font-semibold mb-4">Grade Submission</h2>
             <div className="space-y-6">
               {test.questions?.map((question, index) => {
-                const studentAnswer = submission.answers && typeof submission.answers === 'object' 
-                  ? (submission.answers as Record<string, any>)[question.id] 
+                const studentAnswer = submission.answers && typeof submission.answers === 'object'
+                  ? (submission.answers as Record<string, any>)[question.id]
                   : null;
 
                 return (
@@ -517,7 +597,7 @@ export default function StudentSubmissionPage({
                   className="w-full p-3 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none focus:border-blue-500 min-h-32 resize-y text-sm"
                 />
               </div>
-              
+
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="font-medium text-gray-900 mb-3">Grade Summary</h3>
                 <div className="space-y-2">
@@ -531,10 +611,18 @@ export default function StudentSubmissionPage({
                   </div>
                   <div className="pt-2 border-t">
                     <button
-                      onClick={saveGrade}
-                      className="w-full bg-blue-600 text-white py-2 px-4 hover:bg-blue-700 transition-colors text-sm"
+                      onClick={confirmSaveGrade}
+                      disabled={isSaving}
+                      className="w-full bg-blue-600 text-white py-2 px-4 hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Save Final Grade
+                      {isSaving ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Final Grade'
+                      )}
                     </button>
                   </div>
                 </div>

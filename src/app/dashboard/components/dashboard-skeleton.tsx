@@ -78,7 +78,7 @@ export function SkeletonSection({ icon, title, color }: {
         {title}
       </h2>
       <div className="space-y-3">
-        {[...Array(3)].map((_, i) => (
+        {[...Array(1)].map((_, i) => (
           <div key={i} className="bg-gray-50 p-3 rounded animate-pulse">
             <div className="h-4 w-3/4 bg-gray-200 rounded mb-2"></div>
             <div className="h-3 w-1/2 bg-gray-200 rounded"></div>

@@ -2,18 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
-  const tutorId = req.nextUrl.searchParams.get("tutorId");
-  const studentId = req.nextUrl.searchParams.get("studentId");
-  const testId = req.nextUrl.searchParams.get("testId");
-  const courseIds = req.nextUrl.searchParams.get("courseIds");
+  const { searchParams } = req.nextUrl;
+  const tutorId = searchParams.get("tutorId");
+  const studentId = searchParams.get("studentId");
+  const testId = searchParams.get("testId");
+  const courseIds = searchParams.get("courseIds");
+  const courseId = searchParams.get("courseId");
 
-  if (!tutorId && !testId && !courseIds && !studentId)
+  if (!tutorId && !testId && !courseIds && !studentId && !courseId) {
     return NextResponse.json(
       { error: "Course, Test or Tutor ID required" },
       { status: 400 }
     );
+  }
 
-  if (tutorId) {
+  if (courseId && studentId) {
+    const tests = await prisma.test.findMany({
+      where: {
+        course: {
+          id: courseId,
+          students: {
+            some: {
+              id: studentId,
+            },
+          },
+        },
+      },
+      include: {
+        questions: true,
+      },
+    });
+    return NextResponse.json(tests);
+  } else if (tutorId) {
     const tests = await prisma.test.findMany({
       where: {
         course: {
@@ -21,8 +41,6 @@ export async function GET(req: NextRequest) {
         },
       },
       include: {
-        course: true,
-        submissions: true,
         questions: true,
       },
     });
@@ -33,8 +51,6 @@ export async function GET(req: NextRequest) {
         id: testId,
       },
       include: {
-        course: true,
-        submissions: true,
         questions: true,
       },
     });
@@ -50,8 +66,6 @@ export async function GET(req: NextRequest) {
           },
         },
         include: {
-          course: true,
-          submissions: true,
           questions: true,
         },
       });
@@ -75,8 +89,6 @@ export async function GET(req: NextRequest) {
         },
       },
       include: {
-        course: true,
-        submissions: true,
         questions: true,
       },
     });
@@ -86,7 +98,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-  
+
   const newTest = await prisma.test.create({
     data: {
       ...data,
@@ -96,14 +108,24 @@ export async function POST(req: NextRequest) {
           type: q.type,
           points: q.points,
           options: q.options,
-          answer: q.answer
-        }))
-      }
+          answer: q.answer,
+        })),
+      },
     },
     include: {
-      questions: true
-    }
+      questions: true,
+    },
   });
+
+  await prisma.notification.create({
+  data: {
+    title: "New Test Created",
+    message: `A new test "${newTest.title}" has been published.`,
+    link: `/dashboard/tests/${newTest.id}`,
+    type: "TEST_CREATED",
+    courseId: newTest.courseId,
+  },
+});
 
   return NextResponse.json(newTest);
 }

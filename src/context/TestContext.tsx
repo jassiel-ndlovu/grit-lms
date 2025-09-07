@@ -15,6 +15,7 @@ interface TestContextType {
   fetchTestsByTutorId: (tutorId: string) => Promise<void | AppTypes.Test[]>;
   fetchTestById: (testId: string) => Promise<void | AppTypes.Test>;
   fetchTestsByStudentId: (studentId: string) => Promise<void | AppTypes.Test[]>;
+  fetchTestsByStudentIdCourseId: (studentId: string, courseId: string) => Promise<void | AppTypes.Test[]>;
   fetchTestsByCourse: (courseIds: string[]) => Promise<void | AppTypes.Test[]>;
   createTest: (courseId: string, testData: Partial<AppTypes.Test>) => Promise<AppTypes.Test | void>;
   updateTest: (testId: string, updates: Partial<AppTypes.Test>) => Promise<AppTypes.Test | void>;
@@ -63,7 +64,24 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await axios.get(`/api/tests?studentId=${studentId}`);
       setTests(res.data);
-      
+
+      return res.data;
+    } catch (err: any) {
+      setMessage(Message.error(
+        err.response?.data?.message || 'Failed to fetch tests',
+        { title: 'Fetch Error', duration: 5000 }
+      ));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchTestsByStudentIdCourseId = useCallback(async (studentId: string, courseId: string) => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`/api/tests?studentId=${studentId}&courseId=${courseId}`);
+      setTests(res.data);
+
       return res.data;
     } catch (err: any) {
       setMessage(Message.error(
@@ -79,7 +97,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       const res = await axios.get(`/api/tests?testId=${testId}`);
-      
+
       setCurrentTest(res.data);
 
       return res.data;
@@ -95,7 +113,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchTestsByCourse = useCallback(async (courseIds: string[]) => {
     if (!courseIds.length) return;
-    
+
     setLoading(true);
     try {
       const res = await axios.get('/api/tests', {
@@ -192,6 +210,7 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
         message,
         fetchTestsByCourse,
         fetchTestsByStudentId,
+        fetchTestsByStudentIdCourseId,
         fetchTestsByTutorId,
         fetchTestById,
         createTest,

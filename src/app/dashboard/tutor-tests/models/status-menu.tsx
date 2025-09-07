@@ -8,6 +8,7 @@ type StatusCheckProps = {
     inProgressCount: number;
   };
   isActive: boolean;
+  isLoading: boolean;
 }
 
 export default function StatusCheck({ stats, isActive }: StatusCheckProps) {

@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getToken } from "next-auth/jwt";
 
 export async function GET(req: NextRequest) {
   const studentId = req.nextUrl.searchParams.get("studentId");
@@ -104,7 +105,15 @@ export async function GET(req: NextRequest) {
 }
 
 // POST create new submission
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const token = await getToken({ req });
+
+  if (!token?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = token.id;
+
   try {
     const data = await req.json();
 
@@ -134,6 +143,34 @@ export async function POST(req: Request) {
         uploadedFiles: true,
       },
     });
+
+    // activity logs
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        action: "TEST_COMPLETED",
+        targetId: data.testId,
+        meta: { score: data.score ?? 0 },
+      },
+    });
+
+    // notifications
+    const test = await prisma.test.findUnique({
+      where: { id: data.testId },
+    });
+
+    if (test) {
+    await prisma.notification.create({
+      data: {
+        title: "Test Submitted",
+        message: `Your test "${test.title}" has been submitted.`,
+        link: `/dashboard/tests/review/${test.id}`,
+        type: "TEST_DUE",
+        studentId: data.studentId,
+        courseId: test.courseId,
+      },
+    });
+  }
 
     return NextResponse.json(submission, { status: 201 });
   } catch (error) {

@@ -3,10 +3,11 @@
 import { BookOpen, Clock, Plus, Search, Users } from "lucide-react";
 import TestActionsMenu from "./models/actions-menu";
 import TutorTestsTableSkeleton from "./skeletons/table-skeleton";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCourses } from "@/context/CourseContext";
 import { useTests } from "@/context/TestContext";
 import { useProfile } from "@/context/ProfileContext";
+import { useTestSubmissions } from "@/context/TestSubmissionContext";
 import { formatDate } from "@/lib/functions";
 import ViewSubmissionsDialog from "./dialogs/view-submission-dialog";
 import StatusCheck from "./models/status-menu";
@@ -15,6 +16,7 @@ import { useRouter } from "next/navigation";
 export default function TutorTestsPage() {
   const { fetchCoursesByTutorId, loading: coursesLoading } = useCourses();
   const { fetchTestsByTutorId, deleteTest, loading: testLoading } = useTests();
+  const { fetchSubmissionsByTestId } = useTestSubmissions();
   const { profile } = useProfile();
   const router = useRouter();
 
@@ -22,11 +24,13 @@ export default function TutorTestsPage() {
 
   const [tests, setTests] = useState<AppTypes.Test[]>([]);
   const [courses, setCourses] = useState<AppTypes.Course[]>([]);
+  const [testSubmissions, setTestSubmissions] = useState<Record<string, AppTypes.TestSubmission[]>>({});
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTest, setSelectedTest] = useState<AppTypes.Test | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submissionsLoading, setSubmissionsLoading] = useState<Record<string, boolean>>({});
   const [showSubmissionsDialog, setShowSubmissionsDialog] = useState<boolean>(false);
 
   // fetch courses
@@ -36,14 +40,32 @@ export default function TutorTestsPage() {
     const fetch = async () => {
       setLoading(true);
 
-      const fetchedCourses = await fetchCoursesByTutorId(tutorProfile.id) as AppTypes.Course[];
-
-      setCourses(fetchedCourses);
-      setLoading(false);
+      try {
+        const fetchedCourses = await fetchCoursesByTutorId(tutorProfile.id) as AppTypes.Course[];
+        setCourses(fetchedCourses);
+      } catch (error) {
+        console.error("Failed to fetch courses:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetch();
   }, [tutorProfile, fetchCoursesByTutorId]);
+
+// Function to fetch submissions for a specific test
+  const fetchTestSubmissions = useCallback(async (testId: string) => {
+    setSubmissionsLoading(prev => ({ ...prev, [testId]: true }));
+    
+    try {
+      const submissions = await fetchSubmissionsByTestId(testId) as AppTypes.TestSubmission[];
+      setTestSubmissions(prev => ({ ...prev, [testId]: submissions }));
+    } catch (error) {
+      console.error(`Failed to fetch submissions for test ${testId}:`, error);
+    } finally {
+      setSubmissionsLoading(prev => ({ ...prev, [testId]: false }));
+    }
+  }, [fetchSubmissionsByTestId]);
 
   // fetch tests
   useEffect(() => {
@@ -52,14 +74,23 @@ export default function TutorTestsPage() {
     const fetch = async () => {
       setLoading(true);
 
-      const fetchedTests = await fetchTestsByTutorId(tutorProfile.id) as AppTypes.Test[];
-
-      setTests(fetchedTests);
-      setLoading(false);
+      try {
+        const fetchedTests = await fetchTestsByTutorId(tutorProfile.id) as AppTypes.Test[];
+        setTests(fetchedTests);
+        
+        // Fetch submissions for each test
+        fetchedTests.forEach(test => {
+          fetchTestSubmissions(test.id);
+        });
+      } catch (error) {
+        console.error("Failed to fetch tests:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetch();
-  }, [tutorProfile, fetchTestsByTutorId]);
+  }, [tutorProfile, fetchTestsByTutorId, fetchTestSubmissions]);
 
   // memoized filter function
   const filteredTests = useMemo(() => {
@@ -74,13 +105,14 @@ export default function TutorTestsPage() {
     if (searchTerm) {
       filtered = filtered.filter(test =>
         test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        test.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        test.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         courses.find(c => c.id === test.courseId)?.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Filter by status
     if (statusFilter !== 'all') {
+      const now = new Date();
       filtered = filtered.filter(test => {
         switch (statusFilter) {
           case 'active':
@@ -88,9 +120,9 @@ export default function TutorTestsPage() {
           case 'inactive':
             return !test.isActive;
           case 'upcoming':
-            return test.dueDate > new Date();
+            return new Date(test.dueDate) > now;
           case 'past':
-            return test.dueDate <= new Date();
+            return new Date(test.dueDate) <= now;
           default:
             return true;
         }
@@ -102,12 +134,19 @@ export default function TutorTestsPage() {
 
   // functions
   const getTestStats = (test: AppTypes.Test) => {
+    const submissions = testSubmissions[test.id] || [];
     const totalStudents = courses.find(c => c.id === test.courseId)?.students?.length || 0;
-    const submittedCount = test.submissions.filter(s => s.submittedAt).length;
-    const gradedCount = test.submissions.filter(s => s.score !== undefined).length;
-    const inProgressCount = test.submissions.filter(s => s.status === 'SUBMITTED').length;
+    const submittedCount = submissions.filter(s => s.submittedAt).length;
+    const gradedCount = submissions.filter(s => s.grade !== undefined && s.grade !== null).length;
+    const inProgressCount = submissions.filter(s => s.status === 'SUBMITTED').length;
 
-    return { totalStudents, submittedCount, gradedCount, inProgressCount };
+    return { 
+      totalStudents, 
+      submittedCount, 
+      gradedCount, 
+      inProgressCount,
+      isLoading: submissionsLoading[test.id] || false
+    };
   };
 
   const formatDuration = (minutes: number) => {
@@ -130,30 +169,57 @@ export default function TutorTestsPage() {
     try {
       if (confirm('Are you sure you want to delete this test? This action cannot be undone.')) {
         await deleteTest(testId);
+        setTests(prev => prev.filter(test => test.id !== testId));
+        // Remove submissions for deleted test
+        setTestSubmissions(prev => {
+          const newSubmissions = { ...prev };
+          delete newSubmissions[testId];
+          return newSubmissions;
+        });
       }
     } catch (error) {
       console.error('Error deleting test:', error);
     }
   };
 
-  const handleDuplicateTest = (test: AppTypes.Test) => {
-    const duplicated: AppTypes.Test = {
-      ...test,
-      id: `${test.id}_copy_${Date.now()}`,
-      title: `${test.title} (Copy)`,
-      submissions: [],
-      createdAt: new Date(),
-    };
-    setTests(prev => [duplicated, ...prev]);
+  const handleDuplicateTest = async (test: AppTypes.Test) => {
+    try {
+      // Create a copy of the test without the ID and with a new title
+      const duplicatedTest = {
+        ...test,
+        id: undefined, // Let the server generate a new ID
+        title: `${test.title} (Copy)`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // In a real implementation, you would call an API to create the duplicated test
+      // For now, we'll just add it to the local state
+      setTests(prev => [{ ...duplicatedTest, id: `temp-${Date.now()}` }, ...prev]);
+      
+      // Show success message
+      alert('Test duplicated successfully!');
+    } catch (error) {
+      console.error('Error duplicating test:', error);
+      alert('Failed to duplicate test. Please try again.');
+    }
   };
 
-  const handleToggleActive = (testId: string) => {
-    setTests(prev => prev.map(test =>
-      test.id === testId ? { ...test, isActive: !test.isActive } : test
-    ));
+  const handleToggleActive = async (testId: string) => {
+    try {
+      // In a real implementation, you would call an API to toggle the test status
+      // For now, we'll just update the local state
+      setTests(prev => prev.map(test =>
+        test.id === testId ? { ...test, isActive: !test.isActive } : test
+      ));
+    } catch (error) {
+      console.error('Error toggling test status:', error);
+    }
   };
 
-  if (loading || testLoading || coursesLoading) {
+  const isLoading = loading || testLoading || coursesLoading;
+
+  if (isLoading) {
     return <TutorTestsTableSkeleton />;
   }
 
@@ -172,7 +238,7 @@ export default function TutorTestsPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 p-6 bg-white border border-gray-200 flex justify-between items-center">
+      <div className="mb-6 p-6 bg-white border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex flex-wrap gap-4 items-center">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -221,7 +287,7 @@ export default function TutorTestsPage() {
       </div>
 
       {/* Tests Table */}
-      {(!filteredTests.length && !loading) ? (
+      {(!filteredTests.length && !isLoading) ? (
         <div className="text-center py-12 bg-white border border-gray-200">
           <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -274,10 +340,11 @@ export default function TutorTestsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredTests.map(test => {
                   const stats = getTestStats(test);
-                  const isOverdue = new Date() > test.dueDate;
+                  const isOverdue = new Date() > new Date(test.dueDate);
                   const completionRate = stats.totalStudents > 0
                     ? Math.round((stats.submittedCount / stats.totalStudents) * 100)
                     : 0;
+                  const course = courses.find(c => c.id === test.courseId);
 
                   return (
                     <tr key={test.id} className="hover:bg-gray-50">
@@ -287,13 +354,13 @@ export default function TutorTestsPage() {
                             {test.title}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {test.totalPoints} points • Created {new Date(test.createdAt).toLocaleDateString()}
+                            {test.totalPoints} points • Created {formatDate(test.createdAt)}
                           </div>
                         </div>
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{courses.find(c => c.id === test.courseId)?.name || "Course name not found"}</div>
+                        <div className="text-sm text-gray-900">{course?.name || "Course not found"}</div>
                         <div className="text-sm text-gray-500 flex items-center">
                           <Users className="w-3 h-3 mr-1" />
                           {stats.totalStudents} students
@@ -317,17 +384,21 @@ export default function TutorTestsPage() {
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full"
-                              style={{ width: `${completionRate}%` }}
-                            ></div>
+                        {stats.isLoading ? (
+                          <div className="text-sm text-gray-500">Loading...</div>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                              <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${completionRate}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm text-gray-600">
+                              {stats.submittedCount}/{stats.totalStudents}
+                            </span>
                           </div>
-                          <span className="text-sm text-gray-600">
-                            {stats.submittedCount}/{stats.totalStudents}
-                          </span>
-                        </div>
+                        )}
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -338,6 +409,7 @@ export default function TutorTestsPage() {
                             inProgressCount: stats.inProgressCount,
                             submittedCount: stats.submittedCount
                           }}
+                          isLoading={stats.isLoading}
                         />
                       </td>
 
@@ -360,11 +432,12 @@ export default function TutorTestsPage() {
         </div>
       )}
 
-      {showSubmissionsDialog && (
+      {showSubmissionsDialog && selectedTest && (
         <ViewSubmissionsDialog
-          test={selectedTest as AppTypes.Test}
-          courseId={selectedTest?.courseId as string}
-          courseName={courses.find(c => c.id === selectedTest?.courseId)?.name || "Course Name Not Found"}
+          test={selectedTest}
+          testSubmissions={testSubmissions}
+          courseId={selectedTest.courseId}
+          courseName={courses.find(c => c.id === selectedTest.courseId)?.name || "Course Name Not Found"}
           onClose={() => setShowSubmissionsDialog(false)}
         />
       )}

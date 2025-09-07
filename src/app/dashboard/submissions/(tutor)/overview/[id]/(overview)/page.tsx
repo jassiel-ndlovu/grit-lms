@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useCourses } from "@/context/CourseContext";
@@ -6,7 +5,7 @@ import { useSubmission } from "@/context/SubmissionContext";
 import { useSubmissionEntries } from "@/context/SubmissionEntryContext";
 import { $Enums } from "@/generated/prisma";
 import { formatDate } from "@/lib/functions";
-import { AlertCircle, Calendar, CheckCircle, Download, Edit3, Eye, FileText, ArrowLeft, Trash2, Users, ChevronRight } from "lucide-react";
+import { AlertCircle, Calendar, CheckCircle, Edit3, FileText, Trash2, Users, ChevronRight } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import OverviewSkeleton from "../../../../skeletons/overview-skeleton";
@@ -63,7 +62,7 @@ export default function SubmissionDetailTutor() {
 
   // helper functions
   const averageGrade = (stats as Stats).gradedCount > 0
-    ? Math.round(entries.reduce((sum, entry) => sum + (0 || 0), 0) / (stats as Stats).gradedCount)
+    ? Math.round(entries.reduce((sum, entry) => sum + (entry.grade?.score || 0), 0) / (stats as Stats).gradedCount)
     : 0;
 
   const handleDeleteSubmission = async () => {
