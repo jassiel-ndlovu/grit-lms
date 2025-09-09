@@ -238,55 +238,53 @@ export default function StudentCourse({ params }: StudentCourseProps) {
       </div>
 
       {/* Course Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-2">{course.name}</h2>
-              <p className="text-blue-100 mb-4 max-w-2xl">{course.description}</p>
-              <div className="flex items-center space-x-6">
-                <div>
-                  <div className="text-sm text-blue-200">Progress</div>
-                  {completionsLoading ?
-                    <Skeleton className="h-6 w-40 mb-1 rounded !bg-blue-200" />
-                    : <div className="text-lg font-semibold">{Math.round(progressPercentage)}%</div>
-                  }
-                </div>
-                <div>
-                  <div className="text-sm text-blue-200">Overall Grade</div>
-                  {entriesLoading || testSubsLoading ?
-                    <Skeleton className="h-6 w-40 mb-1 rounded !bg-blue-200" />
-                    : <div className="text-lg font-semibold">{calculateOverallGrade()}%</div>
-                  }
-                </div>
-                <div>
-                  <div className="text-sm text-blue-200">Lessons Completed</div>
-                  {completionsLoading ?
-                    <Skeleton className="h-6 w-40 mb-1 rounded !bg-blue-200" />
-                    : <div className="text-lg font-semibold">{completions.length} of {lessons.length}</div>
-                  }
-                </div>
-              </div>
-            </div>
-            <div className="hidden md:block">
-              <div className="relative w-32 h-32 bg-white/10 border-2 border-white flex items-center justify-center">
+      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          <div className="flex items-center justify-between gap-10">
+            <div className="w-60 h-60 hidden md:block">
+              <div className="relative h-full w-full  bg-white/10 border-2 border-white/20 rounded-lg">
                 <Image
                   src={`/images/${course.imageUrl}`}
                   alt="Course Image"
                   fill
-                  className="object-cover"
+                  className="object-cover rounded-lg"
                 />
               </div>
             </div>
+
+            <div className="flex-1">
+              <h2 className="text-3xl font-bold mb-2">{course.name}</h2>
+              <p className="text-blue-100 mb-4 max-w-2xl">{course.description}</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-8">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="text-white/80 text-sm mb-1">Progress</div>
+                  <div className="text-2xl font-bold text-white">{progressPercentage}%</div>
+                  <div className="text-white/60 text-xs">{completions.length} of {lessons.length} lessons</div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="text-white/80 text-sm mb-1">Overall Grade</div>
+                  <div className="text-2xl font-bold text-white">{calculateOverallGrade()}%</div>
+                </div>
+              </div>
+            </div>
+            
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-6">
-            <div className="bg-blue-700/30 border-white/20 border rounded-full h-2">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-white/80">
+              <span>Course Progress</span>
+              <span>{progressPercentage}%</span>
+            </div>
+            <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
               <div
-                className="from-0% via-50% to-100% bg-gradient-to-r from-green-400 to-blue-400 rounded-full h-2 transition-all duration-300"
+                className="h-full bg-gradient-to-r from-green-400 to-blue-400 rounded-full transition-all duration-1000 ease-out relative"
                 style={{ width: `${progressPercentage}%` }}
-              ></div>
+              >
+                <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
+              </div>
             </div>
           </div>
         </div>

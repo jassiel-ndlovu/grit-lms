@@ -6,10 +6,11 @@ import { useState } from "react";
 const QuestionReview: React.FC<{
   questionNumber: number;
   question: AppTypes.TestQuestion;
+  questionGrade?: AppTypes.QuestionGrade;
   studentAnswer: any;
   isCorrect: boolean;
   partialCredit?: number;
-}> = ({ question, questionNumber, studentAnswer, isCorrect, partialCredit }) => {
+}> = ({ question, questionGrade, questionNumber, studentAnswer, isCorrect, partialCredit }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
   const renderAnswer = () => {
@@ -401,6 +402,23 @@ const QuestionReview: React.FC<{
         <div className="px-6 pb-6 border-t border-gray-100">
           <div className="mt-4">
             {renderAnswer()}
+            {questionGrade && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-900">
+                    Score: {questionGrade.score}/{questionGrade.outOf}
+                  </span>
+                  <span className="text-sm text-blue-700">
+                    {((questionGrade.score / questionGrade.outOf) * 100).toFixed(1)}%
+                  </span>
+                </div>
+                {questionGrade.feedback && (
+                  <div className="mt-2">
+                    <p className="text-sm text-blue-900">{questionGrade.feedback}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

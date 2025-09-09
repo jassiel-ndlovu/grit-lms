@@ -40,7 +40,6 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
       const sub = await fetchSubmissionByStudentTestId(studentProfile.id, id) as AppTypes.TestSubmission;
 
       setSubmission(sub);
-
       setLoading(false);
     };
 
@@ -89,6 +88,32 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
       IN_PROGRESS: 'bg-yellow-100 text-yellow-800'
     };
     return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Calculate score based on grade if available, otherwise use submission score
+  const calculateScore = () => {
+    if (submission?.grade) {
+      // Use grade data if available
+      return {
+        percentage: (submission.grade.score / submission.grade.outOf) * 100,
+        points: submission.grade.score,
+        totalPoints: submission.grade.outOf
+      };
+    } else if (submission?.score !== null && submission?.score !== undefined) {
+      // Fall back to submission score
+      return {
+        percentage: submission.score,
+        points: Math.round(submission.score * test!.totalPoints / 100),
+        totalPoints: test!.totalPoints
+      };
+    }
+    return null;
+  };
+
+  // Get question grade for a specific question
+  const getQuestionGrade = (questionId: string) => {
+    if (!submission?.questionGrades) return null;
+    return submission.questionGrades.find(qg => qg.questionId === questionId);
   };
 
   // Type-safe version with additional checks
@@ -142,6 +167,8 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
     );
   }
 
+  const scoreData = calculateScore();
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -163,9 +190,9 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
                 <span className="text-sm font-medium text-blue-900">Score</span>
               </div>
               <div className="font-semibold text-blue-900">
-                {submission.score !== null ? (
-                  <span className={getScoreColor(submission.score)}>
-                    {submission.score}%
+                {scoreData ? (
+                  <span className={getScoreColor(scoreData.percentage)}>
+                    {scoreData.percentage.toFixed(1)}%
                   </span>
                 ) : (
                   <span className="text-gray-500">
@@ -174,8 +201,13 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
                 )}
               </div>
               <div className="text-xs text-blue-700">
-                {submission.score !== null && `${Math.round(submission.score * test.totalPoints / 100)}/${test.totalPoints} points`}
+                {scoreData && `${scoreData.points}/${scoreData.totalPoints} points`}
               </div>
+              {submission.grade && (
+                <div className="text-xs text-blue-700 mt-1">
+                  Graded
+                </div>
+              )}
             </div>
 
             <div className="bg-green-50 p-4 border border-green-200">
@@ -183,7 +215,7 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
                 <Clock className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-medium text-green-900">
                   Time Spent
-                  </span>
+                </span>
               </div>
               <div className="font-semibold text-green-900">
                 {calculateTimeSpent()}
@@ -200,7 +232,7 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
                 <Calendar className="w-4 h-4 text-purple-600" />
                 <span className="text-sm font-medium text-purple-900">
                   Submitted
-                  </span>
+                </span>
               </div>
               <div className="font-semibold text-purple-900">
                 {submission.submittedAt
@@ -233,12 +265,52 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
           </div>
         </div>
 
+        {/* Grade Information */}
+        {submission.grade && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Grade Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="text-sm font-medium text-blue-900 mb-1">Final Score</h3>
+                <p className="text-2xl font-bold text-blue-900">
+                  {submission.grade.score}/{submission.grade.outOf}
+                </p>
+                <p className="text-sm text-blue-700">
+                  {(submission.grade.score / submission.grade.outOf * 100).toFixed(1)}%
+                </p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="text-sm font-medium text-green-900 mb-1">Graded On</h3>
+                <p className="text-sm text-green-900">
+                  {new Date(submission.grade.createdAt).toLocaleDateString()}
+                </p>
+                <p className="text-xs text-green-700">
+                  {new Date(submission.grade.createdAt).toLocaleTimeString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Feedback */}
-        {submission.feedback && (
+        {(submission.feedback || submission.grade?.finalComments) && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Instructor Feedback</h2>
             <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-              <p className="text-blue-900 whitespace-pre-wrap">{submission.feedback}</p>
+              {submission.grade?.finalComments && (
+                <div className="mb-3">
+                  <h3 className="text-sm font-medium text-blue-900 mb-1">Final Comments</h3>
+                  <p className="text-blue-900 whitespace-pre-wrap">{submission.grade.finalComments}</p>
+                </div>
+              )}
+              {submission.feedback && (
+                <div>
+                  {submission.grade?.finalComments && (
+                    <h3 className="text-sm font-medium text-blue-900 mb-1">Additional Feedback</h3>
+                  )}
+                  <p className="text-blue-900 whitespace-pre-wrap">{submission.feedback}</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -254,6 +326,7 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
             }
 
             const isCorrect = areAnswersEqual(studentAnswer, question.answer);
+            const questionGrade = getQuestionGrade(question.id);
 
             return (
               <QuestionReview
@@ -262,6 +335,7 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
                 questionNumber={i + 1}
                 studentAnswer={studentAnswer}
                 isCorrect={isCorrect}
+                questionGrade={questionGrade as AppTypes.QuestionGrade}
               />
             );
           })}
@@ -270,9 +344,10 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
         {/* Navigation */}
         <div className="mt-8 flex justify-center">
           <button 
-          onClick={() => router.push("/dashboard/tests")}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-6 py-3 transition-colors">
-            Return to Course
+            onClick={() => router.push("/dashboard/tests")}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-6 py-3 transition-colors"
+          >
+            Return to Tests
           </button>
         </div>
       </div>

@@ -15,10 +15,13 @@ type TabType = 'active' | 'incomplete' | 'completed';
 export default function TestsPage() {
   const { fetchTestsByCourse, loading: testsLoading } = useTests();
   const { fetchCoursesByStudentId, loading: coursesLoading } = useCourses();
+  const { fetchSubmissionByStudentTestId } = useTestSubmissions();
   const { profile, loading: profileLoading } = useProfile();
 
   const [studentCourses, setStudentCourses] = useState<AppTypes.Course[]>([]);
   const [studentTests, setStudentTests] = useState<AppTypes.Test[]>([]);
+  const [testSubmissions, setTestSubmissions] = useState<AppTypes.TestSubmission[]>([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabType>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCourse, setFilterCourse] = useState('all');
@@ -40,47 +43,100 @@ export default function TestsPage() {
       const fetchTests = async () => {
         if (coursesLoading) return;
         const courseIds = studentCourses.map(course => course.id);
-        const fetchedTests = await fetchTestsByCourse(courseIds);
-        setStudentTests(fetchedTests || []);
+        const fetchedTests = await fetchTestsByCourse(courseIds) as AppTypes.Test[];
+        setStudentTests(fetchedTests);
+
+        if (!fetchedTests || fetchedTests.length === 0) return;
+
+        try {
+          // Create an array of promises for all submissions
+          const submissionPromises = fetchedTests.map(t =>
+            fetchSubmissionByStudentTestId(studentProfile.id, t.id)
+          );
+
+          // Execute all requests in parallel
+          const results = await Promise.allSettled(submissionPromises);
+
+          // Process results
+          const successfulSubmissions: AppTypes.TestSubmission[] = [];
+          const errors: string[] = [];
+
+          results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value) {
+              successfulSubmissions.push(result.value as AppTypes.TestSubmission);
+            } else {
+              errors.push(`Failed to fetch submission for test: ${fetchedTests[index]?.title}`);
+            }
+          });
+
+          // Set the successful submissions
+          setTestSubmissions(successfulSubmissions);
+
+          // Log any errors
+          if (errors.length > 0) {
+            console.warn('Some submissions failed to load:', errors);
+            if (successfulSubmissions.length === 0) {
+              console.error('Failed to load submissions');
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching test submissions:', error);
+        } finally {
+          setLoadingSubmissions(false);
+        }
       }
       fetchTests();
     }
-  }, [studentProfile?.id, studentCourses, fetchTestsByCourse, coursesLoading]);
+  }, [studentProfile?.id, studentCourses, fetchTestsByCourse, coursesLoading, fetchSubmissionByStudentTestId]);
 
   // Filter tests based on active tab
   const filteredTests = useMemo(() => {
+    if (!studentTests || studentTests.length === 0) return [];
+
     const now = new Date();
-    
+
     return studentTests.filter(test => {
       const dueDate = new Date(test.dueDate);
-      const isCompleted = test.submissions?.some(sub => sub.status === "SUBMITTED");
+      const submission = testSubmissions.find(sub => sub.testId === test.id);
+      const isCompleted = submission && submission.status === "SUBMITTED";
       const isExpired = dueDate < now;
-      
+
+      // A test is active if it is before the due date and test.isActive
+      const isActive = test.isActive && dueDate >= now;
+
+      // A test is incomplete if test.isActive, the due date has passed and no submission is found
+      const isIncomplete = test.isActive && isExpired && !isCompleted;
+
+      // A test is completed if test.isActive, the due date has passed and a submission is found
+      const isCompletedStatus = test.isActive && isExpired && isCompleted;
+
       // Filter by tab
       if (activeTab === 'active') {
-        if (isExpired || isCompleted) return false;
+        if (!isActive) return false;
       } else if (activeTab === 'incomplete') {
-        if (!isExpired || isCompleted) return false;
+        if (!isIncomplete) return false;
       } else if (activeTab === 'completed') {
-        if (!isCompleted) return false;
+        if (!isCompletedStatus) return false;
       }
-      
+
       // Filter by search query
       if (searchQuery && !test.title.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
-      
+
       // Filter by course
       if (filterCourse !== 'all' && test.courseId !== filterCourse) {
         return false;
       }
-      
+
       return true;
     });
-  }, [studentTests, activeTab, searchQuery, filterCourse]);
+  }, [studentTests, testSubmissions, activeTab, searchQuery, filterCourse]);
 
   // Get course info for each test
   const testsWithCourseInfo = useMemo(() => {
+    if (!filteredTests) return;
+
     return filteredTests.map(test => {
       const course = studentCourses.find(c => c.id === test.courseId);
       return {
@@ -91,12 +147,14 @@ export default function TestsPage() {
     });
   }, [filteredTests, studentCourses]);
 
-  const isLoading = coursesLoading || testsLoading || profileLoading;
+  const isLoading = coursesLoading || testsLoading || profileLoading || loadingSubmissions;
 
   // Calculate stats for the header
   const stats = useMemo(() => {
+    if (!studentTests || studentTests.length === 0) return;
+
     const activeTests = studentTests.filter(test => new Date(test.dueDate) > new Date());
-    const completedTests = studentTests.filter(test => 
+    const completedTests = studentTests.filter(test =>
       test.submissions?.some(sub => sub.status === "SUBMITTED")
     );
     const upcomingDeadlines = studentTests.filter(test => {
@@ -140,13 +198,13 @@ export default function TestsPage() {
                   <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
                     <BookOpen className="w-4 h-4 text-yellow-300" />
                   </div>
-                  <span className="text-sm text-blue-100">{stats.totalTests} Total Tests</span>
+                  <span className="text-sm text-blue-100">{stats ? stats.totalTests: 0} Total Tests</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
                     <Target className="w-4 h-4 text-green-300" />
                   </div>
-                  <span className="text-sm text-blue-100">{stats.activeTests} Active Tests</span>
+                  <span className="text-sm text-blue-100">{stats ? stats.activeTests : 0} Active Tests</span>
                 </div>
               </div>
             </div>
@@ -154,13 +212,13 @@ export default function TestsPage() {
             <div className="relative">
               <div className="w-64 h-40 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/20 p-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold mb-1">{stats.completionRate}%</div>
+                  <div className="text-3xl font-bold mb-1">{stats ? stats.completionRate: 0}%</div>
                   <div className="text-sm text-blue-100">Completion Rate</div>
                   <div className="mt-4 flex justify-center">
                     <div className="w-20 h-2 bg-white/20 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-green-400 to-blue-400 rounded-full transition-all duration-500"
-                        style={{ width: `${stats.completionRate}%` }}
+                        style={{ width: `${stats ? stats.completionRate: 0}%` }}
                       ></div>
                     </div>
                   </div>
@@ -175,28 +233,28 @@ export default function TestsPage() {
           <StatCard
             icon={<BookOpen className="w-6 h-6 text-blue-600" />}
             title="Total Tests"
-            value={stats.totalTests.toString()}
+            value={stats ? stats.totalTests.toString(): "0"}
             color="blue"
             trend="All courses"
           />
           <StatCard
             icon={<Clock className="w-6 h-6 text-amber-600" />}
             title="Active Tests"
-            value={stats.activeTests.toString()}
+            value={stats ? stats.activeTests.toString(): "0"}
             color="amber"
             trend="Ready to take"
           />
           <StatCard
             icon={<TrendingUp className="w-6 h-6 text-green-600" />}
             title="Completion Rate"
-            value={`${stats.completionRate}%`}
+            value={`${stats ? stats.completionRate: "0"}%`}
             color="green"
             trend="Overall progress"
           />
           <StatCard
             icon={<Users className="w-6 h-6 text-purple-600" />}
             title="Upcoming Deadlines"
-            value={stats.upcomingDeadlines.toString()}
+            value={stats ? stats.upcomingDeadlines.toString(): "0"}
             color="purple"
             trend="Next 7 days"
           />
@@ -215,10 +273,10 @@ export default function TestsPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            
+
             <div className="flex items-center gap-3 w-full md:w-auto">
               <Filter className="text-gray-500 w-5 h-5" />
-              <select 
+              <select
                 className="border border-gray-300 text-sm px-4 py-3 rounded-xl focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 value={filterCourse}
                 onChange={(e) => setFilterCourse(e.target.value)}
@@ -230,7 +288,7 @@ export default function TestsPage() {
               </select>
             </div>
           </div>
-          
+
           {/* Tabs */}
           <div className="flex border-b border-gray-200 mt-6">
             <button
@@ -258,7 +316,7 @@ export default function TestsPage() {
         <div className="space-y-8">
           {isLoading ? (
             <SkeletonLoader />
-          ) : testsWithCourseInfo.length === 0 ? (
+          ) : !testsWithCourseInfo || testsWithCourseInfo.length === 0 ? (
             <EmptyState />
           ) : (
             <section className="bg-white border border-gray-200 rounded-2xl p-6">
@@ -314,31 +372,31 @@ function TestCard({ test, courseName, courseImage }: { test: AppTypes.Test; cour
     const calculateTimeLeft = () => {
       const now = new Date();
       const dueDate = new Date(test.dueDate);
-      
+
       if (studentSub?.status === "SUBMITTED") {
         setTimeLeft("Completed");
         return;
-      } 
-      
+      }
+
       // Check if test is expired
       if (now > dueDate) {
         setIsExpired(true);
         setTimeLeft('Time expired');
         return;
       }
-      
+
       // Calculate time left for active tests (static calculation)
       const timeLimitMs = (test.timeLimit as number) * 60 * 1000;
       const startTime = studentSub?.startedAt ? new Date(studentSub.startedAt) : now;
       const elapsedTime = now.getTime() - startTime.getTime();
       const remainingTime = timeLimitMs - elapsedTime;
-      
+
       if (remainingTime <= 0) {
         setIsExpired(true);
         setTimeLeft('Time expired');
         return;
       }
-      
+
       setTimeLeft(formatTime(Math.floor(remainingTime / 1000)));
     };
 
@@ -374,12 +432,12 @@ function TestCard({ test, courseName, courseImage }: { test: AppTypes.Test; cour
           </div>
         </div>
       )}
-      
+
       <div className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
           {test.title}
         </h3>
-        
+
         <div className="space-y-3 mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <CalendarDays className="w-4 h-4" />

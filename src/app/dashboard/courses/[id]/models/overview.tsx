@@ -187,23 +187,36 @@ export default function Overview({
               {notifications.length === 0 ? (
                 <NoResourcePage resource="Notifications" />
               ) : (
-                notifications.slice(0, 3).map(notification => (
-                  <div key={notification.id} className={`p-3 rounded-md ${!notification.isRead ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
-                    <p className="text-sm text-gray-900 font-medium">
-                      {notification.title}
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formatTimeAgo(notification.createdAt)}
-                    </p>
-                  </div>
+                notifications.slice(0, 3).map((notification, i) => (
+                  <NotificationItem key={i} notification={notification} />
                 ))
               )}
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function NotificationItem({ notification }: { notification: AppTypes.Notification }) {
+  return (
+    <div className={`p-4 border-l-4 ${
+      notification.priority === 'HIGH' ? 'border-orange-400 bg-orange-50' :
+      notification.priority === 'URGENT' ? 'border-red-400 bg-red-50' :
+      'border-blue-400 bg-blue-50'
+    } rounded-r-lg mb-3`}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <h4 className="font-medium text-gray-900">{notification.title}</h4>
+          <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+          <p className="text-xs text-gray-400 mt-2">
+            {formatDate(notification.createdAt)}
+          </p>
+        </div>
+        {!notification.isRead && (
+          <div className="w-2 h-2 bg-blue-500 rounded-full ml-3 mt-2" />
+        )}
       </div>
     </div>
   );

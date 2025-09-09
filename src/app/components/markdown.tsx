@@ -13,15 +13,17 @@ interface CodeProps extends HTMLAttributes<HTMLElement> {
 }
 
 interface LessonMarkdownProps {
-  content?: string; // initial value
+  content?: string;
   onChange?: (value: string) => void;
   readOnly?: boolean;
+  maxImageWidth?: string; // e.g., "100%", "600px"
 }
 
 export default function LessonMarkdown({
   content = "",
   onChange,
   readOnly = true,
+  maxImageWidth = "100%",
 }: LessonMarkdownProps) {
   const [value, setValue] = useState(content);
 
@@ -33,6 +35,21 @@ export default function LessonMarkdown({
     const newValue = e.target.value;
     setValue(newValue);
     onChange?.(newValue);
+  };
+
+  // Function to extract image size from alt text (optional feature)
+  const getImageSizeFromAlt = (altText: string) => {
+    const sizeMatch = altText.match(/\[(\d+%?)(?:\s*x\s*(\d+%?))?\]/);
+    if (sizeMatch) {
+      return {
+        width: sizeMatch[1] || maxImageWidth,
+        height: sizeMatch[2] || "auto"
+      };
+    }
+    return {
+      width: maxImageWidth,
+      height: "auto"
+    };
   };
 
   return (
@@ -69,6 +86,27 @@ export default function LessonMarkdown({
                 {...props}
               />
             ),
+            // Enhanced image component with size control
+            img: ({ alt, src, ...props }) => {
+              const size = getImageSizeFromAlt(alt || "");
+              
+              return (
+                <div className="flex justify-center my-4">
+                  <img
+                    src={src}
+                    alt={alt}
+                    className="rounded-lg border border-gray-200"
+                    style={{
+                      maxWidth: size.width,
+                      height: size.height,
+                      width: "65%"
+                    }}
+                    loading="lazy"
+                    {...props}
+                  />
+                </div>
+              );
+            },
             table: ({ ...props }) => (
               <div className="overflow-x-auto my-6">
                 <table

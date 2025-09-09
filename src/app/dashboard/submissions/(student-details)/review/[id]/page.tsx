@@ -6,22 +6,7 @@ import { useSubmission } from "@/context/SubmissionContext";
 import { useSubmissionEntries } from "@/context/SubmissionEntryContext";
 import { $Enums } from "@/generated/prisma";
 import { cleanUrl, formatDate } from "@/lib/functions";
-import { 
-  Download, 
-  Eye, 
-  FileText, 
-  ArrowLeft, 
-  Upload, 
-  Paperclip, 
-  Calendar,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  User,
-  BookOpen,
-  Star,
-  MessageSquare
-} from "lucide-react";
+import { Download, Eye, FileText, ArrowLeft, Upload, Paperclip, Calendar, Clock, CheckCircle, AlertTriangle, User, BookOpen, Star, MessageSquare, MessageCircle, List, BarChart3, Trophy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import SubmissionDetailsSkeleton from "../../../skeletons/review-skeleton";
@@ -88,6 +73,14 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
     };
     fetch();
   }, [id, submission, fetchCoursesByIds]);
+
+  const getPerformanceLabel = (percentage: number) => {
+    if (percentage >= 0.9) return "Excellent";
+    if (percentage >= 0.8) return "Very Good";
+    if (percentage >= 0.7) return "Good";
+    if (percentage >= 0.6) return "Satisfactory";
+    return "Needs Improvement";
+  };
 
   if (courseLoading || submissionLoading || entryLoading || !course || !submission || !studentProfile) {
     return <SubmissionDetailsSkeleton />;
@@ -237,7 +230,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                   Instructions
                 </h2>
               </div>
-              
+
               <div className="p-6">
                 {submission.description && (
                   <div className="text-sm">
@@ -280,7 +273,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                     Submitted Files
                   </h2>
                 </div>
-                
+
                 <div className="p-6 space-y-4">
                   {entry.fileUrl.map((link, i) => (
                     <div
@@ -322,28 +315,128 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
             )}
 
             {/* Feedback */}
-            {entry && entry.feedback && (
+            {entry && entry.grade && (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
                 <div className="p-6 border-b border-slate-100">
                   <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
                     <div className="p-2 bg-amber-50 rounded-xl">
                       <MessageSquare className="w-5 h-5 text-amber-600" />
                     </div>
-                    Instructor Feedback
+                    Grade & Feedback
                   </h2>
                 </div>
-                
-                <div className="p-6">
-                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-6">
-                    <div className="flex gap-4">
-                      <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0">
-                        <User className="w-5 h-5 text-amber-700" />
+
+                <div className="p-6 space-y-6">
+                  {/* Grade Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Trophy className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-900">Final Score</span>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-slate-800 leading-relaxed">{entry.feedback}</p>
+                      <div className="text-2xl font-bold text-blue-900">
+                        {entry.grade.score}/{entry.grade.outOf}
+                      </div>
+                      <div className="text-sm text-blue-700 mt-1">
+                        {((entry.grade.score / entry.grade.outOf) * 100).toFixed(1)}%
+                      </div>
+                    </div>
+
+                    <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-900">Graded On</span>
+                      </div>
+                      <div className="text-sm font-medium text-green-900">
+                        {new Date(entry.grade.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-green-700 mt-1">
+                        {new Date(entry.grade.createdAt).toLocaleTimeString()}
+                      </div>
+                    </div>
+
+                    <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <BarChart3 className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-purple-900">Performance</span>
+                      </div>
+                      <div className="text-sm font-medium text-purple-900">
+                        {getPerformanceLabel(entry.grade.score / entry.grade.outOf)}
+                      </div>
+                      <div className="w-full bg-purple-200 rounded-full h-2 mt-2">
+                        <div
+                          className="bg-purple-600 h-2 rounded-full"
+                          style={{ width: `${(entry.grade.score / entry.grade.outOf) * 100}%` }}
+                        ></div>
                       </div>
                     </div>
                   </div>
+
+                  {/* Question Grades Breakdown */}
+                  {entry.questionGrades && entry.questionGrades.length > 0 && (
+                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                      <div className="bg-slate-50 p-4 border-b border-slate-200">
+                        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                          <List className="w-4 h-4 text-slate-600" />
+                          Question Breakdown
+                        </h3>
+                      </div>
+                      <div className="divide-y divide-slate-200">
+                        {entry.questionGrades.map((qGrade, index) => (
+                          <div key={qGrade.id} className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-slate-900">Question {index + 1}</h4>
+                                {qGrade.feedback && (
+                                  <p className="text-sm text-slate-600 mt-1">{qGrade.feedback}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-slate-900">
+                                  {qGrade.score}/{qGrade.outOf}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {((qGrade.score / qGrade.outOf) * 100).toFixed(0)}%
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Instructor Feedback */}
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-6">
+                    <div className="flex gap-4">
+                      <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0 self-start">
+                        <User className="w-5 h-5 text-amber-700" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900 mb-2">Instructor Comments</h3>
+                        <p className="text-slate-800 leading-relaxed whitespace-pre-wrap">
+                          {entry.grade.finalComments || "No additional comments provided."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Submission Feedback */}
+                  {entry.feedback && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                      <div className="flex gap-4">
+                        <div className="p-2 bg-blue-100 rounded-xl flex-shrink-0 self-start">
+                          <MessageCircle className="w-5 h-5 text-blue-700" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-slate-900 mb-2">Additional Feedback</h3>
+                          <p className="text-slate-800 leading-relaxed whitespace-pre-wrap">
+                            {entry.feedback}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -355,7 +448,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
             {entry ? (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6">
                 <h3 className="font-bold text-slate-900 mb-6">Submission Status</h3>
-                
+
                 <div className="space-y-6">
                   {/* Grade */}
                   {entry.grade !== undefined && (
@@ -371,11 +464,10 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                               {[...Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
-                                  className={`w-4 h-4 ${
-                                    i < Math.round((entry?.grade?.score ?? 0) / 20)
-                                      ? "text-yellow-400 fill-current"
-                                      : "text-slate-300"
-                                  }`}
+                                  className={`w-4 h-4 ${i < Math.round((entry?.grade?.score ?? 0) / 20)
+                                    ? "text-yellow-400 fill-current"
+                                    : "text-slate-300"
+                                    }`}
                                 />
                               ))}
                             </div>
@@ -397,12 +489,12 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                         {entry.status.replace("_", " ")}
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between py-3 border-b border-slate-100">
                       <span className="text-sm font-medium text-slate-600">Submitted</span>
                       <span className="text-sm text-slate-900">{formatDate(entry.submittedAt)}</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-between py-3 border-b border-slate-100">
                       <span className="text-sm font-medium text-slate-600">Due Date</span>
                       <span className="text-sm text-slate-900">{formatDate(submission.dueDate)}</span>
@@ -430,20 +522,20 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
             ) : (
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6">
                 <h3 className="font-bold text-slate-900 mb-6">Assignment Details</h3>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between py-3 border-b border-slate-100">
                     <span className="text-sm font-medium text-slate-600">Due Date</span>
                     <span className="text-sm text-slate-900">{formatDate(submission.dueDate)}</span>
                   </div>
-                  
+
                   {submission.lastDueDate && (
                     <div className="flex items-center justify-between py-3 border-b border-slate-100">
                       <span className="text-sm font-medium text-slate-600">Final Due</span>
                       <span className="text-sm text-slate-900">{formatDate(submission.lastDueDate)}</span>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center justify-between py-3">
                     <span className="text-sm font-medium text-slate-600">Status</span>
                     <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">

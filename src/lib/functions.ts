@@ -32,6 +32,20 @@ export function formatTimeAgo(date: Date | string | number): string {
   return `${years} year${years !== 1 ? "s" : ""} ago`;
 }
 
+export function formatDuration(minutes: number) {
+  if (!minutes || minutes <= 0) return "No duration specified";
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  if (hours > 0 && remainingMinutes > 0) {
+    return `${hours}h ${remainingMinutes}m`;
+  } else if (hours > 0) {
+    return `${hours}h`;
+  } else {
+    return `${minutes}m`;
+  }
+}
 
 export const formatDate = (date: Date) => {
   return new Date(date).toLocaleDateString("en-ZA", {

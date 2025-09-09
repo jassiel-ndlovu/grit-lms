@@ -170,31 +170,48 @@ export default function Nav() {
       ? pathname.slice(0, -1)
       : pathname;
 
-    // First try: exact match
-    let activeNavItem = allNavItems.find(item => item.link === cleanPath);
+    // Sort items by path length (longest first) to prioritize more specific matches
+    const sortedItems = [...allNavItems].sort((a, b) =>
+      b.link.split('/').length - a.link.split('/').length
+    );
 
-    if (!activeNavItem) {
-      // Second try: find by segment match
-      activeNavItem = allNavItems.find(item => {
-        // Ensure segment alignment (avoid false positives)
-        return cleanPath.startsWith(item.link + "/");
-      });
-    }
+    // Find the best matching item
+    let bestMatch = null;
+    let bestMatchLength = 0;
 
-    if (!activeNavItem) {
-      // Fallback: match by the second segment only
-      const pathSegments = cleanPath.split("/").filter(Boolean);
-      if (pathSegments.length >= 2) {
-        const secondSegment = pathSegments[1];
-        activeNavItem = allNavItems.find(item => {
-          const itemSegments = item.link.split("/").filter(Boolean);
-          return itemSegments[1] === secondSegment;
-        });
+    for (const item of sortedItems) {
+      // Skip items with empty links or placeholder links
+      if (!item.link || item.link === "#") continue;
+
+      // Normalize item link
+      const cleanItemLink = item.link.endsWith("/") && item.link !== "/"
+        ? item.link.slice(0, -1)
+        : item.link;
+
+      // Check if the current path starts with the item link
+      if (cleanPath.startsWith(cleanItemLink)) {
+        // Prefer the longest (most specific) match
+        if (cleanItemLink.length > bestMatchLength) {
+          bestMatch = item;
+          bestMatchLength = cleanItemLink.length;
+        }
       }
     }
 
-    if (activeNavItem) {
-      setActiveItem(activeNavItem.label);
+    if (bestMatch) {
+      setActiveItem(bestMatch.label);
+    } else {
+      // Fallback: try to match by the first segment
+      const pathSegments = cleanPath.split('/').filter(Boolean);
+      if (pathSegments.length > 0) {
+        const firstSegment = `/${pathSegments[0]}`;
+        const fallbackMatch = allNavItems.find(item =>
+          item.link && item.link.startsWith(firstSegment)
+        );
+        if (fallbackMatch) {
+          setActiveItem(fallbackMatch.label);
+        }
+      }
     }
   }, [navItems, bottomNavItems, pathname]);
 

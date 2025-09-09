@@ -8,7 +8,7 @@ import { useTests } from "@/context/TestContext";
 import { QuestionType, TestQuestion } from "@/generated/prisma";
 import { deleteFile, uploadFile } from "@/lib/blob";
 import { parseDateTimeLocal, formatForDateTimeLocal, extractImageUrlsFromMarkdown } from "@/lib/functions";
-import { ArrowLeft, Download, FileText, ImageIcon, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Download, FileText, Plus, Trash2, Upload, Eye, EyeOff, File, FileTextIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import TestCreationSkeleton from "../../skeletons/create-test-skeleton";
 import { useParams } from "next/navigation";
@@ -25,6 +25,26 @@ interface QuestionExport {
   blankCount?: number | null;
 }
 
+// JSON Schema for ML-generated tests
+interface MLTestSchema {
+  title: string;
+  description?: string;
+  preTestInstructions?: string;
+  dueDate: string; // ISO string
+  timeLimit?: number;
+  questions: Array<{
+    question: string; // Markdown supported
+    type: QuestionType;
+    points: number;
+    options?: string[]; // For multiple choice/multi-select
+    answer?: any; // Type depends on question type
+    language?: string; // For code questions
+    matchPairs?: Array<{ left: string, right: string }>; // For matching questions
+    reorderItems?: string[]; // For reorder questions
+    blankCount?: number; // For fill in the blank
+  }>;
+}
+
 export default function CreateTestPage() {
   const { loading: courseLoading, fetchCoursesByTutorId } = useCourses();
   const { loading: testLoading, fetchTestById, createTest, updateTest } = useTests();
@@ -34,6 +54,7 @@ export default function CreateTestPage() {
   const editMode = id !== undefined || id != null;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileUploadRef = useRef<HTMLInputElement>(null);
 
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -43,6 +64,7 @@ export default function CreateTestPage() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [dragOver, setDragOver] = useState<boolean>(false);
   const [uploadedImages, setUploadedImages] = useState<Set<string>>(new Set());
+  const [uploadedFiles, setUploadedFiles] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState<Partial<AppTypes.Test & { questions: Partial<TestQuestion>[] }>>({
     title: '',
     description: '',
@@ -50,6 +72,7 @@ export default function CreateTestPage() {
     courseId: '',
     dueDate: new Date(),
     timeLimit: undefined,
+    isActive: true, // Default to active
     // @ts-expect-error testId is not required for creation
     questions: [{
       id: "1",
@@ -109,9 +132,13 @@ export default function CreateTestPage() {
     fetch();
   }, [editMode, id, fetchTestById]);
 
-  // Add a cleanup function for when the page is closed without submitting
+  const toggleDraftStatus = () => {
+    setFormData(prev => ({
+      ...prev,
+      isActive: !prev.isActive
+    }));
+  };
 
-  // functions
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -132,49 +159,66 @@ export default function CreateTestPage() {
     reader.readAsText(file);
   };
 
-  const handleImageUpload = async (file: File, questionIndex: number) => {
-    setIsUploading(true);
-    try {
-      const imageUrl = await uploadFile(file);
-
-      // Track this uploaded image
-      setUploadedImages(prev => new Set(prev).add(imageUrl));
-
-      // Get current question text
-      const currentQuestion = formData.questions?.[questionIndex]?.question || "";
-
-      // Append Markdown image syntax
-      const markdownImage = `\n![${file.name}](${imageUrl})\n`;
-      const newQuestionText = currentQuestion + markdownImage;
-
-      // Update the question text
-      updateQuestion(questionIndex, 'question', newQuestionText);
-    } catch (error) {
-      console.error("Failed to upload image:", error);
-      alert("Failed to upload image. Please try again.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleDrop = (e: React.DragEvent, questionIndex: number) => {
     e.preventDefault();
     setDragOver(false);
 
     const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    const supportedFiles = files.filter(file =>
+      file.type.startsWith('image/') ||
+      file.type === 'application/pdf' ||
+      file.type === 'application/msword' ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
 
-    if (imageFiles.length > 0) {
-      handleImageUpload(imageFiles[0], questionIndex);
+    if (supportedFiles.length > 0) {
+      handleQuestionFileUpload(supportedFiles[0], questionIndex);
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>, questionIndex: number) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleImageUpload(files[0], questionIndex);
+      handleQuestionFileUpload(files[0], questionIndex);
     }
     e.target.value = ''; // Reset input
+  };
+
+  const handleQuestionFileUpload = async (file: File, questionIndex: number) => {
+    setIsUploading(true);
+    try {
+      const fileUrl = await uploadFile(file);
+
+      // Track this uploaded file
+      if (file.type.startsWith('image/')) {
+        setUploadedImages(prev => new Set(prev).add(fileUrl));
+      } else {
+        setUploadedFiles(prev => new Set(prev).add(fileUrl));
+      }
+
+      // Get current question text
+      const currentQuestion = formData.questions?.[questionIndex]?.question || "";
+
+      // Create appropriate Markdown based on file type
+      let markdownLink = '';
+      if (file.type.startsWith('image/')) {
+        // For images: ![filename](url)
+        markdownLink = `\n![${file.name}](${fileUrl})\n`;
+      } else {
+        // For documents: [filename](url)
+        markdownLink = `\n[${file.name}](${fileUrl})\n`;
+      }
+
+      const newQuestionText = currentQuestion + markdownLink;
+
+      // Update the question text
+      updateQuestion(questionIndex, 'question', newQuestionText);
+    } catch (error) {
+      console.error("Failed to upload file:", error);
+      alert("Failed to upload file. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const exportQuestionsToJson = () => {
@@ -208,7 +252,6 @@ export default function CreateTestPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Also update the import function to handle null values properly
   const importQuestionsFromJson = () => {
     try {
       if (!importJson.trim()) {
@@ -216,14 +259,26 @@ export default function CreateTestPage() {
         return;
       }
 
-      const parsedData: QuestionExport[] = JSON.parse(importJson);
+      const parsedData: MLTestSchema = JSON.parse(importJson);
 
-      if (!Array.isArray(parsedData)) {
-        setImportError("JSON should contain an array of questions");
+      if (!Array.isArray(parsedData.questions)) {
+        setImportError("JSON should contain a questions array");
         return;
       }
 
-      const importedQuestions: Partial<TestQuestion>[] = parsedData.map((q, i) => ({
+      // Update test details if provided
+      if (parsedData.title) {
+        setFormData(prev => ({
+          ...prev,
+          title: parsedData.title,
+          description: parsedData.description || prev.description,
+          preTestInstructions: parsedData.preTestInstructions || prev.preTestInstructions,
+          dueDate: parsedData.dueDate ? new Date(parsedData.dueDate) : prev.dueDate,
+          timeLimit: parsedData.timeLimit || prev.timeLimit
+        }));
+      }
+
+      const importedQuestions: Partial<TestQuestion>[] = parsedData.questions.map((q, i) => ({
         id: `imported-${Date.now()}-${i}`,
         question: q.question || '',
         type: q.type || QuestionType.MULTIPLE_CHOICE,
@@ -287,67 +342,115 @@ export default function CreateTestPage() {
     }));
   };
 
-  // Update the handleSubmit function to handle image cleanup
-  const handleSubmit = async () => {
-    const totalPoints = (formData.questions || []).reduce((sum, q) => sum + (q.points || 0), 0);
+  const moveQuestion = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= (formData.questions?.length || 0)) return;
 
-    // Extract all image URLs from all questions
-    const allImageUrls = new Set<string>();
-    (formData.questions || []).forEach(question => {
-      if (question.question) {
-        const urls = extractImageUrlsFromMarkdown(question.question);
-        urls.forEach(url => allImageUrls.add(url));
-      }
+    setFormData(prev => {
+      const questions = [...(prev.questions || [])];
+      const [movedQuestion] = questions.splice(fromIndex, 1);
+      questions.splice(toIndex, 0, movedQuestion);
+      return { ...prev, questions };
     });
+  };
 
-    // Find images that were uploaded but are no longer used
-    const unusedImages = Array.from(uploadedImages).filter(
-      url => !allImageUrls.has(url)
-    );
+  const extractDocumentUrlsFromMarkdown = (markdown: string): string[] => {
+    const urls: string[] = [];
 
-    // Clean up unused images
-    if (unusedImages.length > 0) {
-      try {
-        await Promise.allSettled(
-          unusedImages.map(url => deleteFile(url).catch(err => {
-            console.error(`Failed to delete image ${url}:`, err);
-          }))
-        );
-        console.log(`Cleaned up ${unusedImages.length} unused images`);
-      } catch (error) {
-        console.error("Error cleaning up images:", error);
-        // Don't fail the whole submission if image cleanup fails
+    // Match markdown links without the ! prefix: [text](url)
+    const linkRegex = /(?!!)\[.*?\]\((.*?)\)/g;
+    let match;
+
+    while ((match = linkRegex.exec(markdown)) !== null) {
+      const url = match[1];
+      // Only include URLs that look like file URLs (not web pages)
+      if (url && (url.endsWith('.pdf') || url.endsWith('.doc') || url.endsWith('.docx') ||
+        url.includes('/files/') || url.includes('/uploads/'))) {
+        urls.push(url);
       }
     }
 
-    // If editing, also check for images that were removed from existing content
+    return urls;
+  };
+
+  const handleSubmit = async () => {
+    const totalPoints = (formData.questions || []).reduce((sum, q) => sum + (q.points || 0), 0);
+
+    // Extract all file URLs from all questions (both images and documents)
+    const allFileUrls = new Set<string>();
+    (formData.questions || []).forEach(question => {
+      if (question.question) {
+        // Extract image URLs from markdown
+        const imageUrls = extractImageUrlsFromMarkdown(question.question);
+        imageUrls.forEach(url => allFileUrls.add(url));
+
+        // Extract document URLs from markdown (links in format [filename](url))
+        const documentUrls = extractDocumentUrlsFromMarkdown(question.question);
+        documentUrls.forEach(url => allFileUrls.add(url));
+      }
+
+      // Check if answer itself is a file URL
+      if (typeof question.answer === 'string' &&
+        (question.answer.startsWith('http://') || question.answer.startsWith('https://'))) {
+        allFileUrls.add(question.answer);
+      }
+    });
+
+    // Find files that were uploaded but are no longer used
+    const allUploadedFiles = new Set([...uploadedImages, ...uploadedFiles]);
+    const unusedFiles = Array.from(allUploadedFiles).filter(
+      url => !allFileUrls.has(url)
+    );
+
+    // Clean up unused files
+    if (unusedFiles.length > 0) {
+      try {
+        await Promise.allSettled(
+          unusedFiles.map(url => deleteFile(url).catch(err => {
+            console.error(`Failed to delete file ${url}:`, err);
+          }))
+        );
+        console.log(`Cleaned up ${unusedFiles.length} unused files`);
+      } catch (error) {
+        console.error("Error cleaning up files:", error);
+      }
+    }
+
+    // If editing, also check for files that were removed from existing content
     if (editMode && formData.questions) {
       try {
-        const oldImages = new Set<string>();
+        const oldFiles = new Set<string>();
         formData.questions.forEach(question => {
           if (question.question) {
-            const urls = extractImageUrlsFromMarkdown(question.question);
-            urls.forEach(url => oldImages.add(url));
+            const imageUrls = extractImageUrlsFromMarkdown(question.question);
+            imageUrls.forEach(url => oldFiles.add(url));
+
+            const documentUrls = extractDocumentUrlsFromMarkdown(question.question);
+            documentUrls.forEach(url => oldFiles.add(url));
+          }
+
+          // Check if answer was a file URL
+          if (typeof question.answer === 'string' &&
+            (question.answer.startsWith('http://') || question.answer.startsWith('https://'))) {
+            oldFiles.add(question.answer);
           }
         });
 
-        // Find images that were in the old version but not in the new one
-        const removedImages = Array.from(oldImages).filter(
-          url => !allImageUrls.has(url)
+        // Find files that were in the old version but not in the new one
+        const removedFiles = Array.from(oldFiles).filter(
+          url => !allFileUrls.has(url)
         );
 
-        // Clean up images that were completely removed
-        if (removedImages.length > 0) {
+        // Clean up files that were completely removed
+        if (removedFiles.length > 0) {
           await Promise.allSettled(
-            removedImages.map(url => deleteFile(url).catch(err => {
-              console.error(`Failed to delete removed image ${url}:`, err);
+            removedFiles.map(url => deleteFile(url).catch(err => {
+              console.error(`Failed to delete removed file ${url}:`, err);
             }))
           );
-          console.log(`Cleaned up ${removedImages.length} removed images`);
+          console.log(`Cleaned up ${removedFiles.length} removed files`);
         }
       } catch (error) {
-        console.error("Error cleaning up removed images:", error);
-        // Don't fail the whole submission if image cleanup fails
+        console.error("Error cleaning up removed files:", error);
       }
     }
 
@@ -376,11 +479,69 @@ export default function CreateTestPage() {
       setLoading(false);
     }
 
-    // Reset uploaded images tracking after successful submission
+    // Reset uploaded files tracking after successful submission
     setUploadedImages(new Set());
+    setUploadedFiles(new Set());
   };
 
   const renderQuestionFields = (question: Partial<TestQuestion>, index: number) => {
+    // Common file upload section for all question types
+    const renderFileUploadOption = () => (
+      <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+        <h4 className="text-sm font-medium text-gray-700 mb-2">Answer File Upload (Optional)</h4>
+
+        {typeof question.answer === 'string' &&
+          (question.answer.startsWith('http://') || question.answer.startsWith('https://')) ? (
+          <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-md">
+            <div className="flex items-center gap-2">
+              <FileTextIcon className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-800">
+                File uploaded: {question.answer.split('/').pop()}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => updateQuestion(index, 'answer', '')}
+              className="text-red-500 hover:text-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => handleDrop(e, index)}
+            onClick={() => fileUploadRef.current?.click()}
+          >
+            <File className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+            <p className="text-sm text-gray-600">
+              Drag & drop or click to upload answer file
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Supports PDF, Word documents, and images
+            </p>
+            <input
+              ref={fileUploadRef}
+              type="file"
+              accept=".pdf,.doc,.docx,image/*"
+              className="hidden"
+              onChange={(e) => handleFileInput(e, index)}
+            />
+          </div>
+        )}
+
+        <div className="mt-2 text-xs text-gray-500">
+          <p>You can either provide a text answer below or upload a file with the answer.</p>
+          <p>If both are provided, the file will take precedence.</p>
+        </div>
+      </div>
+    );
+
     switch (question.type) {
       case QuestionType.MULTIPLE_CHOICE:
       case QuestionType.MULTI_SELECT:
@@ -431,7 +592,10 @@ export default function CreateTestPage() {
               </label>
               <input
                 type="text"
-                value={typeof question.answer === 'string' ? question.answer : ''}
+                value={typeof question.answer === 'string' &&
+                  !question.answer.startsWith('http://') &&
+                  !question.answer.startsWith('https://')
+                  ? question.answer : ''}
                 onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
                 placeholder={question.type === QuestionType.MULTI_SELECT ?
                   "Correct answers (comma-separated, e.g., A, C)" :
@@ -439,6 +603,8 @@ export default function CreateTestPage() {
                 className="w-full font-mono text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
               />
             </div>
+
+            {renderFileUploadOption()}
           </div>
         );
 
@@ -453,12 +619,17 @@ export default function CreateTestPage() {
               className="w-full font-mono text-sm px-3 py-2 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
             />
             <textarea
-              value={typeof question.answer === 'string' ? question.answer : ''}
+              value={typeof question.answer === 'string' &&
+                !question.answer.startsWith('http://') &&
+                !question.answer.startsWith('https://')
+                ? question.answer : ''}
               onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
               placeholder="Expected code answer"
               rows={4}
               className="w-full font-mono text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
             />
+
+            {renderFileUploadOption()}
           </div>
         );
 
@@ -522,6 +693,24 @@ export default function CreateTestPage() {
               <Plus className="w-4 h-4" />
               Add Matching Pair
             </button>
+
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Correct Answer (JSON format)
+              </label>
+              <textarea
+                value={typeof question.answer === 'string' &&
+                  !question.answer.startsWith('http://') &&
+                  !question.answer.startsWith('https://')
+                  ? question.answer : ''}
+                onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
+                placeholder='{"left1": "right1", "left2": "right2"}'
+                rows={3}
+                className="w-full font-mono text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+              />
+            </div>
+
+            {renderFileUploadOption()}
           </div>
         );
 
@@ -576,8 +765,11 @@ export default function CreateTestPage() {
               </label>
               <input
                 type="text"
-                value={Array.isArray(question.answer) ? question.answer.join(',') : ''}
-                onChange={(e) => updateQuestion(index, 'answer', e.target.value.split(',').map(item => item.trim()))}
+                value={typeof question.answer === 'string' &&
+                  !question.answer.startsWith('http://') &&
+                  !question.answer.startsWith('https://')
+                  ? question.answer : ''}
+                onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
                 placeholder="e.g., 3,1,2,4"
                 className="w-full font-mono text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
               />
@@ -585,6 +777,8 @@ export default function CreateTestPage() {
                 Enter the correct order using numbers corresponding to the item positions above.
               </p>
             </div>
+
+            {renderFileUploadOption()}
           </div>
         );
 
@@ -613,7 +807,10 @@ export default function CreateTestPage() {
               {question.blankCount === 1 ? (
                 <input
                   type="text"
-                  value={typeof question.answer === 'string' ? question.answer : ''}
+                  value={typeof question.answer === 'string' &&
+                    !question.answer.startsWith('http://') &&
+                    !question.answer.startsWith('https://')
+                    ? question.answer : ''}
                   onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
                   placeholder="Correct answer"
                   className="w-full font-mono text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
@@ -637,6 +834,8 @@ export default function CreateTestPage() {
                 </div>
               )}
             </div>
+
+            {renderFileUploadOption()}
           </div>
         );
 
@@ -645,11 +844,18 @@ export default function CreateTestPage() {
           <div className="space-y-2">
             <input
               type="number"
-              value={typeof question.answer === 'number' ? question.answer : ''}
+              step="any"
+              value={typeof question.answer === 'number' ? question.answer :
+                typeof question.answer === 'string' &&
+                  !question.answer.startsWith('http://') &&
+                  !question.answer.startsWith('https://')
+                  ? question.answer : ''}
               onChange={(e) => updateQuestion(index, 'answer', parseFloat(e.target.value))}
               placeholder="Correct numeric answer"
               className="w-full font-mono text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
             />
+
+            {renderFileUploadOption()}
           </div>
         );
 
@@ -657,14 +863,26 @@ export default function CreateTestPage() {
         return (
           <div className="space-y-2">
             <select
-              value={typeof question.answer === 'boolean' ? question.answer.toString() : ''}
-              onChange={(e) => updateQuestion(index, 'answer', e.target.value === 'true')}
+              value={typeof question.answer === 'boolean' ? question.answer.toString() :
+                typeof question.answer === 'string' &&
+                  !question.answer.startsWith('http://') &&
+                  !question.answer.startsWith('https://')
+                  ? question.answer : ''}
+              onChange={(e) => {
+                if (e.target.value === 'true' || e.target.value === 'false') {
+                  updateQuestion(index, 'answer', e.target.value === 'true');
+                } else {
+                  updateQuestion(index, 'answer', e.target.value);
+                }
+              }}
               className="w-full text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
             >
               <option value="">Select correct answer</option>
               <option value="true">True</option>
               <option value="false">False</option>
             </select>
+
+            {renderFileUploadOption()}
           </div>
         );
 
@@ -673,24 +891,91 @@ export default function CreateTestPage() {
         return (
           <div className="space-y-2">
             <textarea
-              value={typeof question.answer === 'string' ? question.answer : ''}
+              value={typeof question.answer === 'string' &&
+                !question.answer.startsWith('http://') &&
+                !question.answer.startsWith('https://')
+                ? question.answer : ''}
               onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
               placeholder="Expected answer"
               rows={question.type === QuestionType.ESSAY ? 6 : 3}
               className="w-full font-mono text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
             />
+
+            {renderFileUploadOption()}
           </div>
         );
 
       case QuestionType.FILE_UPLOAD:
         return (
-          <div className="text-sm text-gray-500 italic">
-            Students will upload files for this question. No answer field needed.
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Upload Correct Answer File
+            </label>
+
+            {typeof question.answer === 'string' &&
+              (question.answer.startsWith('http://') || question.answer.startsWith('https://')) ? (
+              <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className="flex items-center gap-2">
+                  <FileTextIcon className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-green-800">
+                    File uploaded: {question.answer.split('/').pop()}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateQuestion(index, 'answer', '')}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div
+                className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => handleDrop(e, index)}
+                onClick={() => fileUploadRef.current?.click()}
+              >
+                <File className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">
+                  Drag & drop or click to upload correct answer file
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Supports PDF, Word documents, and images
+                </p>
+                <input
+                  ref={fileUploadRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileInput(e, index)}
+                />
+              </div>
+            )}
           </div>
         );
 
       default:
-        return null;
+        return (
+          <div className="space-y-2">
+            <textarea
+              value={typeof question.answer === 'string' &&
+                !question.answer.startsWith('http://') &&
+                !question.answer.startsWith('https://')
+                ? question.answer : ''}
+              onChange={(e) => updateQuestion(index, 'answer', e.target.value)}
+              placeholder="Expected answer"
+              rows={3}
+              className="w-full font-mono text-sm px-3 py-2 border border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none"
+            />
+
+            {renderFileUploadOption()}
+          </div>
+        );
     }
   };
 
@@ -704,7 +989,7 @@ export default function CreateTestPage() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => window.history.back()}
               className="p-1 hover:bg-gray-100 rounded"
             >
@@ -713,6 +998,28 @@ export default function CreateTestPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               {editMode ? 'Edit Test' : 'Create New Test'}
             </h1>
+
+            {/* Draft/Active Toggle Button */}
+            <button
+              onClick={toggleDraftStatus}
+              className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${formData.isActive
+                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                }`}
+            >
+              {formData.isActive ? (
+                <>
+                  <Eye className="w-4 h-4" />
+                  Active
+                </>
+              ) : (
+                <>
+                  <EyeOff className="w-4 h-4" />
+                  Draft
+                </>
+              )}
+            </button>
+
           </div>
         </div>
       </div>
@@ -821,20 +1128,6 @@ export default function CreateTestPage() {
               </div>
             </div>
 
-            {editMode && (
-              <div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Active Test</span>
-                </label>
-              </div>
-            )}
-
             <hr className="border-gray-300" />
 
             {/* Questions */}
@@ -869,11 +1162,29 @@ export default function CreateTestPage() {
 
               <div className="space-y-4">
                 {formData.questions && formData.questions.map((question, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div key={question.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-gray-900">
-                        Question {index + 1}
-                      </h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-medium text-gray-900">
+                          Question {index + 1}
+                        </h4>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => moveQuestion(index, index - 1)}
+                            disabled={index === 0}
+                            className="text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            onClick={() => moveQuestion(index, index + 1)}
+                            disabled={index === (formData.questions?.length || 0) - 1}
+                            className="text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      </div>
                       {formData.questions && formData.questions.length > 1 && (
                         <button
                           onClick={() => removeQuestion(index)}
@@ -901,16 +1212,16 @@ export default function CreateTestPage() {
                           onDrop={(e) => handleDrop(e, index)}
                         />
 
-                        {/* Image upload button */}
+                        {/* File upload button */}
                         <div className="absolute bottom-2 right-2 flex items-center gap-2">
                           {isUploading && (
                             <div className="text-xs text-gray-500">Uploading...</div>
                           )}
                           <label className="cursor-pointer p-1 text-gray-500 hover:text-blue-600">
-                            <ImageIcon className="w-4 h-4" />
+                            <File className="w-4 h-4" />
                             <input
                               type="file"
-                              accept="image/*"
+                              accept="image/*,.pdf,.doc,.docx"
                               className="hidden"
                               onChange={(e) => handleFileInput(e, index)}
                               disabled={isUploading}
@@ -997,7 +1308,7 @@ export default function CreateTestPage() {
       {/* Import Dialog */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+          <div className="bg-white h-[90vh] overflow-y-auto rounded-lg shadow-xl w-full max-w-2xl">
             <div className="p-6 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Import Questions from JSON</h3>
               <p className="text-sm text-gray-500 mt-1">
@@ -1028,7 +1339,23 @@ export default function CreateTestPage() {
                   onChange={(e) => setImportJson(e.target.value)}
                   rows={10}
                   className="w-full font-mono text-sm px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                  placeholder='[{"question": "Sample question", "type": "MULTIPLE_CHOICE", "points": 10, "options": ["A", "B", "C", "D"], "answer": "A"}]'
+                  placeholder={`Example JSON structure:
+{
+  "title": "Test Title",
+  "description": "Test description",
+  "preTestInstructions": "Instructions for students",
+  "dueDate": "2024-12-31T23:59:59.000Z",
+  "timeLimit": 60,
+  "questions": [
+    {
+      "question": "What is 2+2? (Markdown **supported**)",
+      "type": "MULTIPLE_CHOICE",
+      "points": 10,
+      "options": ["2", "3", "4", "5"],
+      "answer": "4"
+    }
+  ]
+}`}
                 />
               </div>
 
@@ -1037,6 +1364,33 @@ export default function CreateTestPage() {
                   Error: {importError}
                 </div>
               )}
+
+              {/* JSON Schema Explanation */}
+              <div className="bg-blue-50 p-4 rounded-md">
+                <h4 className="font-medium text-blue-900 mb-2">JSON Schema for ML Models:</h4>
+                <pre className="text-xs text-blue-800 whitespace-pre-wrap">
+                  {`{
+  "title": "string",                    // Test title
+  "description": "string",              // Test description (optional)
+  "preTestInstructions": "string",      // Instructions (optional, Markdown supported)
+  "dueDate": "ISO string",              // Due date in ISO format
+  "timeLimit": number,                  // Time limit in minutes (optional)
+  "questions": [
+    {
+      "question": "string",             // Question text (Markdown supported)
+      "type": "QuestionType",           // One of: MULTIPLE_CHOICE, MULTI_SELECT, TRUE_FALSE, SHORT_ANSWER, ESSAY, FILE_UPLOAD, CODE, MATCHING, REORDER, FILL_IN_THE_BLANK, NUMERIC
+      "points": number,                 // Points for this question
+      "options": ["string"],            // For multiple choice/multi-select (optional)
+      "answer": "any",                  // Correct answer (type depends on question type)
+      "language": "string",             // For code questions (optional)
+      "matchPairs": [{"left": "string", "right": "string"}], // For matching questions
+      "reorderItems": ["string"],       // For reorder questions
+      "blankCount": number              // For fill in the blank
+    }
+  ]
+}`}
+                </pre>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
