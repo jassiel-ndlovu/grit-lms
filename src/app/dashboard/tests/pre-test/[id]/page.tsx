@@ -161,6 +161,18 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
     });
   }
 
+  if (!currentTest.isActive) {
+    return renderErrorPage({
+      errorType: "validation",
+      message: "This test is still in draft. We apologise that you can see this. We are fixing this bug.",
+      title: "Test Not Available",
+      showGoBack: true,
+      showGoHome: true,
+      onGoHome: () => router.push("/dashboard"),
+      onGoBack: () => router.push("/dashboard/tests"),
+    });
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto py-8 px-4">

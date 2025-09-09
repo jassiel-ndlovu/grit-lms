@@ -319,6 +319,18 @@ if (loadingState === 'expired') {
     });
   }
 
+  if (!test.isActive) {
+    return renderErrorPage({
+      errorType: "validation",
+      message: "This test is still in draft. We apologise that you can see this. We are fixing this bug.",
+      title: "Test Not Available",
+      showGoBack: true,
+      showGoHome: true,
+      onGoHome: () => router.push("/dashboard"),
+      onGoBack: () => router.push("/dashboard/tests"),
+    });
+  }
+
   const currentQuestion = test.questions[currentQuestionIndex];
 
   // functions
