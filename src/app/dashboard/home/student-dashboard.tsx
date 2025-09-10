@@ -51,7 +51,7 @@ export default function ModernStudentDashboard() {
           studentCompletions
         ] = await Promise.all([
           fetchCoursesByStudentId(profile.id),
-          fetchTestsByStudentId(profile.id),
+          fetchTestsByStudentId(profile.id, true),
           fetchTestSubmissionsByStudentId(profile.id),
           fetchSubmissionsByStudentId(profile.id),
           fetchCompletionsByStudent(profile.id)

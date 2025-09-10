@@ -15,6 +15,13 @@ export async function GET(req: Request) {
 
     const events = await prisma.courseEvent.findMany({
       where: { courseId },
+      include: {
+        course: {
+          include: {
+            tutor: true
+          }
+        },
+      },
       orderBy: { date: "asc" },
     });
 
@@ -36,6 +43,9 @@ export async function POST(req: Request) {
       data: {
         title: body.title,
         type: body.type,
+        description: body.description,
+        duration: body.duration ?? null,
+        location: body.location ?? null,
         date: new Date(body.date),
         link: body.link,
         courseId: body.courseId,

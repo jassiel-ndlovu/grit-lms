@@ -31,14 +31,31 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadingState, setLoadingState] = useState<'loading' | 'success' | 'error'>('loading');
+  const [loadingState, setLoadingState] = useState<'loading' | 'success' | 'error' | 'expired'>('loading');
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoadingState('loading');
-        await fetchTestById(id);
+        const t = await fetchTestById(id) as AppTypes.Test;
+
+        // Check if test is active
+        if (t.isActive === false) {
+          setLoadingState('expired');
+          setError('This test is no longer available. The due date has passed.');
+        }
+
+        // Check due date immediately after fetching test
+        if (t.dueDate) {
+          const dueDate = new Date(t.dueDate);
+          const now = new Date();
+
+          if (dueDate < now) {
+            setLoadingState('expired');
+            setError('This test is no longer available. The due date has passed.');
+          }
+        }
       } catch (err) {
         setLoadingState('error');
         setError('Failed to load test. Please try again.');
@@ -52,14 +69,14 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   useEffect(() => {
     if (currentTest) {
       fetchCoursesByIds([currentTest.courseId]);
-      
+
       // Check if test is overdue immediately
       if (new Date(currentTest.dueDate) < new Date()) {
         setLoadingState('error');
         setError('This test is overdue and can no longer be attempted.');
         return;
       }
-      
+
       setLoadingState('success');
     }
   }, [currentTest, fetchCoursesByIds]);
@@ -89,7 +106,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   const handleExistingSubmission = async (submission: AppTypes.TestSubmission) => {
     const isCompleted = submission.status === $Enums.SubmissionStatus.SUBMITTED;
     const isOverdue = new Date(currentTest!.dueDate) < new Date();
-    
+
     const testStartTime = new Date(submission.startedAt).getTime();
     const dueDateTime = testStartTime + (currentTest!.timeLimit as number) * 60 * 1000;
     const timeExceeded = dueDateTime < Date.now();
@@ -105,7 +122,7 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
         status: $Enums.SubmissionStatus.LATE,
         submittedAt: new Date(),
       });
-      
+
       setError('You have exceeded the time limit for this test.');
       router.push('/dashboard/tests');
       return;
@@ -139,6 +156,18 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
   };
 
   // Render error states
+  if (loadingState === 'expired') {
+    return renderErrorPage({
+      errorType: "timeout",
+      message: error || "This test is no longer available. The due date has passed.",
+      title: "Test Not Available",
+      showGoBack: true,
+      showGoHome: true,
+      onGoHome: () => router.push("/dashboard"),
+      onGoBack: () => router.push("/dashboard/tests"),
+    });
+  }
+
   if (loadingState === 'error') {
     return renderErrorPage({
       message: error || 'Unable to load test instructions.',

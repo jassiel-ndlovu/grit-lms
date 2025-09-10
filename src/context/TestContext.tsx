@@ -12,11 +12,11 @@ interface TestContextType {
   loading: boolean;
   updating: boolean;
   message: Message | null;
-  fetchTestsByTutorId: (tutorId: string) => Promise<void | AppTypes.Test[]>;
+  fetchTestsByTutorId: (tutorId: string, isActive?: boolean) => Promise<void | AppTypes.Test[]>;
   fetchTestById: (testId: string) => Promise<void | AppTypes.Test>;
-  fetchTestsByStudentId: (studentId: string) => Promise<void | AppTypes.Test[]>;
-  fetchTestsByStudentIdCourseId: (studentId: string, courseId: string) => Promise<void | AppTypes.Test[]>;
-  fetchTestsByCourse: (courseIds: string[]) => Promise<void | AppTypes.Test[]>;
+  fetchTestsByStudentId: (studentId: string, isActive?: boolean) => Promise<void | AppTypes.Test[]>;
+  fetchTestsByStudentIdCourseId: (studentId: string, courseId: string, isActive?: boolean) => Promise<void | AppTypes.Test[]>;
+  fetchTestsByCourse: (courseIds: string[], isActive?: boolean) => Promise<void | AppTypes.Test[]>;
   createTest: (courseId: string, testData: Partial<AppTypes.Test>) => Promise<AppTypes.Test | void>;
   updateTest: (testId: string, updates: Partial<AppTypes.Test>) => Promise<AppTypes.Test | void>;
   deleteTest: (testId: string) => Promise<void>;
@@ -42,10 +42,15 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     setMessage(null);
   }, []);
 
-  const fetchTestsByTutorId = useCallback(async (tutorId: string) => {
+  const fetchTestsByTutorId = useCallback(async (tutorId: string, isActive?: boolean) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/tests?tutorId=${tutorId}`);
+      const params = new URLSearchParams({ tutorId });
+      if (isActive !== undefined) {
+        params.append('isActive', isActive.toString());
+      }
+      
+      const res = await axios.get(`/api/tests?${params.toString()}`);
       setTests(res.data);
 
       return res.data;
@@ -59,10 +64,15 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const fetchTestsByStudentId = useCallback(async (studentId: string) => {
+  const fetchTestsByStudentId = useCallback(async (studentId: string, isActive?: boolean) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/tests?studentId=${studentId}`);
+      const params = new URLSearchParams({ studentId });
+      if (isActive !== undefined) {
+        params.append('isActive', isActive.toString());
+      }
+      
+      const res = await axios.get(`/api/tests?${params.toString()}`);
       setTests(res.data);
 
       return res.data;
@@ -76,10 +86,15 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const fetchTestsByStudentIdCourseId = useCallback(async (studentId: string, courseId: string) => {
+  const fetchTestsByStudentIdCourseId = useCallback(async (studentId: string, courseId: string, isActive?: boolean) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/tests?studentId=${studentId}&courseId=${courseId}`);
+      const params = new URLSearchParams({ studentId, courseId });
+      if (isActive !== undefined) {
+        params.append('isActive', isActive.toString());
+      }
+      
+      const res = await axios.get(`/api/tests?${params.toString()}`);
       setTests(res.data);
 
       return res.data;
@@ -111,16 +126,20 @@ export const TestProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const fetchTestsByCourse = useCallback(async (courseIds: string[]) => {
+  const fetchTestsByCourse = useCallback(async (courseIds: string[], isActive?: boolean) => {
     if (!courseIds.length) return;
 
     setLoading(true);
     try {
-      const res = await axios.get('/api/tests', {
-        params: {
-          courseIds: courseIds.join(',')
-        }
+      const params = new URLSearchParams({
+        courseIds: courseIds.join(',')
       });
+      
+      if (isActive !== undefined) {
+        params.append('isActive', isActive.toString());
+      }
+      
+      const res = await axios.get(`/api/tests?${params.toString()}`);
       setTests(res.data);
 
       return res.data;

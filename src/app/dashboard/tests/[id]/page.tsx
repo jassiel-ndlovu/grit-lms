@@ -86,7 +86,13 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
     const loadTestData = async () => {
       try {
         setLoadingState('loading');
-        const fetchedTest = await fetchTestById(id);
+        const fetchedTest = await fetchTestById(id) as AppTypes.Test;
+
+        // Check if test is active
+        if (fetchedTest.isActive === false) {
+          setLoadingState('expired');
+          setErrorMessage('This test is no longer available. Please contact your tutor for details.');
+        }
 
         // Check due date immediately after fetching test
         if (fetchedTest?.dueDate) {
@@ -260,8 +266,8 @@ const TestTakingPage = ({ params }: TestTakingPageProps) => {
   }, [answers, test, studentProfile?.id, testStartTime, submission?.id, updateSubmission]);
 
   // Render different states
-if (loadingState === 'expired') {
-  return renderErrorPage({
+  if (loadingState === 'expired') {
+    return renderErrorPage({
       errorType: "timeout",
       message: errorMessage || "This test is no longer available. The due date has passed.",
       title: "Test Not Available",

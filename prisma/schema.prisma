@@ -21,25 +21,25 @@ model User {
 }
 
 model UserPreferences {
-  id                        String   @id @default(cuid())
-  userId                    String   @unique
-  emailNotifications        Boolean  @default(true)
-  pushNotifications         Boolean  @default(true)
-  notificationFrequency     NotificationFrequency @default(IMMEDIATE)
-  notifyOnCourseUpdate      Boolean  @default(true)
-  notifyOnNewLesson         Boolean  @default(true)
-  notifyOnNewTest           Boolean  @default(true)
-  notifyOnDueDateReminder   Boolean  @default(true)
-  notifyOnGrades            Boolean  @default(true)
-  notifyOnMessages          Boolean  @default(true)
-  darkMode                  Boolean  @default(false)
-  preferredLanguage         String   @default("EN")
-  timeZone                  String?  
-  preferredView             PreferredView @default(LIST)
-  studyReminders            Boolean  @default(false)
-  defaultDashboardTab       DashboardTab @default(COURSES)
+  id                      String                @id @default(cuid())
+  userId                  String                @unique
+  emailNotifications      Boolean               @default(true)
+  pushNotifications       Boolean               @default(true)
+  notificationFrequency   NotificationFrequency @default(IMMEDIATE)
+  notifyOnCourseUpdate    Boolean               @default(true)
+  notifyOnNewLesson       Boolean               @default(true)
+  notifyOnNewTest         Boolean               @default(true)
+  notifyOnDueDateReminder Boolean               @default(true)
+  notifyOnGrades          Boolean               @default(true)
+  notifyOnMessages        Boolean               @default(true)
+  darkMode                Boolean               @default(false)
+  preferredLanguage       String                @default("EN")
+  timeZone                String?
+  preferredView           PreferredView         @default(LIST)
+  studyReminders          Boolean               @default(false)
+  defaultDashboardTab     DashboardTab          @default(COURSES)
 
-  user                      User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Tutor {
@@ -115,14 +115,17 @@ model LessonCompletion {
 }
 
 model CourseEvent {
-  id        String    @id @default(cuid())
-  title     String
-  type      EventType
-  date      DateTime
-  link      String
-  createdAt DateTime  @default(now())
-  courseId  String
-  course    Course    @relation(fields: [courseId], references: [id])
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  type        EventType
+  date        DateTime
+  location    String?
+  duration    Int?
+  link        String?
+  createdAt   DateTime  @default(now())
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id])
 }
 
 model Quiz {
@@ -287,20 +290,20 @@ model Grade {
 }
 
 model Notification {
-  id          String                @id @default(cuid())
-  title       String
-  message     String
-  link        String?
-  type        NotificationType
-  priority    NotificationPriority  @default(NORMAL)
-  isRead      Boolean               @default(false)
-  createdAt   DateTime              @default(now())
-  readAt      DateTime?
-  studentId   String?
-  courseId    String?
+  id        String               @id @default(cuid())
+  title     String
+  message   String
+  link      String?
+  type      NotificationType
+  priority  NotificationPriority @default(NORMAL)
+  isRead    Boolean              @default(false)
+  createdAt DateTime             @default(now())
+  readAt    DateTime?
+  studentId String?
+  courseId  String?
 
-  course      Course?               @relation(fields: [courseId], references: [id])
-  student     Student?              @relation(fields: [studentId], references: [id])
+  course  Course?  @relation(fields: [courseId], references: [id])
+  student Student? @relation(fields: [studentId], references: [id])
 }
 
 model ActivityLog {
@@ -311,7 +314,7 @@ model ActivityLog {
   meta      Json?
   createdAt DateTime     @default(now())
 
-  user      User         @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 enum NotificationType {
@@ -381,6 +384,8 @@ enum SubmissionStatus {
 
 enum EventType {
   LECTURE
+  TEST
+  REMINDER
   SUBMISSION
   LIVE
   EXAM

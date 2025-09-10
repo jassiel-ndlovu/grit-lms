@@ -5,13 +5,14 @@ import LessonMarkdown from "@/app/components/markdown";
 import { useCourses } from "@/context/CourseContext";
 import { useProfile } from "@/context/ProfileContext";
 import { useTests } from "@/context/TestContext";
-import { QuestionType, TestQuestion } from "@/generated/prisma";
+import { $Enums, QuestionType, TestQuestion } from "@/generated/prisma";
 import { deleteFile, uploadFile } from "@/lib/blob";
-import { parseDateTimeLocal, formatForDateTimeLocal, extractImageUrlsFromMarkdown } from "@/lib/functions";
+import { parseDateTimeLocal, formatForDateTimeLocal, extractImageUrlsFromMarkdown, formatDate } from "@/lib/functions";
 import { ArrowLeft, Download, FileText, Plus, Trash2, Upload, Eye, EyeOff, File, FileTextIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import TestCreationSkeleton from "../../skeletons/create-test-skeleton";
 import { useParams } from "next/navigation";
+import { useEvents } from "@/context/EventContext";
 
 interface QuestionExport {
   question: string;
@@ -48,6 +49,7 @@ interface MLTestSchema {
 export default function CreateTestPage() {
   const { loading: courseLoading, fetchCoursesByTutorId } = useCourses();
   const { loading: testLoading, fetchTestById, createTest, updateTest } = useTests();
+  const { loading: eventsLoading, createEvent, updateEvent } = useEvents();
   const { profile } = useProfile();
   const { id } = useParams();
 
@@ -470,8 +472,22 @@ export default function CreateTestPage() {
     try {
       if (editMode) {
         await updateTest(id as string, testData);
+        updateEvent(formData.courseId || "", {
+          courseId: formData.courseId,
+          date: formData.dueDate,
+          description: `Test "${formData.title}" created, due on the "${formData.dueDate ? formatDate(formData.dueDate): ""}.`,
+          title: formData.title,
+          type: $Enums.EventType.TEST,
+        });
       } else {
         await createTest(formData.courseId || "", testData);
+        await createEvent(formData.courseId || "", {
+          courseId: formData.courseId,
+          date: formData.dueDate,
+          description: `Test "${formData.title}" created, due on the "${formData.dueDate ? formatDate(formData.dueDate): ""}.`,
+          title: formData.title,
+          type: $Enums.EventType.TEST,
+        });
       }
     } catch (error) {
       console.error('Error creating test:', error);
@@ -979,7 +995,7 @@ export default function CreateTestPage() {
     }
   };
 
-  if ((loading && !formData.title) || courseLoading || testLoading) {
+  if ((loading && !formData.title) || courseLoading || testLoading || eventsLoading) {
     return <TestCreationSkeleton />;
   }
 

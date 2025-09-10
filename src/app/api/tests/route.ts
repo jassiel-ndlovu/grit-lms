@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
@@ -8,6 +10,13 @@ export async function GET(req: NextRequest) {
   const testId = searchParams.get("testId");
   const courseIds = searchParams.get("courseIds");
   const courseId = searchParams.get("courseId");
+  const isActiveParam = searchParams.get("isActive");
+
+  // Parse isActive parameter (if provided)
+  let isActive: boolean | undefined = undefined;
+  if (isActiveParam !== null) {
+    isActive = isActiveParam.toLowerCase() === 'true';
+  }
 
   if (!tutorId && !testId && !courseIds && !studentId && !courseId) {
     return NextResponse.json(
@@ -16,9 +25,16 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // Base where clause with isActive filtering
+  const baseWhere: any = {};
+  if (isActive !== undefined) {
+    baseWhere.isActive = isActive;
+  }
+
   if (courseId && studentId) {
     const tests = await prisma.test.findMany({
       where: {
+        ...baseWhere,
         course: {
           id: courseId,
           students: {
@@ -36,6 +52,7 @@ export async function GET(req: NextRequest) {
   } else if (tutorId) {
     const tests = await prisma.test.findMany({
       where: {
+        ...baseWhere,
         course: {
           tutorId: tutorId,
         },
@@ -49,11 +66,20 @@ export async function GET(req: NextRequest) {
     const test = await prisma.test.findUnique({
       where: {
         id: testId,
+        ...(isActive !== undefined && { isActive }), // Only apply isActive filter for single test if specified
       },
       include: {
         questions: true,
       },
     });
+    
+    if (!test) {
+      return NextResponse.json(
+        { error: "Test not found" },
+        { status: 404 }
+      );
+    }
+    
     return NextResponse.json(test);
   } else if (courseIds) {
     const courseIdsArray = courseIds.split(",").filter(Boolean);
@@ -61,6 +87,7 @@ export async function GET(req: NextRequest) {
     try {
       const tests = await prisma.test.findMany({
         where: {
+          ...baseWhere,
           courseId: {
             in: courseIdsArray,
           },
@@ -80,6 +107,7 @@ export async function GET(req: NextRequest) {
   } else if (studentId) {
     const tests = await prisma.test.findMany({
       where: {
+        ...baseWhere,
         course: {
           students: {
             some: {
@@ -94,38 +122,51 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(tests);
   }
+  
+  // Fallback response
+  return NextResponse.json(
+    { error: "Invalid request parameters" },
+    { status: 400 }
+  );
 }
 
 export async function POST(req: NextRequest) {
-  const data = await req.json();
+  try {
+    const data = await req.json();
 
-  const newTest = await prisma.test.create({
-    data: {
-      ...data,
-      questions: {
-        create: data.questions.map((q: AppTypes.TestQuestion) => ({
-          question: q.question,
-          type: q.type,
-          points: q.points,
-          options: q.options,
-          answer: q.answer,
-        })),
+    const newTest = await prisma.test.create({
+      data: {
+        ...data,
+        questions: {
+          create: data.questions.map((q: AppTypes.TestQuestion) => ({
+            question: q.question,
+            type: q.type,
+            points: q.points,
+            options: q.options,
+            answer: q.answer,
+          })),
+        },
       },
-    },
-    include: {
-      questions: true,
-    },
-  });
+      include: {
+        questions: true,
+      },
+    });
 
-  await prisma.notification.create({
-  data: {
-    title: "New Test Created",
-    message: `A new test "${newTest.title}" has been published.`,
-    link: `/dashboard/tests/${newTest.id}`,
-    type: "TEST_CREATED",
-    courseId: newTest.courseId,
-  },
-});
+    await prisma.notification.create({
+      data: {
+        title: "New Test Created",
+        message: `A new test "${newTest.title}" has been published.`,
+        link: `/dashboard/tests/${newTest.id}`,
+        type: "TEST_CREATED",
+        courseId: newTest.courseId,
+      },
+    });
 
-  return NextResponse.json(newTest);
+    return NextResponse.json(newTest);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to create test: " + error },
+      { status: 500 }
+    );
+  }
 }

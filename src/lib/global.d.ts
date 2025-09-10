@@ -34,7 +34,15 @@ declare global {
     }>;
     type Attachment = Prisma.AttachmentGetPayload<object>;
     type LessonCompletion = Prisma.LessonCompletionGetPayload<object>;
-    type CourseEvent = Prisma.CourseEventGetPayload<object>;
+    type CourseEvent = Prisma.CourseEventGetPayload<{
+      include: {
+        course: {
+          include: {
+            tutor: true,
+          }
+        },
+      }
+    }>;
     type Quiz = Prisma.QuizGetPayload<{
       include: { completions: true };
     }>;

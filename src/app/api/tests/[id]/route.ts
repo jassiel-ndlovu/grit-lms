@@ -8,7 +8,22 @@ export async function PUT(
   const data = await req.json();
   const { id } = await params;
 
-  const updated = await prisma.test.update({ where: { id: id }, data });
+  const updated = await prisma.test.update({
+    where: { id: id },
+    data: {
+      ...data,
+      questions: {
+        deleteMany: {},
+        create: data.questions.map((q: AppTypes.TestQuestion) => ({
+          question: q.question,
+          type: q.type,
+          points: q.points,
+          options: q.options,
+          answer: q.answer,
+        })),
+      },
+    },
+  });
 
   await prisma.notification.create({
     data: {

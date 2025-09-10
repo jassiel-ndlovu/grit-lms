@@ -219,7 +219,7 @@ export default function ModernStudentHeader() {
             >
               <Bell className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
               {unreadCount > 0 && (
-                <div className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
+                <div className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </div>
               )}

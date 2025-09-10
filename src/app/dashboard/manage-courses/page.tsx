@@ -11,14 +11,15 @@ import TutorCourseCard from './models/tutor-course-card';
 import TutorCourseCardSkeleton from './skeletons/tutor-skeleton-course-card';
 
 export default function ManageCoursesPage() {
-  const { profile } = useProfile();
-  const { students } = useStudent();
+  const { loading: profileLoading, profile } = useProfile();
+  const { loading: studentsLoading, fetchStudents } = useStudent();
   const { loading: coursesLoading, fetchCoursesByTutorId, createCourse, message } = useCourses();
 
   // Memoize tutor profile once
   const tutorProfile = useMemo(() => profile as AppTypes.Tutor, [profile]);
 
   const [isOpen, setIsOpen] = useState(false);
+  const [students, setStudents] = useState<AppTypes.Student[]>([]);
   const [localCourses, setLocalCourses] = useState<AppTypes.Course[]>([]);
   const [formData, setFormData] = useState({
     courseName: '',
@@ -41,6 +42,15 @@ export default function ManageCoursesPage() {
 
     fetch();
   }, [tutorProfile?.id, fetchCoursesByTutorId]);
+
+  // fetch students
+  useEffect(() => {
+    (async () => {
+      const fetchedStudents = await fetchStudents() as AppTypes.Student[];
+
+      setStudents(fetchedStudents);
+    })();
+  }, [fetchStudents]);
 
   // Show toast/feedback
   useEffect(() => {
@@ -128,7 +138,7 @@ export default function ManageCoursesPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {coursesLoading
+        {coursesLoading || profileLoading || studentsLoading
           ? Array.from({ length: 4 }).map((_, i) => <TutorCourseCardSkeleton key={i} />)
           : localCourses.length ? (
             localCourses.map((c, index) => (

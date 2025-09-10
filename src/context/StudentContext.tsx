@@ -11,7 +11,7 @@ type StudentContextType = {
   loading: boolean;
   updating: boolean;
   message: Message | null;
-  fetchStudents: () => Promise<void>;
+  fetchStudents: () => Promise<void | AppTypes.Student[]>;
   fetchStudentsById: (ids: string[]) => Promise<AppTypes.Student[]>;
   fetchStudentsByCourseId: (courseId: string) => Promise<AppTypes.Student[]>;
   addStudent: (student: Partial<AppTypes.Student>) => Promise<AppTypes.Student | void>;
@@ -35,10 +35,10 @@ export const StudentProvider = ({ children }: { children: ReactNode }) => {
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/students');
-      if (!res.ok) throw new Error('Failed to fetch students');
-      const data = await res.json();
-      setStudents(data);
+      const res = await axios.get<AppTypes.Student[]>('/api/students');
+      setStudents(res.data);
+
+      return res.data;
     } catch (err: any) {
       setMessage(Message.error(
         err.message || 'Failed to load students',

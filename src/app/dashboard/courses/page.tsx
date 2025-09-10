@@ -56,7 +56,7 @@ export default function StudentCoursesPage() {
           studentCompletions
         ] = await Promise.all([
           fetchCoursesByStudentId(studentId),
-          fetchTestsByStudentId(studentId),
+          fetchTestsByStudentId(studentId, true),
           fetchTestSubmissionsByStudentId(studentId),
           fetchSubmissionsByStudentId(studentId),
           fetchEntriesByStudentId(studentId),

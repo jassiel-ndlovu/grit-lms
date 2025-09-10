@@ -130,7 +130,7 @@ export default function StudentCourse({ params }: StudentCourseProps) {
         setEntries(fetchedEntries);
 
         // Tests
-        const fetchedTests = await fetchTestsByStudentIdCourseId(studentId, courseId) as AppTypes.Test[];
+        const fetchedTests = await fetchTestsByStudentIdCourseId(studentId, courseId, true) as AppTypes.Test[];
         if (fetchedTests?.length) {
           const fetchedTestSubs = await Promise.all(
             fetchedTests.map((test) =>

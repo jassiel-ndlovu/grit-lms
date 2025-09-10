@@ -43,7 +43,7 @@ export default function TestsPage() {
       const fetchTests = async () => {
         if (coursesLoading) return;
         const courseIds = studentCourses.map(course => course.id);
-        const fetchedTests = await fetchTestsByCourse(courseIds) as AppTypes.Test[];
+        const fetchedTests = await fetchTestsByCourse(courseIds, true) as AppTypes.Test[];
         setStudentTests(fetchedTests);
 
         if (!fetchedTests || fetchedTests.length === 0) return;
