@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Clock, Plus, Search, Users } from "lucide-react";
+import { BookOpen, Clock, Cloud, CloudOffIcon, Plus, Search, Users } from "lucide-react";
 import TestActionsMenu from "./models/actions-menu";
 import TutorTestsTableSkeleton from "./skeletons/table-skeleton";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -371,8 +371,13 @@ export default function TutorTestsPage() {
                         <div className="text-sm text-gray-900">
                           {formatDate(test.dueDate)}
                         </div>
-                        <div className={`text-sm ${isOverdue ? 'text-red-500' : 'text-gray-500'}`}>
-                          {isOverdue ? 'Overdue' : 'Active'}
+                        <div className={`flex items-center gap-1 text-sm font-medium ${isOverdue ? 'text-red-500' : test.isActive ? 'text-green-500': 'text-gray-500'}`}>
+                          {isOverdue ? 
+                            <Clock className="w-3 h-3" />
+                          : test.isActive ? 
+                            <Cloud className="w-3 h-3" />
+                          : <CloudOffIcon className="w-3 h-3" />}
+                          <span>{isOverdue ? 'Due' : test.isActive ? 'Active' : 'Draft'}</span>
                         </div>
                       </td>
 

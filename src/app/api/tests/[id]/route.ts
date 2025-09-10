@@ -25,15 +25,17 @@ export async function PUT(
     },
   });
 
-  await prisma.notification.create({
-    data: {
-      title: "Test Updated",
-      message: `The test "${updated.title}" has been updated.`,
-      link: `/dashboard/tests/${updated.id}`,
-      type: "TEST_UPDATED",
-      courseId: updated.courseId,
-    },
-  });
+  if (data.isActive === true) {
+    await prisma.notification.create({
+      data: {
+        title: "Test Updated",
+        message: `The test "${updated.title}" has been updated.`,
+        link: `/dashboard/tests/${updated.id}`,
+        type: "TEST_UPDATED",
+        courseId: updated.courseId,
+      },
+    });
+  }
 
   return NextResponse.json(updated);
 }

@@ -8,10 +8,10 @@ import { useTests } from "@/context/TestContext";
 import { $Enums, QuestionType, TestQuestion } from "@/generated/prisma";
 import { deleteFile, uploadFile } from "@/lib/blob";
 import { parseDateTimeLocal, formatForDateTimeLocal, extractImageUrlsFromMarkdown, formatDate } from "@/lib/functions";
-import { ArrowLeft, Download, FileText, Plus, Trash2, Upload, Eye, EyeOff, File, FileTextIcon } from "lucide-react";
+import { ArrowLeft, Download, FileText, Plus, Trash2, Upload, File, FileTextIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import TestCreationSkeleton from "../../skeletons/create-test-skeleton";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEvents } from "@/context/EventContext";
 
 interface QuestionExport {
@@ -52,6 +52,7 @@ export default function CreateTestPage() {
   const { loading: eventsLoading, createEvent, updateEvent } = useEvents();
   const { profile } = useProfile();
   const { id } = useParams();
+  const router = useRouter();
 
   const editMode = id !== undefined || id != null;
 
@@ -472,22 +473,24 @@ export default function CreateTestPage() {
     try {
       if (editMode) {
         await updateTest(id as string, testData);
-        updateEvent(formData.courseId || "", {
+        await updateEvent(formData.courseId || "", {
           courseId: formData.courseId,
           date: formData.dueDate,
-          description: `Test "${formData.title}" created, due on the "${formData.dueDate ? formatDate(formData.dueDate): ""}.`,
+          description: `Test "${formData.title}" created, due on the "${formData.dueDate ? formatDate(formData.dueDate) : ""}.`,
           title: formData.title,
           type: $Enums.EventType.TEST,
         });
       } else {
-        await createTest(formData.courseId || "", testData);
+        const test = await createTest(formData.courseId || "", testData) as AppTypes.Test;
         await createEvent(formData.courseId || "", {
           courseId: formData.courseId,
           date: formData.dueDate,
-          description: `Test "${formData.title}" created, due on the "${formData.dueDate ? formatDate(formData.dueDate): ""}.`,
+          description: `Test "${formData.title}" created, due on the "${formData.dueDate ? formatDate(formData.dueDate) : ""}.`,
           title: formData.title,
           type: $Enums.EventType.TEST,
         });
+
+        router.push(`/dashboard/tutor-tests/create/${test.id}`);
       }
     } catch (error) {
       console.error('Error creating test:', error);
@@ -1014,28 +1017,6 @@ export default function CreateTestPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               {editMode ? 'Edit Test' : 'Create New Test'}
             </h1>
-
-            {/* Draft/Active Toggle Button */}
-            <button
-              onClick={toggleDraftStatus}
-              className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${formData.isActive
-                ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                }`}
-            >
-              {formData.isActive ? (
-                <>
-                  <Eye className="w-4 h-4" />
-                  Active
-                </>
-              ) : (
-                <>
-                  <EyeOff className="w-4 h-4" />
-                  Draft
-                </>
-              )}
-            </button>
-
           </div>
         </div>
       </div>
@@ -1044,13 +1025,33 @@ export default function CreateTestPage() {
       <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-sm">
           {/* Form Header */}
-          <div className="flex items-center gap-3 p-6 border-b border-gray-200 bg-gray-50">
-            <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
-              <FileText className="w-5 h-5 text-blue-600" />
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Test Details
+              </h2>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              Test Details
-            </h2>
+
+            {/* Draft/Active Toggle Button */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">
+                {formData.isActive ? 'Active' : 'Draft'}
+              </span>
+              <button
+                type="button"
+                onClick={toggleDraftStatus}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  formData.isActive ? 'bg-green-600' : 'bg-gray-300'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                  formData.isActive ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
           </div>
 
           <div className="p-6 space-y-6">

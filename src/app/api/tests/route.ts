@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   // Parse isActive parameter (if provided)
   let isActive: boolean | undefined = undefined;
   if (isActiveParam !== null) {
-    isActive = isActiveParam.toLowerCase() === 'true';
+    isActive = isActiveParam.toLowerCase() === "true";
   }
 
   if (!tutorId && !testId && !courseIds && !studentId && !courseId) {
@@ -72,14 +72,11 @@ export async function GET(req: NextRequest) {
         questions: true,
       },
     });
-    
+
     if (!test) {
-      return NextResponse.json(
-        { error: "Test not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Test not found" }, { status: 404 });
     }
-    
+
     return NextResponse.json(test);
   } else if (courseIds) {
     const courseIdsArray = courseIds.split(",").filter(Boolean);
@@ -122,7 +119,7 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json(tests);
   }
-  
+
   // Fallback response
   return NextResponse.json(
     { error: "Invalid request parameters" },
@@ -152,15 +149,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await prisma.notification.create({
-      data: {
-        title: "New Test Created",
-        message: `A new test "${newTest.title}" has been published.`,
-        link: `/dashboard/tests/${newTest.id}`,
-        type: "TEST_CREATED",
-        courseId: newTest.courseId,
-      },
-    });
+    if (data.isActive === true) {
+      await prisma.notification.create({
+        data: {
+          title: "New Test Created",
+          message: `A new test "${newTest.title}" has been published.`,
+          link: `/dashboard/tests/${newTest.id}`,
+          type: "TEST_CREATED",
+          courseId: newTest.courseId,
+        },
+      });
+    }
 
     return NextResponse.json(newTest);
   } catch (error) {
