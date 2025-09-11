@@ -224,7 +224,7 @@ export default function TutorTestsPage() {
   }
 
   return (
-    <div className="h-full px-6 pt-6 pb-10 bg-gray-50 overflow-y-auto">
+    <div className="h-full px-6 pt-6 pb-10 bg-gray-50">
       {/* Header */}
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
