@@ -157,21 +157,30 @@ model Test {
 }
 
 model TestQuestion {
-  id           String         @id @default(uuid())
-  testId       String
-  question     String
-  type         QuestionType
-  points       Int
-  options      String[]
-  answer       Json?
-  language     String?
-  matchPairs   Json?
-  reorderItems String[]
-  blankCount   Int?
-  createdAt    DateTime       @default(now())
-  test         Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
-  UploadedFile UploadedFile[]
+  id             String         @id @default(uuid())
+  testId         String
+  parentId       String?        // <-- NEW: for sub-questions
+  order          Int?           // <-- NEW: for explicit ordering
+  question       String
+  type           QuestionType
+  points         Int
+  options        String[]
+  answer         Json?
+  language       String?
+  matchPairs     Json?
+  reorderItems   String[]
+  blankCount     Int?
+  createdAt      DateTime       @default(now())
+
+  // Relations
+  test           Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
+  UploadedFile   UploadedFile[]
+
+  // Self-relation for sub-questions
+  parent         TestQuestion?  @relation("SubQuestions", fields: [parentId], references: [id])
+  subQuestions   TestQuestion[] @relation("SubQuestions")
 }
+
 
 model TestSubmission {
   id             String           @id @default(cuid())

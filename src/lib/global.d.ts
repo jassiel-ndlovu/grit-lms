@@ -38,17 +38,22 @@ declare global {
       include: {
         course: {
           include: {
-            tutor: true,
-          }
-        },
-      }
+            tutor: true;
+          };
+        };
+      };
     }>;
     type Quiz = Prisma.QuizGetPayload<{
       include: { completions: true };
     }>;
     type Test = Prisma.TestGetPayload<{
       include: {
-        questions: true;
+        questions: {
+          include: {
+            subQuestions: true,
+            parent: true,
+          }
+        };
         submissions: {
           include: {
             uploadedFiles: true;
@@ -56,7 +61,16 @@ declare global {
         };
       };
     }>;
-    type TestQuestion = Prisma.TestQuestionGetPayload<object>;
+    type ExtendedTestQuestion = AppTypes.TestQuestion & {
+      subQuestions?: ExtendedTestQuestion[];
+      order: number; // Make order non-nullable for UI purposes
+    };
+    type TestQuestion = Prisma.TestQuestionGetPayload<{
+      include: {
+        subQuestions: true;
+        parent: true;
+      };
+    }>;
     type TestSubmission = Prisma.TestSubmissionGetPayload<{
       include: {
         uploadedFiles: true;
@@ -87,7 +101,7 @@ declare global {
     };
     type Submission = Prisma.SubmissionGetPayload<{
       include: {
-        entries: true
+        entries: true;
       };
     }>;
 
