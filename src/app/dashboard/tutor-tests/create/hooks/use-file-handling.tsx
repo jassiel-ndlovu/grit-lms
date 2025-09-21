@@ -10,6 +10,7 @@ export const useFileHandling = () => {
   const handleQuestionFileUpload = useCallback(async (
     file: File, 
     questionId: string,
+    currentQuestionText: string, // Add current question text as parameter
     updateQuestionCallback: (questionId: string, field: string, value: any) => void
   ) => {
     setIsUploading(true);
@@ -23,14 +24,12 @@ export const useFileHandling = () => {
         setUploadedFiles(prev => new Set(prev).add(fileUrl));
       }
 
-      // Update question with file URL
+      // Update question with file URL using the provided current text
       const markdownLink = file.type.startsWith('image/')
         ? `\n![${file.name}](${fileUrl})\n`
         : `\n[${file.name}](${fileUrl})\n`;
 
-      updateQuestionCallback(questionId, 'question', (currentQuestion: string) => 
-        (currentQuestion || '') + markdownLink
-      );
+      updateQuestionCallback(questionId, 'question', currentQuestionText + "\n" + markdownLink);
 
     } catch (error) {
       console.error("Failed to upload file:", error);
@@ -43,6 +42,7 @@ export const useFileHandling = () => {
   const handleDrop = useCallback((
     e: React.DragEvent, 
     questionId: string,
+    currentQuestionText: string, // Add current question text as parameter
     updateQuestionCallback: (questionId: string, field: string, value: any) => void
   ) => {
     e.preventDefault();
@@ -57,18 +57,19 @@ export const useFileHandling = () => {
     );
 
     if (supportedFiles.length > 0) {
-      handleQuestionFileUpload(supportedFiles[0], questionId, updateQuestionCallback);
+      handleQuestionFileUpload(supportedFiles[0], questionId, currentQuestionText, updateQuestionCallback);
     }
   }, [handleQuestionFileUpload]);
 
   const handleFileInput = useCallback((
     e: React.ChangeEvent<HTMLInputElement>, 
     questionId: string,
+    currentQuestionText: string, // Add current question text as parameter
     updateQuestionCallback: (questionId: string, field: string, value: any) => void
   ) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleQuestionFileUpload(files[0], questionId, updateQuestionCallback);
+      handleQuestionFileUpload(files[0], questionId, currentQuestionText, updateQuestionCallback);
     }
     e.target.value = '';
   }, [handleQuestionFileUpload]);

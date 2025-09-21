@@ -47,9 +47,24 @@ export interface TestFormData extends Partial<Omit<AppTypes.Test, "questions">> 
 }
 
 export interface FileHandlingProps {
-  handleQuestionFileUpload: (file: File, questionId: string, updateQuestionCallback: (questionId: string, field: string, value: any) => void) => Promise<void>;
-  handleDrop: (e: React.DragEvent, questionId: string, updateQuestionCallback: (questionId: string, field: string, value: any) => void) => void;
-  handleFileInput: (e: React.ChangeEvent<HTMLInputElement>, questionId: string, updateQuestionCallback: (questionId: string, field: string, value: any) => void) => void;
+  handleQuestionFileUpload: (
+    file: File, 
+    questionId: string, 
+    currentQuestionText: string,
+    updateQuestionCallback: (questionId: string, field: string, value: any) => void
+  ) => Promise<void>;
+  handleDrop: (
+    e: React.DragEvent,
+    questionId: string, 
+    currentQuestionText: string,
+    updateQuestionCallback: (questionId: string, field: string, value: any) => void
+  ) => void;
+  handleFileInput: (
+    e: React.ChangeEvent<HTMLInputElement>,
+    questionId: string, 
+    currentQuestionText: string,
+    updateQuestionCallback: (questionId: string, field: string, value: any) => void
+  ) => void;
   isUploading: boolean;
   dragOver: boolean;
   setDragOver: (dragOver: boolean) => void;
@@ -58,6 +73,7 @@ export interface FileHandlingProps {
 export interface QuestionManagerProps {
   questions: ExtendedTestQuestion[];
   addQuestion: (parentId?: string) => void;
+  addSubQuestion: (parentId: string) => void;
   removeQuestion: (questionId: string) => void;
   updateQuestion: (questionId: string, field: string, value: any) => void;
   duplicateQuestion: (questionId: string) => void;

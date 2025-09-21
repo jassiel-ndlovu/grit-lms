@@ -82,7 +82,66 @@ export const useQuestionManagement = (initialQuestions: ExtendedTestQuestion[] =
     return rootQuestions;
   }, []);
 
+  // NEW: Add subquestion to a specific parent
+  const addSubQuestion = useCallback((parentId: string) => {
+    const newSubQuestion: ExtendedTestQuestion = {
+      id: generateId(),
+      question: '',
+      type: QuestionType.MULTIPLE_CHOICE,
+      points: 1,
+      options: ['', '', '', ''],
+      answer: '',
+      language: '',
+      matchPairs: null,
+      reorderItems: [],
+      blankCount: 0,
+      order: 0,
+      parentId: parentId,
+      subQuestions: [],
+      isExpanded: false,
+    };
+
+    setQuestions(prev => {
+      const updateWithSubQuestion = (questionsList: ExtendedTestQuestion[]): ExtendedTestQuestion[] => {
+        return questionsList.map(question => {
+          if (question.id === parentId) {
+            // Found the parent, add subquestion
+            const existingSubQuestions = question.subQuestions || [];
+            return {
+              ...question,
+              subQuestions: [...existingSubQuestions, newSubQuestion],
+              isExpanded: true // Auto-expand parent when adding subquestion
+            };
+          }
+
+          // Recursively search through subquestions
+          if (question.subQuestions && question.subQuestions.length > 0) {
+            return {
+              ...question,
+              subQuestions: updateWithSubQuestion(question.subQuestions)
+            };
+          }
+
+          return question;
+        });
+      };
+
+      return updateWithSubQuestion(prev);
+    });
+
+    // Set initial tab for new subquestion and expand parent
+    setQuestionTab(newSubQuestion.id as string, 'content');
+    setExpandedQuestions(prev => new Set([...prev, parentId]));
+  }, [generateId, setQuestionTab]);
+
+  // Existing addQuestion function (modified to use addSubQuestion when parentId is provided)
   const addQuestion = useCallback((parentId?: string) => {
+    if (parentId) {
+      addSubQuestion(parentId);
+      return;
+    }
+
+    // Add as root question (original functionality)
     const newQuestion: ExtendedTestQuestion = {
       id: generateId(),
       question: '',
@@ -95,46 +154,19 @@ export const useQuestionManagement = (initialQuestions: ExtendedTestQuestion[] =
       reorderItems: [],
       blankCount: 0,
       order: 0,
-      parentId: parentId || null,
+      parentId: null,
       subQuestions: [],
       isExpanded: false,
     };
 
     setQuestions(prev => {
-      const updatedQuestions = [...prev];
-
-      if (parentId) {
-        // Add as sub-question
-        const addSubQuestion = (qs: ExtendedTestQuestion[]): ExtendedTestQuestion[] => {
-          return qs.map(q => {
-            if (q.id === parentId) {
-              return {
-                ...q,
-                subQuestions: [...(q.subQuestions || []), newQuestion],
-                isExpanded: true
-              };
-            }
-            if (q.subQuestions) {
-              return { ...q, subQuestions: addSubQuestion(q.subQuestions) };
-            }
-            return q;
-          });
-        };
-
-        return addSubQuestion(updatedQuestions);
-      } else {
-        // Add as root question
-        newQuestion.order = updatedQuestions.length;
-        return [...updatedQuestions, newQuestion];
-      }
+      newQuestion.order = prev.length;
+      return [...prev, newQuestion];
     });
 
     // Set initial tab for new question
     setQuestionTab(newQuestion.id as string, 'content');
-    if (parentId) {
-      setExpandedQuestions(prev => new Set([...prev, parentId]));
-    }
-  }, [generateId, setQuestionTab]);
+  }, [generateId, setQuestionTab, addSubQuestion]);
 
   const removeQuestion = useCallback((questionId: string) => {
     setQuestions(prev => {
@@ -217,26 +249,71 @@ export const useQuestionManagement = (initialQuestions: ExtendedTestQuestion[] =
   }, [generateId]);
 
   const moveQuestion = useCallback((fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= questions.length) return;
-
     setQuestions(prev => {
+      if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 ||
+        fromIndex >= prev.length || toIndex >= prev.length) {
+        return prev;
+      }
+
       const updatedQuestions = [...prev];
       const [movedQuestion] = updatedQuestions.splice(fromIndex, 1);
       updatedQuestions.splice(toIndex, 0, movedQuestion);
 
-      // Update order
+      // Update order property if needed
       return updatedQuestions.map((q, index) => ({ ...q, order: index }));
     });
-  }, [questions.length]);
+  }, []);
+
+  // NEW: Move subquestion within parent
+  const moveSubQuestion = useCallback((parentId: string, fromIndex: number, toIndex: number) => {
+    setQuestions(prev => {
+      const moveSubQuestionRecursive = (questionsList: ExtendedTestQuestion[]): ExtendedTestQuestion[] => {
+        return questionsList.map(question => {
+          if (question.id === parentId && question.subQuestions) {
+            const subQuestions = [...question.subQuestions];
+            if (toIndex < 0 || toIndex >= subQuestions.length) return question;
+
+            const [movedSubQuestion] = subQuestions.splice(fromIndex, 1);
+            subQuestions.splice(toIndex, 0, movedSubQuestion);
+
+            // Update order for subquestions
+            const updatedSubQuestions = subQuestions.map((sq, index) => ({
+              ...sq,
+              order: index
+            }));
+
+            return {
+              ...question,
+              subQuestions: updatedSubQuestions
+            };
+          }
+
+          // Recursively search through subquestions
+          if (question.subQuestions && question.subQuestions.length > 0) {
+            return {
+              ...question,
+              subQuestions: moveSubQuestionRecursive(question.subQuestions)
+            };
+          }
+
+          return question;
+        });
+      };
+
+      return moveSubQuestionRecursive(prev);
+    });
+  }, []);
 
   return {
     questions,
     setQuestions,
     addQuestion,
+    addSubQuestion, // NEW: Export the addSubQuestion function
     removeQuestion,
     updateQuestion,
     duplicateQuestion,
     moveQuestion,
+    moveSubQuestion, // NEW: Export the moveSubQuestion function
     flattenQuestions,
     organizeQuestionsHierarchy,
     getQuestionTab,

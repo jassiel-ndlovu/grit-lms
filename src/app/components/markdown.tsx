@@ -91,11 +91,10 @@ export default function LessonMarkdown({
               const size = getImageSizeFromAlt(alt || "");
               
               return (
-                <div className="flex justify-center my-4">
                   <img
                     src={src}
                     alt={alt}
-                    className="rounded-lg border border-gray-200"
+                    className="mx-auto my-4 rounded-lg border border-gray-200"
                     style={{
                       maxWidth: size.width,
                       height: size.height,
@@ -104,7 +103,6 @@ export default function LessonMarkdown({
                     loading="lazy"
                     {...props}
                   />
-                </div>
               );
             },
             table: ({ ...props }) => (

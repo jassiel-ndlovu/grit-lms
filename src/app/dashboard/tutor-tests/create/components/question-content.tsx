@@ -16,11 +16,34 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
   fileHandling,
   updateQuestionCallback
 }) => {
-  const { handleDrop, handleFileInput, isUploading, dragOver, setDragOver } = fileHandling;
+  const { handleDrop, handleFileInput, isUploading } = fileHandling;
+  const [dragCounter, setDragCounter] = React.useState(0);
 
   return (
     <div className="space-y-4">
-      <div className="relative">
+      <div
+        className="relative"
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragCounter((c) => c + 1);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragCounter((c) => Math.max(c - 1, 0));
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragCounter(0);
+          handleDrop(e, question.id as string, question.question as string, updateQuestionCallback);
+        }}
+      >
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Question Text
         </label>
@@ -30,12 +53,6 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
           placeholder="Enter your question (Markdown supported)..."
           className="w-full font-mono text-sm px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
           rows={4}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => handleDrop(e, question.id as string, updateQuestionCallback)}
         />
 
         <div className="absolute bottom-2 right-2 flex items-center gap-2">
@@ -48,13 +65,13 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
               type="file"
               accept="image/*,.pdf,.doc,.docx"
               className="hidden"
-              onChange={(e) => handleFileInput(e, question.id as string, updateQuestionCallback)}
+              onChange={(e) => handleFileInput(e, question.id as string, question.question as string, updateQuestionCallback)}
               disabled={isUploading}
             />
           </label>
         </div>
 
-        {dragOver && (
+        {dragCounter > 0 && (
           <div className="absolute inset-0 bg-blue-50 border-2 border-dashed border-blue-400 rounded flex items-center justify-center">
             <div className="text-blue-600 font-medium">Drop file here</div>
           </div>

@@ -18,6 +18,7 @@ interface QuestionCardProps {
   fileHandling: FileHandlingProps;
   fileUploadRef: React.RefObject<HTMLInputElement>;
   updateQuestionCallback: (questionId: string, field: string, value: any) => void;
+  isSubQuestion?: boolean; // Add this prop
 }
 
 const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -31,11 +32,12 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   onMove,
   fileHandling,
   fileUploadRef,
-  updateQuestionCallback
+  updateQuestionCallback,
+  isSubQuestion = false // Default to false
 }) => {
   const [activeTab, setActiveTab] = useState<QuestionTab>('content');
-  const [isExpanded, setIsExpanded] = useState(false);
-  
+  const [isExpanded, setIsExpanded] = useState(true);
+
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -98,7 +100,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   };
 
   return (
-    <div className={`border border-gray-200 rounded-lg ${level > 0 ? 'ml-8 mt-2' : ''}`}>
+    <div className={`border border-gray-200 rounded-r-lg ${level > 0 ? 'ml-8 mt-2 border-l-2 border-l-purple-500' : ''}`}>
       {/* Question Header */}
       <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center gap-2">
@@ -115,7 +117,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
           )}
 
           <h4 className="text-sm font-medium text-gray-900">
-            {level === 0 ? `Question ${index + 1}` : `Sub-question ${(question.id as string).slice(-3)}`}
+            {level === 0 ? `Question ${index + 1}` : `Sub-question ${index + 1}`}
             <span className="text-gray-500 ml-2">({question.points || 0} pts)</span>
           </h4>
 
@@ -138,7 +140,8 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
             <Copy className="w-4 h-4" />
           </button>
 
-          {level === 0 && (
+          {/* Only show add sub-question button for parent questions, not subquestions */}
+          {level === 0 && !isSubQuestion && (
             <button
               onClick={() => onAddSubQuestion(question.id as string)}
               className="text-gray-500 hover:text-green-600 p-1 transition-colors"
@@ -188,6 +191,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                 fileHandling={fileHandling}
                 fileUploadRef={fileUploadRef}
                 updateQuestionCallback={updateQuestionCallback}
+                isSubQuestion={true} // Mark as subquestion to prevent nesting
               />
             ))}
           </div>
