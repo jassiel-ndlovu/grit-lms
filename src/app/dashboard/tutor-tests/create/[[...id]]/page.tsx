@@ -293,6 +293,7 @@ export default function CreateTestPage() {
     }
 
     if (importedData.questions) {
+      console.log("Imported Questions", importedData.questions)
       setQuestions(importedData.questions);
     }
 
@@ -302,6 +303,20 @@ export default function CreateTestPage() {
       title: 'Import Successful',
       message: `${importedData.questions?.length || 0} questions imported`
     });
+  };
+
+  const handleQuestionsReorder = (reorderedQuestions: ExtendedTestQuestion[]) => {
+    setQuestions(reorderedQuestions);
+  };
+
+  const handleSubQuestionsReorder = (parentId: string, reorderedSubQuestions: ExtendedTestQuestion[]) => {
+    setQuestions(prevQuestions =>
+      prevQuestions.map(question =>
+        question.id === parentId
+          ? { ...question, subQuestions: reorderedSubQuestions }
+          : question
+      )
+    );
   };
 
   const findQuestionById = (id: string, questionsList: ExtendedTestQuestion[]): ExtendedTestQuestion | null => {
@@ -587,7 +602,8 @@ export default function CreateTestPage() {
                   hasQuestions={hasQuestions}
                   totalPoints={totalPoints}
                   flatQuestions={flatQuestions}
-                  onMoveQuestion={moveQuestion}
+                  onQuestionsReorder={handleQuestionsReorder}
+                  onSubQuestionsReorder={handleSubQuestionsReorder}
                 />
                 {renderQuestionEditor()}
               </div>

@@ -170,7 +170,7 @@ export const QuestionsManager: React.FC<ExtendedQuestionManagerProps> = ({
                   <div className="opacity-60 scale-95 shadow-xl z-50 bg-blue-50 border-blue-200 border rounded-lg">
                     <QuestionCard
                       question={activeQuestion}
-                      index={questions.findIndex(q => q.id === activeId) || 0}
+                      index={activeQuestion.order || questions.findIndex(q => q.id === activeId) || 0}
                       level={activeQuestion.parentId ? 1 : 0}
                       onUpdate={updateQuestion}
                       onRemove={removeQuestion}

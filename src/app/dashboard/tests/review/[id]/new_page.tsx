@@ -196,7 +196,6 @@ export default function TestReviewPage({ params }: TestReviewPageProps) {
                 <QuestionReview
                   key={question.id}
                   question={question}
-                  questionGrade={questionGrade ? questionGrade: undefined}
                   questionNumber={index + 1}
                   studentAnswer={studentAnswer}
                   isCorrect={isCorrect}

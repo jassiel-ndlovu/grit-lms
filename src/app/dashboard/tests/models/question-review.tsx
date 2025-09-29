@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import LessonMarkdown from "@/app/components/markdown"; import { ArrowRight, CheckCircle, ChevronDown, ChevronRight, Download, FileText, XCircle } from "lucide-react";
+import LessonMarkdown from "@/app/components/markdown";
+import { ArrowRight, CheckCircle, ChevronDown, ChevronRight, Download, FileText, XCircle } from "lucide-react";
 import { useState } from "react";
 
 const QuestionReview: React.FC<{
@@ -10,8 +11,35 @@ const QuestionReview: React.FC<{
   studentAnswer: any;
   isCorrect: boolean;
   partialCredit?: number;
-}> = ({ question, questionGrade, questionNumber, studentAnswer, isCorrect, partialCredit }) => {
+  level?: number; // Add level attribute
+}> = ({ question, questionGrade, questionNumber, studentAnswer, isCorrect, partialCredit, level = 0 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
+
+  // Calculate indentation based on level
+  const getIndentationClass = () => {
+    switch (level) {
+      case 1: return 'ml-6 border-l-2 border-l-blue-200';
+      case 2: return 'ml-12 border-l-2 border-l-green-200';
+      case 3: return 'ml-18 border-l-2 border-l-purple-200';
+      default: return '';
+    }
+  };
+
+  // Get question number prefix based on level
+  const getQuestionNumberPrefix = () => {
+    switch (level) {
+      case 0: return 'Question';
+      case 1: return 'Part';
+      case 2: return 'Sub-part';
+      default: return 'Item';
+    }
+  };
+
+  // Get background color based on level for visual hierarchy
+  const getBackgroundColor = () => {
+    if (level === 0) return 'bg-white';
+    return level % 2 === 1 ? 'bg-gray-50' : 'bg-white';
+  };
 
   const renderAnswer = () => {
     switch (question.type) {
@@ -215,7 +243,6 @@ const QuestionReview: React.FC<{
                     >
                       <FileText className="w-4 h-4" />
                       <span className="flex-1 truncate">{file.fileName}</span>
-
                       <Download className="w-4 h-4 text-blue-600 hover:text-blue-800" />
                     </a>
                   ))}
@@ -352,9 +379,9 @@ const QuestionReview: React.FC<{
   };
 
   return (
-    <div className="bg-white border border-gray-200">
+    <div className={`border border-gray-200 ${getIndentationClass()} ${getBackgroundColor()}`}>
       <div
-        className="p-6 cursor-pointer hover:bg-gray-50"
+        className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-start justify-between">
@@ -367,7 +394,12 @@ const QuestionReview: React.FC<{
                   <XCircle className="w-5 h-5 text-red-500" />
                 )}
                 <span className="font-medium text-gray-900">
-                  Question {questionNumber} ({question.points} points)
+                  {getQuestionNumberPrefix()} {questionNumber} ({question.points} points)
+                  {level > 0 && (
+                    <span className="ml-2 text-xs font-normal text-gray-500">
+                      (Level {level})
+                    </span>
+                  )}
                 </span>
               </div>
               {partialCredit !== undefined && partialCredit > 0 && partialCredit < question.points && (
@@ -420,10 +452,61 @@ const QuestionReview: React.FC<{
               </div>
             )}
           </div>
+
+          {/* Recursively render sub-questions */}
+          {question.subQuestions && question.subQuestions.length > 0 && (
+            <div className="mt-6 space-y-4">
+              <h4 className="font-medium text-gray-900 text-sm">
+                {level === 0 ? 'Sub-questions' : 'Follow-up questions'}:
+              </h4>
+              {question.subQuestions.map((subQuestion, index) => {
+                const safeSubQuestion: AppTypes.TestQuestion = {
+                  ...subQuestion,
+                  subQuestions: [],
+                  parent: question,
+                };
+
+                return (
+                  <QuestionReview
+                    key={subQuestion.id}
+                    question={safeSubQuestion}
+                    questionNumber={index + 1}
+                    studentAnswer={studentAnswer?.[subQuestion.id] || studentAnswer} 
+                    isCorrect={areAnswersEqual(studentAnswer?.[subQuestion.id], subQuestion.answer)}
+                    questionGrade={getSubQuestionGrade(subQuestion.id)}
+                    level={level + 1}
+                  />
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 };
+
+// Helper function for answer comparison
+function areAnswersEqual(studentAnswer: any, correctAnswer: any): boolean {
+  if (studentAnswer == null && correctAnswer == null) return true;
+  if (studentAnswer == null || correctAnswer == null) return false;
+  if (typeof studentAnswer !== typeof correctAnswer) return false;
+
+  if (Array.isArray(studentAnswer) && Array.isArray(correctAnswer)) {
+    if (studentAnswer.length !== correctAnswer.length) return false;
+    return studentAnswer.every((item, index) =>
+      JSON.stringify(item) === JSON.stringify(correctAnswer[index])
+    );
+  }
+
+  return JSON.stringify(studentAnswer) === JSON.stringify(correctAnswer);
+}
+
+// Helper function to get sub-question grades
+function getSubQuestionGrade(questionId: string): AppTypes.QuestionGrade | undefined {
+  // Implement this based on your data structure
+  // This should return the grade for a specific sub-question
+  return undefined;
+}
 
 export default QuestionReview;

@@ -1,6 +1,7 @@
+// app/dashboard/tests/take/[id]/page.tsx
 "use client";
 
-import React, { use, useEffect } from 'react';
+import React, { use } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoadingOverlay } from '../components/loading-overlay';
 import { TimeWarning } from '../components/time-warning';
@@ -40,7 +41,6 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
     errorMessage,
     hasInternet,
     expandedQuestions,
-    autoSubmitted,
 
     // Actions
     setCurrentQuestionIndex,
@@ -55,17 +55,6 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
     getQuestionStatus,
     toggleQuestionExpansion
   } = useTestSession(id);
-
-  // Handle auto-submit redirect
-  useEffect(() => {
-    if (autoSubmitted) {
-      console.log('Auto-submit occurred, preparing redirect...');
-      // The redirect is handled within the hook, but we can show a message
-    }
-  }, [autoSubmitted]);
-
-  // Show warning when time is running low
-  const showTimeWarning = timeRemaining !== null && timeRemaining > 0 && timeRemaining <= 300; // 5 minutes
 
   // Render different states
   if (loadingState === 'expired') {
@@ -146,30 +135,16 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/20">
       <InternetStatus hasInternet={hasInternet} />
 
-      {/* Time warning for low time */}
-      {showTimeWarning && (
+      {/* Add time warning */}
+      {timeRemaining !== null && timeRemaining > 0 && (
         <TimeWarning
           timeRemaining={timeRemaining}
           onDismiss={() => console.log('Warning dismissed')}
         />
       )}
 
-      {/* Auto-submit notification */}
-      {autoSubmitted && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg">
-            Time expired! Your test has been automatically submitted.
-          </div>
-        </div>
-      )}
-
-      {/* Loading overlay for save operations */}
+      {/* Add loading overlay for save operations */}
       {isSaving && <LoadingOverlay message="Saving your progress..." />}
-
-      {/* Submitting overlay */}
-      {isSubmitting && (
-        <LoadingOverlay message="Submitting your test... Please wait." />
-      )}
 
       {/* Header */}
       <TestHeader

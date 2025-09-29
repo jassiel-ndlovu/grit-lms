@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Copy, Check } from 'lucide-react';
 import { QuestionType } from '@/generated/prisma';
 import { MLTestSchema, ExtendedTestQuestion } from '@/lib/test-creation-types';
 
@@ -13,6 +13,148 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onSuccess, fileInput
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [copiedSchema, setCopiedSchema] = useState('');
+
+  const handleCopySchema = (schemaType: string) => {
+    let schemaContent = '';
+    
+    switch (schemaType) {
+      case 'basic':
+        schemaContent = JSON.stringify(basicExampleJson, null, 2);
+        break;
+      case 'subquestions':
+        schemaContent = JSON.stringify(subQuestionsExampleJson, null, 2);
+        break;
+      case 'matching':
+        schemaContent = JSON.stringify(matchingExampleJson, null, 2);
+        break;
+      default:
+        schemaContent = JSON.stringify(basicExampleJson, null, 2);
+    }
+    
+    navigator.clipboard.writeText(schemaContent);
+    setCopiedSchema(schemaType);
+    setTimeout(() => setCopiedSchema(''), 2000);
+  };
+
+  const basicExampleJson = {
+    title: "Sample Math Test",
+    description: "A sample test demonstrating various question types",
+    preTestInstructions: "Read each question carefully. Show your work where applicable.",
+    dueDate: "2024-12-31T23:59:59.000Z",
+    timeLimit: 60,
+    questions: [
+      {
+        question: "What is 2 + 2?",
+        type: "MULTIPLE_CHOICE",
+        points: 10,
+        options: ["3", "4", "5", "6"],
+        answer: "4",
+        order: 0
+      },
+      {
+        question: "The sky is blue.",
+        type: "TRUE_FALSE",
+        points: 5,
+        answer: true,
+        order: 1
+      }
+    ]
+  };
+
+  const subQuestionsExampleJson = {
+    title: "Advanced Physics Test with Sub-questions",
+    description: "Demonstrating hierarchical question structure",
+    questions: [
+      {
+        id: "q1",
+        question: "A car accelerates uniformly from rest to 20 m/s in 5 seconds.",
+        type: "ESSAY",
+        points: 0, // Parent questions can have 0 points if sub-questions carry the weight
+        order: 0,
+        subQuestions: [
+          {
+            id: "q1a",
+            question: "Calculate the acceleration of the car.",
+            type: "NUMERIC",
+            points: 5,
+            answer: 4,
+            order: 0,
+            parentId: "q1"
+          },
+          {
+            id: "q1b",
+            question: "What distance does the car travel during this time?",
+            type: "NUMERIC",
+            points: 5,
+            answer: 50,
+            order: 1,
+            parentId: "q1"
+          }
+        ]
+      },
+      {
+        id: "q2",
+        question: "Chemical Reactions Analysis",
+        type: "MULTIPLE_CHOICE",
+        points: 10,
+        options: ["Option A", "Option B", "Option C", "Option D"],
+        answer: "Option B",
+        order: 1,
+        subQuestions: [
+          {
+            id: "q2a",
+            question: "Explain why you chose this answer.",
+            type: "SHORT_ANSWER",
+            points: 5,
+            answer: "Sample explanation text",
+            order: 0,
+            parentId: "q2"
+          }
+        ]
+      }
+    ]
+  };
+
+  const matchingExampleJson = {
+    title: "Vocabulary Matching Test",
+    questions: [
+      {
+        question: "Match the following terms with their definitions:",
+        type: "MATCHING",
+        points: 10,
+        matchPairs: [
+          { left: "Photosynthesis", right: "Process by which plants make food" },
+          { left: "Mitosis", right: "Cell division process" },
+          { left: "Ecosystem", right: "Community of interacting organisms" }
+        ],
+        answer: [
+          { left: "Photosynthesis", right: "Process by which plants make food" },
+          { left: "Mitosis", right: "Cell division process" },
+          { left: "Ecosystem", right: "Community of interacting organisms" }
+        ],
+        order: 0
+      },
+      {
+        question: "Reorder the steps of the scientific method:",
+        type: "REORDER",
+        points: 8,
+        reorderItems: [
+          "Form hypothesis",
+          "Make observation",
+          "Conduct experiment",
+          "Analyze results"
+        ],
+        answer: [
+          "Make observation",
+          "Form hypothesis", 
+          "Conduct experiment",
+          "Analyze results"
+        ],
+        order: 1
+      }
+    ]
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -39,28 +181,50 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onSuccess, fileInput
     const questionMap = new Map<string, ExtendedTestQuestion>();
     const rootQuestions: ExtendedTestQuestion[] = [];
 
-    // First pass: create map of all questions
+    // First pass: create map of all questions with proper subQuestions array
     flatQuestions.forEach(q => {
-      questionMap.set(q.id as string, { ...q, subQuestions: [] });
+      questionMap.set(q.id as string, { 
+        ...q, 
+        subQuestions: q.subQuestions || [],
+        isExpanded: true // Default to expanded for imported questions
+      });
     });
 
-    // Second pass: organize hierarchy
+    // Second pass: organize hierarchy and validate parent-child relationships
     flatQuestions.forEach(q => {
       const question = questionMap.get(q.id as string)!;
-      if (q.parentId && questionMap.has(q.parentId)) {
-        const parent = questionMap.get(q.parentId)!;
-        if (!parent.subQuestions) parent.subQuestions = [];
-        parent.subQuestions.push(question);
+      
+      if (q.parentId) {
+        if (questionMap.has(q.parentId)) {
+          const parent = questionMap.get(q.parentId)!;
+          if (!parent.subQuestions) parent.subQuestions = [];
+          
+          // Validate that parent and child have compatible types
+          if (parent.type === QuestionType.ESSAY || parent.type === QuestionType.SHORT_ANSWER) {
+            // Essay/short answer parents can have any type of sub-questions
+            parent.subQuestions.push(question);
+          } else if (parent.type === question.type) {
+            // Same type nesting allowed
+            parent.subQuestions.push(question);
+          } else {
+            console.warn(`Question ${q.id} has incompatible type with parent ${q.parentId}`);
+            // Still add to hierarchy but log warning
+            parent.subQuestions.push(question);
+          }
+        } else {
+          console.warn(`Question ${q.id} references non-existent parent ${q.parentId}`);
+          rootQuestions.push(question);
+        }
       } else {
         rootQuestions.push(question);
       }
     });
 
-    // Sort by order
+    // Sort by order and recursively sort sub-questions
     const sortByOrder = (questions: ExtendedTestQuestion[]) => {
       questions.sort((a, b) => (a.order || 0) - (b.order || 0));
       questions.forEach(q => {
-        if (q.subQuestions) {
+        if (q.subQuestions && q.subQuestions.length > 0) {
           sortByOrder(q.subQuestions);
         }
       });
@@ -70,9 +234,65 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onSuccess, fileInput
     return rootQuestions;
   };
 
+  const validateQuestion = (q: any, index: number): ExtendedTestQuestion => {
+    // Validate required fields
+    if (!q.question || q.question.trim() === '') {
+      throw new Error(`Question ${index + 1} is missing question text`);
+    }
+
+    if (!q.type) {
+      throw new Error(`Question ${index + 1} is missing question type`);
+    }
+
+    // Validate question type
+    if (!Object.values(QuestionType).includes(q.type)) {
+      throw new Error(`Question ${index + 1} has invalid question type: ${q.type}`);
+    }
+
+    // Validate points (can be 0 for parent questions)
+    if (q.points === undefined || q.points === null || q.points < 0) {
+      throw new Error(`Question ${index + 1} has invalid points value`);
+    }
+
+    // Type-specific validations
+    if ((q.type === QuestionType.MULTIPLE_CHOICE || q.type === QuestionType.MULTI_SELECT) && 
+        (!q.options || !Array.isArray(q.options) || q.options.length === 0)) {
+      throw new Error(`Question ${index + 1} (${q.type}) requires options array`);
+    }
+
+    if (q.type === QuestionType.MATCHING && (!q.matchPairs || !Array.isArray(q.matchPairs))) {
+      throw new Error(`Question ${index + 1} (MATCHING) requires matchPairs array`);
+    }
+
+    if (q.type === QuestionType.REORDER && (!q.reorderItems || !Array.isArray(q.reorderItems))) {
+      throw new Error(`Question ${index + 1} (REORDER) requires reorderItems array`);
+    }
+
+    if (q.type === QuestionType.FILL_IN_THE_BLANK && (!q.blankCount || q.blankCount < 1)) {
+      throw new Error(`Question ${index + 1} (FILL_IN_THE_BLANK) requires blankCount >= 1`);
+    }
+
+    return {
+      id: q.id || `imported-${Date.now()}-${index}`,
+      question: q.question.trim(),
+      type: q.type,
+      points: q.points,
+      options: q.options || [],
+      answer: q.answer !== undefined ? q.answer : null,
+      language: q.language || null,
+      matchPairs: q.matchPairs || null,
+      reorderItems: q.reorderItems || [],
+      blankCount: q.blankCount || null,
+      order: q.order !== undefined ? q.order : index,
+      parentId: q.parentId || null,
+      subQuestions: q.subQuestions,
+      isExpanded: true,
+    };
+  };
+
   const importQuestionsFromJson = async () => {
     if (isImporting) return;
-    
+
     setIsImporting(true);
     setImportError('');
 
@@ -91,58 +311,28 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onSuccess, fileInput
         throw new Error("Questions array cannot be empty");
       }
 
-      // Validate and transform questions
-      const importedQuestions: ExtendedTestQuestion[] = parsedData.questions.map((q, i) => {
-        // Validate required fields
-        if (!q.question || q.question.trim() === '') {
-          throw new Error(`Question ${i + 1} is missing question text`);
-        }
-
-        if (!q.type) {
-          throw new Error(`Question ${i + 1} is missing question type`);
-        }
-
-        // Validate question type
-        if (!Object.values(QuestionType).includes(q.type)) {
-          throw new Error(`Question ${i + 1} has invalid question type: ${q.type}`);
-        }
-
-        // Validate points
-        if (q.points === undefined || q.points === null || q.points < 0) {
-          throw new Error(`Question ${i + 1} has invalid points value`);
-        }
-
-        return {
-          id: `imported-${Date.now()}-${i}`,
-          question: q.question.trim(),
-          type: q.type,
-          points: q.points,
-          options: q.options || (q.type === QuestionType.MULTIPLE_CHOICE || q.type === QuestionType.MULTI_SELECT ? ['', '', '', ''] : []),
-          answer: q.answer !== undefined ? q.answer : '',
-          language: q.language || null,
-          matchPairs: q.matchPairs || null,
-          reorderItems: q.reorderItems || [],
-          blankCount: q.blankCount || (q.type === QuestionType.FILL_IN_THE_BLANK ? 1 : null),
-          order: q.order || i,
-          parentId: q.parentId || null,
-          subQuestions: [],
-          isExpanded: false,
-        };
-      });
-
-      // Organize into hierarchy if there are parent-child relationships
+      // Validate and transform all questions
+      const importedQuestions: ExtendedTestQuestion[] = parsedData.questions.map((q, i) => 
+        validateQuestion(q, i)
+      );
+      
+      // Organize into hierarchy
       const hierarchicalQuestions = organizeQuestionsHierarchy(importedQuestions);
 
       // Prepare the full import data
       const importData: MLTestSchema = {
-        ...parsedData,
-        // @ts-expect-error subQuestions can be undefined
+        title: parsedData.title || "Imported Test",
+        description: parsedData.description || "",
+        preTestInstructions: parsedData.preTestInstructions || "",
+        dueDate: parsedData.dueDate,
+        timeLimit: parsedData.timeLimit,
+        // @ts-expect-error question
         questions: hierarchicalQuestions
       };
 
       onSuccess(importData);
       setImportJson('');
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Invalid JSON format or structure";
       setImportError(errorMessage);
@@ -152,42 +342,45 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onSuccess, fileInput
     }
   };
 
-  const exampleJson = {
-    title: "Sample Math Test",
-    description: "A sample test demonstrating various question types",
-    preTestInstructions: "Read each question carefully. Show your work where applicable.",
-    dueDate: "2024-12-31T23:59:59.000Z",
-    timeLimit: 60,
-    questions: [
-      {
-        question: "What is 2 + 2?",
-        type: "MULTIPLE_CHOICE",
-        points: 10,
-        options: ["3", "4", "5", "6"],
-        answer: "4",
-        order: 0,
-        parentId: null
-      },
-      {
-        question: "The sky is blue.",
-        type: "TRUE_FALSE",
-        points: 5,
-        answer: true,
-        order: 1,
-        parentId: null
-      }
-    ]
-  };
+  const SchemaCard = ({ title, description, example, type }: { 
+    title: string; 
+    description: string; 
+    example: object;
+    type: string;
+  }) => (
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h4 className="font-medium text-gray-900">{title}</h4>
+          <p className="text-sm text-gray-600 mt-1">{description}</p>
+        </div>
+        <button
+          onClick={() => handleCopySchema(type)}
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+        >
+          {copiedSchema === type ? (
+            <Check className="w-3 h-3 text-green-600" />
+          ) : (
+            <Copy className="w-3 h-3" />
+          )}
+          Copy
+        </button>
+      </div>
+      <pre className="text-xs bg-gray-50 p-3 rounded border overflow-x-auto">
+        {JSON.stringify(example, null, 2)}
+      </pre>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h3 className="text-lg font-medium text-gray-900">Import Questions from JSON</h3>
             <p className="text-sm text-gray-500 mt-1">
-              Upload a file or paste JSON data to import questions
+              Upload a file or paste JSON data to import questions with full subquestion support
             </p>
           </div>
           <button
@@ -224,9 +417,9 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onSuccess, fileInput
                 value={importJson}
                 onChange={(e) => {
                   setImportJson(e.target.value);
-                  setImportError(''); // Clear errors when typing
+                  setImportError('');
                 }}
-                rows={12}
+                rows={8}
                 className="w-full font-mono text-sm px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
                 placeholder="Paste your JSON data here..."
               />
@@ -235,40 +428,60 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onSuccess, fileInput
             {/* Error Display */}
             {importError && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                <div className="flex">
-                  <div className="text-sm text-red-800">
-                    <strong>Import Error:</strong> {importError}
-                  </div>
+                <div className="text-sm text-red-800">
+                  <strong>Import Error:</strong> {importError}
                 </div>
               </div>
             )}
 
-            {/* Example JSON */}
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-3">Example JSON Structure:</h4>
-              <pre className="text-xs text-blue-800 whitespace-pre-wrap overflow-x-auto bg-white p-3 rounded border">
-                {JSON.stringify(exampleJson, null, 2)}
-              </pre>
+            {/* Schema Templates */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">JSON Templates (Click to Copy):</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <SchemaCard
+                  title="Basic Questions"
+                  description="Simple multiple choice and true/false"
+                  example={basicExampleJson}
+                  type="basic"
+                />
+                <SchemaCard
+                  title="With Sub-questions"
+                  description="Hierarchical question structure"
+                  example={subQuestionsExampleJson}
+                  type="subquestions"
+                />
+                <SchemaCard
+                  title="Interactive Types"
+                  description="Matching and reorder questions"
+                  example={matchingExampleJson}
+                  type="matching"
+                />
+              </div>
             </div>
 
-            {/* Schema Documentation */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-3">Supported Question Types:</h4>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="space-y-1">
-                  <div><code className="bg-gray-200 px-1 rounded">MULTIPLE_CHOICE</code> - Single answer</div>
-                  <div><code className="bg-gray-200 px-1 rounded">MULTI_SELECT</code> - Multiple answers</div>
-                  <div><code className="bg-gray-200 px-1 rounded">TRUE_FALSE</code> - True/False</div>
-                  <div><code className="bg-gray-200 px-1 rounded">SHORT_ANSWER</code> - Brief text</div>
-                  <div><code className="bg-gray-200 px-1 rounded">ESSAY</code> - Long text</div>
-                  <div><code className="bg-gray-200 px-1 rounded">NUMERIC</code> - Number answer</div>
+            {/* Quick Reference */}
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="font-medium text-blue-900 mb-3">Quick Reference:</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <div className="font-medium mb-1">Hierarchical Fields:</div>
+                  <code className="block bg-blue-100 px-1 rounded mb-1">parentId</code>
+                  <code className="block bg-blue-100 px-1 rounded">subQuestions[]</code>
                 </div>
-                <div className="space-y-1">
-                  <div><code className="bg-gray-200 px-1 rounded">CODE</code> - Programming code</div>
-                  <div><code className="bg-gray-200 px-1 rounded">FILE_UPLOAD</code> - File submission</div>
-                  <div><code className="bg-gray-200 px-1 rounded">MATCHING</code> - Match pairs</div>
-                  <div><code className="bg-gray-200 px-1 rounded">REORDER</code> - Sort items</div>
-                  <div><code className="bg-gray-200 px-1 rounded">FILL_IN_THE_BLANK</code> - Fill blanks</div>
+                <div>
+                  <div className="font-medium mb-1">Matching Type:</div>
+                  <code className="block bg-blue-100 px-1 rounded mb-1">matchPairs: {"{left, right}[]"}</code>
+                  <code className="block bg-blue-100 px-1 rounded">answer: same structure</code>
+                </div>
+                <div>
+                  <div className="font-medium mb-1">Parent Questions:</div>
+                  <div className="text-blue-800">Can have points: 0</div>
+                  <div className="text-blue-800">Nest any question types</div>
+                </div>
+                <div>
+                  <div className="font-medium mb-1">Validation:</div>
+                  <div className="text-blue-800">Auto-hierarchy building</div>
+                  <div className="text-blue-800">Type-specific checks</div>
                 </div>
               </div>
             </div>

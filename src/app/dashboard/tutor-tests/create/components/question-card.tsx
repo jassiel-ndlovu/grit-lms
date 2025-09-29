@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Copy, ChevronRight, ChevronDown, Plus, Trash2, GripVertical } from 'lucide-react';
+import { Copy, ChevronRight, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { ExtendedTestQuestion, FileHandlingProps, QuestionTab } from '@/lib/test-creation-types';
 import QuestionContent from './question-content';
 import QuestionAnswer from './question-answer';
@@ -18,7 +18,7 @@ interface QuestionCardProps {
   fileHandling: FileHandlingProps;
   fileUploadRef: React.RefObject<HTMLInputElement>;
   updateQuestionCallback: (questionId: string, field: string, value: any) => void;
-  isSubQuestion?: boolean; // Add this prop
+  isSubQuestion?: boolean;
 }
 
 const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -33,38 +33,14 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   fileHandling,
   fileUploadRef,
   updateQuestionCallback,
-  isSubQuestion = false // Default to false
+  isSubQuestion = false
 }) => {
   const [activeTab, setActiveTab] = useState<QuestionTab>('content');
   const [isExpanded, setIsExpanded] = useState(true);
 
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
+  console.log("QuestionCard index", index, "QuestionCard order", question.order);
 
   const hasSubQuestions = question.subQuestions && question.subQuestions.length > 0;
-
-  const handleDragStart = (e: React.DragEvent) => {
-    if (level === 0) {
-      dragItem.current = index;
-      e.dataTransfer.effectAllowed = 'move';
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (level === 0) {
-      dragOverItem.current = index;
-      e.dataTransfer.dropEffect = 'move';
-    }
-  };
-
-  const handleDragEnd = () => {
-    if (dragItem.current !== null && dragOverItem.current !== null && level === 0) {
-      onMove(dragItem.current, dragOverItem.current);
-    }
-    dragItem.current = null;
-    dragOverItem.current = null;
-  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -104,18 +80,6 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
       {/* Question Header */}
       <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center gap-2">
-          {level === 0 && (
-            <div
-              className="cursor-move p-1 text-gray-400 hover:text-gray-600 transition-colors"
-              draggable
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-            >
-              <GripVertical className="w-4 h-4" />
-            </div>
-          )}
-
           <h4 className="text-sm font-medium text-gray-900">
             {level === 0 ? `Question ${index + 1}` : `Sub-question ${index + 1}`}
             <span className="text-gray-500 ml-2">({question.points || 0} pts)</span>
@@ -191,7 +155,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                 fileHandling={fileHandling}
                 fileUploadRef={fileUploadRef}
                 updateQuestionCallback={updateQuestionCallback}
-                isSubQuestion={true} // Mark as subquestion to prevent nesting
+                isSubQuestion={true}
               />
             ))}
           </div>

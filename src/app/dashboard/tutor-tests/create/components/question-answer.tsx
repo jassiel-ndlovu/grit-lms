@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Trash2, File, FileTextIcon } from 'lucide-react';
+import { Plus, Trash2, File, FileTextIcon, FileText } from 'lucide-react';
 import { QuestionType } from '@/generated/prisma';
 import { ExtendedTestQuestion, FileHandlingProps } from '@/lib/test-creation-types';
 
@@ -45,7 +45,7 @@ const QuestionAnswer: React.FC<QuestionAnswerProps> = ({
         <div
           className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
           onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => handleDrop(e, question.id as string, updateQuestionCallback)}
+          onDrop={(e) => handleDrop(e, question.id as string, question.question || "", updateQuestionCallback)}
           onClick={() => fileUploadRef.current?.click()}
         >
           <File className="w-6 h-6 text-gray-400 mx-auto mb-2" />
@@ -60,7 +60,7 @@ const QuestionAnswer: React.FC<QuestionAnswerProps> = ({
             type="file"
             accept=".pdf,.doc,.docx,image/*"
             className="hidden"
-            onChange={(e) => handleFileInput(e, question.id as string, updateQuestionCallback)}
+            onChange={(e) => handleFileInput(e, question.id as string, question.question || "", updateQuestionCallback)}
           />
         </div>
       )}
@@ -73,6 +73,59 @@ const QuestionAnswer: React.FC<QuestionAnswerProps> = ({
   );
 
   const renderAnswerInput = () => {
+    const renderFileUploadOption = () => (
+      <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+        <h4 className="text-sm font-medium text-gray-700 mb-2">Answer File Upload (Optional)</h4>
+
+        {typeof question.answer === 'string' &&
+          (question.answer.startsWith('http://') || question.answer.startsWith('https://')) ? (
+          <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-md">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-800">
+                File uploaded: {question.answer.split('/').pop()}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => onUpdate(question.id as string, 'answer', '')}
+              className="text-red-500 hover:text-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div
+            className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
+            onDragOver={(e) => {
+              e.preventDefault();
+              // You might need to manage dragOver state in your component
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              // Handle file drop logic here
+            }}
+            onClick={() => {
+              // Trigger file input click
+            }}
+          >
+            <File className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+            <p className="text-sm text-gray-600">
+              Drag & drop or click to upload answer file
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Supports PDF, Word documents, and images
+            </p>
+          </div>
+        )}
+
+        <div className="mt-2 text-xs text-gray-500">
+          <p>You can either provide a text answer below or upload a file with the answer.</p>
+          <p>If both are provided, the file will take precedence.</p>
+        </div>
+      </div>
+    );
+
     switch (question.type) {
       case QuestionType.MULTIPLE_CHOICE:
       case QuestionType.MULTI_SELECT:
@@ -273,6 +326,160 @@ const QuestionAnswer: React.FC<QuestionAnswerProps> = ({
           </div>
         );
 
+      case QuestionType.MATCHING:
+        const matchPairsArray = Array.isArray(question.matchPairs)
+          ? question.matchPairs as Array<{ left?: string, right?: string }>
+          : [];
+
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Matching Pairs:</label>
+              {matchPairsArray.map((pair, pairIndex) => (
+                <div key={pairIndex} className="grid grid-cols-2 gap-2 items-center mb-2">
+                  <input
+                    type="text"
+                    value={pair.left || ''}
+                    onChange={(e) => {
+                      const newPairs = [...matchPairsArray];
+                      newPairs[pairIndex] = { ...newPairs[pairIndex], left: e.target.value };
+                      onUpdate(question.id as string, 'matchPairs', newPairs);
+                    }}
+                    placeholder="Left item"
+                    className="text-sm px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={pair.right || ''}
+                      onChange={(e) => {
+                        const newPairs = [...matchPairsArray];
+                        newPairs[pairIndex] = { ...newPairs[pairIndex], right: e.target.value };
+                        onUpdate(question.id as string, 'matchPairs', newPairs);
+                      }}
+                      placeholder="Right item"
+                      className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPairs = [...matchPairsArray];
+                        newPairs.splice(pairIndex, 1);
+                        onUpdate(question.id as string, 'matchPairs', newPairs);
+                      }}
+                      className="text-red-500 hover:text-red-700 p-1 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const newPairs = [...matchPairsArray, { left: '', right: '' }];
+                  onUpdate(question.id as string, 'matchPairs', newPairs);
+                }}
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Matching Pair
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Correct Answer (JSON format)
+              </label>
+              <textarea
+                value={typeof question.answer === 'string' &&
+                  !question.answer.startsWith('http://') &&
+                  !question.answer.startsWith('https://')
+                  ? question.answer : ''}
+                onChange={(e) => onUpdate(question.id as string, 'answer', e.target.value)}
+                placeholder='[{"left": "Capital of France", "right": "Paris"}, {"left": "Largest planet", "right": "Jupiter"}]'
+                rows={4}
+                className="w-full font-mono text-sm px-3 py-2 border border-green-500 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-colors"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter the correct matching pairs in JSON array format with left and right properties.
+              </p>
+            </div>
+
+            {renderFileUploadOption()}
+          </div>
+        );
+
+      case QuestionType.REORDER:
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Items to Reorder:</label>
+              {(question.reorderItems || []).map((item, itemIndex) => (
+                <div key={itemIndex} className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500 w-6">{itemIndex + 1}.</span>
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => {
+                      const newItems = [...(question.reorderItems || [])];
+                      newItems[itemIndex] = e.target.value;
+                      onUpdate(question.id as string, 'reorderItems', newItems);
+                    }}
+                    placeholder={`Item ${itemIndex + 1}`}
+                    className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newItems = [...(question.reorderItems || [])];
+                      newItems.splice(itemIndex, 1);
+                      onUpdate(question.id as string, 'reorderItems', newItems);
+                    }}
+                    className="text-red-500 hover:text-red-700 p-1 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const newItems = [...(question.reorderItems || []), ''];
+                  onUpdate(question.id as string, 'reorderItems', newItems);
+                }}
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Item
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Correct Order (comma-separated indices)
+              </label>
+              <input
+                type="text"
+                value={typeof question.answer === 'string' &&
+                  !question.answer.startsWith('http://') &&
+                  !question.answer.startsWith('https://')
+                  ? question.answer : ''}
+                onChange={(e) => onUpdate(question.id as string, 'answer', e.target.value)}
+                placeholder="e.g., 3,1,2,4"
+                className="w-full text-sm px-3 py-2 border border-green-500 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:outline-none transition-colors"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter the correct order using numbers corresponding to the item positions above.
+              </p>
+            </div>
+
+            {renderFileUploadOption()}
+          </div>
+        );
+
       case QuestionType.SHORT_ANSWER:
       case QuestionType.ESSAY:
       default:
@@ -302,12 +509,12 @@ const QuestionAnswer: React.FC<QuestionAnswerProps> = ({
   return (
     <div className="space-y-4">
       {renderAnswerInput()}
-      
+
       <div className="bg-green-50 p-4 rounded-lg">
         <h4 className="text-sm font-medium text-green-900 mb-2">Answer Guidelines</h4>
         <div className="text-xs text-green-800">
           <p>
-            Provide clear, complete answers that help with automated grading. 
+            Provide clear, complete answers that help with automated grading.
             For subjective questions, consider partial credit criteria.
           </p>
         </div>

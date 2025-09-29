@@ -69,7 +69,7 @@ export const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
         <div className="ml-4 relative border border-gray-200 rounded-lg bg-white">
           <QuestionCard
             question={question}
-            index={index}
+            index={question.order || index}
             level={level}
             onUpdate={onUpdate}
             onRemove={onRemove}
