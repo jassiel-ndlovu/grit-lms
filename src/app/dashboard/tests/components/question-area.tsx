@@ -1,4 +1,5 @@
-// app/dashboard/tests/take/[id]/components/question-area.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React from 'react';
 import { ChevronLeft, ChevronRight, Eraser, Flag } from 'lucide-react';
 import LessonMarkdown from '@/app/components/markdown';

@@ -1,5 +1,6 @@
-// app/dashboard/tests/take/[id]/components/question-input.tsx
-import React, { useState, useCallback } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import React, { useState } from 'react';
 import { Upload, Trash2, ImageIcon, FileText, Download } from 'lucide-react';
 import LessonMarkdown from '@/app/components/markdown';
 import { uploadFile, deleteFile } from '@/lib/blob';
@@ -24,7 +25,6 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
   question,
   answer,
   matchingAnswers,
-  isUploading,
   onAnswerChange,
   onMatchingAnswerChange
 }) => {
@@ -63,6 +63,7 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
         });
       } catch (error) {
         errors.push(`${file.name}: Upload failed`);
+        console.error(error);
       }
     }
 

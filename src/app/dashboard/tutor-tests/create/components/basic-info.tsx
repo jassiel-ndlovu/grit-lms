@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React from 'react';
 import { formatForDateTimeLocal, parseDateTimeLocal } from '@/lib/functions';
 import { TestFormData } from '@/lib/test-creation-types';

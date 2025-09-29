@@ -80,7 +80,6 @@ export default function CreateTestPage() {
 
   const {
     exportQuestionsToJson,
-    importQuestionsFromJson,
     handleSubmit: performSubmit
   } = useTestOperations({
     formData,
@@ -158,6 +157,7 @@ export default function CreateTestPage() {
         title: 'Export Failed',
         message: 'Failed to export questions. Please try again.'
       });
+      console.error(error);
     }
   };
 
@@ -468,7 +468,7 @@ export default function CreateTestPage() {
                   {editMode ? 'Edit Test' : 'Create New Test'}
                 </h1>
                 {formData.title && (
-                  <span className="text-sm text-gray-500 mt-1">"{formData.title}"</span>
+                  <span className="text-sm text-gray-500 mt-1">&quot;{formData.title}&quot;</span>
                 )}
               </div>
             </div>

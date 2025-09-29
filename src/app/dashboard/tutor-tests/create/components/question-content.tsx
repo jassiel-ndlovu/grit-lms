@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React from 'react';
 import { File } from 'lucide-react';
 import { ExtendedTestQuestion, FileHandlingProps } from '@/lib/test-creation-types';

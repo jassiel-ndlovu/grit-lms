@@ -95,7 +95,7 @@ export const SubmitConfirmation: React.FC<SubmitConfirmationProps> = ({
                 <div>
                   <h4 className="font-medium text-green-800">All Questions Answered</h4>
                   <p className="text-sm text-green-700 mt-1">
-                    Great job! You've answered all the questions.
+                    Great job! You&apos;ve answered all the questions.
                   </p>
                 </div>
               </div>

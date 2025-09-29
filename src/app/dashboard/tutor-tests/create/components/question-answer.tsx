@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React from 'react';
-import { Plus, Trash2, File, FileTextIcon, FileText } from 'lucide-react';
+import { Plus, Trash2, File, FileTextIcon } from 'lucide-react';
 import { QuestionType } from '@/generated/prisma';
 import { ExtendedTestQuestion, FileHandlingProps } from '@/lib/test-creation-types';
 
@@ -73,59 +75,6 @@ const QuestionAnswer: React.FC<QuestionAnswerProps> = ({
   );
 
   const renderAnswerInput = () => {
-    const renderFileUploadOption = () => (
-      <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Answer File Upload (Optional)</h4>
-
-        {typeof question.answer === 'string' &&
-          (question.answer.startsWith('http://') || question.answer.startsWith('https://')) ? (
-          <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-md">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-green-800">
-                File uploaded: {question.answer.split('/').pop()}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => onUpdate(question.id as string, 'answer', '')}
-              className="text-red-500 hover:text-red-700"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <div
-            className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
-            onDragOver={(e) => {
-              e.preventDefault();
-              // You might need to manage dragOver state in your component
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              // Handle file drop logic here
-            }}
-            onClick={() => {
-              // Trigger file input click
-            }}
-          >
-            <File className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">
-              Drag & drop or click to upload answer file
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Supports PDF, Word documents, and images
-            </p>
-          </div>
-        )}
-
-        <div className="mt-2 text-xs text-gray-500">
-          <p>You can either provide a text answer below or upload a file with the answer.</p>
-          <p>If both are provided, the file will take precedence.</p>
-        </div>
-      </div>
-    );
-
     switch (question.type) {
       case QuestionType.MULTIPLE_CHOICE:
       case QuestionType.MULTI_SELECT:

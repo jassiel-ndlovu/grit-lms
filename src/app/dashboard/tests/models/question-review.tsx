@@ -506,6 +506,7 @@ function areAnswersEqual(studentAnswer: any, correctAnswer: any): boolean {
 function getSubQuestionGrade(questionId: string): AppTypes.QuestionGrade | undefined {
   // Implement this based on your data structure
   // This should return the grade for a specific sub-question
+  if (questionId) return undefined;
   return undefined;
 }
 

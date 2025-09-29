@@ -1,4 +1,5 @@
-// app/dashboard/tests/take/[id]/hooks/use-test-session.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTests } from "@/context/TestContext";
@@ -61,6 +62,7 @@ export const useTestSession = (testId: string) => {
     }
 
     setIsSubmitting(true);
+    setIsUploading(true);
     
     try {
       console.log('Starting test submission...');
@@ -97,6 +99,7 @@ export const useTestSession = (testId: string) => {
       // Don't reset isSubmitting for auto-submit to prevent UI flicker during redirect
       if (!isAutoSubmit) {
         setIsSubmitting(false);
+        setIsUploading(false);
       }
     }
   }, [test, hasInternet, isSubmitting, autoSubmitted, studentProfile?.id, answers, testStartTime, submission?.id, updateSubmission, router]);
@@ -452,7 +455,13 @@ export const useTestSession = (testId: string) => {
   const toggleQuestionExpansion = useCallback((questionId: string) => {
     setExpandedQuestions((prev) => {
       const newSet = new Set(prev);
-      newSet.has(questionId) ? newSet.delete(questionId) : newSet.add(questionId);
+
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId)
+      } else {
+        newSet.add(questionId);
+      }
+
       return newSet;
     });
   }, []);

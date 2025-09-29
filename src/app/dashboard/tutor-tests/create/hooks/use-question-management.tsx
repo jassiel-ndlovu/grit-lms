@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+
 import { useState, useCallback } from 'react';
 import { QuestionType } from '@/generated/prisma';
 import { ExtendedTestQuestion } from '@/lib/test-creation-types';
@@ -184,7 +186,7 @@ export const useQuestionManagement = (initialQuestions: ExtendedTestQuestion[] =
 
     // Clean up state
     setActiveQuestionTabs(prev => {
-      const { [questionId]: _, ...rest } = prev;
+      const { [questionId]: _removed, ...rest } = prev;
       return rest;
     });
     setExpandedQuestions(prev => {

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useCallback } from 'react';
 import { deleteFile, extractImageUrlsFromMarkdown } from '@/lib/blob';
 import { formatDate } from '@/lib/functions';
@@ -24,9 +26,7 @@ interface UseTestOperationsProps {
 
 export const useTestOperations = ({
   formData,
-  setFormData,
   questions,
-  setQuestions,
   uploadedImages,
   uploadedFiles,
   setUploadedImages,
@@ -36,7 +36,6 @@ export const useTestOperations = ({
   updateTest,
   createEvent,
   updateEvent,
-  setLoading,
   router
 }: UseTestOperationsProps) => {
 

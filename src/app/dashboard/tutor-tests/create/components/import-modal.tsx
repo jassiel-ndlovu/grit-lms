@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useState } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 import { QuestionType } from '@/generated/prisma';

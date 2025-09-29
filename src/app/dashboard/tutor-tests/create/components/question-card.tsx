@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import React, { useState } from 'react';
 import { Copy, ChevronRight, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { ExtendedTestQuestion, FileHandlingProps, QuestionTab } from '@/lib/test-creation-types';
 import QuestionContent from './question-content';

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React from 'react';
 import { QuestionType } from '@/generated/prisma';
 import { ExtendedTestQuestion } from '@/lib/test-creation-types';
@@ -112,7 +114,7 @@ const QuestionSettings: React.FC<QuestionSettingsProps> = ({
             <ul className="list-disc list-inside space-y-0.5">
               <li>Provide 3-5 answer options</li>
               <li>Make distractors plausible but clearly incorrect</li>
-              <li>Avoid "all of the above" or "none of the above"</li>
+              <li>Avoid &quot;all of the above&quot; or &quot;none of the above&quot;</li>
             </ul>
           )}
           {question.type === QuestionType.ESSAY && (

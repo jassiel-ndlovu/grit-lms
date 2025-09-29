@@ -26,7 +26,6 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
     // State
     test,
     courses,
-    submission,
     answers,
     matchingAnswers,
     currentQuestionIndex,

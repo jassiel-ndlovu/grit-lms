@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { QuestionType } from "@/generated/prisma";
 
 export interface ExtendedTestQuestion extends Omit<Partial<AppTypes.TestQuestion>, "subQuestions"> {
