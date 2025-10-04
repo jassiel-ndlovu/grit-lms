@@ -101,6 +101,94 @@ export const useTestOperations = ({
     return urls;
   }, []);
 
+  // Helper function to recursively transform questions for export with proper IDs and hierarchy
+  const transformQuestionsForExport = useCallback((questionsToTransform: ExtendedTestQuestion[], parentId: string | null = null): QuestionExport[] => {
+    return questionsToTransform.map((q, index) => {
+      const questionExport: QuestionExport = {
+        id: q.id || `temp-${Date.now()}-${index}`, // Provide temporary ID if missing
+        question: q.question || '',
+        type: q.type || 'MULTIPLE_CHOICE',
+        points: q.points || 0,
+        options: q.options,
+        answer: q.answer,
+        language: q.language || undefined,
+        matchPairs: q.matchPairs as Array<{ left: string, right: string }> | undefined,
+        reorderItems: q.reorderItems,
+        blankCount: q.blankCount || undefined,
+        order: q.order ?? index, // Use provided order or index as fallback
+        parentId: parentId, // Set parentId for hierarchy
+      };
+
+      // Recursively transform subquestions
+      if (q.subQuestions && q.subQuestions.length > 0) {
+        questionExport.subQuestions = transformQuestionsForExport(q.subQuestions, q.id as string);
+      }
+
+      return questionExport;
+    });
+  }, []);
+
+  // Function to normalize imported questions with proper IDs and hierarchy
+  const normalizeImportedQuestions = useCallback((questionsToNormalize: QuestionExport[], parentId: string | null = null): ExtendedTestQuestion[] => {
+    return questionsToNormalize.map((q, index) => {
+      const normalizedQuestion: ExtendedTestQuestion = {
+        id: q.id || `imported-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID if missing
+        question: q.question,
+        type: q.type,
+        points: q.points,
+        options: q.options,
+        answer: q.answer,
+        language: q.language,
+        matchPairs: q.matchPairs,
+        reorderItems: q.reorderItems,
+        blankCount: q.blankCount,
+        order: q.order ?? index, // Use provided order or index as fallback
+        parentId: parentId, // Set parentId for proper hierarchy
+        isExpanded: true, // Default to expanded for imported questions
+      };
+
+      // Recursively normalize subquestions
+      if (q.subQuestions && q.subQuestions.length > 0) {
+        normalizedQuestion.subQuestions = normalizeImportedQuestions(q.subQuestions, normalizedQuestion.id as string);
+      }
+
+      return normalizedQuestion;
+    });
+  }, []);
+
+  const exportTestToJson = useCallback(() => {
+    if (!questions || questions.length === 0) {
+      alert("No questions to export");
+      return;
+    }
+
+    // Create the complete test schema with hierarchy
+    const testToExport: MLTestSchema = {
+      title: formData.title || 'Untitled Test',
+      description: formData.description || '',
+      preTestInstructions: formData.preTestInstructions || '',
+      dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : new Date().toISOString(),
+      timeLimit: formData.timeLimit || 60,
+      questions: transformQuestionsForExport(questions) // This now includes proper hierarchy
+    };
+
+    const jsonString = JSON.stringify(testToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const fileName = `test-${formData.title ? formData.title.toLowerCase().replace(/\s+/g, '-') : 'export'}-${timestamp}.json`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [questions, formData, transformQuestionsForExport]);
+
+  // Legacy export function for backward compatibility (exports only questions as flat array)
   const exportQuestionsToJson = useCallback(() => {
     if (!questions || questions.length === 0) {
       alert("No questions to export");
@@ -108,18 +196,20 @@ export const useTestOperations = ({
     }
 
     const flatQuestions = flattenQuestions(questions);
-    const questionsToExport: QuestionExport[] = flatQuestions.map(q => ({
+    const questionsToExport: QuestionExport[] = flatQuestions.map((q, index) => ({
+      id: q.id,
       question: q.question || '',
-      type: q.type || 'MULTIPLE_CHOICE' as any,
+      type: q.type || 'MULTIPLE_CHOICE',
       points: q.points || 0,
       options: q.options,
       answer: q.answer,
-      language: q.language || null,
-      matchPairs: q.matchPairs as Array<{ left: string, right: string }> | null | undefined,
+      language: q.language || undefined,
+      matchPairs: q.matchPairs as Array<{ left: string, right: string }> | undefined,
       reorderItems: q.reorderItems,
-      blankCount: q.blankCount || null,
-      order: q.order ?? undefined,
-      parentId: q.parentId
+      blankCount: q.blankCount || undefined,
+      order: q.order ?? index,
+      parentId: q.parentId,
+      // Note: subQuestions are not included in flat export
     }));
 
     const jsonString = JSON.stringify(questionsToExport, null, 2);
@@ -135,19 +225,43 @@ export const useTestOperations = ({
     URL.revokeObjectURL(url);
   }, [questions, flattenQuestions]);
 
-  const importQuestionsFromJson = useCallback((jsonData: string): MLTestSchema => {
+  const importQuestionsFromJson = useCallback((jsonData: string): { testSchema: MLTestSchema; normalizedQuestions: ExtendedTestQuestion[] } => {
     if (!jsonData.trim()) {
       throw new Error("Please paste JSON data");
     }
 
-    const parsedData: MLTestSchema = JSON.parse(jsonData);
+    const parsedData = JSON.parse(jsonData);
 
-    if (!Array.isArray(parsedData.questions)) {
-      throw new Error("JSON should contain a questions array");
+    // Handle both formats: complete test schema or just questions array
+    let testSchema: MLTestSchema;
+    let questionsToImport: QuestionExport[];
+
+    if (Array.isArray(parsedData)) {
+      // Legacy format: just questions array
+      testSchema = {
+        title: 'Imported Test',
+        dueDate: new Date().toISOString(),
+        description: '',
+        preTestInstructions: '',
+        questions: parsedData
+      };
+      questionsToImport = parsedData;
+    } else if (parsedData.questions && Array.isArray(parsedData.questions)) {
+      // New format: complete test schema
+      testSchema = parsedData as MLTestSchema;
+      questionsToImport = parsedData.questions;
+    } else {
+      throw new Error("Invalid JSON format: should contain a questions array or complete test schema");
     }
 
-    return parsedData;
-  }, []);
+    // Normalize the imported questions with proper IDs and hierarchy
+    const normalizedQuestions = normalizeImportedQuestions(questionsToImport);
+
+    return {
+      testSchema,
+      normalizedQuestions
+    };
+  }, [normalizeImportedQuestions]);
 
   const handleSubmit = useCallback(async () => {
     const flatQuestions = flattenQuestions(questions);
@@ -196,7 +310,7 @@ export const useTestOperations = ({
       dueDate: new Date(formData.dueDate || ''),
       timeLimit: formData.timeLimit,
       // @ts-expect-error subQuestions can be undefined
-      questions: flatQuestions,
+      questions: questions,
       totalPoints,
       isActive: formData.isActive !== undefined ? formData.isActive : true
     };
@@ -248,10 +362,13 @@ export const useTestOperations = ({
   ]);
 
   return {
+    exportTestToJson,
     exportQuestionsToJson,
     importQuestionsFromJson,
     handleSubmit,
     flattenQuestions,
-    organizeQuestionsHierarchy
+    organizeQuestionsHierarchy,
+    transformQuestionsForExport,
+    normalizeImportedQuestions
   };
 };

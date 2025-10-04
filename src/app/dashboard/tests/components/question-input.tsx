@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState } from 'react';
-import { Upload, Trash2, ImageIcon, FileText, Download } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Upload, Trash2, ImageIcon, FileText, Download, ArrowRight } from 'lucide-react';
 import LessonMarkdown from '@/app/components/markdown';
 import { uploadFile, deleteFile } from '@/lib/blob';
-import { JsonArray } from '@/generated/prisma/runtime/library';
 
 interface QuestionInputProps {
   question: AppTypes.TestQuestion;
@@ -21,6 +20,16 @@ type FileUploadAnswer = {
   fileName: string;
 };
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export const QuestionInput: React.FC<QuestionInputProps> = ({
   question,
   answer,
@@ -29,6 +38,62 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
   onMatchingAnswerChange
 }) => {
   const [dragOver, setDragOver] = useState(false);
+
+  // Memoized shuffled options for various question types
+  const shuffledOptions = useMemo(() => {
+    const result: {
+      multipleChoice?: string[];
+      multiSelect?: string[];
+      matching?: {
+        leftItems: string[];
+        rightItems: string[];
+        originalPairs: Array<{ left: string; right: string }>;
+      };
+      reorder?: string[];
+    } = {};
+
+    // Shuffle Multiple Choice options
+    if (question.type === 'MULTIPLE_CHOICE' && question.options) {
+      result.multipleChoice = shuffleArray([...question.options]);
+    }
+
+    // Shuffle Multi-Select options
+    if (question.type === 'MULTI_SELECT' && question.options) {
+      result.multiSelect = shuffleArray([...question.options]);
+    }
+
+    // Shuffle Matching options (left and right independently)
+    if (question.type === 'MATCHING' && question.matchPairs) {
+      try {
+        const pairs = Array.isArray(question.matchPairs)
+          ? question.matchPairs
+          : [];
+
+        const leftItems = pairs.map((pair: any) => pair?.left || '');
+        const rightItems = pairs.map((pair: any) => pair?.right || '');
+
+        result.matching = {
+          leftItems: shuffleArray(leftItems),
+          rightItems: shuffleArray(rightItems),
+          originalPairs: pairs as Array<{ left: string; right: string }>,
+        };
+      } catch (error) {
+        console.error('Error processing matching pairs:', error);
+        result.matching = {
+          leftItems: [],
+          rightItems: [],
+          originalPairs: []
+        };
+      }
+    }
+
+    // Shuffle Reorder items
+    if (question.type === 'REORDER' && question.reorderItems) {
+      result.reorder = shuffleArray([...question.reorderItems]);
+    }
+
+    return result;
+  }, [question.type, question.options, question.matchPairs, question.reorderItems]);
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files) return;
@@ -99,9 +164,8 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
     return (
       <div className="space-y-4">
         <div
-          className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
-            dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-          }`}
+          className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+            }`}
           onDragOver={(e) => {
             e.preventDefault();
             setDragOver(true);
@@ -148,8 +212,8 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
                   <div>
                     <p className="font-medium text-gray-900 truncate">{file.fileName}</p>
                     <p className="text-sm text-gray-500">
-                      {file.fileType.includes('image') ? 'Image' : 
-                       file.fileType.includes('pdf') ? 'PDF' : 'Document'}
+                      {file.fileType.includes('image') ? 'Image' :
+                        file.fileType.includes('pdf') ? 'PDF' : 'Document'}
                     </p>
                   </div>
                 </div>
@@ -180,7 +244,7 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
 
   const renderMultipleChoice = () => (
     <div className="space-y-3">
-      {question.options?.map((option: string, index: number) => (
+      {shuffledOptions.multipleChoice?.map((option: string, index: number) => (
         <label key={index} className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
           <input
             type="radio"
@@ -200,10 +264,10 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
 
   const renderMultiSelect = () => {
     const multiSelectAnswer = Array.isArray(answer) ? answer as string[] : [];
-    
+
     return (
       <div className="space-y-3">
-        {question.options?.map((option: string, index: number) => (
+        {shuffledOptions.multiSelect?.map((option: string, index: number) => (
           <label key={index} className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors">
             <input
               type="checkbox"
@@ -255,75 +319,181 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
   );
 
   const renderMatching = () => {
-    const matchPairs = question.matchPairs || [];
-    
+    const matchingData = shuffledOptions.matching;
+
+    if (!matchingData) return null;
+
+    // Helper function to create a plain text version for dropdown options
+    const createPlainTextOption = (text: string): string => {
+      // Remove Markdown formatting for dropdown display
+      return text
+        .replace(/#{1,6}\s/g, '') // Remove headers
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic
+        .replace(/`(.*?)`/g, '$1') // Remove inline code
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links, keep text
+        .replace(/\n/g, ' ') // Replace newlines with spaces
+        .trim()
+        .substring(0, 80); // Limit length for dropdown
+    };
+
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column - Items */}
           <div>
             <h4 className="font-medium text-gray-900 mb-3">Items</h4>
-            <div className="space-y-2">
-              {(matchPairs as JsonArray).map((pair: any, index: number) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                  <LessonMarkdown content={pair.left} />
+            <div className="space-y-3">
+              {matchingData.leftItems.map((leftItem: string, index: number) => (
+                <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="text-sm font-medium text-gray-900">
+                    <LessonMarkdown content={leftItem} />
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-          
+
+          {/* Right Column - Matches */}
           <div>
             <h4 className="font-medium text-gray-900 mb-3">Matches</h4>
-            <div className="space-y-2">
-              {(matchPairs as JsonArray).map((pair: any, index: number) => (
-                <select
-                  key={index}
-                  value={matchingAnswers[pair.left] || ''}
-                  onChange={(e) => onMatchingAnswerChange(question.id, pair.left, e.target.value)}
-                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Select a match</option>
-                  {(matchPairs as JsonArray).map((p: any, idx: number) => (
-                    <option key={idx} value={p.right}>
-                      {p.right}
-                    </option>
-                  ))}
-                </select>
+            <div className="space-y-3">
+              {matchingData.leftItems.map((leftItem: string, index: number) => (
+                <div key={index} className="space-y-2">
+                  <select
+                    value={matchingAnswers[leftItem] || ''}
+                    onChange={(e) => onMatchingAnswerChange(question.id, leftItem, e.target.value)}
+                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                  >
+                    <option value="">Select a match</option>
+                    {matchingData.rightItems.map((rightItem: string, idx: number) => (
+                      <option key={idx} value={rightItem}>
+                        {createPlainTextOption(rightItem)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ))}
             </div>
           </div>
         </div>
+
+        {/* Instructions */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            <strong>Instructions:</strong> Match each item on the left with the correct option from the dropdown.
+            Each item has only one correct match. Selected matches will be displayed with proper formatting below each dropdown.
+          </p>
+        </div>
+
+        {/* Progress Summary */}
+        <div className={`p-4 rounded-lg border ${Object.keys(matchingAnswers).length === matchingData.leftItems.length
+            ? 'bg-green-50 border-green-200 text-green-800'
+            : 'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+          <p className="text-sm font-medium">
+            Progress: {Object.keys(matchingAnswers).length} of {matchingData.leftItems.length} items matched
+            {Object.keys(matchingAnswers).length === matchingData.leftItems.length && ' ✓'}
+          </p>
+        </div>
+
+        {/* Preview Section - Show all matches in one place */}
+        {Object.keys(matchingAnswers).length > 0 && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h5 className="font-medium text-gray-900 mb-3 text-sm">Your Matches Preview:</h5>
+            <div className="space-y-3">
+              {matchingData.leftItems.map((leftItem: string, index: number) => (
+                <div key={index} className="flex items-start gap-4 p-3 bg-white rounded border">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 mb-1">
+                      Item {index + 1}:
+                    </div>
+                    <div className="text-sm text-gray-700">
+                      <LessonMarkdown content={leftItem} />
+                    </div>
+                  </div>
+
+                  <ArrowRight className="w-4 h-4 text-gray-400 mt-5 flex-shrink-0" />
+
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 mb-1">
+                      Your Match:
+                    </div>
+                    <div className="text-sm">
+                      {matchingAnswers[leftItem] ? (
+                        <div className="text-green-700">
+                          <LessonMarkdown content={matchingAnswers[leftItem]} />
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 italic">Not yet matched</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   const renderReorder = () => {
-    const reorderItems = question.reorderItems || [];
+    const reorderItems = shuffledOptions.reorder || [];
     const reorderAnswer = Array.isArray(answer) ? answer as string[] : reorderItems;
 
     return (
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">Drag and drop to reorder the items:</p>
-        <div className="space-y-2">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            <strong>Instructions:</strong> Drag and drop the items below to put them in the correct order.
+          </p>
+        </div>
+
+        <div className="space-y-3">
           {reorderAnswer.map((item: string, index: number) => (
             <div
               key={index}
               draggable
-              onDragStart={(e) => e.dataTransfer.setData('text/plain', index.toString())}
-              onDragOver={(e) => e.preventDefault()}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', index.toString());
+                e.currentTarget.classList.add('opacity-50');
+              }}
+              onDragEnd={(e) => {
+                e.currentTarget.classList.remove('opacity-50');
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('bg-blue-50');
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('bg-blue-50');
+              }}
               onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('bg-blue-50');
+
                 const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
                 const toIndex = index;
+
+                if (fromIndex === toIndex) return;
+
                 const newOrder = [...reorderAnswer];
                 const [movedItem] = newOrder.splice(fromIndex, 1);
                 newOrder.splice(toIndex, 0, movedItem);
                 onAnswerChange(question.id, newOrder);
               }}
-              className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-white cursor-move hover:shadow-md transition-shadow"
+              className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg bg-white cursor-grab hover:shadow-md transition-all duration-200 active:cursor-grabbing"
             >
-              <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-medium">
+              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-medium text-sm">
                 {index + 1}
               </div>
-              <LessonMarkdown content={item} />
+              <div className="flex-1 text-sm">
+                <LessonMarkdown content={item} />
+              </div>
+              <div className="flex-shrink-0 text-gray-400">
+                ⋮⋮
+              </div>
             </div>
           ))}
         </div>
@@ -340,7 +510,7 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
         <div className="prose prose-sm max-w-none">
           <LessonMarkdown content={question.question} />
         </div>
-        
+
         <div className="grid gap-4">
           {Array.from({ length: blankCount }).map((_, index) => (
             <div key={index} className="flex items-center gap-3">

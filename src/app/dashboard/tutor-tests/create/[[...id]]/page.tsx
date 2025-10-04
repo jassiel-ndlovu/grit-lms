@@ -80,7 +80,8 @@ export default function CreateTestPage() {
 
   const {
     exportQuestionsToJson,
-    handleSubmit: performSubmit
+    handleSubmit: performSubmit,
+    organizeQuestionsHierarchy
   } = useTestOperations({
     formData,
     setFormData,
@@ -212,18 +213,9 @@ export default function CreateTestPage() {
           questions: []
         });
 
-        setQuestions(test.questions.map(q => ({
-          ...q,
-          options: q.options || ['', '', '', ''],
-          language: q.language || '',
-          matchPairs: q.matchPairs || null,
-          reorderItems: q.reorderItems || [],
-          blankCount: q.blankCount || 0,
-          order: q.order || 0,
-          parentId: q.parentId || null,
-          subQuestions: [],
-          isExpanded: false,
-        } as ExtendedTestQuestion)));
+        const extendQuestions = organizeQuestionsHierarchy(test.questions || []);
+
+        setQuestions(extendQuestions);
 
         addToast({
           type: 'success',

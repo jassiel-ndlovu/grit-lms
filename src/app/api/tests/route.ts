@@ -131,41 +131,120 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
 
-    const newTest = await prisma.test.create({
-      data: {
-        ...data,
-        questions: {
-          create: data.questions.map((q: AppTypes.TestQuestion) => ({
-            question: q.question,
-            type: q.type,
-            points: q.points,
-            options: q.options,
-            answer: q.answer,
-          })),
+    const result = await prisma.$transaction(async (tx) => {
+      // Create test
+      const newTest = await tx.test.create({
+        data: {
+          title: data.title,
+          description: data.description,
+          preTestInstructions: data.preTestInstructions,
+          courseId: data.courseId,
+          dueDate: new Date(data.dueDate),
+          timeLimit: data.timeLimit,
+          totalPoints: data.totalPoints,
+          isActive: data.isActive !== undefined ? data.isActive : true,
         },
-      },
-      include: {
-        questions: true,
+      });
+
+      // Create new questions using the same non-recursive queue approach as PUT
+      if (data.questions && data.questions.length > 0) {
+        await createQuestions(data.questions, newTest.id, tx);
+        console.log("Questions created successfully for new test");
+      }
+
+      // Fetch the complete test with questions and subquestions
+      const completeTest = await tx.test.findUnique({
+        where: { id: newTest.id },
+        include: {
+          questions: {
+            include: {
+              subQuestions: true,
+            },
+            orderBy: {
+              order: 'asc',
+            },
+          },
+        },
+      });
+
+      // Create notification if test is active
+      if (data.isActive === true) {
+        await tx.notification.create({
+          data: {
+            title: "New Test Created",
+            message: `A new test "${newTest.title}" has been published.`,
+            link: `/dashboard/tests/${newTest.id}`,
+            type: "TEST_CREATED",
+            courseId: newTest.courseId,
+          },
+        });
+      }
+
+      return completeTest;
+    }, { timeout: 30000 });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Failed to create test:", error);
+    return NextResponse.json(
+      { error: "Failed to create test: " + (error instanceof Error ? error.message : String(error)) },
+      { status: 500 }
+    );
+  }
+}
+
+async function createQuestions(
+  questions: any[],
+  testId: string,
+  tx: any
+) {
+  const queue: { question: any; parentId: string | null }[] = [];
+  
+  // First, add all root questions to the queue
+  questions.forEach((question, index) => {
+    queue.push({ question: { ...question, order: index }, parentId: null });
+  });
+
+  console.log("Root questions to process:", queue.length);
+
+  const createdQuestions = new Map(); // Store created questions for reference
+
+  while (queue.length > 0) {
+    const { question, parentId } = queue.shift()!;
+
+    if (question.subQuestions) {
+      console.log(`Processing question with ${question.subQuestions.length} subQuestions`);
+    } else {
+      console.log("Sub-question with parentId:", parentId);
+    }
+
+    const createdQuestion = await tx.testQuestion.create({
+      data: {
+        testId: testId,
+        question: question.question || "",
+        type: question.type,
+        points: question.points || 0,
+        options: question.options || [],
+        answer: question.answer,
+        language: question.language,
+        matchPairs: question.matchPairs,
+        reorderItems: question.reorderItems || [],
+        blankCount: question.blankCount,
+        order: question.order,
+        parentId: parentId,
       },
     });
 
-    if (data.isActive === true) {
-      await prisma.notification.create({
-        data: {
-          title: "New Test Created",
-          message: `A new test "${newTest.title}" has been published.`,
-          link: `/dashboard/tests/${newTest.id}`,
-          type: "TEST_CREATED",
-          courseId: newTest.courseId,
-        },
+    createdQuestions.set(question.tempId || createdQuestion.id, createdQuestion);
+
+    // Add subquestions to the queue
+    if (question.subQuestions && question.subQuestions.length > 0) {
+      question.subQuestions.forEach((subQuestion: any, subIndex: number) => {
+        queue.push({
+          question: { ...subQuestion, order: subIndex },
+          parentId: createdQuestion.id
+        });
       });
     }
-
-    return NextResponse.json(newTest);
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to create test: " + error },
-      { status: 500 }
-    );
   }
 }

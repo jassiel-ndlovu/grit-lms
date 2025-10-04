@@ -40,8 +40,6 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   const [activeTab, setActiveTab] = useState<QuestionTab>('content');
   const [isExpanded, setIsExpanded] = useState(true);
 
-  console.log("QuestionCard index", index, "QuestionCard order", question.order);
-
   const hasSubQuestions = question.subQuestions && question.subQuestions.length > 0;
 
   const renderTabContent = () => {
@@ -145,7 +143,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
           <div className="space-y-2">
             {question.subQuestions!.map((subQuestion, subIndex) => (
               <QuestionCard
-                key={subQuestion.id}
+                key={subIndex}
                 question={subQuestion}
                 index={subIndex}
                 level={level + 1}

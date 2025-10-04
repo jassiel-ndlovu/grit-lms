@@ -8,38 +8,29 @@ export interface ExtendedTestQuestion extends Omit<Partial<AppTypes.TestQuestion
 }
 
 export interface QuestionExport {
+  id?: string;
   question: string;
   type: QuestionType;
   points: number;
   options?: string[];
   answer?: any;
-  language?: string | null;
-  matchPairs?: Array<{ left: string, right: string }> | null;
+  language?: string;
+  matchPairs?: Array<{ left: string; right: string }>;
   reorderItems?: string[];
-  blankCount?: number | null;
+  blankCount?: number;
   order?: number;
   parentId?: string | null;
+  subQuestions?: QuestionExport[];
 }
 
+// Update MLTestSchema to allow hierarchical questions
 export interface MLTestSchema {
   title: string;
   description?: string;
   preTestInstructions?: string;
   dueDate: string;
   timeLimit?: number;
-  questions: Array<{
-    question: string;
-    type: QuestionType;
-    points: number;
-    options?: string[];
-    answer?: any;
-    language?: string;
-    matchPairs?: Array<{ left: string, right: string }>;
-    reorderItems?: string[];
-    blankCount?: number;
-    order?: number;
-    parentId?: string | null;
-  }>;
+  questions: QuestionExport[]; // Use QuestionExport which includes subQuestions
 }
 
 export type QuestionTab = 'content' | 'settings' | 'answer';

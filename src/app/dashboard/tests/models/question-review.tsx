@@ -1,26 +1,64 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import LessonMarkdown from "@/app/components/markdown";
+import { ExtendedTestQuestion } from "@/lib/test-creation-types";
 import { ArrowRight, CheckCircle, ChevronDown, ChevronRight, Download, FileText, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 const QuestionReview: React.FC<{
-  questionNumber: number;
-  question: AppTypes.TestQuestion;
+  questionNumber: number | string;
+  question: AppTypes.TestQuestion | ExtendedTestQuestion;
   questionGrade?: AppTypes.QuestionGrade;
   studentAnswer: any;
   isCorrect: boolean;
   partialCredit?: number;
-  level?: number; // Add level attribute
+  level?: number;
 }> = ({ question, questionGrade, questionNumber, studentAnswer, isCorrect, partialCredit, level = 0 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
+
+  // Shuffle arrays using Fisher-Yates algorithm
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Memoized shuffled options for Matching and Reorder questions
+  const shuffledOptions = useMemo(() => {
+    if (question.type === 'MATCHING' && question.matchPairs) {
+      try {
+        const pairs = Array.isArray(question.matchPairs) ? question.matchPairs : [];
+        const leftItems = pairs.map((pair: any) => pair?.left || '');
+        const rightItems = pairs.map((pair: any) => pair?.right || '');
+        
+        return {
+          leftItems: shuffleArray(leftItems),
+          rightItems: shuffleArray(rightItems)
+        };
+      } catch (error) {
+        console.error('Error processing matching pairs:', error);
+        return { leftItems: [], rightItems: [] };
+      }
+    }
+    
+    if (question.type === 'REORDER' && question.reorderItems) {
+      return {
+        reorderItems: shuffleArray([...question.reorderItems])
+      };
+    }
+    
+    return null;
+  }, [question.type, question.matchPairs, question.reorderItems]);
 
   // Calculate indentation based on level
   const getIndentationClass = () => {
     switch (level) {
-      case 1: return 'ml-6 border-l-2 border-l-blue-200';
-      case 2: return 'ml-12 border-l-2 border-l-green-200';
-      case 3: return 'ml-18 border-l-2 border-l-purple-200';
+      case 1: return 'ml-6 border-l-2 border-l-blue-200 pl-4';
+      case 2: return 'ml-12 border-l-2 border-l-green-200 pl-4';
+      case 3: return 'ml-18 border-l-2 border-l-purple-200 pl-4';
       default: return '';
     }
   };
@@ -255,45 +293,74 @@ const QuestionReview: React.FC<{
       case 'MATCHING':
         const studentMatches = Array.isArray(studentAnswer) ? studentAnswer : [];
         const correctMatches = Array.isArray(question.answer) ? question.answer : [];
+        const leftItems = shuffledOptions?.leftItems || [];
+        const rightItems = shuffledOptions?.rightItems || [];
 
         return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-medium text-blue-900 mb-2">Your Matching:</h4>
-                {studentMatches.length === 0 ? (
-                  <p className="text-gray-600 text-sm">No matching attempted</p>
-                ) : (
-                  <div className="space-y-2">
-                    {studentMatches.map((match, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-white border rounded">
-                        <span className="text-sm font-medium">{match.left}</span>
-                        <ArrowRight className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">{match.right}</span>
+          <div className="space-y-6">
+            {/* Student's Matching */}
+            <div>
+              <h4 className="font-medium text-blue-900 mb-3">Your Matching:</h4>
+              {studentMatches.length === 0 ? (
+                <p className="text-gray-600 text-sm">No matching attempted</p>
+              ) : (
+                <div className="space-y-3">
+                  {studentMatches.map((match, index) => (
+                    <div key={index} className="flex items-center gap-4 p-3 bg-white border border-gray-200 rounded-lg">
+                      <div className="flex-1 text-sm font-medium">
+                        <LessonMarkdown content={match.left || 'Undefined'} />
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <div className="flex-1 text-sm">
+                        <LessonMarkdown content={match.right || 'Undefined'} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-              <div>
-                <h4 className="font-medium text-green-900 mb-2">Correct Matching:</h4>
-                <div className="space-y-2">
-                  {correctMatches.map((match, index) => {
-                    const m = match as { left: string; right: string };
-                    const left = m.left ? m.left : "Undefined Left";
-                    const right = m.right ? m.right : "Undefined Right";
-                    return (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                        <div className="text-sm font-medium">
-                          <LessonMarkdown content={left} />
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-green-500" />
-                        <span className="text-sm text-green-700">{right}</span>
+            {/* Correct Matching */}
+            <div>
+              <h4 className="font-medium text-green-900 mb-3">Correct Matching:</h4>
+              <div className="space-y-3">
+                {correctMatches.map((match, index) => {
+                  const m = match as { left: string; right: string };
+                  return (
+                    <div key={index} className="flex items-center gap-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex-1 text-sm font-medium text-green-800">
+                        <LessonMarkdown content={m.left || 'Undefined'} />
                       </div>
-                    )
-                  }
-                  )}
+                      <ArrowRight className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <div className="flex-1 text-sm text-green-700">
+                        <LessonMarkdown content={m.right || 'Undefined'} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Available Options (Shuffled) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2 text-sm">Left Items (Shuffled):</h4>
+                <div className="space-y-2">
+                  {leftItems.map((item, index) => (
+                    <div key={index} className="p-2 bg-gray-50 border border-gray-200 rounded text-sm">
+                      <LessonMarkdown content={item} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2 text-sm">Right Items (Shuffled):</h4>
+                <div className="space-y-2">
+                  {rightItems.map((item, index) => (
+                    <div key={index} className="p-2 bg-gray-50 border border-gray-200 rounded text-sm">
+                      <LessonMarkdown content={item} />
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -303,42 +370,61 @@ const QuestionReview: React.FC<{
       case 'REORDER':
         const studentOrder = Array.isArray(studentAnswer) ? studentAnswer : [];
         const correctOrder = Array.isArray(question.answer) ? question.answer : [];
+        const shuffledReorderItems = shuffledOptions?.reorderItems || [];
 
         return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-medium text-blue-900 mb-2">Your Order:</h4>
-                {studentOrder.length === 0 ? (
-                  <p className="text-gray-600 text-sm">No ordering attempted</p>
-                ) : (
-                  <div className="space-y-2">
-                    {studentOrder.map((item, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-white border rounded">
-                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium">
-                          {index + 1}
-                        </div>
-                        <span className="text-sm">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h4 className="font-medium text-green-900 mb-2">Correct Order:</h4>
+          <div className="space-y-6">
+            {/* Student's Order */}
+            <div>
+              <h4 className="font-medium text-blue-900 mb-3">Your Order:</h4>
+              {studentOrder.length === 0 ? (
+                <p className="text-gray-600 text-sm">No ordering attempted</p>
+              ) : (
                 <div className="space-y-2">
-                  {correctOrder.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
-                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs font-medium text-green-700">
+                  {studentOrder.map((item, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-700">
                         {index + 1}
                       </div>
-                      <span className="text-sm text-green-700">{item as string}</span>
+                      <div className="text-sm flex-1">
+                        <LessonMarkdown content={item as string} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Correct Order */}
+            <div>
+              <h4 className="font-medium text-green-900 mb-3">Correct Order:</h4>
+              <div className="space-y-2">
+                {correctOrder.map((item, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded">
+                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs font-medium text-green-700">
+                      {index + 1}
+                    </div>
+                    <div className="text-sm text-green-700 flex-1">
+                      <LessonMarkdown content={item as string} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Available Items (Shuffled) */}
+            {shuffledReorderItems.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2 text-sm">Available Items (Shuffled):</h4>
+                <div className="space-y-2">
+                  {shuffledReorderItems.map((item, index) => (
+                    <div key={index} className="p-2 bg-gray-50 border border-gray-200 rounded text-sm">
+                      <LessonMarkdown content={item as string} />
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         );
 
@@ -379,9 +465,9 @@ const QuestionReview: React.FC<{
   };
 
   return (
-    <div className={`border border-gray-200 ${getIndentationClass()} ${getBackgroundColor()}`}>
+    <div className={`border border-gray-200 rounded-lg ${getIndentationClass()} ${getBackgroundColor()}`}>
       <div
-        className="p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+        className="p-6 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-start justify-between">
@@ -402,7 +488,7 @@ const QuestionReview: React.FC<{
                   )}
                 </span>
               </div>
-              {partialCredit !== undefined && partialCredit > 0 && partialCredit < question.points && (
+              {partialCredit !== undefined && partialCredit > 0 && partialCredit < (question.points as number) && (
                 <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
                   {partialCredit}/{question.points} points
                 </span>
@@ -412,7 +498,7 @@ const QuestionReview: React.FC<{
               <LessonMarkdown content={question.question} />
             </div>
             {question.type === 'CODE' && question.language && (
-              <span className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-mono">
+              <span className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-mono mt-2">
                 {question.language}
               </span>
             )}
@@ -460,9 +546,10 @@ const QuestionReview: React.FC<{
                 {level === 0 ? 'Sub-questions' : 'Follow-up questions'}:
               </h4>
               {question.subQuestions.map((subQuestion, index) => {
-                const safeSubQuestion: AppTypes.TestQuestion = {
+                const safeSubQuestion: ExtendedTestQuestion = {
                   ...subQuestion,
                   subQuestions: [],
+                  // @ts-expect-error question is valid here
                   parent: question,
                 };
 
@@ -471,9 +558,9 @@ const QuestionReview: React.FC<{
                     key={subQuestion.id}
                     question={safeSubQuestion}
                     questionNumber={index + 1}
-                    studentAnswer={studentAnswer?.[subQuestion.id] || studentAnswer} 
-                    isCorrect={areAnswersEqual(studentAnswer?.[subQuestion.id], subQuestion.answer)}
-                    questionGrade={getSubQuestionGrade(subQuestion.id)}
+                    studentAnswer={studentAnswer?.[subQuestion.id as string] || studentAnswer} 
+                    isCorrect={areAnswersEqual(studentAnswer?.[subQuestion.id as string], subQuestion.answer)}
+                    questionGrade={getSubQuestionGrade(subQuestion.id as string)}
                     level={level + 1}
                   />
                 )

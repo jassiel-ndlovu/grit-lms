@@ -305,6 +305,8 @@ const PreTestInstructionsPage = ({ params }: PreTestInstructionsPageProps) => {
                   <li>Save your progress frequently by clicking the <strong>&quot;Save Progress&quot; button</strong>.</li>
                   <li>You can navigate between questions using the navigation panel.</li>
                   <li>Review your answers before submitting.</li>
+                  <li>Use the Test Naviagtion tool to navigate between questions, all and including sub-questions questions may have.</li>
+                  <li>Use the dropdown button at the question item to view the sub-questions.</li>
                 </ul>
               </div>
             )}

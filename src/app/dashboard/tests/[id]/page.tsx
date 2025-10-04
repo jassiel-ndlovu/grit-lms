@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect } from 'react';
+import React, { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoadingOverlay } from '../components/loading-overlay';
 import { TimeWarning } from '../components/time-warning';
@@ -21,6 +21,7 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
   const { id } = use(params);
   const router = useRouter();
   const { renderErrorPage, renderAccessDeniedPage } = useErrorPages();
+  const [currentQuestionId, setCurrentQuestionId] = useState<string>('');
 
   const {
     // State
@@ -28,7 +29,6 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
     courses,
     answers,
     matchingAnswers,
-    currentQuestionIndex,
     timeRemaining,
     isUploading,
     isSaving,
@@ -42,7 +42,6 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
     autoSubmitted,
 
     // Actions
-    setCurrentQuestionIndex,
     setShowSubmitConfirmation,
     setShowAnswers,
     handleAnswerChange,
@@ -62,6 +61,29 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
       // The redirect is handled within the hook, but we can show a message
     }
   }, [autoSubmitted]);
+
+  // Function to get flat list of all questions
+  const getFlatQuestions = useCallback((questions: AppTypes.TestQuestion[]): AppTypes.TestQuestion[] => {
+    const flat: AppTypes.TestQuestion[] = [];
+
+    const flatten = (q: AppTypes.TestQuestion) => {
+      flat.push(q);
+      if (q.subQuestions) {
+        // @ts-expect-error subQuestions and parent are irrelevant here
+        q.subQuestions.forEach(flatten);
+      }
+    };
+
+    questions.forEach(flatten);
+    return flat;
+  }, []);
+
+  const flatQuestions = test ? getFlatQuestions(test.questions) : [];
+
+  // Update navigation to use IDs
+  const handleQuestionSelect = (questionId: string) => {
+    setCurrentQuestionId(questionId);
+  };
 
   // Show warning when time is running low
   const showTimeWarning = timeRemaining !== null && timeRemaining > 0 && timeRemaining <= 300; // 5 minutes
@@ -187,11 +209,12 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
           <div className="lg:col-span-1">
             <TestNavigation
               test={test}
-              currentQuestionIndex={currentQuestionIndex}
+              flatQuestions={flatQuestions}
+              currentQuestionId={currentQuestionId}
               answeredCount={answeredCount}
               showAnswers={showAnswers}
               expandedQuestions={expandedQuestions}
-              onQuestionSelect={setCurrentQuestionIndex}
+              onQuestionSelect={handleQuestionSelect}
               onToggleAnswers={() => setShowAnswers(!showAnswers)}
               onToggleExpansion={toggleQuestionExpansion}
               getQuestionStatus={getQuestionStatus}
@@ -202,11 +225,12 @@ export default function TestTakingPage({ params }: TestTakingPageProps) {
           <div className="lg:col-span-3">
             <QuestionArea
               test={test}
-              currentQuestionIndex={currentQuestionIndex}
+              currentQuestionId={currentQuestionId}
+              flatQuestions={flatQuestions}
               answers={answers}
               matchingAnswers={matchingAnswers}
               isUploading={isUploading}
-              onQuestionChange={setCurrentQuestionIndex}
+              onQuestionChange={handleQuestionSelect}
               onAnswerChange={handleAnswerChange}
               onMatchingAnswerChange={handleMatchingAnswerChange}
               onClearAnswer={handleClearAnswer}

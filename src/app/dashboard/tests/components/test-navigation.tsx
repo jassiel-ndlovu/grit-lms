@@ -4,26 +4,28 @@ import { Eye, EyeOff, ChevronRight, ChevronDown } from 'lucide-react';
 
 interface TestNavigationProps {
   test: AppTypes.Test;
-  currentQuestionIndex: number;
+  currentQuestionId: string; // Changed from index to ID
   answeredCount: number;
   showAnswers: boolean;
   expandedQuestions: Set<string>;
-  onQuestionSelect: (index: number) => void;
+  onQuestionSelect: (questionId: string) => void; // Changed to accept questionId
   onToggleAnswers: () => void;
   onToggleExpansion: (questionId: string) => void;
-  getQuestionStatus: (index: number) => "current" | "answered" | "unanswered" | undefined;
+  getQuestionStatus: (questionId: string, currentQuestionId: string) => "current" | "answered" | "unanswered" | undefined; // Changed to accept questionId
+  flatQuestions: AppTypes.TestQuestion[]; // Add flat list of all questions for counting
 }
 
 export const TestNavigation: React.FC<TestNavigationProps> = ({
   test,
-  currentQuestionIndex,
+  currentQuestionId,
   answeredCount,
   showAnswers,
   expandedQuestions,
   onQuestionSelect,
   onToggleAnswers,
   onToggleExpansion,
-  getQuestionStatus
+  getQuestionStatus,
+  flatQuestions // Use this for total count
 }) => {
   const getStatusColor = (status: "current" | "answered" | "unanswered" | undefined) => {
     switch (status) {
@@ -41,20 +43,34 @@ export const TestNavigation: React.FC<TestNavigationProps> = ({
     }
   };
 
-  const renderQuestionItem = (question: AppTypes.TestQuestion | Omit<AppTypes.TestQuestion, "subQuestions" | "parent">, index: number, level = 0) => {
-    const status = getQuestionStatus(index);
-    let hasSubQuestions = false;
-    if ("subQuestions" in question) {
-      hasSubQuestions = question.subQuestions && question.subQuestions.length > 0;
+  // Helper to get display number for a question
+  const getQuestionDisplayNumber = (question: AppTypes.TestQuestion, parentIndex?: number, subIndex?: number) => {
+    if (parentIndex !== undefined && subIndex !== undefined) {
+      return `${parentIndex + 1}.${subIndex + 1}`;
     }
+    if (parentIndex !== undefined) {
+      return `${parentIndex + 1}`;
+    }
+    return '';
+  };
+
+  const renderQuestionItem = (
+    question: AppTypes.TestQuestion, 
+    parentIndex?: number, 
+    subIndex?: number, 
+    level = 0
+  ) => {
+    const status = getQuestionStatus(question.id, currentQuestionId);
+    const hasSubQuestions = question.subQuestions && question.subQuestions.length > 0;
     const isExpanded = expandedQuestions.has(question.id);
-    const isCurrent = index === currentQuestionIndex;
+    const isCurrent = question.id === currentQuestionId;
+    const displayNumber = getQuestionDisplayNumber(question, parentIndex, subIndex);
 
     return (
       <div key={question.id}>
         {/* Main Question */}
         <div
-          onClick={() => onQuestionSelect(index)}
+          onClick={() => onQuestionSelect(question.id)}
           className={`flex items-center gap-3 p-3 mb-2 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
             isCurrent 
               ? 'border-blue-500 bg-blue-50' 
@@ -65,14 +81,14 @@ export const TestNavigation: React.FC<TestNavigationProps> = ({
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${
             isCurrent ? 'bg-white text-blue-600' : getStatusColor(status)
           }`}>
-            {getStatusIcon(status) || index + 1}
+            {getStatusIcon(status) || displayNumber || '?'}
           </div>
 
           {/* Question Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium truncate">
-                {level === 0 ? `Question ${index + 1}` : `Part ${index + 1}`}
+                {level === 0 ? `Question ${displayNumber}` : `Part ${displayNumber}`}
               </span>
               {hasSubQuestions && (
                 <button
@@ -97,10 +113,11 @@ export const TestNavigation: React.FC<TestNavigationProps> = ({
         </div>
 
         {/* Sub-questions */}
-        {"subQuestions" in question && hasSubQuestions && isExpanded && (
+        {hasSubQuestions && isExpanded && (
           <div className="ml-8 space-y-2 border-l-2 border-blue-200 pl-3">
             {question.subQuestions.map((subQ, subIndex) => 
-              renderQuestionItem(subQ, subIndex, level + 1)
+              // @ts-expect-error parent and subQuestions are irrelevant here
+              renderQuestionItem(subQ, parentIndex, subIndex, level + 1)
             )}
           </div>
         )}
@@ -108,7 +125,7 @@ export const TestNavigation: React.FC<TestNavigationProps> = ({
     );
   };
 
-  const progressPercentage = (answeredCount / test.questions.length) * 100;
+  const progressPercentage = (answeredCount / flatQuestions.length) * 100;
 
   return (
     <div className="bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200/60 shadow-sm sticky top-24">
@@ -130,7 +147,7 @@ export const TestNavigation: React.FC<TestNavigationProps> = ({
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Progress</span>
             <span className="font-medium text-gray-900">
-              {answeredCount}/{test.questions.length}
+              {answeredCount}/{flatQuestions.length}
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
@@ -160,7 +177,7 @@ export const TestNavigation: React.FC<TestNavigationProps> = ({
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-gray-400">
-              {test.questions.length - answeredCount}
+              {flatQuestions.length - answeredCount}
             </div>
             <div className="text-gray-500">Remaining</div>
           </div>

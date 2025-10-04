@@ -159,8 +159,8 @@ model Test {
 model TestQuestion {
   id             String         @id @default(uuid())
   testId         String
-  parentId       String?        // <-- NEW: for sub-questions
-  order          Int?           // <-- NEW: for explicit ordering
+  parentId       String?        
+  order          Int?           
   question       String
   type           QuestionType
   points         Int
@@ -177,7 +177,7 @@ model TestQuestion {
   UploadedFile   UploadedFile[]
 
   // Self-relation for sub-questions
-  parent         TestQuestion?  @relation("SubQuestions", fields: [parentId], references: [id])
+  parent         TestQuestion?  @relation("SubQuestions", fields: [parentId], references: [id], onDelete: Cascade)
   subQuestions   TestQuestion[] @relation("SubQuestions")
 }
 
