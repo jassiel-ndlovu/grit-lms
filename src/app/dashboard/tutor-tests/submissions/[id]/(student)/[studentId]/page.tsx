@@ -333,7 +333,8 @@ export default function StudentSubmissionPage({
         );
 
       case 'FILE_UPLOAD':
-        const uploadedFiles = Array.isArray(studentAnswer) ? studentAnswer : [];
+        const uploadedFiles = Array.isArray(studentAnswer) ? studentAnswer : studentAnswer ? [studentAnswer]: [];
+
         return (
           <div className="space-y-2">
             {uploadedFiles.length === 0 ? (
