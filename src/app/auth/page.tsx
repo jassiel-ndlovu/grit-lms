@@ -6,6 +6,7 @@ import { signIn } from 'next-auth/react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, GraduationCap, Shield } from 'lucide-react';
 import LoadingPopup from '../components/loading';
 import ModernStudentFooter from '../dashboard/models/footer';
+import { APP_SHORT_NAME } from '@/lib/branding';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function LoginPage() {
                   <GraduationCap className="w-6 h-6 text-white" />
                 </div>
                 <h1 className="text-2xl font-bold text-gray-700">
-                  GRIT
+                  {APP_SHORT_NAME}
                 </h1>
               </div>
               <p className="text-slate-600 text-sm">Sign in to continue your learning journey</p>

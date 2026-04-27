@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import Skeleton from '../components/skeleton';
 import { signOut } from 'next-auth/react';
 import { useNotifications } from '@/context/NotificationsContext';
+import { APP_SHORT_NAME } from '@/lib/branding';
 
 type Color = 'blue' | 'purple' | 'green' | 'orange' | 'red' | 'yellow' | 'indigo' | 'pink' | 'gray';
 
@@ -271,7 +272,7 @@ export default function Nav() {
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Grit
+                  {APP_SHORT_NAME}
                 </h1>
                 <p className="text-xs text-gray-500 capitalize">{session?.user.role.toLowerCase()} Portal</p>
               </div>

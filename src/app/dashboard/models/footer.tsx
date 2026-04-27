@@ -2,6 +2,7 @@
 
 import React from "react";
 import { GraduationCap, Mail, Phone, MapPin, ExternalLink,Twitter, Facebook, Instagram, Linkedin, Shield, FileText, HelpCircle, Lock, Globe, ArrowUp } from "lucide-react";
+import { APP_NAME, APP_CONTACT } from "@/lib/branding";
 
 // Crrent path for demonstration
 const currPathname = "/dashboard";
@@ -44,7 +45,7 @@ export default function ModernStudentFooter() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                    Grit LMS
+                    {APP_NAME}
                   </h3>
                   <p className="text-sm text-gray-300">Learning Management System</p>
                 </div>
@@ -59,15 +60,15 @@ export default function ModernStudentFooter() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm text-gray-300">
                   <Mail className="w-4 h-4 text-blue-400" />
-                  <span>nkosijassiel@gmail.com</span>
+                  <span>{APP_CONTACT.email}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-gray-300">
                   <Phone className="w-4 h-4 text-blue-400" />
-                  <span>+27 68 698 3265</span>
+                  <span>{APP_CONTACT.phone}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-gray-300">
                   <MapPin className="w-4 h-4 text-blue-400" />
-                  <span>Johannesburg, South Africa</span>
+                  <span>{APP_CONTACT.location}</span>
                 </div>
               </div>
             </div>
@@ -175,7 +176,7 @@ export default function ModernStudentFooter() {
           <div className="border-t border-gray-600 pt-6">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-400">
-                <span>&copy; {currentYear} Grit LMS. All rights reserved.</span>
+                <span>&copy; {currentYear} {APP_NAME}. All rights reserved.</span>
               </div>
               
               <div className="flex items-center gap-4 text-sm text-gray-400">

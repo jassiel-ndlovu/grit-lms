@@ -1,21 +1,36 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from "@/lib/branding";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  // Enable Inter's stylistic alternates for an SF Pro-like glyph set.
+  // cv11 = single-storey "a", ss01 = open digits, ss03 = simplified ampersand.
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Grit LMS",
-  description: "Tomorrow's LMS for Students",
+  title: {
+    default: APP_NAME,
+    template: `%s · ${APP_NAME}`,
+  },
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
+  openGraph: {
+    title: APP_NAME,
+    description: APP_TAGLINE,
+    siteName: APP_NAME,
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -24,14 +39,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <Providers>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className="antialiased">
+        <Providers>{children}</Providers>
       </body>
-      </Providers>
     </html>
   );
 }

@@ -1,4 +1,5 @@
 import Footer from "../dashboard/models/footer";
+import { APP_LEGAL_NAME } from "@/lib/branding";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -7,7 +8,7 @@ export default function PrivacyPolicyPage() {
         <div className="w-full max-w-2xl p-6 bg-white border border-gray-200">
           <h1 className="text-2xl font-bold mb-6 text-center">Privacy Policy</h1>
           <p className="text-gray-700 text-sm mb-4">
-            At Grit LMS, we value your privacy and are committed to protecting your personal information. This Privacy Policy outlines how we collect, use, and safeguard your data.
+            At {APP_LEGAL_NAME}, we value your privacy and are committed to protecting your personal information. This Privacy Policy outlines how we collect, use, and safeguard your data.
           </p>
           <h2 className="text-lg font-semibold mt-4">Information We Collect</h2>
           <p className="text-gray-700 text-sm mb-4">
