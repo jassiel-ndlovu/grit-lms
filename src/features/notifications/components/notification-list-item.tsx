@@ -90,7 +90,7 @@ export function NotificationListItem({
       }}
       className={cn(
         "hover:bg-muted/60 group flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors",
-        !notification.isRead && "bg-primary/[0.04]",
+        !notification.isRead && "bg-brand-terracotta/[0.06]",
       )}
     >
       <div
@@ -98,7 +98,7 @@ export function NotificationListItem({
           "mt-0.5 rounded-md p-2",
           notification.isRead
             ? "bg-muted text-muted-foreground"
-            : "bg-primary/10 text-primary",
+            : "bg-brand-terracotta/12 text-brand-terracotta",
         )}
       >
         <NotificationIcon type={notification.type} className="size-4" />
@@ -117,19 +117,19 @@ export function NotificationListItem({
                 {notification.title}
               </p>
               {isUrgent && (
-                <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">
+                <Badge variant="brand" className="h-4 px-1.5 text-[10px]">
                   Urgent
                 </Badge>
               )}
               {isHigh && (
-                <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
+                <Badge variant="soft" className="h-4 px-1.5 text-[10px]">
                   High
                 </Badge>
               )}
               {!notification.isRead && (
                 <span
                   aria-hidden
-                  className="bg-primary size-1.5 rounded-full"
+                  className="bg-brand-terracotta size-1.5 rounded-full"
                 />
               )}
             </div>

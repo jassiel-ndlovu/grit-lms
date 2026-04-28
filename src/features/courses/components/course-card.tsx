@@ -29,7 +29,6 @@ export function CourseCard({
   className,
 }: CourseCardProps) {
   const tutorName = course.tutor.fullName ?? "Unknown tutor";
-  console.log(course);
 
   return (
     <Card
@@ -58,7 +57,9 @@ export function CourseCard({
 
         <div className="space-y-2 p-4">
           <div className="space-y-1">
-            <h3 className="line-clamp-1 text-base font-medium">{course.name}</h3>
+            <h3 className="font-display line-clamp-1 text-lg leading-tight tracking-tight text-foreground">
+              {course.name}
+            </h3>
             <p className="text-muted-foreground text-xs">{tutorName}</p>
           </div>
 

@@ -116,7 +116,9 @@ export default async function CourseLessonsPage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-lg font-semibold">{course.name}</h1>
+          <h1 className="font-display text-lg leading-tight tracking-tight text-foreground">
+            {course.name}
+          </h1>
           <p className="text-muted-foreground text-xs">
             with {course.tutor.fullName}
           </p>
@@ -124,13 +126,13 @@ export default async function CourseLessonsPage({
         <div className="bg-muted/50 space-y-2 rounded-md p-3">
           <div className="flex items-baseline justify-between text-xs">
             <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">
+            <span className="font-medium tabular-nums">
               {completedCount}/{total} ({progressPct}%)
             </span>
           </div>
           <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
             <div
-              className="bg-primary h-full transition-all"
+              className="bg-brand-terracotta h-full transition-all"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -161,7 +163,7 @@ export default async function CourseLessonsPage({
                   </span>
                 )}
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight">
+              <h2 className="font-display text-3xl leading-tight tracking-tight text-foreground">
                 {selectedLesson.title}
               </h2>
               <div className="flex flex-wrap items-center justify-between gap-3">

@@ -1,323 +1,237 @@
-'use client';
+/**
+ * Dashboard header — Inkwell identity (Chapter 5).
+ *
+ * Layout:
+ *   - Left: page title (Fraunces display) + warm muted greeting / role chip.
+ *   - Center: search input (token-driven, focus ring branded terracotta).
+ *   - Right: help link, NotificationBell (students only), profile dropdown.
+ */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, LogOut, User, Settings, Search, Moon, Sun, Menu, X, HelpCircle } from 'lucide-react';
-import { useProfile } from '@/context/ProfileContext';
-import { usePathname } from 'next/navigation';
-import { useRouter } from 'next/navigation';
-import Skeleton from '../components/skeleton';
-import { signOut } from 'next-auth/react';
+"use client";
 
-import { NotificationBell } from '@/features/notifications/components/notification-bell';
+import React, { useState } from "react";
+import Image from "next/image";
+import { useRouter, usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+import {
+  ChevronDown,
+  HelpCircle,
+  LogOut,
+  Menu,
+  Search,
+  Settings,
+  User,
+  X,
+} from "lucide-react";
 
-export default function ModernStudentHeader() {
+import { useProfile } from "@/context/ProfileContext";
+import Skeleton from "../components/skeleton";
+import { NotificationBell } from "@/features/notifications/components/notification-bell";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const PAGE_TITLES: Record<string, string> = {
+  courses: "My Courses",
+  calendar: "Schedule",
+  submissions: "Submissions",
+  tests: "Tests & Quizzes",
+  grades: "Grades",
+  groups: "Study Groups",
+  notifications: "Notifications",
+  profile: "Profile",
+  settings: "Settings",
+  help: "Help & Support",
+  "manage-courses": "Manage Courses",
+  "tutor-tests": "Tests & Grading",
+  "browse-courses": "Browse Courses",
+  account: "Account",
+};
+
+function getPageTitle(pathname: string) {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length <= 1) return "Dashboard";
+  const key = segments[1];
+  return PAGE_TITLES[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+export default function DashboardHeader() {
   const { profile, session } = useProfile();
   const pathname = usePathname();
   const router = useRouter();
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Notifications are student-only in v2 — the bell self-fetches; tutors
-  // see no bell at all.
-  const showNotificationBell = session?.user?.role === 'STUDENT';
-
-  // Get page title based on current path
-  const getPageTitle = () => {
-    const pathSegments = pathname.split('/').filter(Boolean);
-    if (pathSegments.length <= 1) return 'Dashboard';
-    
-    const pageMap: { [key: string]: string } = {
-      'courses': 'My Courses',
-      'calendar': 'Schedule',
-      'submissions': 'Submissions',
-      'tests': 'Tests & Quizzes',
-      'grades': 'Grades',
-      'groups': 'Study Groups',
-      'notifications': 'Notifications',
-      'profile': 'Profile',
-      'settings': 'Settings',
-      'help': 'Help & Support',
-      'manage-courses': 'Manage Courses',
-      'tutor-tests': 'Tests & Grading'
-    };
-    
-    return pageMap[pathSegments[1]] || pathSegments[1].charAt(0).toUpperCase() + pathSegments[1].slice(1);
-  };
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
+  const showNotificationBell = session?.user?.role === "STUDENT";
+  const firstName = profile?.fullName?.split(" ")[0];
 
   return (
-    <header className="w-full bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-40 shadow-sm">
-      <div className="flex items-center justify-between px-6 py-4">
-
-        {/* Left Section - Page Title & Breadcrumb */}
-        <div className="flex items-center gap-4">
-          <div className="hidden lg:block">
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl font-bold text-gray-900">{getPageTitle()}</h1>
-              <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                {session?.user.role}
-              </div>
-            </div>
-            {profile ? <p className="text-sm text-gray-600">
-              {getGreeting()}, {profile.fullName?.split(' ')[0]}!
-            </p> :
-              <Skeleton className="w-30 h-8 rounded" />
-            }
-          </div>
-
-          {/* Mobile menu button */}
-          <button className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors">
-            <Menu className="w-5 h-5 text-gray-600" />
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-card/85 backdrop-blur-md">
+      <div className="flex items-center justify-between gap-4 px-6 py-4">
+        <div className="flex min-w-0 items-center gap-4">
+          <button
+            type="button"
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
           </button>
+
+          <div className="hidden min-w-0 lg:block">
+            <div className="flex items-center gap-3">
+              <h1 className="font-display text-2xl leading-tight tracking-tight text-foreground">
+                {getPageTitle(pathname)}
+              </h1>
+              {session?.user.role && (
+                <Badge variant="soft" className="rounded-full px-2.5 py-0.5">
+                  {session.user.role.toLowerCase()}
+                </Badge>
+              )}
+            </div>
+            {profile ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {getGreeting()}
+                {firstName ? `, ${firstName}` : ""}.
+              </p>
+            ) : (
+              <Skeleton className="mt-1 h-4 w-40" />
+            )}
+          </div>
         </div>
 
-        {/* Center Section - Search Bar */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className={`relative w-full transition-all duration-300 ${searchFocused ? 'transform scale-105' : ''
-            }`}>
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className={`w-4 h-4 transition-colors ${searchFocused ? 'text-blue-500' : 'text-gray-400'
-                }`} />
-            </div>
+        <div className="hidden flex-1 justify-center md:flex">
+          <div className="relative w-full max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search courses, assignments, or resources..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
-              className={`w-full pl-11 pr-4 py-3 bg-gray-50 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-sm ${searchFocused ? 'bg-white border-blue-200 shadow-lg' : 'border-gray-200 hover:bg-white'
-                }`}
+              placeholder="Search courses, lessons, submissions…"
+              className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground/80 transition-shadow focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Clear search"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
         </div>
 
-        {/* Right Section - Actions & Profile */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/help")}
+            className="hidden rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:inline-flex"
+            aria-label="Help and support"
+            title="Help and support"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </button>
 
-          {/* Quick Actions */}
-          <div className="hidden sm:flex items-center gap-2">
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2.5 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-105"
-              title="Toggle dark mode"
-            >
-              {isDarkMode ? (
-                <Sun className="w-5 h-5 text-yellow-600" />
-              ) : (
-                <Moon className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
-
-            {/* Help */}
-            <button
-              onClick={() => router.push('/dashboard/help')}
-              className="p-2.5 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-105"
-              title="Help & Support"
-            >
-              <HelpCircle className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-
-          {/* Notifications — v2 RSC-fed bell. Student-only. */}
           {showNotificationBell && <NotificationBell />}
 
-          {/* User Profile Dropdown */}
-          <div ref={menuRef} className="relative">
-            <ModernHeaderUserProfile
-              menuOpen={menuOpen}
-              setMenuOpen={setMenuOpen}
-              profile={profile as AppTypes.Student}
-            />
-
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 shadow-xl rounded-2xl z-50 overflow-hidden">
-                {/* Profile Header */}
-                <div className="p-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <User className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      {profile && session ? (
-                        <>
-                          <h4 className="font-semibold">{profile.fullName}</h4>
-                          <p className="text-sm text-blue-100">{profile.email}</p>
-                          <span className="inline-block px-2 py-1 bg-white/20 text-xs rounded-full mt-1">
-                            {session.user.role}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Skeleton className="w-24 h-4 bg-white/30 mb-2" />
-                          <Skeleton className="w-32 h-3 bg-white/30 mb-1" />
-                          <Skeleton className="w-16 h-3 bg-white/30" />
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Menu Items */}
-                <div className="py-2">
-                  <MenuItem
-                    icon={<User className="w-4 h-4" />}
-                    label="View Profile"
-                    description="Manage your account settings"
-                    onClick={() => {
-                      router.push('/dashboard/account');
-                      setMenuOpen(false);
-                    }}
-                  />
-                  <MenuItem
-                    icon={<Settings className="w-4 h-4" />}
-                    label="Settings"
-                    description="Customize your experience"
-                    onClick={() => {
-                      router.push('/dashboard/settings');
-                      setMenuOpen(false);
-                    }}
-                  />
-                  {/* <MenuItem
-                    icon={<MessageSquare className="w-4 h-4" />}
-                    label="Support"
-                    description="Get help and contact us"
-                    onClick={() => {
-                      router.push('/dashboard/help');
-                      setMenuOpen(false);
-                    }}
-                  /> */}
-
-                  <div className="border-t border-gray-100 my-2"></div>
-
-                  <MenuItem
-                    icon={<LogOut className="w-4 h-4" />}
-                    label="Sign Out"
-                    description="Sign out of your account"
-                    onClick={() => signOut()}
-                    className="text-red-600 hover:bg-red-50"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+          <ProfileMenu profile={profile} email={session?.user?.email ?? null} />
         </div>
       </div>
     </header>
   );
 }
 
-type ModernHeaderUserProfileProps = {
-  menuOpen: boolean;
-  setMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  profile: AppTypes.Student;
+interface ProfileMenuProps {
+  profile: AppTypes.Student | AppTypes.Tutor | null;
+  email: string | null;
 }
 
-function ModernHeaderUserProfile({ menuOpen, setMenuOpen, profile }: ModernHeaderUserProfileProps) {
+function ProfileMenu({ profile, email }: ProfileMenuProps) {
+  const router = useRouter();
+
   if (!profile) {
-    return (
-      <div className="w-10 h-10 bg-gray-200 rounded-xl animate-pulse"></div>
-    );
+    return <Skeleton className="h-10 w-32 rounded-md" />;
   }
 
-  return (
-    <button
-      onClick={() => setMenuOpen(!menuOpen)}
-      className={`flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all duration-200 hover:shadow-md hover:scale-105 ${menuOpen
-        ? 'bg-blue-50 border-blue-200 shadow-md'
-        : 'bg-white border-gray-200 hover:bg-gray-50'
-        }`}
-    >
-      <div className="relative">
-        {profile.imageUrl ? (
-          <div className="w-8 h-8 rounded-xl overflow-hidden">
-            <img src={profile.imageUrl} alt="Profile" className="w-full h-full object-cover" />
-          </div>
-        ) : (
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 text-sm font-semibold rounded-xl flex items-center justify-center text-white shadow-md">
-            {profile.fullName?.charAt(0).toUpperCase() ?? 'U'}
-          </div>
-        )}
-        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
-      </div>
-
-      <div className="hidden sm:flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-800 max-w-24 truncate">
-          {profile.fullName?.split(' ')[0]}
-        </span>
-        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''
-          }`} />
-      </div>
-    </button>
-  );
-}
-
-type MenuItemProps = {
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-  href?: string;
-  onClick?: () => void;
-  className?: string;
-}
-
-function MenuItem({ icon, label, description, href, onClick, className = '' }: MenuItemProps) {
-  const baseClasses = "w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left";
-  const classes = `${baseClasses} ${className}`;
-
-  const content = (
-    <>
-      <div className="p-2 rounded-lg bg-gray-100">
-        {icon}
-      </div>
-      <div className="flex-1">
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-gray-500">{description}</p>
-      </div>
-    </>
-  );
-
-  if (href) {
-    return (
-      <a href={href} className={classes}>
-        {content}
-      </a>
-    );
-  }
+  const initial = profile.fullName?.charAt(0).toUpperCase() ?? "U";
+  const firstName = profile.fullName?.split(" ")[0];
+  const avatarUrl =
+    "imageUrl" in profile ? profile.imageUrl : profile.profileImageUrl;
 
   return (
-    <button onClick={onClick} className={classes}>
-      {content}
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        >
+          <div className="relative">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt=""
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-md object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground">
+                {initial}
+              </div>
+            )}
+          </div>
+          <span className="hidden max-w-[8rem] truncate font-medium sm:inline-block">
+            {firstName}
+          </span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuLabel className="px-2 py-2">
+          <p className="truncate text-sm font-medium text-foreground">
+            {profile.fullName}
+          </p>
+          {email && (
+            <p className="truncate text-xs text-muted-foreground">{email}</p>
+          )}
+        </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onSelect={() => router.push("/dashboard/account")}>
+          <User className="h-4 w-4" />
+          <span>View profile</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => router.push("/dashboard/settings")}>
+          <Settings className="h-4 w-4" />
+          <span>Settings</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          onSelect={() => signOut()}
+          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Sign out</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -152,7 +152,7 @@ export function NotificationBell({
           {unread > 0 && (
             <span
               aria-hidden
-              className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none"
+              className="bg-brand-terracotta text-brand-terracotta-foreground absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium leading-none"
             >
               {unread > 99 ? "99+" : unread}
             </span>
@@ -162,12 +162,16 @@ export function NotificationBell({
 
       <DropdownMenuContent align="end" className="w-80 p-0">
         {/* Header */}
-        <div className="flex items-center justify-between gap-2 px-3 py-2">
+        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Notifications</span>
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-              {unread} new
-            </Badge>
+            <span className="font-display text-base leading-none text-foreground">
+              Notifications
+            </span>
+            {unread > 0 && (
+              <Badge variant="soft" className="h-5 px-1.5 text-[10px]">
+                {unread} new
+              </Badge>
+            )}
           </div>
           <Button
             type="button"
@@ -204,7 +208,7 @@ export function NotificationBell({
                     onClick={() => handleRowClick(n)}
                     className={cn(
                       "hover:bg-muted/60 flex w-full items-start gap-3 px-3 py-2.5 text-left transition-colors",
-                      !n.isRead && "bg-primary/[0.04]",
+                      !n.isRead && "bg-brand-terracotta/[0.06]",
                     )}
                   >
                     <div
@@ -212,7 +216,7 @@ export function NotificationBell({
                         "mt-0.5 rounded-md p-1.5",
                         n.isRead
                           ? "bg-muted text-muted-foreground"
-                          : "bg-primary/10 text-primary",
+                          : "bg-brand-terracotta/12 text-brand-terracotta",
                       )}
                     >
                       <NotificationIcon type={n.type} className="size-3.5" />
@@ -230,7 +234,7 @@ export function NotificationBell({
                         {!n.isRead && (
                           <span
                             aria-hidden
-                            className="bg-primary mt-1.5 size-1.5 shrink-0 rounded-full"
+                            className="bg-brand-terracotta mt-1.5 size-1.5 shrink-0 rounded-full"
                           />
                         )}
                       </div>

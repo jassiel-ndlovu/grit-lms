@@ -28,10 +28,10 @@ export default async function BrowseCoursesPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
           Browse courses
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground mt-1.5 text-sm">
           Explore the full catalogue of available courses.
         </p>
       </header>
@@ -41,8 +41,10 @@ export default async function BrowseCoursesPage() {
         empty={
           <div className="border-input rounded-lg border border-dashed p-12 text-center">
             <Search className="text-muted-foreground mx-auto size-10" />
-            <h3 className="mt-3 text-base font-medium">No courses yet</h3>
-            <p className="text-muted-foreground mx-auto mt-1 max-w-sm text-sm">
+            <h3 className="font-display mt-3 text-lg text-foreground">
+              No courses yet
+            </h3>
+            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
               The catalogue is empty. Check back soon.
             </p>
           </div>

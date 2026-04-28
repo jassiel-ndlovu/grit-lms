@@ -102,7 +102,9 @@ export default async function ManageLessonsPage({
           </Link>
         </Button>
         <div>
-          <h1 className="text-lg font-semibold">{course.name}</h1>
+          <h1 className="font-display text-lg leading-tight tracking-tight text-foreground">
+            {course.name}
+          </h1>
           <p className="text-muted-foreground text-xs">Manage lessons</p>
         </div>
         <Separator />
@@ -134,8 +136,10 @@ export default async function ManageLessonsPage({
         {selectedLesson ? (
           <Card className="space-y-6 p-6">
             <div>
-              <h2 className="text-base font-medium">Edit lesson</h2>
-              <p className="text-muted-foreground text-sm">
+              <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
+                Edit lesson
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm">
                 Changes save immediately when you click &ldquo;Save changes&rdquo;.
               </p>
             </div>
@@ -173,14 +177,14 @@ function EmptyEditorState({
 }) {
   return (
     <Card className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-12 text-center">
-      <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+      <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
         <BookOpenText className="size-6" />
       </div>
       <div>
-        <h3 className="text-base font-medium">
+        <h3 className="font-display text-xl leading-tight text-foreground">
           {totalLessons === 0 ? "No lessons yet" : "Select a lesson"}
         </h3>
-        <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+        <p className="text-muted-foreground mt-2 max-w-sm text-sm">
           {totalLessons === 0
             ? "Create your first lesson using the button on the left."
             : "Pick a lesson from the sidebar to edit its content, videos, and attachments."}

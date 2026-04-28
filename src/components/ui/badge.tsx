@@ -11,6 +11,14 @@ const badgeVariants = cva(
       variant: {
         default:
           "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+        // Inkwell brand badge — solid terracotta. Use for "New", "Featured",
+        // or other editorial accents that should draw the eye.
+        brand:
+          "border-transparent bg-brand-terracotta text-brand-terracotta-foreground [a&]:hover:bg-brand-terracotta/90",
+        // Soft terracotta — a quieter brand chip on a tinted background.
+        // Better for in-list priority pills where many badges may stack.
+        soft:
+          "border-transparent bg-brand-terracotta/12 text-brand-terracotta [a&]:hover:bg-brand-terracotta/20",
         secondary:
           "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
         destructive:

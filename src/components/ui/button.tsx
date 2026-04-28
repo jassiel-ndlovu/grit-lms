@@ -11,6 +11,10 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+        // Inkwell brand CTA — terracotta. Reserve for the most important
+        // single action on a page (sign in, enroll, mark all read).
+        brand:
+          "bg-brand-terracotta text-brand-terracotta-foreground shadow-xs hover:bg-brand-terracotta/90",
         destructive:
           "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40",
         outline:

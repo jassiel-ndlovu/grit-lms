@@ -195,17 +195,17 @@ export default function StudentCourse({ params }: StudentCourseProps) {
     <button
       disabled={loading}
       onClick={() => setActiveTab(id)}
-      className={`flex items-center px-4 py-2 text-sm font-medium  transition-colors ${activeTab === id
-        ? 'border-b-4 border-b-blue-600 text-blue-600 font-medium'
-        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+      className={`flex items-center px-4 py-2 text-sm font-medium transition-colors ${activeTab === id
+        ? 'border-b-2 border-brand-terracotta text-foreground'
+        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
         }`}
     >
       <Icon className="h-4 w-4 mr-2" />
       {label}
       {count > 0 && !loading && (
         <span className={`w-6 h-6 ml-2 px-2 py-0.5 flex items-center justify-center rounded-full tracking-tighter text-xs ${activeTab === id
-          ? 'bg-blue-200 text-blue-800'
-          : 'bg-gray-200 text-gray-600'
+          ? 'bg-brand-terracotta/12 text-brand-terracotta'
+          : 'bg-muted text-muted-foreground'
           } ${loading && "animate-pulse"}`}>
           {count < 10 ? count : "9+"}
         </span>
@@ -214,23 +214,23 @@ export default function StudentCourse({ params }: StudentCourseProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="max-w-7xl bg-white border-b border-gray-200">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push("/dashboard")}
-                className="flex items-center text-sm text-gray-600 hover:text-gray-900"
+                className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back to Courses
               </button>
-              <div className="h-6 border-l border-gray-300"></div>
+              <div className="h-6 border-l border-border"></div>
               <div>
-                <h1 className="font-semibold text-gray-900">{course.name}</h1>
-                <p className="text-sm text-gray-500">Tutor: {course.tutor.fullName}</p>
+                <h1 className="font-display text-base tracking-tight text-foreground">{course.name}</h1>
+                <p className="text-sm text-muted-foreground">Tutor: {course.tutor.fullName}</p>
               </div>
             </div>
           </div>
@@ -238,60 +238,58 @@ export default function StudentCourse({ params }: StudentCourseProps) {
       </div>
 
       {/* Course Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="bg-primary text-primary-foreground border-b-2 border-brand-terracotta">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
           <div className="flex items-center justify-between gap-10">
             <div className="w-60 h-60 hidden md:block">
-              <div className="relative h-full w-full  bg-white/10 border-2 border-white/20 rounded-lg">
+              <div className="relative h-full w-full bg-primary-foreground/10 border border-primary-foreground/15 rounded-lg overflow-hidden">
                 <Image
                   src={`/images/${course.imageUrl}`}
                   alt="Course Image"
                   fill
-                  className="object-cover rounded-lg"
+                  className="object-cover"
                 />
               </div>
             </div>
 
             <div className="flex-1">
-              <h2 className="text-3xl font-bold mb-2">{course.name}</h2>
-              <p className="text-blue-100 mb-4 max-w-2xl">{course.description}</p>
-              
+              <h2 className="font-display text-3xl tracking-tight mb-2">{course.name}</h2>
+              <p className="text-primary-foreground/75 mb-4 max-w-2xl">{course.description}</p>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-8">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                  <div className="text-white/80 text-sm mb-1">Progress</div>
-                  <div className="text-2xl font-bold text-white">{progressPercentage}%</div>
-                  <div className="text-white/60 text-xs">{completions.length} of {lessons.length} lessons</div>
+                <div className="bg-primary-foreground/8 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/15">
+                  <div className="text-primary-foreground/70 text-sm mb-1">Progress</div>
+                  <div className="font-display text-2xl">{progressPercentage}%</div>
+                  <div className="text-primary-foreground/60 text-xs">{completions.length} of {lessons.length} lessons</div>
                 </div>
-                
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                  <div className="text-white/80 text-sm mb-1">Overall Grade</div>
-                  <div className="text-2xl font-bold text-white">{calculateOverallGrade()}%</div>
+
+                <div className="bg-primary-foreground/8 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/15">
+                  <div className="text-primary-foreground/70 text-sm mb-1">Overall Grade</div>
+                  <div className="font-display text-2xl">{calculateOverallGrade()}%</div>
                 </div>
               </div>
             </div>
-            
+
           </div>
 
           {/* Progress Bar */}
           <div className="space-y-2">
-            <div className="flex justify-between text-sm text-white/80">
+            <div className="flex justify-between text-sm text-primary-foreground/75">
               <span>Course Progress</span>
               <span>{progressPercentage}%</span>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-primary-foreground/15 rounded-full h-2 overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-green-400 to-blue-400 rounded-full transition-all duration-1000 ease-out relative"
+                className="h-full bg-brand-terracotta rounded-full transition-all duration-1000 ease-out"
                 style={{ width: `${progressPercentage}%` }}
-              >
-                <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
-              </div>
+              />
             </div>
           </div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex pt-4 overflow-x-auto">
             <TabButton
@@ -406,14 +404,14 @@ export default function StudentCourse({ params }: StudentCourseProps) {
 
 function StudentCourseSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="max-w-7xl bg-white border-b border-gray-200">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <Skeleton className="h-5 w-20 rounded" />
-              <div className="h-6 border-l border-gray-300"></div>
+              <div className="h-6 border-l border-border"></div>
               <div>
                 <Skeleton className="h-6 w-40 mb-1 rounded" />
                 <Skeleton className="h-4 w-24 rounded" />
@@ -424,35 +422,32 @@ function StudentCourseSkeleton() {
       </div>
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
+      <div className="bg-primary text-primary-foreground border-b-2 border-brand-terracotta">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex items-center justify-between gap-10">
+            <div className="hidden md:block">
+              <Skeleton className="h-60 w-60 rounded-lg bg-primary-foreground/10" />
+            </div>
             <div className="flex-1">
-              <Skeleton className="h-8 w-64 mb-2 rounded" />
-              <Skeleton className="h-4 w-96 mb-4 rounded" />
-              <div className="flex items-center space-x-6">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i}>
-                    <Skeleton className="h-3 w-16 mb-1 rounded" />
-                    <Skeleton className="h-5 w-12 rounded" />
-                  </div>
+              <Skeleton className="h-8 w-64 mb-2 rounded bg-primary-foreground/10" />
+              <Skeleton className="h-4 w-96 mb-4 rounded bg-primary-foreground/10" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="h-20 rounded-xl bg-primary-foreground/10" />
                 ))}
               </div>
-            </div>
-            <div className="hidden md:block">
-              <Skeleton className="h-32 w-32 rounded-lg" />
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-6">
-            <Skeleton className="h-2 w-full rounded-full" />
+          <div className="mt-8">
+            <Skeleton className="h-2 w-full rounded-full bg-primary-foreground/10" />
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex pt-4 space-x-6">
             {[...Array(6)].map((_, i) => (

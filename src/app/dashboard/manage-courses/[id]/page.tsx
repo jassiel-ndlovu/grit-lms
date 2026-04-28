@@ -68,8 +68,10 @@ export default async function ManageCourseDetailPage({ params }: PageProps) {
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-6 py-10">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{course.name}</h1>
-        <p className="text-muted-foreground text-sm">
+        <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          {course.name}
+        </h1>
+        <p className="text-muted-foreground mt-1.5 text-sm">
           Edit course details, manage enrolment, and link to lessons and
           assessments.
         </p>
@@ -95,8 +97,10 @@ export default async function ManageCourseDetailPage({ params }: PageProps) {
 
       <Card className="space-y-6 p-6">
         <div>
-          <h2 className="text-base font-medium">Course details</h2>
-          <p className="text-muted-foreground text-sm">
+          <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
+            Course details
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
             Cover image, name, description, and enrolled students.
           </p>
         </div>
@@ -114,7 +118,9 @@ export default async function ManageCourseDetailPage({ params }: PageProps) {
       </Card>
 
       <Card className="space-y-4 p-6">
-        <h2 className="text-base font-medium">Course content</h2>
+        <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
+          Course content
+        </h2>
         <p className="text-muted-foreground text-sm">
           Lessons and assessments are managed on dedicated pages.
         </p>
@@ -146,11 +152,11 @@ function StatTile({
 }) {
   return (
     <Card className="flex flex-row items-center gap-3 p-4">
-      <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-md">
+      <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md">
         {icon}
       </div>
       <div>
-        <p className="text-2xl font-semibold tabular-nums">{value}</p>
+        <p className="font-display text-2xl tabular-nums text-foreground">{value}</p>
         <p className="text-muted-foreground text-xs">{label}</p>
       </div>
     </Card>

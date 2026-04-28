@@ -34,8 +34,8 @@ export function LessonContent({ lesson }: LessonContentProps) {
     <div className="space-y-6">
       {videos.length > 0 && (
         <Card className="space-y-4 p-6">
-          <h3 className="flex items-center gap-2 text-base font-medium">
-            <Play className="text-primary size-4" />
+          <h3 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
+            <Play className="text-brand-terracotta size-4" />
             {videos.length === 1 ? "Lesson video" : "Lesson videos"}
           </h3>
           <div className="space-y-4">
@@ -74,8 +74,8 @@ export function LessonContent({ lesson }: LessonContentProps) {
       )}
 
       <Card className="space-y-4 p-6">
-        <h3 className="flex items-center gap-2 text-base font-medium">
-          <BookOpen className="text-primary size-4" />
+        <h3 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
+          <BookOpen className="text-brand-terracotta size-4" />
           Lesson content
         </h3>
         {lesson.description ? (
@@ -90,8 +90,8 @@ export function LessonContent({ lesson }: LessonContentProps) {
       </Card>
 
       <Card className="space-y-4 p-6">
-        <h3 className="flex items-center gap-2 text-base font-medium">
-          <FileText className="text-primary size-4" />
+        <h3 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
+          <FileText className="text-brand-terracotta size-4" />
           Resources
         </h3>
         {hasAttachments ? (
@@ -102,9 +102,9 @@ export function LessonContent({ lesson }: LessonContentProps) {
                   href={a.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="bg-card hover:border-ring group flex items-center gap-3 rounded-md border p-3 transition-colors"
+                  className="bg-card hover:border-brand-terracotta/40 group flex items-center gap-3 rounded-md border p-3 transition-colors"
                 >
-                  <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-md">
+                  <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md">
                     <FileText className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">

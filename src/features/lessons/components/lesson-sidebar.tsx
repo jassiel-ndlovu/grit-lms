@@ -82,14 +82,19 @@ export function LessonSidebar({
                 <Link
                   href={href}
                   className={cn(
-                    "hover:bg-muted flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
-                    isActive && "bg-muted",
+                    "hover:bg-muted/60 flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+                    isActive && "bg-muted text-foreground",
                   )}
                 >
-                  <span className="text-muted-foreground flex size-5 shrink-0 items-center justify-center text-xs">
+                  <span
+                    className={cn(
+                      "flex size-5 shrink-0 items-center justify-center text-xs tabular-nums",
+                      isActive ? "text-brand-terracotta" : "text-muted-foreground",
+                    )}
+                  >
                     {mode === "student" ? (
                       isCompleted ? (
-                        <CheckCircle2 className="text-primary size-4" />
+                        <CheckCircle2 className="text-brand-terracotta size-4" />
                       ) : (
                         <Circle className="size-4" />
                       )

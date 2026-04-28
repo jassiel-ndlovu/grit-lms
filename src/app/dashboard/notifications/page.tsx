@@ -65,25 +65,26 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
-      <div className="mb-6 space-y-4">
+      <div className="mb-6 space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
               Notifications
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="text-muted-foreground mt-1.5 text-sm">
               Activity from your courses, tutors, and submissions.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">
+            <Badge variant={unreadCount > 0 ? "soft" : "secondary"}>
               {unreadCount} unread
             </Badge>
             <MarkAllReadButton hasUnread={unreadCount > 0} />
           </div>
         </div>
 
-        {/* Filter toggle */}
+        {/* Filter toggle — active filter uses the slate primary so the
+            terracotta accents below stay reserved for unread state. */}
         <div className="flex items-center gap-2">
           <Button
             asChild

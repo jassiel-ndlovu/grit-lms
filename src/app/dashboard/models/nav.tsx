@@ -1,443 +1,332 @@
-'use client';
+/**
+ * Dashboard sidebar — Inkwell identity (Chapter 5).
+ *
+ * Approach:
+ *   - Single visual treatment for every nav item: muted by default, slate
+ *     foreground on hover, slate-tinted background + terracotta indicator
+ *     when active. Drops the previous per-icon rainbow palette in favour
+ *     of one calm, consistent rhythm.
+ *   - Wordmark is set in Fraunces — the lone display-serif moment in the
+ *     sidebar to anchor the brand.
+ *   - Drops the legacy NotificationsContext dependency. The notification
+ *     unread count is now surfaced exclusively by the header bell so the
+ *     two surfaces can't drift; the sidebar entry is just a navigation
+ *     link.
+ *   - Drops the gradient/glow effects, the speculative "Today / Progress"
+ *     stats card, and the redundant in-sidebar search. Header owns search.
+ *
+ * Behaviour preserved:
+ *   - Active-item detection by longest path prefix (handles nested routes).
+ *   - Collapse / expand toggle, bottom utility items, and the sign-out tile.
+ */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Calendar, FileText, Home, Settings, User, Wrench, ChevronLeft, ChevronRight, GraduationCap, Clock, Target, Bell, Search, BookOpen, PenTool, Award, Users, HelpCircle, LogOut, LucideIcon } from 'lucide-react';
-import { useProfile } from '@/context/ProfileContext';
-import { usePathname } from 'next/navigation';
-import { useRouter } from 'next/navigation';
-import Skeleton from '../components/skeleton';
-import { signOut } from 'next-auth/react';
-import { useNotifications } from '@/context/NotificationsContext';
-import { APP_SHORT_NAME } from '@/lib/branding';
+"use client";
 
-type Color = 'blue' | 'purple' | 'green' | 'orange' | 'red' | 'yellow' | 'indigo' | 'pink' | 'gray';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+import {
+  Award,
+  Bell,
+  BookOpen,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  GraduationCap,
+  HelpCircle,
+  Home,
+  LogOut,
+  PenTool,
+  Settings,
+  User,
+  Users,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 
-type NavItems = {
+import { useProfile } from "@/context/ProfileContext";
+import Skeleton from "../components/skeleton";
+import { APP_SHORT_NAME } from "@/lib/branding";
+import { cn } from "@/lib/utils";
+
+interface NavItem {
   icon: LucideIcon;
   label: string;
   link: string;
-  color: Color;
-  badge?: number;
   description?: string;
+}
+
+const STUDENT_NAV_ITEMS: ReadonlyArray<NavItem> = [
+  { icon: Home, label: "Dashboard", link: "/dashboard", description: "Overview" },
+  { icon: BookOpen, label: "My Courses", link: "/dashboard/courses", description: "Enrolled courses" },
+  { icon: Calendar, label: "Schedule", link: "/dashboard/calendar", description: "Events" },
+  { icon: PenTool, label: "Submissions", link: "/dashboard/submissions", description: "Tasks" },
+  { icon: FileText, label: "Tests", link: "/dashboard/tests", description: "Assessments" },
+  { icon: Award, label: "Grades", link: "/dashboard/grades", description: "Performance" },
+  { icon: Users, label: "Study Groups", link: "/dashboard/groups", description: "Collaborate" },
+  { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
+];
+
+const TUTOR_NAV_ITEMS: ReadonlyArray<NavItem> = [
+  { icon: Home, label: "Dashboard", link: "/dashboard", description: "Analytics" },
+  { icon: Wrench, label: "Manage Courses", link: "/dashboard/manage-courses", description: "Authoring" },
+  { icon: Calendar, label: "Schedule", link: "/dashboard/calendar", description: "Events" },
+  { icon: FileText, label: "Tests", link: "/dashboard/tutor-tests", description: "Grading" },
+  { icon: PenTool, label: "Submissions", link: "/dashboard/submissions", description: "Review" },
+  { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
+];
+
+const BOTTOM_NAV_ITEMS: ReadonlyArray<NavItem> = [
+  { icon: User, label: "Profile", link: "/dashboard/account" },
+  { icon: Settings, label: "Settings", link: "/dashboard/settings" },
+  { icon: HelpCircle, label: "Help", link: "/dashboard/help" },
+];
+
+/**
+ * Resolve the active nav item from the current pathname using a
+ * longest-prefix match across both lists. Lifted out as a pure helper so
+ * it's easy to test in isolation if we ever want to.
+ */
+function findActiveLabel(
+  pathname: string,
+  candidates: ReadonlyArray<NavItem>,
+): string | null {
+  const clean = pathname.endsWith("/") && pathname !== "/"
+    ? pathname.slice(0, -1)
+    : pathname;
+
+  let best: NavItem | null = null;
+  for (const item of candidates) {
+    if (!item.link || item.link === "#") continue;
+    const itemLink = item.link.endsWith("/") && item.link !== "/"
+      ? item.link.slice(0, -1)
+      : item.link;
+    if (clean === itemLink || clean.startsWith(itemLink + "/")) {
+      if (!best || itemLink.length > best.link.length) {
+        best = item;
+      }
+    }
+  }
+  return best?.label ?? null;
 }
 
 export default function Nav() {
   const { session, profile } = useProfile();
-  const { notifications } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeItem, setActiveItem] = useState('Home');
 
-  // Calculate unread notifications count
-  const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
+  const navItems = useMemo(
+    () => (session?.user.role === "TUTOR" ? TUTOR_NAV_ITEMS : STUDENT_NAV_ITEMS),
+    [session?.user.role],
+  );
 
-  const studentNavItems: NavItems[] = useMemo(() => [
-    {
-      icon: Home,
-      label: 'Dashboard',
-      link: '/dashboard',
-      color: 'blue',
-      description: 'Overview & stats'
-    },
-    {
-      icon: BookOpen,
-      label: 'My Courses',
-      link: '/dashboard/courses',
-      color: 'purple',
-      description: 'Enrolled courses'
-    },
-    {
-      icon: Calendar,
-      label: 'Schedule',
-      link: '/dashboard/calendar',
-      color: 'green',
-      description: 'Events & meetings'
-    },
-    {
-      icon: PenTool,
-      label: 'Submissions',
-      link: '/dashboard/submissions',
-      color: 'orange',
-      description: 'Tasks & projects'
-    },
-    {
-      icon: FileText,
-      label: 'Tests & Quizzes',
-      link: '/dashboard/tests',
-      color: 'red',
-      description: 'Assessments'
-    },
-    {
-      icon: Award,
-      label: 'Grades',
-      link: '#',
-      color: 'yellow',
-      description: 'Performance tracking'
-    },
-    {
-      icon: Users,
-      label: 'Study Groups',
-      link: '#',
-      color: 'indigo',
-      description: 'Collaborate & learn'
-    },
-    {
-      icon: Bell,
-      label: 'Notifications',
-      link: '/dashboard/notifications',
-      color: 'pink',
-      badge: unreadNotificationsCount,
-      description: 'Updates & alerts'
-    }
-  ], [unreadNotificationsCount]);
+  const allItems = useMemo(
+    () => [...navItems, ...BOTTOM_NAV_ITEMS],
+    [navItems],
+  );
 
-  const tutorNavItems: NavItems[] = useMemo(() => [
-    {
-      icon: Home,
-      label: 'Dashboard',
-      link: '/dashboard',
-      color: 'blue',
-      description: 'Overview & analytics'
-    },
-    {
-      icon: Wrench,
-      label: 'Manage Courses',
-      link: '/dashboard/manage-courses',
-      color: 'purple',
-      description: 'Course management'
-    },
-    {
-      icon: Calendar,
-      label: 'Schedule',
-      link: '/dashboard/calendar',
-      color: 'green',
-      description: 'Events & meetings'
-    },
-    {
-      icon: FileText,
-      label: 'Tests & Quizzes',
-      link: '/dashboard/tutor-tests',
-      color: 'red',
-      description: 'Tests & grading'
-    },
-    {
-      icon: PenTool,
-      label: 'Submissions',
-      link: '/dashboard/submissions',
-      color: 'orange',
-      description: 'Tasks & projects'
-    },
-    {
-      icon: Bell,
-      label: 'Notifications',
-      link: '/dashboard/notifications',
-      color: 'pink',
-      badge: unreadNotificationsCount,
-      description: 'Updates & alerts'
-    }
-  ], [unreadNotificationsCount]);
+  const [activeLabel, setActiveLabel] = useState<string>("Dashboard");
 
-  const navItems = session?.user.role === 'TUTOR' ? tutorNavItems : studentNavItems;
+  const recomputeActive = useCallback(() => {
+    setActiveLabel(findActiveLabel(pathname, allItems) ?? "Dashboard");
+  }, [pathname, allItems]);
 
-  const bottomNavItems: NavItems[] = useMemo(() => [
-    {
-      icon: User,
-      label: 'Profile',
-      link: '/dashboard/account',
-      color: 'gray'
-    },
-    {
-      icon: Settings,
-      label: 'Settings',
-      link: '/dashboard/settings',
-      color: 'gray'
-    },
-    {
-      icon: HelpCircle,
-      label: 'Help & Support',
-      link: '#',
-      color: 'gray'
-    }
-  ], []);
-
-  // Function to set active item based on pathname
-  const setActiveItemFromPathname = useCallback(() => {
-    const allNavItems = [...navItems, ...bottomNavItems];
-
-    // Normalize pathname (remove trailing slash if present)
-    const cleanPath = pathname.endsWith("/") && pathname !== "/"
-      ? pathname.slice(0, -1)
-      : pathname;
-
-    // Sort items by path length (longest first) to prioritize more specific matches
-    const sortedItems = [...allNavItems].sort((a, b) =>
-      b.link.split('/').length - a.link.split('/').length
-    );
-
-    // Find the best matching item
-    let bestMatch = null;
-    let bestMatchLength = 0;
-
-    for (const item of sortedItems) {
-      // Skip items with empty links or placeholder links
-      if (!item.link || item.link === "#") continue;
-
-      // Normalize item link
-      const cleanItemLink = item.link.endsWith("/") && item.link !== "/"
-        ? item.link.slice(0, -1)
-        : item.link;
-
-      // Check if the current path starts with the item link
-      if (cleanPath.startsWith(cleanItemLink)) {
-        // Prefer the longest (most specific) match
-        if (cleanItemLink.length > bestMatchLength) {
-          bestMatch = item;
-          bestMatchLength = cleanItemLink.length;
-        }
-      }
-    }
-
-    if (bestMatch) {
-      setActiveItem(bestMatch.label);
-    } else {
-      // Fallback: try to match by the first segment
-      const pathSegments = cleanPath.split('/').filter(Boolean);
-      if (pathSegments.length > 0) {
-        const firstSegment = `/${pathSegments[0]}`;
-        const fallbackMatch = allNavItems.find(item =>
-          item.link && item.link.startsWith(firstSegment)
-        );
-        if (fallbackMatch) {
-          setActiveItem(fallbackMatch.label);
-        }
-      }
-    }
-  }, [navItems, bottomNavItems, pathname]);
-
-  // Update active item when pathname changes
   useEffect(() => {
-    setActiveItemFromPathname();
-  }, [pathname, session?.user.role, setActiveItemFromPathname]);
-
-  const getColorClasses = (color: Color, isActive: boolean = false) => {
-    const colors = {
-      blue: isActive
-        ? 'bg-blue-100 text-blue-700 border-blue-200'
-        : 'hover:bg-blue-50 hover:text-blue-600',
-      purple: isActive
-        ? 'bg-purple-100 text-purple-700 border-purple-200'
-        : 'hover:bg-purple-50 hover:text-purple-600',
-      green: isActive
-        ? 'bg-green-100 text-green-700 border-green-200'
-        : 'hover:bg-green-50 hover:text-green-600',
-      orange: isActive
-        ? 'bg-orange-100 text-orange-700 border-orange-200'
-        : 'hover:bg-orange-50 hover:text-orange-600',
-      red: isActive
-        ? 'bg-red-100 text-red-700 border-red-200'
-        : 'hover:bg-red-50 hover:text-red-600',
-      yellow: isActive
-        ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
-        : 'hover:bg-yellow-50 hover:text-yellow-600',
-      indigo: isActive
-        ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
-        : 'hover:bg-indigo-50 hover:text-indigo-600',
-      pink: isActive
-        ? 'bg-pink-100 text-pink-700 border-pink-200'
-        : 'hover:bg-pink-50 hover:text-pink-600',
-      gray: isActive
-        ? 'bg-gray-100 text-gray-700 border-gray-200'
-        : 'hover:bg-gray-50 hover:text-gray-600'
-    };
-    return colors[color] || colors.gray;
-  };
-
-  const handleNavItemClick = (label: string, link: string) => {
-    setActiveItem(label);
-    router.push(link);
-  }
+    recomputeActive();
+  }, [recomputeActive]);
 
   return (
-    <nav className={`sticky top-0 h-screen overflow-y-auto bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ease-in-out z-30 ${isCollapsed ? 'w-24' : 'w-72'
-      }`}>
-      {/* Header */}
-      <div className="relative p-6 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          {!isCollapsed && (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <GraduationCap className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  {APP_SHORT_NAME}
-                </h1>
-                <p className="text-xs text-gray-500 capitalize">{session?.user.role.toLowerCase()} Portal</p>
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-all duration-200 hover:scale-105"
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        </div>
-
-        {/* Quick Stats - Only when expanded */}
+    <nav
+      className={cn(
+        "sticky top-0 z-30 flex h-screen flex-col overflow-y-auto",
+        "border-r border-border bg-sidebar text-sidebar-foreground",
+        "transition-[width] duration-200 ease-out",
+        isCollapsed ? "w-20" : "w-72",
+      )}
+    >
+      {/* Wordmark + collapse */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-5">
         {!isCollapsed && (
-          <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-600" />
-                <span className="text-gray-700">Today</span>
-              </div>
-              <span className="text-blue-600 font-semibold">0 tasks</span>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <GraduationCap className="h-5 w-5" />
             </div>
-            <div className="mt-2 flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-purple-600" />
-                <span className="text-gray-700">Progress</span>
-              </div>
-              <span className="text-purple-600 font-semibold">0%</span>
+            <div className="min-w-0">
+              <p className="font-display text-xl leading-none tracking-tight text-foreground">
+                {APP_SHORT_NAME}
+              </p>
+              <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
+                {session?.user.role
+                  ? `${session.user.role.toLowerCase()} portal`
+                  : "Loading"}
+              </p>
             </div>
           </div>
         )}
+
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((c) => !c)}
+          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </button>
       </div>
 
-      {/* Search Bar - Only when expanded */}
-      {!isCollapsed && (
-        <div className="p-4 border-b border-gray-100">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search courses, assignments..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+      {/* Primary nav */}
+      <div className="flex-1 overflow-y-auto px-3 py-4">
+        <ul className="flex flex-col gap-1">
+          {navItems.map((item) => (
+            <NavRow
+              key={item.label}
+              item={item}
+              active={activeLabel === item.label}
+              collapsed={isCollapsed}
+              onClick={() => {
+                setActiveLabel(item.label);
+                router.push(item.link);
+              }}
             />
-          </div>
-        </div>
-      )}
-
-      {/* Main Navigation */}
-      <div className="flex-1 overflow-y-auto px-4 py-2">
-        <div className="space-y-2">
-          {navItems.map(({ icon: Icon, label, link, color, badge, description }) => {
-            const isActive = activeItem === label;
-            const displayBadge = badge !== undefined ? badge : 0;
-
-            return (
-              <button
-                key={label}
-                onClick={() => handleNavItemClick(label, link)}
-                className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left ${isActive
-                  ? `${getColorClasses(color, true)} shadow-md border transform scale-105`
-                  : `${getColorClasses(color)} text-gray-600 hover:shadow-sm hover:scale-105`
-                  }`}
-                title={isCollapsed ? `${label} - ${description}` : ''}
-              >
-                <div className={`relative p-2 rounded-lg ${isActive
-                  ? 'bg-white shadow-sm'
-                  : 'group-hover:bg-white group-hover:shadow-sm'
-                  } transition-all duration-200`}>
-                  <Icon className="w-4 h-4" />
-                  {displayBadge > 0 && (
-                    <div className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold px-1">
-                      {displayBadge > 99 ? '99+' : displayBadge}
-                    </div>
-                  )}
-                </div>
-
-                {!isCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{label}</div>
-                    <div className="text-xs opacity-75 truncate">{description}</div>
-                  </div>
-                )}
-
-                {isActive && !isCollapsed && (
-                  <div className="w-2 h-2 bg-current rounded-full opacity-60"></div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+          ))}
+        </ul>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="border-t border-gray-100 p-4 space-y-2">
-        {bottomNavItems.map(({ icon: Icon, label, link, color }) => {
-          const isActive = activeItem === label;
-          return (
-            <button
-              key={label}
-              onClick={() => handleNavItemClick(label, link)}
-              className={`group relative w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left ${isActive
-                ? `${getColorClasses(color, true)} shadow-md border`
-                : `${getColorClasses(color)} text-gray-600 hover:shadow-sm`
-                }`}
-              title={isCollapsed ? label : ''}
-            >
-              <div className={`p-2 rounded-lg ${isActive
-                ? 'bg-white shadow-sm'
-                : 'group-hover:bg-white group-hover:shadow-sm'
-                } transition-all duration-200`}>
-                <Icon className="w-4 h-4" />
-              </div>
+      {/* Utility nav + sign out */}
+      <div className="mt-auto border-t border-border px-3 py-3">
+        <ul className="flex flex-col gap-1">
+          {BOTTOM_NAV_ITEMS.map((item) => (
+            <NavRow
+              key={item.label}
+              item={item}
+              active={activeLabel === item.label}
+              collapsed={isCollapsed}
+              onClick={() => {
+                setActiveLabel(item.label);
+                router.push(item.link);
+              }}
+            />
+          ))}
+        </ul>
 
+        <div className="mt-3 border-t border-border pt-3">
+          {profile ? (
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors",
+                "hover:bg-muted",
+                isCollapsed && "justify-center",
+              )}
+              aria-label="Sign out"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground text-sm font-medium">
+                {profile.fullName?.charAt(0).toUpperCase() ?? "U"}
+              </div>
               {!isCollapsed && (
-                <span className="font-medium text-sm truncate">{label}</span>
+                <>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {profile.fullName}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {profile.email}
+                    </p>
+                  </div>
+                  <LogOut className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-destructive" />
+                </>
               )}
             </button>
-          );
-        })}
-
-        {/* User Profile Section */}
-        <div className={`mt-4 pt-4 border-t border-gray-100 ${isCollapsed ? 'flex justify-center' : ''}`}>
-          {isCollapsed ? (
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <User className="w-5 h-5 text-white" />
-            </div>
           ) : (
             <div
-              onClick={() => signOut()}
-              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all duration-200 cursor-pointer group"
+              className={cn(
+                "flex items-center gap-3 p-2",
+                isCollapsed && "justify-center",
+              )}
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <User className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                {profile ? (
-                  <>
-                    <div className="font-medium text-sm text-gray-900 truncate">{profile?.fullName}</div>
-                    <div className="text-xs text-gray-500 truncate">{profile?.email}</div>
-                  </>
-                )
-                  : (
-                    <>
-                      <Skeleton className="h-4 w-24 mb-1" />
-                      <Skeleton className="h-3 w-32" />
-                    </>
-                  )}
-              </div>
-              <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors duration-200" />
+              <Skeleton className="h-9 w-9 rounded-md" />
+              {!isCollapsed && (
+                <div className="flex-1">
+                  <Skeleton className="mb-1 h-3 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
-
-      {/* Collapse indicator */}
-      {isCollapsed && (
-        <div className="absolute top-1/2 -right-3 transform -translate-y-1/2">
-          <div className="w-6 h-12 bg-white border border-gray-200 rounded-r-lg shadow-lg flex items-center justify-center">
-            <div className="w-1 h-6 bg-gray-300 rounded-full"></div>
-          </div>
-        </div>
-      )}
     </nav>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/* NavRow                                                                     */
+/* ------------------------------------------------------------------------- */
+
+interface NavRowProps {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  onClick: () => void;
+}
+
+function NavRow({ item, active, collapsed, onClick }: NavRowProps) {
+  const { icon: Icon, label, description } = item;
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "group relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+          active
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+          collapsed && "justify-center px-2",
+        )}
+        title={collapsed ? label : undefined}
+      >
+        {/* Active indicator — terracotta tab on the left edge. */}
+        {active && (
+          <span
+            aria-hidden
+            className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-r-full bg-brand-terracotta"
+          />
+        )}
+
+        <Icon
+          className={cn(
+            "h-4 w-4 shrink-0",
+            active ? "text-brand-terracotta" : "text-muted-foreground",
+          )}
+        />
+
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{label}</p>
+            {description && (
+              <p className="truncate text-xs text-muted-foreground/80">
+                {description}
+              </p>
+            )}
+          </div>
+        )}
+      </button>
+    </li>
   );
 }
