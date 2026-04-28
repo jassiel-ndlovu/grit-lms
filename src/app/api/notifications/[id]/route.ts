@@ -1,35 +1,32 @@
-import { prisma } from "@/lib/db";
-import { getToken } from "next-auth/jwt";
-import { NextRequest, NextResponse } from "next/server";
+/**
+ * /api/notifications/[id] — fully retired.
+ *
+ * The legacy PUT toggled `isRead` for a single notification. Both writers
+ * (the header bell and the notifications page) have moved to the
+ * `markNotificationRead` / `markNotificationUnread` Server Actions in
+ * `src/features/notifications/actions.ts`. This handler returns 410 Gone
+ * so any stale caller fails loudly.
+ *
+ * No GET to preserve — nothing reads through this URL today. The legacy
+ * NotificationsContext only fetches the collection.
+ *
+ * TODO[chapter-3-cleanup]: drop this entire file once we're confident no
+ * legacy callers remain (sweep alongside `NotificationsContext`).
+ */
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const token = await getToken({ req });
-    
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+import { NextResponse } from "next/server";
 
-    const body = await req.json();
-    const { id } = await params;
-
-    const notification = await prisma.notification.update({
-      where: { id },
-      data: { 
-        isRead: body.isRead ?? true, 
-        readAt: body.isRead === false ? null : new Date() 
-      },
-    });
-
-    return NextResponse.json(notification);
-  } catch (error) {
-    console.error("Error updating notification:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+/**
+ * Retired — use `markNotificationRead` / `markNotificationUnread`
+ * Server Actions.
+ * @see src/features/notifications/actions.ts
+ */
+export function PUT() {
+  return NextResponse.json(
+    {
+      error:
+        "Gone. Use the markNotificationRead / markNotificationUnread Server Actions (src/features/notifications/actions.ts).",
+    },
+    { status: 410 },
+  );
 }

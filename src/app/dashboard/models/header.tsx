@@ -1,44 +1,40 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, ChevronDown, LogOut, User, Settings, Search, Moon, Sun, Menu, X, MessageSquare, HelpCircle, Bookmark, Clock, Zap, BookOpen, FileText, Award } from 'lucide-react';
+import { ChevronDown, LogOut, User, Settings, Search, Moon, Sun, Menu, X, HelpCircle } from 'lucide-react';
 import { useProfile } from '@/context/ProfileContext';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import Skeleton from '../components/skeleton';
 import { signOut } from 'next-auth/react';
-import { useNotifications } from '@/context/NotificationsContext';
+
+import { NotificationBell } from '@/features/notifications/components/notification-bell';
 
 export default function ModernStudentHeader() {
   const { profile, session } = useProfile();
-  const { notifications, markAsRead, markAllAsRead } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
-  const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-        setNotificationsOpen(false);
-      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Get unread notifications count
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  // Notifications are student-only in v2 — the bell self-fetches; tutors
+  // see no bell at all.
+  const showNotificationBell = session?.user?.role === 'STUDENT';
 
   // Get page title based on current path
   const getPageTitle = () => {
@@ -68,63 +64,6 @@ export default function ModernStudentHeader() {
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
-  };
-
-  const getNotificationIcon = (type: string) => {
-    const typeMap: { [key: string]: React.ReactNode } = {
-      'COURSE_UPDATE': <BookOpen className="w-4 h-4 text-blue-600" />,
-      'LESSON_CREATED': <BookOpen className="w-4 h-4 text-green-600" />,
-      'TEST_CREATED': <FileText className="w-4 h-4 text-red-600" />,
-      'TEST_DELETED': <FileText className="w-4 h-4 text-gray-600" />,
-      'TEST_UPDATED': <FileText className="w-4 h-4 text-orange-600" />,
-      'QUIZ_CREATED': <FileText className="w-4 h-4 text-purple-600" />,
-      'SUBMISSION_CREATED': <Bookmark className="w-4 h-4 text-blue-600" />,
-      'SUBMISSION_DUE': <Clock className="w-4 h-4 text-yellow-600" />,
-      'SUBMISSION_UPDATED': <Bookmark className="w-4 h-4 text-green-600" />,
-      'SUBMISSION_DELETED': <Bookmark className="w-4 h-4 text-red-600" />,
-      'SUBMISSION_GRADED': <Award className="w-4 h-4 text-green-600" />,
-      'TEST_DUE': <Clock className="w-4 h-4 text-red-600" />,
-      'TEST_GRADED': <Award className="w-4 h-4 text-purple-600" />,
-      'MESSAGE': <MessageSquare className="w-4 h-4 text-indigo-600" />,
-      'SYSTEM': <Zap className="w-4 h-4 text-yellow-600" />
-    };
-    
-    return typeMap[type] || <Bell className="w-4 h-4 text-gray-600" />;
-  };
-
-  const formatNotificationTime = (createdAt: string) => {
-    const now = new Date();
-    const created = new Date(createdAt);
-    const diffMs = now.getTime() - created.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return created.toLocaleDateString();
-  };
-
-  const handleNotificationClick = (notification: AppTypes.Notification) => {
-    markAsRead(notification.id);
-    if (notification.link) {
-      router.push(notification.link);
-    }
-    setNotificationsOpen(false);
-  };
-
-  const handleViewAllNotifications = () => {
-    router.push('/dashboard/notifications');
-    setNotificationsOpen(false);
-  };
-
-  const handleMarkAllAsRead = async () => {
-    if (session?.user?.id) {
-      await markAllAsRead(session.user.id);
-    }
   };
 
   return (
@@ -210,94 +149,8 @@ export default function ModernStudentHeader() {
             </button>
           </div>
 
-          {/* Notifications */}
-          <div ref={notificationRef} className="relative">
-            <button
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
-              className="relative p-2.5 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:scale-105 group"
-              title="Notifications"
-            >
-              <Bell className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" />
-              {unreadCount > 0 && (
-                <div className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </div>
-              )}
-            </button>
-
-            {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 shadow-xl rounded-2xl z-50 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-                    <div className="flex items-center gap-2">
-                      {unreadCount > 0 && (
-                        <button
-                          onClick={handleMarkAllAsRead}
-                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                          Mark all read
-                        </button>
-                      )}
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                        {unreadCount} new
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="max-h-96 overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">
-                      <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                      <p className="text-sm">No notifications yet</p>
-                    </div>
-                  ) : (
-                    notifications.map((notification) => (
-                      <div
-                        key={notification.id}
-                        onClick={() => handleNotificationClick(notification)}
-                        className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!notification.isRead ? 'bg-blue-50/50' : ''
-                          }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-white rounded-lg shadow-sm">
-                            {getNotificationIcon(notification.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 mb-1">
-                              {notification.title}
-                            </p>
-                            <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                              {notification.message}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-3 h-3 text-gray-400" />
-                              <span className="text-xs text-gray-400">
-                                {formatNotificationTime(new Date(notification.createdAt).toLocaleDateString())}
-                              </span>
-                              {!notification.isRead && (
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="p-3 border-t border-gray-100 bg-gray-50">
-                  <button 
-                    onClick={handleViewAllNotifications}
-                    className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    View all notifications
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Notifications — v2 RSC-fed bell. Student-only. */}
+          {showNotificationBell && <NotificationBell />}
 
           {/* User Profile Dropdown */}
           <div ref={menuRef} className="relative">

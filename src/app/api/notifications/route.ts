@@ -1,3 +1,18 @@
+/**
+ * /api/notifications — legacy route, partially retired.
+ *
+ * GET is preserved temporarily because the legacy `NotificationsContext`
+ * still hits it on a couple of unmigrated pages (calendar, course
+ * overview). The two writer pages (header bell and the full notifications
+ * page) have moved to typed Server Actions in
+ * `src/features/notifications/actions.ts`, so the PUT (mark all read)
+ * handler is retired below.
+ *
+ * TODO[chapter-3-cleanup]: drop this entire file once
+ * `NotificationsContext` is deleted (or migrated to RSC queries) along
+ * with its remaining consumers.
+ */
+
 import { prisma } from "@/lib/db";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
@@ -5,7 +20,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   try {
     const token = await getToken({ req });
-    
+
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -15,7 +30,10 @@ export async function GET(req: NextRequest) {
     const courseIds = searchParams.getAll("courseIds");
 
     if (!studentId && courseIds.length === 0) {
-      return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing parameters" },
+        { status: 400 },
+      );
     }
 
     let whereClause = {};
@@ -23,10 +41,7 @@ export async function GET(req: NextRequest) {
     if (studentId && courseIds.length > 0) {
       // Fetch both user-specific and course-specific notifications
       whereClause = {
-        OR: [
-          { studentId: studentId },
-          { courseId: { in: courseIds } }
-        ]
+        OR: [{ studentId: studentId }, { courseId: { in: courseIds } }],
       };
     } else if (studentId) {
       // Fetch only user-specific notifications
@@ -42,14 +57,14 @@ export async function GET(req: NextRequest) {
         course: {
           select: {
             name: true,
-            imageUrl: true
-          }
+            imageUrl: true,
+          },
         },
         student: {
           select: {
-            fullName: true
-          }
-        }
+            fullName: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -59,62 +74,21 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching notifications:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function PUT(req: NextRequest) {
-  try {
-    const token = await getToken({ req });
-    
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { studentId } = body;
-
-    if (!studentId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
-    }
-
-    // Get user's courses to also mark course notifications as read
-    const userCourses = await prisma.course.findMany({
-      where: {
-        students: {
-          some: {
-            id: studentId
-          }
-        }
-      },
-      select: {
-        id: true
-      }
-    });
-
-    const courseIds = userCourses.map(course => course.id);
-
-    await prisma.notification.updateMany({
-      where: {
-        OR: [
-          { studentId: studentId },
-          { courseId: { in: courseIds } }
-        ],
-        isRead: false
-      },
-      data: {
-        isRead: true,
-        readAt: new Date()
-      }
-    });
-
-    return NextResponse.json({ message: "All notifications marked as read" });
-  } catch (error) {
-    console.error("Error marking notifications as read:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+/**
+ * Retired — use `markAllNotificationsRead` Server Action.
+ * @see src/features/notifications/actions.ts
+ */
+export function PUT() {
+  return NextResponse.json(
+    {
+      error:
+        "Gone. Use the markAllNotificationsRead Server Action (src/features/notifications/actions.ts).",
+    },
+    { status: 410 },
+  );
 }

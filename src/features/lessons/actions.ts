@@ -26,6 +26,7 @@ import {
   tutorActionClient,
   studentActionClient,
 } from "@/lib/safe-action";
+import { emitNotification } from "@/features/notifications/server";
 
 import {
   CreateLessonSchema,
@@ -99,20 +100,29 @@ export const createLesson = tutorActionClient
       select: { id: true, title: true, courseId: true },
     });
 
-    await prisma.notification.create({
-      data: {
+    // Fan out to enrolled students via the notifications feature. We pass
+    // `revalidate: false` because this action already revalidates
+    // /dashboard below — letting emitNotification do it again would be
+    // duplicate work.
+    await emitNotification(
+      {
         title: "New Lesson Published",
         message: `Lesson "${created.title}" has been published.`,
         link: `/dashboard/courses/lessons/${created.courseId}`,
         type: "LESSON_CREATED",
+        priority: "NORMAL",
         courseId: created.courseId,
       },
-    });
+      { revalidate: false },
+    );
 
     revalidatePath(`/dashboard/manage-courses/lessons/${created.courseId}`);
     revalidatePath(`/dashboard/courses/lessons/${created.courseId}`);
     revalidatePath(`/dashboard/manage-courses/${created.courseId}`);
     revalidatePath(`/dashboard/courses/${created.courseId}`);
+    // Fresh notifications also need to surface in the bell on /dashboard.
+    revalidatePath("/dashboard/notifications");
+    revalidatePath("/dashboard");
 
     return { id: created.id, courseId: created.courseId };
   });
