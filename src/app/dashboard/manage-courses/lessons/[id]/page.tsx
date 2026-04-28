@@ -1,508 +1,198 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * /dashboard/manage-courses/lessons/[id] — tutor's lesson manager.
+ *
+ * The `[id]` segment is the COURSE id (legacy URL — kept for backwards
+ * compatibility). Selected lesson is driven by `?lesson=<lessonId>` in the
+ * search params; without it the page shows a "select or create a lesson"
+ * empty state.
+ *
+ * Server Component shell. The sidebar uses `<Link>` items so navigation is
+ * shareable; the editor pane is a Client Component (LessonForm) hydrated
+ * with the selected lesson's defaults. Sidebar actions (delete) and the
+ * "+ Add lesson" trigger are also Client Components.
+ */
 
-"use client";
+import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, BookOpenText } from "lucide-react";
 
-import { useState, use, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Video, AlertTriangle, Plus, Trash2, FileText } from "lucide-react";
-import clsx from "clsx";
-import { useCourses } from "@/context/CourseContext";
-import ManageLessonsSkeleton from "../../skeletons/manage-lesson-skeleton";
-import CourseContentNotFound from "../../models/content-not-found";
-import NoLessonsFound from "../../models/no-lessons-found";
-import EditLessonView from "../../models/edit-lesson-view";
-import ViewLessonContent from "../../models/view-lesson-content";
-import { useLesson } from "@/context/LessonContext";
-import CreateLessonDialog from "../../models/create-lesson-dialog";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
-interface CoursePageProps {
+import {
+  courseBelongsToTutor,
+  getCourseDetailById,
+} from "@/features/courses/queries";
+import {
+  getLessonDetailById,
+  listLessonsByCourseId,
+} from "@/features/lessons/queries";
+import { LessonSidebar } from "@/features/lessons/components/lesson-sidebar";
+import { LessonForm } from "@/features/lessons/components/lesson-form";
+import { LessonActions } from "@/features/lessons/components/lesson-actions";
+import { CreateLessonButton } from "@/features/lessons/components/create-lesson-button";
+
+interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ lesson?: string }>;
 }
 
-export default function ManageLessons({ params }: CoursePageProps) {
-  const { id } = use(params);
-  const { loading: courseLoading, fetchCoursesByIds } = useCourses();
-  const { lessons: backendLessons, loading: lessonsLoading, fetchLessonsByCourseId, updateLesson, deleteLesson, createLesson } = useLesson();
+export const metadata = { title: "Manage lessons" };
 
-  const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [course, setCourse] = useState<AppTypes.Course | null>(null);
-  const [lessons, setLessons] = useState<Partial<AppTypes.Lesson>[] | null>(null);
-  const [currentLesson, setCurrentLesson] = useState<Partial<AppTypes.Lesson> | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{
-    lessonId: string;
-    lessonTitle: string;
-    index: number;
-  } | null>(null);
+export default async function ManageLessonsPage({
+  params,
+  searchParams,
+}: PageProps) {
+  const [{ id: courseId }, { lesson: selectedLessonParam }] = await Promise.all(
+    [params, searchParams],
+  );
 
-  // Fetch course
-  useEffect(() => {
-    const fetch = async () => {
-      setLoading(true);
-      const courseData = await fetchCoursesByIds([id]) as AppTypes.Course[];
+  const session = await auth();
+  if (!session?.user) redirect("/");
+  if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-      setLoading(false);
-      setCourse(courseData[0]);
-    };
-
-    fetch();
-  }, [id, fetchCoursesByIds]);
-
-  // Fetch lessons
-  useEffect(() => {
-    const fetch = async () => {
-      setLoading(true);
-      const fetchedLessons = await fetchLessonsByCourseId(id);
-      setLessons(fetchedLessons);
-      if (fetchedLessons.length > 0){
-        setCurrentLesson(fetchedLessons[0]);
-      }
-
-      setSelectedLessonIndex(0);
-      setLoading(false);
-    }
-
-    fetch();
-  }, [id, fetchLessonsByCourseId]);
-
-  // Set lesson to be edited when edit mode starts
-  useEffect(() => {
-    if (editMode && lessons && lessons[selectedLessonIndex]) {
-      setCurrentLesson(lessons[selectedLessonIndex]);
-    }
-  }, [editMode, lessons, selectedLessonIndex]);
-
-  // Update current lesson when selected index or lessons change
-  useEffect(() => {
-    if (lessons && lessons[selectedLessonIndex]) {
-      setCurrentLesson(lessons[selectedLessonIndex]);
-    }
-  }, [selectedLessonIndex, lessons]);
-
-  const handleDeleteLesson = (lesson: Partial<AppTypes.Lesson>, index: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent selecting the lesson
-    setDeleteConfirmation({
-      lessonId: lesson.id as string,
-      lessonTitle: lesson.title || `Lesson ${index + 1} (Untitled)`,
-      index
-    });
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteConfirmation) return;
-
-    try {
-      await deleteLesson(deleteConfirmation.lessonId);
-
-      // If the deleted lesson was selected, adjust selection
-      if (deleteConfirmation.index === selectedLessonIndex) {
-        setSelectedLessonIndex(Math.max(0, deleteConfirmation.index - 1));
-      } else if (deleteConfirmation.index < selectedLessonIndex) {
-        setSelectedLessonIndex(selectedLessonIndex - 1);
-      }
-
-      setDeleteConfirmation(null);
-      setLessons(backendLessons);
-    } catch (error) {
-      console.error('Error deleting lesson:', error);
-    }
-  };
-
-  const handleCreateLesson = async (newLesson: Partial<AppTypes.Lesson>) => {
-    if (!course) return;
-
-    try {
-      // Update local lessons state
-      setLessons(prev => prev ? [...prev, newLesson] : [newLesson]);
-
-      // Update the course in the context with the new lesson
-      const createdLesson = await createLesson(course.id, newLesson);
-
-      if (!createdLesson) {
-        setServerError("Could not create lesson. Please try again.");
-        return;
-      }
-
-      // Set the newly created lesson as selected
-      setSelectedLessonIndex((lessons?.length || 0));
-
-      setShowCreateDialog(false);
-    } catch (error) {
-      console.error('Error updating course with new lesson:', error);
-    }
-  };
-
-  const handleUpdate = (key: keyof AppTypes.Lesson, value: any) => {
-    setCurrentLesson(prev => {
-      if (!prev) return null;
-
-      if (key === "attachmentUrls" || key === "videoUrl") {
-        return {
-          ...prev,
-          [key]: [...(prev[key] || []), ...value]
-        }
-      }
-      return {
-        ...prev,
-        [key]: value
-      };
-    });
-  };
-
-  const handleUpdateSave = async (updatedAttachmentUrls?: AppTypes.Attachment[]) => {
-    // Use the passed value if available, otherwise fall back to currentLesson
-    const attachmentUrlsToSave = currentLesson?.attachmentUrls ? ([
-      ...currentLesson.attachmentUrls, 
-      ...(updatedAttachmentUrls ?? [])
-    ]): updatedAttachmentUrls;
-
-    if (!currentLesson || !currentLesson.id) {
-      alert("No lesson selected or missing ID");
-      return;
-    }
-
-    try {
-      await updateLesson(currentLesson.id, {
-        title: currentLesson.title,
-        description: currentLesson.description,
-        videoUrl: currentLesson.videoUrl,
-        attachmentUrls: attachmentUrlsToSave, // Use the updated value
-      });
-
-      alert("Lesson updated successfully ✅");
-      setEditMode(false);
-    } catch (error) {
-      console.error("Failed to save lesson:", error);
-      alert("Failed to save lesson");
-    }
-  };
-
-  // Loading state
-  if (loading || courseLoading || lessonsLoading || course === undefined) {
-    return <ManageLessonsSkeleton />;
-  }
-
-  // Course not found
-  if (!course) {
-    return <CourseContentNotFound />;
-  }
-
-  // No lessons available
-  if (!lessons || lessons.length === 0) {
-    return <NoLessonsFound courseId={id} courseName={course.name} />;
-  }
-
-  // Invalid lesson index
-  if (selectedLessonIndex >= lessons.length || selectedLessonIndex < 0) {
-    return <InvalidLessonIndex
-      courseName={course.name}
-      totalLessons={lessons.length}
-      onReset={() => setSelectedLessonIndex(0)}
-    />;
-  }
-
-  // Current lesson is somehow null/undefined
-  if (!currentLesson) {
-    return <LessonNotFound
-      courseName={course.name}
-      lessonIndex={selectedLessonIndex}
-      onReset={() => setSelectedLessonIndex(0)}
-    />;
-  }
-
-  const updateCurrentLesson = (key: keyof AppTypes.Lesson, value: any) => {
-    if (!lessons) return;
-
-    setLessons(prev =>
-      prev ? prev.map((lesson, i) =>
-        i === selectedLessonIndex ? { ...lesson, [key]: value } : lesson
-      ) : []
+  const tutor = await prisma.tutor.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!tutor) {
+    return (
+      <div className="text-muted-foreground p-8 text-sm">
+        No tutor profile found for this account.
+      </div>
     );
-  };
+  }
 
-  const moveLesson = (fromIndex: number, toIndex: number) => {
-    setLessons((prev) => {
-      if (!prev) return [];
+  const [course, lessons, owns] = await Promise.all([
+    getCourseDetailById(courseId),
+    listLessonsByCourseId(courseId),
+    courseBelongsToTutor(courseId, tutor.id),
+  ]);
 
-      const updated = [...prev];
-      const [moved] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, moved);
+  if (!course) notFound();
+  if (!owns) {
+    return (
+      <div className="text-muted-foreground p-8 text-sm">
+        You don&apos;t own this course.
+      </div>
+    );
+  }
 
-      // Update `order` property so it matches the array index
-      return updated.map((lesson, index) => ({
-        ...lesson,
-        order: index + 1, // start from 1 for readability
-      }));
-    });
+  // Resolve the selected lesson — the URL param wins; fall back to first.
+  const selectedLessonId =
+    selectedLessonParam &&
+    lessons.some((l) => l.id === selectedLessonParam)
+      ? selectedLessonParam
+      : null;
 
-    handleUpdateSave();
-  };
-
-  const addVideoUrl = () => {
-    updateCurrentLesson("videoUrl", [
-      ...(currentLesson.videoUrl || []),
-      ""
-    ]);
-  };
-
-  const addAttachmentUrl = () => {
-    updateCurrentLesson("attachmentUrls", [
-      ...(currentLesson.attachmentUrls || []),
-      { title: "", url: "" }
-    ]);
-  };
-
-  const removeVideoUrl = (index: number) => {
-    const updated = [...(currentLesson.videoUrl || [])];
-    updated.splice(index, 1);
-    updateCurrentLesson("videoUrl", updated);
-  };
-
-  const removeResourceLink = (index: number) => {
-    const updated = [...(currentLesson.attachmentUrls || [])];
-    updated.splice(index, 1);
-    updateCurrentLesson("attachmentUrls", updated);
-  };
+  const selectedLesson = selectedLessonId
+    ? await getLessonDetailById(selectedLessonId)
+    : null;
 
   return (
-    <div
-      className={clsx(
-        "h-full max-h-[92-vh] grid bg-gray-100",
-        sidebarOpen ? "grid-cols-[250px_1fr]" : "grid-cols-[1px_1fr]"
-      )}
-    >
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
       {/* Sidebar */}
-      <div className="relative h-full bg-gray-900 text-white">
-        <button
-          onClick={() => setSidebarOpen((prev) => !prev)}
-          className="absolute top-3.5 -right-6 z-50 p-1 bg-blue-500 hover:bg-blue-400"
-        >
-          {sidebarOpen ?
-            <ChevronLeft
-              className="text-white w-4 h-4"
-            /> :
-            <ChevronRight
-              className="text-white w-4 h-4"
-            />}
-        </button>
-
-        {/* Aside */}
-        {sidebarOpen && (
-          <aside className="h-full p-4">
-            <div className="mb-4">
-              <h2 className="text-lg font-bold">Lessons</h2>
-              <p className="text-xs text-gray-400">{lessons.length} total</p>
-            </div>
-
-            <ul className="space-y-2 mb-4">
-              {lessons.map((lesson, i) => (
-                <li
-                  key={lesson?.id || i}
-                  title={lesson?.title || `Lesson ${i + 1} (Untitled)`}
-                  onClick={() => setSelectedLessonIndex(i)}
-                  className={clsx(
-                    "cursor-pointer flex items-center gap-2 px-3 py-2 rounded hover:bg-blue-500 transition group",
-                    {
-                      "bg-blue-600 text-white": i === selectedLessonIndex,
-                      "bg-gray-800": i !== selectedLessonIndex,
-                    }
-                  )}
-                >
-                  {lesson?.videoUrl && lesson.videoUrl.length > 0 ?
-                    <Video className="shrink-0 w-4 h-4 text-white" /> :
-                    <FileText className="shrink-0 w-4 h-4 text-gray-400" />  
-                  }
-                  <span className="flex-1 text-sm truncate">
-                    {lesson?.title || `Lesson ${i + 1} (Untitled)`}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      moveLesson(i, i - 1);
-                    }}
-                    disabled={i === 0}
-                    className="text-sm opacity-0 group-hover:opacity-100 px-1.5  hover:shadow-sm hover:bg-blue-500/80 rounded transition-all"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      moveLesson(i, i + 1);
-                    }}
-                    className="text-sm opacity-0 group-hover:opacity-100 px-1.5 hover:shadow-sm hover:bg-blue-500/80 rounded transition-all"
-                    disabled={i === lessons.length - 1}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteLesson(lesson, i, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500 rounded transition-all"
-                    aria-label={`Delete ${lesson?.title || `Lesson ${i + 1}`}`}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {/* Create Lesson Button */}
-            <button
-              onClick={() => setShowCreateDialog(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-500 rounded transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="text-sm">Add New Lesson</span>
-            </button>
-
-            {/* Delete Confirmation Dialog */}
-            {deleteConfirmation && (
-              <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-                <div className="bg-white shadow-xl max-w-md w-full p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    Delete Lesson
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-6">
-                    Are you sure you want to delete &quot;{deleteConfirmation.lessonTitle}&quot;?
-                    This action cannot be undone.
-                  </p>
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      onClick={() => setDeleteConfirmation(null)}
-                      className="px-4 py-2 text-gray-700 text-sm border border-gray-300 hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmDelete}
-                      className="px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Create Lesson Dialog */}
-            {showCreateDialog && (
-              <CreateLessonDialog
-                courseId={course.id}
-                courseName={course.name}
-                onClose={() => setShowCreateDialog(false)}
-                onSave={handleCreateLesson}
-                loading={false}
-                serverError={serverError}
-              />
-            )}
-          </aside>
-        )}
-      </div>
-
-      {/* Main Content */}
-      <main className="h-full max-h-[92vh] p-8 space-y-6 overflow-y-auto">
+      <aside className="space-y-4">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link href={`/dashboard/manage-courses/${courseId}`}>
+            <ArrowLeft className="size-4" /> Back to course
+          </Link>
+        </Button>
         <div>
-          <h1 className="text-3xl font-bold text-blue-500">
-            {course.name}
-          </h1>
-          <p className="text-sm text-gray-500">
-            Tutor: {course.tutor?.fullName || 'Unknown'}
-          </p>
-          <p className="text-xs text-gray-400">
-            Lesson {selectedLessonIndex + 1} of {lessons.length}
-          </p>
+          <h1 className="text-lg font-semibold">{course.name}</h1>
+          <p className="text-muted-foreground text-xs">Manage lessons</p>
         </div>
-
-        <section className="bg-white p-6 space-y-6 border border-gray-200">
-          {editMode ? (
-            <EditLessonView
-              lesson={currentLesson}
-              onUpdate={handleUpdate}
-              onSave={handleUpdateSave}
-              onCancel={() => setEditMode(false)}
-              onAddVideo={addVideoUrl}
-              onRemoveVideo={removeVideoUrl}
-              onAddResource={addAttachmentUrl}
-              onRemoveResource={removeResourceLink}
-            />
-          ) : (
-            <ViewLessonContent
-              lesson={currentLesson}
-              onEdit={() => setEditMode(true)}
+        <Separator />
+        <LessonSidebar
+          courseId={courseId}
+          lessons={lessons}
+          selectedLessonId={selectedLessonId}
+          mode="tutor"
+          renderActions={(lesson) => (
+            <LessonActions
+              lessonId={lesson.id}
+              lessonTitle={lesson.title}
+              isSelected={lesson.id === selectedLessonId}
+              courseId={courseId}
             />
           )}
-        </section>
+          footer={
+            <CreateLessonButton
+              courseId={courseId}
+              nextOrder={lessons.length}
+              label={lessons.length === 0 ? "Create first lesson" : "Add lesson"}
+            />
+          }
+        />
+      </aside>
+
+      {/* Main pane */}
+      <main className="min-w-0">
+        {selectedLesson ? (
+          <Card className="space-y-6 p-6">
+            <div>
+              <h2 className="text-base font-medium">Edit lesson</h2>
+              <p className="text-muted-foreground text-sm">
+                Changes save immediately when you click &ldquo;Save changes&rdquo;.
+              </p>
+            </div>
+            <Separator />
+            <LessonForm
+              courseId={courseId}
+              defaultValues={{
+                id: selectedLesson.id,
+                title: selectedLesson.title,
+                description: selectedLesson.description,
+                order: selectedLesson.order,
+                duration: selectedLesson.duration,
+                videoUrl: selectedLesson.videoUrl,
+                attachments: selectedLesson.attachmentUrls.map((a) => ({
+                  title: a.title,
+                  url: a.url,
+                })),
+              }}
+            />
+          </Card>
+        ) : (
+          <EmptyEditorState courseId={courseId} totalLessons={lessons.length} />
+        )}
       </main>
     </div>
   );
 }
 
-// Component for invalid lesson index
-function InvalidLessonIndex({
-  courseName,
+function EmptyEditorState({
+  courseId,
   totalLessons,
-  onReset
 }: {
-  courseName: string;
+  courseId: string;
   totalLessons: number;
-  onReset: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="text-center space-y-6 max-w-md">
-        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mx-auto">
-          <AlertTriangle className="w-8 h-8" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Invalid Lesson</h2>
-          <p className="text-gray-600">
-            The requested lesson doesn&apos;t exist in &quot;{courseName}&quot;.
-            This course has {totalLessons} lesson{totalLessons !== 1 ? 's' : ''}.
-          </p>
-        </div>
-        <button
-          onClick={onReset}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-        >
-          Go to First Lesson
-        </button>
+    <Card className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-12 text-center">
+      <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-full">
+        <BookOpenText className="size-6" />
       </div>
-    </div>
-  );
-}
-
-// Component for when current lesson is null
-function LessonNotFound({
-  courseName,
-  lessonIndex,
-  onReset
-}: {
-  courseName: string;
-  lessonIndex: number;
-  onReset: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="text-center space-y-6 max-w-md">
-        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 text-yellow-600 mx-auto">
-          <AlertTriangle className="w-8 h-8" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Lesson Data Missing</h2>
-          <p className="text-gray-600">
-            Lesson {lessonIndex + 1} in &quot;{courseName}&quot; appears to be corrupted or missing data.
-          </p>
-        </div>
-        <button
-          onClick={onReset}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-        >
-          Return to First Lesson
-        </button>
+      <div>
+        <h3 className="text-base font-medium">
+          {totalLessons === 0 ? "No lessons yet" : "Select a lesson"}
+        </h3>
+        <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+          {totalLessons === 0
+            ? "Create your first lesson using the button on the left."
+            : "Pick a lesson from the sidebar to edit its content, videos, and attachments."}
+        </p>
       </div>
-    </div>
+      {totalLessons === 0 && (
+        <CreateLessonButton
+          courseId={courseId}
+          nextOrder={0}
+          label="Create first lesson"
+        />
+      )}
+    </Card>
   );
 }

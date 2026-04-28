@@ -28,16 +28,36 @@ export const CourseSchema = z.object({
 });
 export type Course = z.infer<typeof CourseSchema>;
 
-export const CreateCourseSchema = CourseSchema.omit({
-  id: true,
-  createdAt: true,
+/**
+ * Create input. The form supplies an `imageUrl` (already uploaded via the
+ * blob client) plus an optional list of student IDs to enrol on creation.
+ * `tutorId` is NOT in the input — the action infers it from the session.
+ */
+export const CreateCourseSchema = z.object({
+  name: NonEmptyString.max(120, "Name too long"),
+  description: z.string().max(2000, "Description too long").nullable(),
+  imageUrl: UrlSchema,
+  studentIds: z.array(CuidSchema).default([]).optional(),
 });
 export type CreateCourseInput = z.infer<typeof CreateCourseSchema>;
 
-export const UpdateCourseSchema = CreateCourseSchema.partial().extend({
+/**
+ * Update input — `id` is required, all other fields optional.
+ * `studentIds`, when supplied, REPLACES the enrolment set (Prisma `set:`).
+ */
+export const UpdateCourseSchema = z.object({
   id: CuidSchema,
+  name: NonEmptyString.max(120, "Name too long").optional(),
+  description: z.string().max(2000, "Description too long").nullable().optional(),
+  imageUrl: UrlSchema.optional(),
+  studentIds: z.array(CuidSchema).optional(),
 });
 export type UpdateCourseInput = z.infer<typeof UpdateCourseSchema>;
+
+export const DeleteCourseSchema = z.object({
+  id: CuidSchema,
+});
+export type DeleteCourseInput = z.infer<typeof DeleteCourseSchema>;
 
 export const CourseFilterSchema = z.object({
   tutorId: CuidSchema.optional(),
