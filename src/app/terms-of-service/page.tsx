@@ -1,13 +1,14 @@
 import Footer from "../dashboard/models/footer";
+import { APP_LEGAL_NAME } from "@/lib/branding";
 
-export default function PrivacyPolicyPage() {
+export default function TermsOfServicePage() {
   return (
     <div className="h-screen flex flex-col">
       <main className="h-full flex items-center justify-center bg-gray-50">
         <div className="w-full max-w-2xl p-6 bg-white border border-gray-200">
           <h1 className="text-2xl font-bold mb-6 text-center">Terms of Service</h1>
           <p className="text-gray-700 text-sm mb-4">
-            Welcome to Grit LMS. By using our services, you agree to comply with and be bound by the following terms and conditions.
+            Welcome to {APP_LEGAL_NAME}. By using our services, you agree to comply with and be bound by the following terms and conditions.
           </p>
           <h2 className="text-lg font-semibold mt-4">Acceptance of Terms</h2>
           <p className="text-gray-700 text-sm mb-4">
@@ -23,11 +24,11 @@ export default function PrivacyPolicyPage() {
           </p>
           <h2 className="text-lg font-semibold mt-4">Limitation of Liability</h2>
           <p className="text-gray-700 text-sm mb-4">
-            Grit LMS will not be liable for any direct, indirect, incidental, or consequential damages arising from your use of our services.
+            {APP_LEGAL_NAME} will not be liable for any direct, indirect, incidental, or consequential damages arising from your use of our services.
           </p>
           <h2 className="text-lg font-semibold mt-4">Governing Law</h2>
           <p className="text-gray-700 text-sm mb-4">
-            These terms are governed by the laws of the jurisdiction in which Grit LMS operates. Any disputes will be resolved in the courts of that jurisdiction.
+            These terms are governed by the laws of the jurisdiction in which {APP_LEGAL_NAME} operates. Any disputes will be resolved in the courts of that jurisdiction.
           </p>
         </div>
       </main>

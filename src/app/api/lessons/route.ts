@@ -1,53 +1,48 @@
-import { prisma } from "@/lib/db";
+/**
+ * /api/lessons — legacy route, partially retired.
+ *
+ * GET is preserved temporarily because the legacy `LessonContext` (still used
+ * by a handful of student-facing pages that haven't migrated yet) reads
+ * lessons through `axios.get("/api/lessons?courseId=…")`.
+ *
+ * POST has been retired in favour of the typed Server Action
+ * `createLesson` in `src/features/lessons/actions.ts`. This handler returns
+ * 410 Gone so any stale caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this entire file once `LessonContext` is
+ * deleted (or migrated to RSC queries) along with its remaining consumers.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
+
+import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const courseId = req.nextUrl.searchParams.get("courseId");
 
-  if (!courseId)
+  if (!courseId) {
     return NextResponse.json({ error: "Missing courseId" }, { status: 400 });
+  }
 
   const lessons = await prisma.lesson.findMany({
     where: { courseId },
-    include: {
-      attachmentUrls: true,
-    },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    include: { attachmentUrls: true },
   });
 
   return NextResponse.json(lessons);
 }
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { title, description, videoUrl, attachmentUrls, courseId, order } =
-    body;
-
-  if (!title || !courseId) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-  }
-
-  const newLesson = await prisma.lesson.create({
-    data: {
-      title,
-      description,
-      videoUrl,
-      attachmentUrls: {
-        create: attachmentUrls,
-      },
-      courseId,
-      order: order ?? 0,
+/**
+ * Retired — use `createLesson` Server Action.
+ * @see src/features/lessons/actions.ts
+ */
+export function POST() {
+  return NextResponse.json(
+    {
+      error:
+        "Gone. Use the createLesson Server Action (src/features/lessons/actions.ts).",
     },
-  });
-
-  await prisma.notification.create({
-    data: {
-      title: "New Lesson Published",
-      message: `Lesson "${newLesson.title}" has been published.`,
-      link: `/dashboard/courses/lessons/${newLesson.courseId}`,
-      type: "LESSON_CREATED",
-      courseId: newLesson.courseId,
-    },
-  });
-
-  return NextResponse.json(newLesson);
+    { status: 410 },
+  );
 }

@@ -1,55 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getToken } from 'next-auth/jwt';
+/**
+ * RETIRED — replaced by Server Actions in `@/features/courses/actions`.
+ *
+ *   PUT  /api/courses/[id]  → updateCourse({ id, ... })
+ *   DEL  /api/courses/[id]  → deleteCourse({ id })
+ *
+ * This file should be deleted in the same commit that migrates the last
+ * caller. It currently returns 410 Gone so any stale client surfaces a
+ * loud failure rather than silently succeeding against the wrong code.
+ *
+ * TODO[chapter-2-cleanup]: rm src/app/api/courses/[id]/route.ts
+ */
 
-export async function PUT(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const token = await getToken({ req });
-  const { params } = context;
+import { NextResponse } from "next/server";
 
-  const id = (await params).id;
+const GONE = NextResponse.json(
+  {
+    error:
+      "This endpoint has been retired. Use the createCourse/updateCourse/deleteCourse Server Actions instead.",
+  },
+  { status: 410 },
+);
 
-  if (!token || token.role !== 'TUTOR') {
-    return new NextResponse('Unauthorized', { status: 403 });
-  }
-
-  const data = await req.json();
-
-  const updated = await prisma.course.update({
-    where: { id: id },
-    data,
-    include: {
-      tutor: true,
-      students: true,
-      lessons: true,
-      quizzes: true,
-      tests: true,
-      submissions: true,
-      courseEvents: true,
-    },
-  });
-
-  return NextResponse.json(updated);
+export async function PUT() {
+  return GONE;
 }
 
-export async function DELETE(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const token = await getToken({ req });
-  const { params } =  context;
-
-  const id = (await params).id;
-
-  if (!token || token.role !== 'TUTOR') {
-    return new NextResponse('Unauthorized', { status: 403 });
-  }
-
-  await prisma.course.delete({
-    where: { id: id },
-  });
-
-  return new NextResponse('Deleted', { status: 204 });
+export async function DELETE() {
+  return GONE;
 }

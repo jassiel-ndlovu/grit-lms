@@ -1,89 +1,63 @@
-'use client'
+/**
+ * /dashboard/browse-courses — public-ish catalogue of every course on the
+ * platform. Server Component: data is fetched on the server and the page
+ * renders without client-side state.
+ *
+ * Search/filter UI was removed in this migration — the legacy version
+ * filtered client-side after pulling everything anyway, and we don't yet
+ * have a category column. Add server-driven search in a later chapter
+ * once we know the real query patterns.
+ */
 
-import { useState } from 'react'
-import CourseCard from '../components/course-card'
-import { Filter, Search } from 'lucide-react'
-import Image from 'next/image'
-import { useCourses } from '@/context/CourseContext'
+import { redirect } from "next/navigation";
+import { Search } from "lucide-react";
 
-export default function BrowseCoursesPage() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filter, setFilter] = useState('All')
+import { auth } from "@/lib/auth";
+import { listAllCourses } from "@/features/courses/queries";
+import { CourseCard } from "@/features/courses/components/course-card";
+import { CourseGrid } from "@/features/courses/components/course-grid";
 
-  const { courses } = useCourses();
+export const metadata = { title: "Browse courses" };
 
-  const filteredCourses = courses.filter((course) =>
-    (filter === 'All') &&
-    course.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+export default async function BrowseCoursesPage() {
+  const session = await auth();
+  if (!session?.user) redirect("/");
 
-  const categories = ['All', 'Programming', 'Math', 'Science', 'Languages']
+  const courses = await listAllCourses();
 
   return (
-    <div className="h-full w-full px-6 py-10 space-y-10 bg-gray-50">
-      <header className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800">Browse Courses</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Explore our available courses. Filter by category or search by title.
+    <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
+      <header>
+        <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          Browse courses
+        </h1>
+        <p className="text-muted-foreground mt-1.5 text-sm">
+          Explore the full catalogue of available courses.
         </p>
       </header>
 
-      {/* Filter & Search Bar */}
-      <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-4">
-        <div className="relative w-full md:w-1/2">
-          <Search className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search courses..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 bg-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Filter className="text-gray-400 w-4 h-4" />
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="bg-white border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Course Grid */}
-      <section className="max-w-5xl mx-auto">
-        {filteredCourses.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCourses.map((course: AppTypes.Course) => (
-              <CourseCard key={course.id} course={course} lessons={[]} />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white p-10 rounded-lg text-center border border-gray-200">
-            <div className="relative mx-auto w-44 h-44 mb-2">
-              <Image
-                src="/images/No-Result.jpg"
-                alt="No results"
-                className="object-cover"
-                fill
-              />
-            </div>
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">
-              No courses match your search
-            </h2>
-            <p className="text-sm text-gray-500">
-              Try adjusting your search or filter options.
+      <CourseGrid
+        isEmpty={courses.length === 0}
+        empty={
+          <div className="border-input rounded-lg border border-dashed p-12 text-center">
+            <Search className="text-muted-foreground mx-auto size-10" />
+            <h3 className="font-display mt-3 text-lg text-foreground">
+              No courses yet
+            </h3>
+            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
+              The catalogue is empty. Check back soon.
             </p>
           </div>
-        )}
-      </section>
+        }
+      >
+        {courses.map((course) => (
+          <CourseCard
+            key={course.id}
+            course={course}
+            href={`/dashboard/courses/${course.id}`}
+          />
+        ))}
+      </CourseGrid>
     </div>
-  )
+  );
 }
