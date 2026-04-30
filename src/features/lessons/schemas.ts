@@ -64,16 +64,17 @@ export type Lesson = z.infer<typeof LessonSchema>;
 /**
  * Create input. Course is required, attachments + videos default to [].
  * `order` defaults to 0 (legacy behavior — the manage-lessons UI re-orders
- * after creation if needed).
+ * after creation if needed). Duration is the only nullable input — the rest
+ * use `.default()` so callers can omit them entirely.
  */
 export const CreateLessonSchema = z.object({
   title: NonEmptyString.max(120, "Title too long"),
   description: z.string().max(20000, "Description too long").nullable(),
   courseId: CuidSchema,
-  order: z.number().int().nonnegative().default(0).optional(),
-  duration: z.number().int().positive().nullable().optional(),
-  videoUrl: z.array(UrlSchema).default([]).optional(),
-  attachments: z.array(CreateAttachmentSchema).default([]).optional(),
+  order: z.number().int().nonnegative().default(0),
+  duration: z.number().int().positive().nullable().default(null),
+  videoUrl: z.array(UrlSchema).default([]),
+  attachments: z.array(CreateAttachmentSchema).default([]),
 });
 export type CreateLessonInput = z.infer<typeof CreateLessonSchema>;
 

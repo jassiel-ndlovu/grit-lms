@@ -46,11 +46,18 @@ import { cn } from "@/lib/utils";
 /**
  * Combined form schema. `id` is optional; presence flips the form into edit
  * mode at submit time.
+ *
+ * Note: CreateLessonSchema uses `.default()` on order/videoUrl/attachments,
+ * which makes those fields optional in the *input* type but required in the
+ * *output* type. RHF's TFieldValues should be the input shape — otherwise
+ * the resolver's input/output don't line up. We pass z.input for
+ * TFieldValues and z.output for the transformed-values generic.
  */
 const FormSchema = CreateLessonSchema.extend({
   id: z.string().optional(),
 });
-type FormValues = z.infer<typeof FormSchema>;
+type FormValues = z.input<typeof FormSchema>;
+type FormOutput = z.output<typeof FormSchema>;
 
 export interface LessonFormProps {
   /** Course this lesson belongs to. Required for blob path generation. */
@@ -82,7 +89,7 @@ export function LessonForm({
     [defaultValues?.id],
   );
 
-  const form = useForm<FormValues>({
+  const form = useForm<FormValues, unknown, FormOutput>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       id: defaultValues?.id,
@@ -98,7 +105,7 @@ export function LessonForm({
 
   const isEdit = Boolean(defaultValues?.id);
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(values: FormOutput) {
     setPending(true);
     try {
       // Strip empty manual rows so the server doesn't reject them on UrlSchema.

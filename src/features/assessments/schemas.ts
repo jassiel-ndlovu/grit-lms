@@ -152,3 +152,132 @@ export const QuizSchema = z.object({
   createdAt: DateSchema,
 });
 export type Quiz = z.infer<typeof QuizSchema>;
+
+/* ─── Delete + ownership inputs ────────────────────────────────────────── */
+
+export const DeleteTestSchema = z.object({ id: CuidSchema });
+export type DeleteTestInput = z.infer<typeof DeleteTestSchema>;
+
+/* ─── Test creation/update with embedded questions ──────────────────────── */
+
+/**
+ * Question shape accepted by createTest / updateTest. Supports nested
+ * sub-questions via a recursive `subQuestions` array. The action turns the
+ * tree into a flat insert with parentId pointers.
+ */
+export type CreateTestQuestionTree = {
+  question: string;
+  type: z.infer<typeof QuestionTypeSchema>;
+  points: number;
+  order?: number;
+  options?: string[];
+  answer?: unknown;
+  language?: string | null;
+  matchPairs?: unknown;
+  reorderItems?: string[];
+  blankCount?: number | null;
+  subQuestions?: CreateTestQuestionTree[];
+};
+
+export const CreateTestQuestionTreeSchema: z.ZodType<CreateTestQuestionTree> =
+  z.lazy(() =>
+    z.object({
+      question: NonEmptyString,
+      type: QuestionTypeSchema,
+      points: z.number().int().nonnegative(),
+      order: z.number().int().optional(),
+      options: z.array(z.string()).default([]),
+      answer: z.unknown().optional(),
+      language: z.string().nullable().optional(),
+      matchPairs: z.unknown().optional(),
+      reorderItems: z.array(z.string()).default([]),
+      blankCount: z.number().int().positive().nullable().optional(),
+      subQuestions: z.array(CreateTestQuestionTreeSchema).default([]),
+    }),
+  );
+
+/**
+ * Create a test with its question tree in one atomic action.
+ *
+ * `isActive` is intentionally exposed so the form can save drafts without
+ * triggering a TEST_CREATED notification fan-out.
+ */
+export const CreateTestWithQuestionsSchema = z.object({
+  title: NonEmptyString.max(200),
+  description: z.string().max(5000).default(""),
+  preTestInstructions: z.string().max(5000).nullable().default(null),
+  courseId: CuidSchema,
+  dueDate: DateSchema,
+  timeLimit: z.number().int().positive().nullable().default(null),
+  totalPoints: z.number().int().nonnegative().default(0),
+  isActive: z.boolean().default(false),
+  questions: z.array(CreateTestQuestionTreeSchema).default([]),
+});
+export type CreateTestWithQuestionsInput = z.infer<
+  typeof CreateTestWithQuestionsSchema
+>;
+
+/**
+ * Update a test + replace its question set in one atomic action.
+ *
+ * `questions`, when supplied, REPLACES the test's question tree. Pass an
+ * empty array to clear all questions. Omitting the field keeps existing.
+ */
+export const UpdateTestWithQuestionsSchema = z.object({
+  id: CuidSchema,
+  title: NonEmptyString.max(200).optional(),
+  description: z.string().max(5000).optional(),
+  preTestInstructions: z.string().max(5000).nullable().optional(),
+  dueDate: DateSchema.optional(),
+  timeLimit: z.number().int().positive().nullable().optional(),
+  totalPoints: z.number().int().nonnegative().optional(),
+  isActive: z.boolean().optional(),
+  questions: z.array(CreateTestQuestionTreeSchema).optional(),
+});
+export type UpdateTestWithQuestionsInput = z.infer<
+  typeof UpdateTestWithQuestionsSchema
+>;
+
+/* ─── TestSubmission inputs ─────────────────────────────────────────────── */
+
+/** Begin a fresh submission for the calling student (status = IN_PROGRESS). */
+export const StartTestSubmissionSchema = z.object({
+  testId: CuidSchema,
+});
+export type StartTestSubmissionInput = z.infer<
+  typeof StartTestSubmissionSchema
+>;
+
+/** Submit answers — flips the submission to SUBMITTED. Tutor grades next. */
+export const SubmitTestAnswersSchema = z.object({
+  submissionId: CuidSchema,
+  answers: z.unknown(),
+});
+export type SubmitTestAnswersInput = z.infer<typeof SubmitTestAnswersSchema>;
+
+/* ─── Grading inputs (tutor) ────────────────────────────────────────────── */
+
+/**
+ * Grade a test submission. Creates or updates the Grade row (one per
+ * submission via unique constraint) and replaces all QuestionGrade rows
+ * for the submission in one transaction.
+ */
+export const GradeTestSubmissionSchema = z.object({
+  submissionId: CuidSchema,
+  score: z.number().nonnegative(),
+  outOf: z.number().positive(),
+  feedback: z.string().max(5000).nullable().default(null),
+  questionGrades: z
+    .array(
+      z.object({
+        questionId: CuidSchema.nullable(),
+        score: z.number().nonnegative(),
+        outOf: z.number().positive(),
+        feedback: z.string().max(2000).nullable().default(null),
+      }),
+    )
+    .default([]),
+});
+export type GradeTestSubmissionInput = z.infer<
+  typeof GradeTestSubmissionSchema
+>;

@@ -20,6 +20,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { tutorActionClient } from "@/lib/safe-action";
 import { deleteBlob } from "@/lib/blob/server";
+import { emitNotification } from "@/features/notifications/server";
 
 import {
   CreateCourseSchema,
@@ -48,19 +49,26 @@ export const createCourse = tutorActionClient
       select: { id: true, name: true },
     });
 
-    await prisma.notification.create({
-      data: {
+    // Single typed entry point — emitNotification handles persistence,
+    // schema validation, and student/courses revalidation in one place.
+    await emitNotification(
+      {
         title: "New Course Available",
         message: `A new course "${created.name}" is available.`,
         link: `/dashboard/courses/${created.id}`,
         type: "COURSE_UPDATE",
+        priority: "NORMAL",
         courseId: created.id,
       },
-    });
+      // We're already revalidating the course routes below — let
+      // emitNotification skip its own pass to avoid double work.
+      { revalidate: false },
+    );
 
     revalidatePath("/dashboard/manage-courses");
     revalidatePath("/dashboard/browse-courses");
     revalidatePath("/dashboard/courses");
+    revalidatePath("/dashboard/notifications");
 
     return { id: created.id };
   });
@@ -141,8 +149,8 @@ export const deleteCourse = tutorActionClient
     await deleteBlob(existing.imageUrl);
 
     revalidatePath("/dashboard/manage-courses");
-    revalidatePath("/dashboard/browse-courses");
     revalidatePath("/dashboard/courses");
+    revalidatePath("/dashboard/browse-courses");
 
     return { id: parsedInput.id };
   });
