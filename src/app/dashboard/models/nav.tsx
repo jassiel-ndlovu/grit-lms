@@ -45,7 +45,6 @@ import {
   PenTool,
   Settings,
   User,
-  Users,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
