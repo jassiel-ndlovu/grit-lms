@@ -47,3 +47,6 @@ next-env.d.ts
 
 # audit
 audit.json
+
+# IDE
+.vscode

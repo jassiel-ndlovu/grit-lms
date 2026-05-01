@@ -45,7 +45,6 @@ import {
   PenTool,
   Settings,
   User,
-  Users,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -69,7 +68,7 @@ const STUDENT_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { icon: PenTool, label: "Submissions", link: "/dashboard/submissions", description: "Tasks" },
   { icon: FileText, label: "Tests", link: "/dashboard/tests", description: "Assessments" },
   { icon: Award, label: "Grades", link: "/dashboard/grades", description: "Performance" },
-  { icon: Users, label: "Study Groups", link: "/dashboard/groups", description: "Collaborate" },
+  // { icon: Users, label: "Study Groups", link: "/dashboard/groups", description: "Collaborate" },
   { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 
@@ -83,9 +82,9 @@ const TUTOR_NAV_ITEMS: ReadonlyArray<NavItem> = [
 ];
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { icon: User, label: "Profile", link: "/dashboard/account" },
-  { icon: Settings, label: "Settings", link: "/dashboard/settings" },
-  { icon: HelpCircle, label: "Help", link: "/dashboard/help" },
+  { icon: User, label: "Profile", link: "#" }, // /dashboard/account
+  { icon: Settings, label: "Settings", link: "#" }, // /dashboard/settings
+  { icon: HelpCircle, label: "Help", link: "#" }, // /dashboard/help
 ];
 
 /**

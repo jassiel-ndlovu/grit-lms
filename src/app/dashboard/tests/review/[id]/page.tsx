@@ -1,288 +1,235 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * /dashboard/tests/review/[id] — student's review of a submitted test.
+ *
+ * Server Component. Pulls the test detail + the student's latest submission
+ * + per-question grades (if any). Read-only — no mutations on this surface.
+ *
+ * `[id]` is the TEST id, not the submission id. The student's latest
+ * submission is the canonical source of truth (one student → at most one
+ * graded row per test in current data).
+ */
 
-"use client";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { ArrowLeft, CheckCircle2, GraduationCap, Hourglass } from "lucide-react";
 
-import { AlertCircle } from "lucide-react";
-import TestReviewSkeleton from "../../skeletons/test-review-skeleton";
-import { use, useEffect, useState } from "react";
-import { useTests } from "@/context/TestContext";
-import { useTestSubmissions } from "@/context/TestSubmissionContext";
-import { useProfile } from "@/context/ProfileContext";
-import { useRouter } from "next/navigation";
-import { ScoreSummary } from "../components/score-summary";
-import { FeedbackSection } from "../components/feedback-section";
-import QuestionReview from "../../models/question-review";
-import { ExtendedTestQuestion } from "@/lib/test-creation-types";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
-type TestReviewPageProps = {
+import {
+  getTestDetailById,
+  getTestSubmissionByStudentAndTest,
+} from "@/features/assessments/queries";
+
+interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function TestReviewPage({ params }: TestReviewPageProps) {
-  const { id } = use(params);
-  const { loading: testLoading, fetchTestById } = useTests();
-  const { loading: submissionLoading, fetchSubmissionByStudentTestId } = useTestSubmissions();
-  const { profile } = useProfile();
-  const router = useRouter();
+const dateFmt = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
 
-  const studentProfile = profile as AppTypes.Student;
+export const metadata = { title: "Test review" };
 
-  const [submission, setSubmission] = useState<AppTypes.TestSubmission | null>(null);
-  const [questions, setQuestions] = useState<ExtendedTestQuestion[]>([]);
-  const [test, setTest] = useState<AppTypes.Test | null>(null);
-  const [loading, setLoading] = useState(true);
+export default async function TestReviewPage({ params }: PageProps) {
+  const { id: testId } = await params;
 
-  // Fetch submission and test data
-  useEffect(() => {
-    if (!id || !studentProfile) return;
+  const session = await auth();
+  if (!session?.user) redirect("/");
+  if (session.user.role !== "STUDENT") redirect("/dashboard");
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [sub, fetchedTest] = await Promise.all([
-          fetchSubmissionByStudentTestId(studentProfile.id, id) as Promise<AppTypes.TestSubmission>,
-          fetchTestById(id) as Promise<AppTypes.Test>
-        ]);
-
-        setSubmission(sub);
-        setTest(fetchedTest);
-
-        // Use the original hierarchical questions structure
-        console.log("Fetched Test Questions:", fetchedTest.questions);
-        const hierarchicalQuestions = organizeQuestionsHierarchically(fetchedTest.questions || []);
-          console.log("Hierarchical Questions:", hierarchicalQuestions);
-
-        setQuestions(hierarchicalQuestions || []);
-      } catch (error) {
-        console.error("Error fetching review data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [id, studentProfile, fetchSubmissionByStudentTestId, fetchTestById]);
-
-  const organizeQuestionsHierarchically = (
-    flatQuestions: AppTypes.TestQuestion[]
-  ): ExtendedTestQuestion[] => {
-    // Create a map for quick lookup
-    const questionMap = new Map<string, ExtendedTestQuestion>();
-    const rootQuestions: ExtendedTestQuestion[] = [];
-
-    // First pass: create extended questions and store in map
-    flatQuestions.forEach((question) => {
-      questionMap.set(question.id, {
-        ...question,
-        subQuestions: [],
-        isExpanded: false,
-      });
-    });
-
-    // Second pass: build the hierarchy
-    flatQuestions.forEach((question) => {
-      const extendedQuestion = questionMap.get(question.id)!;
-
-      if (question.parentId) {
-        // This is a subquestion - add to parent's subQuestions array
-        const parent = questionMap.get(question.parentId);
-        if (parent) {
-          parent.subQuestions = parent.subQuestions || [];
-          parent.subQuestions.push(extendedQuestion);
-
-          // Sort subquestions by order if available
-          if (
-            parent.subQuestions.length > 1 &&
-            parent.subQuestions.every((q) => q.order != null)
-          ) {
-            parent.subQuestions.sort((a, b) => (a.order || 0) - (b.order || 0));
-          }
-        }
-      } else {
-        // This is a root question
-        rootQuestions.push(extendedQuestion);
-      }
-    });
-
-    // Sort root questions by order if available
-    if (
-      rootQuestions.length > 1 &&
-      rootQuestions.every((q) => q.order != null)
-    ) {
-      rootQuestions.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
-
-    return rootQuestions;
-  };
-
-  // Helper function to recursively render questions with their subquestions
-  const renderQuestionsRecursively = (questions: ExtendedTestQuestion[], level = 0) => {
-    return questions.map((question, index) => {
-      // Safe access with type checking
-      let studentAnswer = null;
-      if (submission?.answers && typeof submission.answers === 'object' && !Array.isArray(submission.answers)) {
-        studentAnswer = (submission.answers as Record<string, any>)[question.id as string];
-      }
-
-      const isCorrect = areAnswersEqual(studentAnswer, question.answer);
-      const questionGrade = getQuestionGrade(question.id as string);
-
-      // Calculate the display number based on hierarchy
-      const displayNumber = level === 0 ? index + 1 : `${Math.floor(index / 10) + 1}.${(index % 10) + 1}`;
-
-      return (
-        <div key={question.id} className={level > 0 ? "ml-8 border-l-2 border-gray-200 pl-4" : ""}>
-          <QuestionReview
-            question={question}
-            questionGrade={questionGrade || undefined}
-            questionNumber={displayNumber}
-            studentAnswer={studentAnswer}
-            isCorrect={isCorrect}
-            level={level}
-          />
-        </div>
-      );
-    });
-  };
-
-  // Calculate score based on grade if available, otherwise use submission score
-  const calculateScore = () => {
-    if (submission?.grade) {
-      return {
-        percentage: (submission.grade.score / submission.grade.outOf) * 100,
-        points: submission.grade.score,
-        totalPoints: submission.grade.outOf
-      };
-    } else if (submission?.score !== null && submission?.score !== undefined && test) {
-      return {
-        percentage: submission.score,
-        points: Math.round(submission.score * test.totalPoints / 100),
-        totalPoints: test.totalPoints
-      };
-    }
-    return null;
-  };
-
-  // Get question grade for a specific question
-  const getQuestionGrade = (questionId: string) => {
-    if (!submission?.questionGrades) return null;
-    return submission.questionGrades.find(qg => qg.questionId === questionId);
-  };
-
-  // Type-safe answer comparison
-  const areAnswersEqual = (studentAnswer: any, correctAnswer: any): boolean => {
-    if (studentAnswer == null && correctAnswer == null) return true;
-    if (studentAnswer == null || correctAnswer == null) return false;
-    if (typeof studentAnswer !== typeof correctAnswer) return false;
-
-    if (Array.isArray(studentAnswer) && Array.isArray(correctAnswer)) {
-      if (studentAnswer.length !== correctAnswer.length) return false;
-      return studentAnswer.every((item, index) =>
-        JSON.stringify(item) === JSON.stringify(correctAnswer[index])
-      );
-    }
-
-    return JSON.stringify(studentAnswer) === JSON.stringify(correctAnswer);
-  };
-
-  // Count total questions including subquestions for display
-  const countTotalQuestions = (questions: ExtendedTestQuestion[]): number => {
-    let count = 0;
-    const countRecursive = (qList: ExtendedTestQuestion[]) => {
-      qList.forEach(question => {
-        count++;
-        if (question.subQuestions && question.subQuestions.length > 0) {
-          countRecursive(question.subQuestions);
-        }
-      });
-    };
-    countRecursive(questions);
-    return count;
-  };
-
-  if (loading || testLoading || submissionLoading) {
-    return <TestReviewSkeleton />;
-  }
-
-  if (!submission || !questions.length || !test) {
+  const student = await prisma.student.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!student) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Test Not Found
-          </h2>
-          <p className="text-gray-600">
-            The test submission could not be loaded.
-          </p>
-        </div>
+      <div className="text-muted-foreground p-8 text-sm">
+        No student profile found for this account.
       </div>
     );
   }
 
-  const scoreData = calculateScore();
-  const totalQuestionsCount = countTotalQuestions(questions);
+  const [test, submission] = await Promise.all([
+    getTestDetailById(testId),
+    getTestSubmissionByStudentAndTest(student.id, testId),
+  ]);
+
+  if (!test) notFound();
+  if (!submission) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-10">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link href={`/dashboard/courses/${test.courseId}`}>
+            <ArrowLeft className="size-4" /> Back to course
+          </Link>
+        </Button>
+        <Card className="mt-6 p-12 text-center">
+          <h1 className="font-display text-2xl text-foreground">
+            No submission yet
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            You haven&apos;t started this test yet. Open it from your tests
+            list to begin.
+          </p>
+          <div className="mt-6">
+            <Button asChild>
+              <Link href={`/dashboard/tests/${test.id}`}>Open test</Link>
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Index per-question grades by questionId for fast lookup as we render.
+  const qgByQ = new Map(
+    submission.questionGrades.map((qg) => [qg.questionId, qg]),
+  );
+
+  // Pull just the top-level questions; sub-questions are walked recursively
+  // inside the renderer below.
+  const topQuestions = test.questions
+    .filter((q) => q.parentId === null)
+    .sort(
+      (a, b) =>
+        (a.order ?? 0) - (b.order ?? 0) ||
+        a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+
+  const status = submission.status;
+  const graded = status === "GRADED";
+  const grade = submission.grade;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Score Summary */}
-        <ScoreSummary test={test} submission={submission} scoreData={scoreData} />
+    <div className="mx-auto max-w-3xl space-y-6 px-6 py-10">
+      <Button asChild variant="ghost" size="sm" className="-ml-2">
+        <Link href={`/dashboard/courses/${test.courseId}`}>
+          <ArrowLeft className="size-4" /> Back to course
+        </Link>
+      </Button>
 
-        {/* Grade Information */}
-        {submission.grade && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Grade Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="text-sm font-medium text-blue-900 mb-1">Final Score</h3>
-                <p className="text-2xl font-bold text-blue-900">
-                  {submission.grade.score}/{submission.grade.outOf}
-                </p>
-                <p className="text-sm text-blue-700">
-                  {(submission.grade.score / submission.grade.outOf * 100).toFixed(1)}%
-                </p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="text-sm font-medium text-green-900 mb-1">Graded On</h3>
-                <p className="text-sm text-green-900">
-                  {new Date(submission.grade.createdAt).toLocaleDateString()}
-                </p>
-                <p className="text-xs text-green-700">
-                  {new Date(submission.grade.createdAt).toLocaleTimeString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Feedback Section */}
-        <FeedbackSection submission={submission} />
-
-        {/* Questions Review */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Question Review</h2>
-            <div className="text-sm text-gray-600">
-              {totalQuestionsCount} questions total
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            {renderQuestionsRecursively(questions)}
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={() => router.push("/dashboard/tests")}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+      <header className="space-y-2">
+        <p className="text-muted-foreground text-xs">
+          {test.course.name} · with {test.course.tutor.fullName}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+            {test.title}
+          </h1>
+          <Badge
+            variant={
+              graded ? "brand" : status === "SUBMITTED" ? "soft" : "secondary"
+            }
           >
-            Return to Tests
-          </button>
+            {graded
+              ? "Graded"
+              : status === "SUBMITTED"
+                ? "Awaiting grade"
+                : status}
+          </Badge>
         </div>
-      </div>
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="inline-flex items-center gap-1">
+            <Hourglass className="size-4" />
+            Submitted{" "}
+            {submission.submittedAt
+              ? dateFmt.format(submission.submittedAt)
+              : "—"}
+          </span>
+          {test.timeLimit != null && (
+            <span className="inline-flex items-center gap-1">
+              <Hourglass className="size-4" />
+              {test.timeLimit} min limit
+            </span>
+          )}
+        </div>
+      </header>
+
+      {graded && grade && (
+        <Card className="bg-brand-terracotta/8 border-brand-terracotta/30 flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="flex items-center gap-3">
+            <div className="bg-brand-terracotta/15 text-brand-terracotta flex size-12 items-center justify-center rounded-md">
+              <GraduationCap className="size-6" />
+            </div>
+            <div>
+              <p className="font-display text-3xl tabular-nums text-foreground">
+                {grade.score}
+                <span className="text-muted-foreground"> / {grade.outOf}</span>
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {grade.outOf > 0
+                  ? `${Math.round((grade.score / grade.outOf) * 100)}% overall`
+                  : ""}
+              </p>
+            </div>
+          </div>
+          {submission.feedback && (
+            <p className="text-muted-foreground max-w-md text-sm italic">
+              &ldquo;{submission.feedback}&rdquo;
+            </p>
+          )}
+        </Card>
+      )}
+
+      <Card className="overflow-hidden p-0">
+        <div className="flex items-baseline justify-between gap-3 px-5 py-4">
+          <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
+            Questions
+          </h2>
+          <span className="text-muted-foreground text-xs">
+            {topQuestions.length}{" "}
+            {topQuestions.length === 1 ? "question" : "questions"}
+          </span>
+        </div>
+        <Separator />
+        <ol className="divide-border divide-y">
+          {topQuestions.map((q, idx) => {
+            const qg = qgByQ.get(q.id);
+            return (
+              <li key={q.id} className="space-y-3 px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground text-xs">
+                      Question {idx + 1} · {q.points} pts
+                    </p>
+                    <p className="text-foreground mt-1 whitespace-pre-wrap text-sm font-medium">
+                      {q.question}
+                    </p>
+                  </div>
+                  {qg && (
+                    <div className="text-right shrink-0">
+                      <p className="font-display tabular-nums text-foreground text-sm">
+                        {qg.score}
+                        <span className="text-muted-foreground">
+                          {" "}
+                          / {qg.outOf}
+                        </span>
+                      </p>
+                      {qg.score === qg.outOf && (
+                        <CheckCircle2 className="text-brand-terracotta ml-auto mt-0.5 size-4" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                {qg?.feedback && (
+                  <div className="bg-muted/50 rounded-md p-3 text-sm italic text-foreground">
+                    {qg.feedback}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </Card>
     </div>
   );
 }

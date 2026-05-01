@@ -64,3 +64,69 @@ export const CreateSubmissionEntrySchema = SubmissionEntrySchema.omit({
 export type CreateSubmissionEntryInput = z.infer<
   typeof CreateSubmissionEntrySchema
 >;
+
+import { CreateAttachmentSchema } from "../lessons/schemas";
+
+/* ─── Delete inputs ─────────────────────────────────────────────────────── */
+
+export const DeleteSubmissionSchema = z.object({ id: CuidSchema });
+export type DeleteSubmissionInput = z.infer<typeof DeleteSubmissionSchema>;
+
+/* ─── Submission CRUD inputs (tutor) ───────────────────────────────────── */
+
+/**
+ * Tutor creates an assignment. `descriptionFiles` are description-time
+ * attachments (e.g. PDF prompt) — not the student's submitted files.
+ */
+export const CreateSubmissionInputSchema = z.object({
+  title: NonEmptyString.max(200),
+  description: z.string().max(10000).default(""),
+  courseId: CuidSchema,
+  dueDate: DateSchema,
+  lastDueDate: DateSchema.nullable().default(null),
+  fileType: z.string().default("PDF"),
+  maxAttempts: z.number().int().positive().nullable().default(null),
+  totalPoints: z.number().int().nonnegative().default(1),
+  isActive: z.boolean().default(true),
+  descriptionFiles: z.array(UrlSchema).default([]),
+});
+export type CreateSubmissionInputType = z.infer<
+  typeof CreateSubmissionInputSchema
+>;
+
+export const UpdateSubmissionInputSchema =
+  CreateSubmissionInputSchema.partial().extend({
+    id: CuidSchema,
+  });
+export type UpdateSubmissionInputType = z.infer<
+  typeof UpdateSubmissionInputSchema
+>;
+
+/* ─── SubmissionEntry inputs (student) ─────────────────────────────────── */
+
+/**
+ * Student submits an assignment entry. `fileUrl` carries the uploaded
+ * file URLs (uploaded out-of-band via /api/blob/upload-token).
+ */
+export const SubmitSubmissionEntrySchema = z.object({
+  submissionId: CuidSchema,
+  fileUrl: z.array(UrlSchema).default([]),
+});
+export type SubmitSubmissionEntryInput = z.infer<
+  typeof SubmitSubmissionEntrySchema
+>;
+
+/* ─── Grading inputs (tutor) ────────────────────────────────────────────── */
+
+export const GradeSubmissionEntrySchema = z.object({
+  entryId: CuidSchema,
+  score: z.number().nonnegative(),
+  outOf: z.number().positive(),
+  feedback: z.string().max(5000).nullable().default(null),
+});
+export type GradeSubmissionEntryInput = z.infer<
+  typeof GradeSubmissionEntrySchema
+>;
+
+// Re-export to suppress unused-import warnings when forms only need shapes.
+export { CreateAttachmentSchema };

@@ -124,7 +124,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
   const isNearDue = new Date() > new Date(new Date(submission.dueDate).getTime() - 24 * 60 * 60 * 1000) && !isOverdue && !entry;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -182,7 +182,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
               {canEdit && (
                 <button
                   onClick={() => router.push(`/dashboard/submissions/${submission.id}`)}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                  className="bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
                 >
                   <Upload className="w-5 h-5" />
                   {entry ? "Resubmit" : "Submit"}
@@ -278,7 +278,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                   {entry.fileUrl.map((link, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-slate-50/50 rounded-xl border border-slate-100"
+                      className="flex items-center justify-between p-4 bg-linear-to-r from-slate-50 to-slate-50/50 rounded-xl border border-slate-100"
                     >
                       <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-50 rounded-xl">
@@ -407,9 +407,9 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                   )}
 
                   {/* Instructor Feedback */}
-                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-6">
+                  <div className="bg-linear-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-6">
                     <div className="flex gap-4">
-                      <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0 self-start">
+                      <div className="p-2 bg-amber-100 rounded-xl shrink-0 self-start">
                         <User className="w-5 h-5 text-amber-700" />
                       </div>
                       <div className="flex-1">
@@ -425,7 +425,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                   {entry.feedback && (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
                       <div className="flex gap-4">
-                        <div className="p-2 bg-blue-100 rounded-xl flex-shrink-0 self-start">
+                        <div className="p-2 bg-blue-100 rounded-xl shrink-0 self-start">
                           <MessageCircle className="w-5 h-5 text-blue-700" />
                         </div>
                         <div className="flex-1">
@@ -455,7 +455,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                     <div className="text-center">
                       {entry.grade ? (
                         <div className="relative">
-                          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center border-4 border-emerald-200">
+                          <div className="w-24 h-24 mx-auto bg-linear-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center border-4 border-emerald-200">
                             <span className="text-2xl font-bold text-emerald-700">{entry?.grade?.score ?? 0}%</span>
                           </div>
                           <div className="mt-3">
@@ -511,7 +511,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                   {canEdit && (
                     <button
                       onClick={() => router.push(`/dashboard/submissions/${submission.id}`)}
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+                      className="w-full bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
                     >
                       <Upload className="w-4 h-4" />
                       Resubmit
@@ -547,7 +547,7 @@ export default function SubmissionReviewPage({ params }: SubmissionReviewPagePro
                 {canEdit && (
                   <button
                     onClick={() => router.push(`/dashboard/submissions/${submission.id}`)}
-                    className="w-full mt-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+                    className="w-full mt-6 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
                   >
                     <Upload className="w-4 h-4" />
                     Submit Assignment
