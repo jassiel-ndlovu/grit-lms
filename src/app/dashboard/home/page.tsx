@@ -1,22 +1,10 @@
-'use client';
+/**
+ * /dashboard/home — legacy URL kept as a redirect.
+ * The dashboard landing now lives at /dashboard.
+ */
 
-import { useSession } from 'next-auth/react';
-import StudentDashboard from './student-dashboard';
-import TutorDashboard from './tutor-dashboard';
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  const { data: session, status } = useSession();
-
-  if (status === 'loading') {
-    return <div className="p-6 text-gray-600">Loading dashboard...</div>;
-  }
-
-  const role = session?.user?.role;
-
-  if (role === 'TUTOR') {
-    return <TutorDashboard />;
-  }
-
-  // default to student
-  return <StudentDashboard />;
+export default function HomeRedirect() {
+  redirect("/dashboard");
 }

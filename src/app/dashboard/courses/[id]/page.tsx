@@ -1,471 +1,454 @@
-"use client";
+/**
+ * /dashboard/courses/[id] — student's view of a single course.
+ *
+ * Server Component. Replaces the legacy 6-tab client page with a clean
+ * vertical layout: hero, lessons preview, pending assessments, pending
+ * assignments, upcoming events, recent grades. Every section is RSC and
+ * reads from the new feature queries - zero client contexts.
+ */
 
-import React, { use, useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BookOpen, Calendar, FileText, Play, Award, Target } from 'lucide-react';
-import { $Enums } from '@/generated/prisma';
-import Overview from './models/overview';
-import Lessons from './models/lessons';
-import Submissions from './models/submissions';
-import Assessments from './models/assessments';
-import Grades from './models/grades';
-import Schedule from './models/schedule';
-import { useRouter } from 'next/navigation';
-import { useLesson } from '@/context/LessonContext';
-import { useSubmission } from '@/context/SubmissionContext';
-import { useSubmissionEntries } from '@/context/SubmissionEntryContext';
-import { useTests } from '@/context/TestContext';
-import { useTestSubmissions } from '@/context/TestSubmissionContext';
-import { useLessonCompletions } from '@/context/LessonCompletionContext';
-import { useCourses } from '@/context/CourseContext';
-import Skeleton from '../../components/skeleton';
-import { useProfile } from '@/context/ProfileContext';
-import Image from 'next/image';
-import { useNotifications } from '@/context/NotificationsContext';
-import { useActivityLog } from '@/context/ActivityLogContext';
-import { JsonObject } from '@prisma/client/runtime/library';
+import Image from "next/image";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  Circle,
+  GraduationCap,
+  Hourglass,
+  Pencil,
+  Target,
+} from "lucide-react";
 
-type ActiveTabValues = 'overview' | 'lessons' | 'submissions' | 'tests' | 'grades' | 'schedule';
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
-type TabButtonProps = {
-  id: ActiveTabValues;
-  label: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  count?: number;
-  loading: boolean;
-};
+import { getCourseDetailById } from "@/features/courses/queries";
+import {
+  listCompletionsForStudentInCourse,
+  listLessonsByCourseId,
+} from "@/features/lessons/queries";
+import {
+  getTestSubmissionByStudentAndTest,
+  listActiveTestsByCourseId,
+} from "@/features/assessments/queries";
+import {
+  getEntryByStudentAndSubmission,
+  listActiveSubmissionsByCourseId,
+} from "@/features/submissions/queries";
+import { listGradesForStudentInCourse } from "@/features/grades/queries";
+import { listEventsByCourseId } from "@/features/events/queries";
 
-type StudentCourseProps = {
+interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function StudentCourse({ params }: StudentCourseProps) {
-  // contexts
-  const { id: courseId } = use(params);
-  const { profile } = useProfile();
-  const { loading: courseLoading, fetchCoursesByIds } = useCourses();
-  const { loading: lessonLoading, fetchLessonsByCourseId } = useLesson();
-  const { loading: completionsLoading, fetchCompletionByStudentAndLesson } = useLessonCompletions();
-  const { loading: submissionLoading, fetchSubmissionsByStudentIdCourseId } = useSubmission();
-  const { loading: entriesLoading, fetchEntriesByStudentId } = useSubmissionEntries();
-  const { loading: testsLoading, fetchTestsByStudentIdCourseId } = useTests();
-  const { loading: testSubsLoading, fetchSubmissionByStudentTestId } = useTestSubmissions();
-  const { notifications } = useNotifications();
-  const { activities } = useActivityLog();
-  const router = useRouter();
+const dateFmt = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
 
-  // states
-  const [course, setCourse] = useState<AppTypes.Course | null>(null);
-  const [lessons, setLessons] = useState<AppTypes.Lesson[]>([]);
-  const [completions, setCompletions] = useState<AppTypes.LessonCompletion[]>([]);
-  const [submissions, setSubmissions] = useState<AppTypes.Submission[]>([]);
-  const [entries, setEntries] = useState<AppTypes.SubmissionEntry[]>([]);
-  const [grades, setGrades] = useState<AppTypes.Grade[]>([]);
-  const [tests, setTests] = useState<AppTypes.Test[]>([]);
-  const [testSubmissions, setTestSubmissions] = useState<AppTypes.TestSubmission[]>([]);
+function pct(score: number, outOf: number) {
+  if (outOf <= 0) return 0;
+  return Math.round((score / outOf) * 100);
+}
 
-  const [activeTab, setActiveTab] = useState<ActiveTabValues>('overview');
-  const [progressPercentage, setProgressPercentage] = useState<number>(0);
+export const metadata = { title: "Course" };
 
-  // Calculate overall grade
-  const calculateOverallGrade = useCallback(() => {
-    if (grades.length === 0) return 0;
+export default async function StudentCourseDetailPage({ params }: PageProps) {
+  const { id: courseId } = await params;
 
-    const totalScore = grades.reduce((sum, grade) => sum + (grade.score || 0), 0);
-    const totalOutOf = grades.reduce((sum, grade) => sum + (grade.outOf || 0), 0);
+  const session = await auth();
+  if (!session?.user) redirect("/");
+  if (session.user.role !== "STUDENT") redirect("/dashboard");
 
-    return totalOutOf > 0 ? Math.round((totalScore / totalOutOf) * 100) : 0;
-  }, [grades]);
+  const student = await prisma.student.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!student) {
+    return (
+      <div className="text-muted-foreground p-8 text-sm">
+        No student profile found for this account.
+      </div>
+    );
+  }
 
-  // Filter course-specific notifications and activities
-  const courseNotifications = useMemo(() => {
-    return notifications.filter(notification => notification.courseId === courseId);
-  }, [notifications, courseId]);
+  const course = await getCourseDetailById(courseId);
+  if (!course) notFound();
 
-  const courseActivities = useMemo(() => {
-    return activities.filter(activity =>
-      (activity.meta as JsonObject)?.courseId === courseId ||
-      activity.action.includes('COURSE') ||
-      (activity.meta && Object.values(activity.meta).includes(courseId))
-    ).slice(0, 5); // Show only recent 5 activities
-  }, [activities, courseId]);
+  // Enrolment gate.
+  const enrolled = course.students.some((s) => s.id === student.id);
+  if (!enrolled) {
+    return (
+      <div className="text-muted-foreground p-8 text-sm">
+        You aren&apos;t enrolled in this course.
+      </div>
+    );
+  }
 
-  // fetches
-  useEffect(() => {
-    async function loadData() {
-      if (!profile?.id || !courseId) return;
-
-      try {
-        const studentId = profile.id;
-
-        // Course
-        const fetchedCourses = await fetchCoursesByIds([courseId]) as AppTypes.Course[];
-        const fetchedLessons = await fetchLessonsByCourseId(courseId) as AppTypes.Lesson[];
-
-        setCourse(fetchedCourses[0]);
-        setLessons(fetchedLessons);
-
-        // Lesson Completions (load per lesson for this student)
-        if (fetchedLessons?.length) {
-          const fetchedCompletions = await Promise.all(
-            fetchedLessons.map((lesson) =>
-              fetchCompletionByStudentAndLesson(studentId, lesson.id)
-            )
-          );
-
-          const filteredCompletions = fetchedCompletions.filter(Boolean) as AppTypes.LessonCompletion[]
-
-          setCompletions(filteredCompletions);
-
-          setProgressPercentage(fetchedLessons.length !== 0
-            ? (filteredCompletions.length / fetchedLessons.length) * 100
-            : 0
-          );
-        }
-
-        // Submissions + entries
-        const fetchedSubs = await fetchSubmissionsByStudentIdCourseId(studentId, courseId) as AppTypes.Submission[];
-        const fetchedEntries = await fetchEntriesByStudentId(studentId) as AppTypes.SubmissionEntry[];
-
-        setSubmissions(fetchedSubs);
-        setEntries(fetchedEntries);
-
-        // Tests
-        const fetchedTests = await fetchTestsByStudentIdCourseId(studentId, courseId, true) as AppTypes.Test[];
-        if (fetchedTests?.length) {
-          const fetchedTestSubs = await Promise.all(
-            fetchedTests.map((test) =>
-              fetchSubmissionByStudentTestId(studentId, test.id)
-            )
-          );
-
-          const filteredTestSubs = fetchedTestSubs.filter(Boolean) as AppTypes.TestSubmission[];
-          setTestSubmissions(filteredTestSubs);
-        }
-        setTests(fetchedTests);
-
-        // Grades
-        const entryGrades = entries
-          .map(entry => entry.grade)
-          .filter((g): g is NonNullable<typeof g> => g !== null);
-
-        const testGrades = testSubmissions
-          .map(sub => sub.grade)
-          .filter((g): g is NonNullable<typeof g> => g !== null);
-
-        setGrades([...entryGrades, ...testGrades]);
-
-      } catch (err) {
-        console.error("Failed to load course data", err);
-      }
-    }
-
-    loadData();
-  }, [
-    profile?.id,
-    courseId,
-    progressPercentage,
-    fetchCoursesByIds,
-    fetchLessonsByCourseId,
-    fetchCompletionByStudentAndLesson,
-    fetchSubmissionsByStudentIdCourseId,
-    fetchEntriesByStudentId,
-    fetchTestsByStudentIdCourseId,
-    fetchSubmissionByStudentTestId,
+  // Pull every section in parallel.
+  const [lessons, completions, tests, assignments, events, grades] = await Promise.all([
+    listLessonsByCourseId(courseId),
+    listCompletionsForStudentInCourse(student.id, courseId),
+    listActiveTestsByCourseId(courseId),
+    listActiveSubmissionsByCourseId(courseId),
+    listEventsByCourseId(courseId),
+    listGradesForStudentInCourse(student.id, courseId),
   ]);
 
-  if (!profile || !course || courseLoading) return <StudentCourseSkeleton />;
-
-  const getStatusColor = (status: $Enums.SubmissionStatus | string) => {
-    switch (status) {
-      case 'SUBMITTED':
-      case 'GRADED':
-        return 'text-green-600 bg-green-50';
-      case 'NOT_STARTED':
-      case 'IN_PROGRESS':
-        return 'text-blue-600 bg-blue-50';
-      case 'LATE':
-      case 'NOT_SUBMITTED':
-        return 'text-red-600 bg-red-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  const TabButton = ({ id, label, icon: Icon, count = 0, loading }: TabButtonProps) => (
-    <button
-      disabled={loading}
-      onClick={() => setActiveTab(id)}
-      className={`flex items-center px-4 py-2 text-sm font-medium transition-colors ${activeTab === id
-        ? 'border-b-2 border-brand-terracotta text-foreground'
-        : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-        }`}
-    >
-      <Icon className="h-4 w-4 mr-2" />
-      {label}
-      {count > 0 && !loading && (
-        <span className={`w-6 h-6 ml-2 px-2 py-0.5 flex items-center justify-center rounded-full tracking-tighter text-xs ${activeTab === id
-          ? 'bg-brand-terracotta/12 text-brand-terracotta'
-          : 'bg-muted text-muted-foreground'
-          } ${loading && "animate-pulse"}`}>
-          {count < 10 ? count : "9+"}
-        </span>
-      )}
-    </button>
+  // Per-test status lookup.
+  const testStatuses = await Promise.all(
+    tests.map((t) => getTestSubmissionByStudentAndTest(student.id, t.id)),
   );
+  const pendingTests = tests
+    .map((t, i) => ({ test: t, sub: testStatuses[i] }))
+    .filter(({ sub }) => !sub || sub.status === "IN_PROGRESS");
+
+  // Per-assignment status lookup.
+  const entryStatuses = await Promise.all(
+    assignments.map((a) => getEntryByStudentAndSubmission(student.id, a.id)),
+  );
+  const pendingAssignments = assignments
+    .map((a, i) => ({ assignment: a, entry: entryStatuses[i] }))
+    .filter(
+      ({ entry }) =>
+        !entry || (entry.status !== "GRADED" && entry.status !== "SUBMITTED"),
+    );
+
+  const completedIds = new Set(completions.map((c) => c.lessonId));
+  const completedCount = completedIds.size;
+  const totalLessons = lessons.length;
+  const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+  // Find the next not-yet-completed lesson so the hero can deep-link to it.
+  const nextLesson = lessons.find((l) => !completedIds.has(l.id));
+
+  // Course-level grade rollup.
+  const courseScore = grades.reduce((s, g) => s + g.score, 0);
+  const courseOutOf = grades.reduce((s, g) => s + g.outOf, 0);
+  const courseAverage = courseOutOf > 0 ? pct(courseScore, courseOutOf) : null;
+
+  // Upcoming events only (already future-dated by date >= now in query).
+  const upcomingEvents = events.filter((e) => e.date.getTime() >= Date.now()).slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
+    <div className="bg-background min-h-screen">
+      {/* ───── Header bar ───── */}
       <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Back to Courses
-              </button>
-              <div className="h-6 border-l border-border"></div>
-              <div>
-                <h1 className="font-display text-base tracking-tight text-foreground">{course.name}</h1>
-                <p className="text-sm text-muted-foreground">Tutor: {course.tutor.fullName}</p>
-              </div>
-            </div>
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex h-14 items-center">
+            <Button asChild variant="ghost" size="sm" className="-ml-2">
+              <Link href="/dashboard/courses">
+                <ArrowLeft className="size-4" /> All courses
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Course Hero Section */}
+      {/* ───── Hero ───── */}
       <div className="bg-primary text-primary-foreground border-b-2 border-brand-terracotta">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-          <div className="flex items-center justify-between gap-10">
-            <div className="w-60 h-60 hidden md:block">
-              <div className="relative h-full w-full bg-primary-foreground/10 border border-primary-foreground/15 rounded-lg overflow-hidden">
-                <Image
-                  src={`/images/${course.imageUrl}`}
-                  alt="Course Image"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-
-            <div className="flex-1">
-              <h2 className="font-display text-3xl tracking-tight mb-2">{course.name}</h2>
-              <p className="text-primary-foreground/75 mb-4 max-w-2xl">{course.description}</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-8">
-                <div className="bg-primary-foreground/8 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/15">
-                  <div className="text-primary-foreground/70 text-sm mb-1">Progress</div>
-                  <div className="font-display text-2xl">{progressPercentage}%</div>
-                  <div className="text-primary-foreground/60 text-xs">{completions.length} of {lessons.length} lessons</div>
-                </div>
-
-                <div className="bg-primary-foreground/8 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/15">
-                  <div className="text-primary-foreground/70 text-sm mb-1">Overall Grade</div>
-                  <div className="font-display text-2xl">{calculateOverallGrade()}%</div>
+        <div className="mx-auto max-w-6xl px-6 py-10">
+          <div className="flex flex-col gap-8 md:flex-row md:items-center">
+            {course.imageUrl && (
+              <div className="hidden w-60 shrink-0 md:block">
+                <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-primary-foreground/10 border border-primary-foreground/15">
+                  <Image
+                    src={course.imageUrl.includes("course") ? `/images/${course.imageUrl}` : course.imageUrl}
+                    alt={course.name}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
               </div>
-            </div>
+            )}
+            <div className="flex-1 space-y-4">
+              <div>
+                <p className="text-primary-foreground/70 text-sm">with {course.tutor.fullName}</p>
+                <h1 className="font-display mt-1 text-4xl leading-tight tracking-tight">
+                  {course.name}
+                </h1>
+                {course.description && (
+                  <p className="text-primary-foreground/75 mt-3 max-w-2xl text-sm">
+                    {course.description}
+                  </p>
+                )}
+              </div>
 
-          </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <HeroStat label="Lessons" value={`${completedCount}/${totalLessons}`} />
+                <HeroStat label="Progress" value={`${progressPct}%`} />
+                <HeroStat label="Average" value={courseAverage != null ? `${courseAverage}%` : "-"} />
+                <HeroStat label="Up next" value={String(pendingTests.length + pendingAssignments.length)} />
+              </div>
 
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-primary-foreground/75">
-              <span>Course Progress</span>
-              <span>{progressPercentage}%</span>
-            </div>
-            <div className="w-full bg-primary-foreground/15 rounded-full h-2 overflow-hidden">
-              <div
-                className="h-full bg-brand-terracotta rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              />
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between text-xs text-primary-foreground/70">
+                  <span>Course progress</span>
+                  <span className="tabular-nums">{progressPct}%</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-primary-foreground/15">
+                  <div
+                    className="h-full bg-brand-terracotta transition-all"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+              </div>
+
+              {nextLesson && (
+                <Button asChild variant="brand" className="mt-2">
+                  <Link href={`/dashboard/courses/lessons/${courseId}?lesson=${nextLesson.id}`}>
+                    Continue with {nextLesson.title}
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex pt-4 overflow-x-auto">
-            <TabButton
-              id="overview"
-              label="Overview"
-              icon={BookOpen}
-              loading={!course || !profile || courseLoading || submissionLoading}
-            />
-            <TabButton
-              id="lessons"
-              label="Lessons"
-              icon={Play}
-              count={lessons.length}
-              loading={lessonLoading || completionsLoading}
-            />
-            <TabButton
-              id="submissions"
-              label="Submissions"
-              icon={FileText}
-              count={submissions.length}
-              loading={submissionLoading || entriesLoading}
-            />
-            <TabButton
-              id="tests"
-              label="Tests & Quizzes"
-              icon={Target}
-              count={tests.length}
-              loading={testsLoading || testSubsLoading}
-            />
-            <TabButton
-              id="grades"
-              label="Grades"
-              icon={Award}
-              count={grades.length}
-              loading={entriesLoading || testSubsLoading}
-            />
-            <TabButton
-              id="schedule"
-              label="Schedule"
-              icon={Calendar}
-              count={0}
-              loading={false}
-            />
-          </div>
+      {/* ───── Body ───── */}
+      <div className="mx-auto max-w-6xl space-y-10 px-6 py-10">
+        {/* Lessons preview */}
+        <section className="space-y-4">
+          <SectionHeader
+            title="Lessons"
+            href={`/dashboard/courses/lessons/${courseId}`}
+            label="Open lessons"
+          />
+          {lessons.length === 0 ? (
+            <Card className="text-muted-foreground p-12 text-center text-sm">
+              No lessons published yet.
+            </Card>
+          ) : (
+            <Card className="overflow-hidden p-0">
+              <ul className="divide-border divide-y">
+                {lessons.slice(0, 6).map((lesson, i) => {
+                  const done = completedIds.has(lesson.id);
+                  return (
+                    <li key={lesson.id}>
+                      <Link
+                        href={`/dashboard/courses/lessons/${courseId}?lesson=${lesson.id}`}
+                        className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 transition-colors"
+                      >
+                        <span
+                          className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs tabular-nums ${
+                            done ? "bg-brand-terracotta/15 text-brand-terracotta" : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {done ? <CheckCircle2 className="size-4" /> : i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {lesson.title}
+                          </p>
+                          {lesson.duration && (
+                            <p className="text-muted-foreground text-xs">
+                              {lesson.duration} min
+                            </p>
+                          )}
+                        </div>
+                        {!done && <Circle className="text-muted-foreground size-4 shrink-0" />}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          )}
+        </section>
+
+        {/* Pending assessments + assignments */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <section className="space-y-4">
+            <SectionHeader title="Active tests" href="/dashboard/tests" label="All tests" />
+            <Card className="overflow-hidden p-0">
+              {pendingTests.length === 0 ? (
+                <div className="text-muted-foreground p-8 text-center text-sm">
+                  No pending tests in this course.
+                </div>
+              ) : (
+                <ul className="divide-border divide-y">
+                  {pendingTests.map(({ test, sub }) => (
+                    <li key={test.id}>
+                      <Link
+                        href={`/dashboard/tests/${test.id}`}
+                        className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 transition-colors"
+                      >
+                        <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
+                          <Target className="size-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {test.title}
+                          </p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            Due {dateFmt.format(test.dueDate)}
+                            {test.timeLimit ? ` - ${test.timeLimit} min` : ""}
+                          </p>
+                        </div>
+                        <Badge variant={sub?.status === "IN_PROGRESS" ? "secondary" : "soft"} className="shrink-0">
+                          {sub?.status === "IN_PROGRESS" ? "In progress" : "Begin"}
+                        </Badge>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </section>
+
+          <section className="space-y-4">
+            <SectionHeader title="Active assignments" href="/dashboard/submissions" label="All assignments" />
+            <Card className="overflow-hidden p-0">
+              {pendingAssignments.length === 0 ? (
+                <div className="text-muted-foreground p-8 text-center text-sm">
+                  No pending assignments in this course.
+                </div>
+              ) : (
+                <ul className="divide-border divide-y">
+                  {pendingAssignments.map(({ assignment, entry }) => (
+                    <li key={assignment.id}>
+                      <Link
+                        href={`/dashboard/submissions/${assignment.id}`}
+                        className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 transition-colors"
+                      >
+                        <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
+                          <Pencil className="size-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {assignment.title}
+                          </p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            Due {dateFmt.format(assignment.dueDate)}
+                          </p>
+                        </div>
+                        <Badge variant={entry ? "secondary" : "soft"} className="shrink-0">
+                          {entry ? "Resume" : "Submit"}
+                        </Badge>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </section>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <Overview
-            submissions={submissions}
-            tests={tests}
-            testsLoading={testsLoading}
-            submissionsLoading={submissionLoading}
-            testSubmissions={testSubmissions}
-            entries={entries}
-            progressPercentage={progressPercentage}
-            notifications={courseNotifications}
-            activities={courseActivities}
-            calculateOverallGrade={calculateOverallGrade}
-          />
-        )}
+        {/* Schedule + Grades */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <section className="space-y-4">
+            <SectionHeader title="Schedule" href="/dashboard/calendar" label="Full schedule" />
+            <Card className="overflow-hidden p-0">
+              {upcomingEvents.length === 0 ? (
+                <div className="text-muted-foreground p-8 text-center text-sm">
+                  No upcoming events.
+                </div>
+              ) : (
+                <ul className="divide-border divide-y">
+                  {upcomingEvents.map((event) => (
+                    <li key={event.id} className="flex items-center gap-3 px-5 py-3">
+                      <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
+                        <CalendarDays className="size-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">{event.title}</p>
+                        <p className="text-muted-foreground text-xs">{event.type}</p>
+                      </div>
+                      <Badge variant="secondary" className="shrink-0 tabular-nums">
+                        {dateFmt.format(event.date)}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </section>
 
-        {/* Lessons Tab */}
-        {activeTab === 'lessons' && (
-          <Lessons
-            lessons={lessons}
-            lessonCompletions={completions}
-            studentId={profile.id}
-            loading={lessonLoading || completionsLoading}
-          />
-        )}
-
-        {/* Submissions Tab */}
-        {activeTab === 'submissions' && (
-          <Submissions
-            submissions={submissions}
-            entries={entries}
-            loading={entriesLoading || submissionLoading}
-            getStatusColor={getStatusColor}
-          />
-        )}
-
-        {/* Tests Tab */}
-        {activeTab === 'tests' && (
-          <Assessments
-            tests={tests}
-            testSubs={testSubmissions}
-            loading={testsLoading || testSubsLoading}
-            getStatusColor={getStatusColor}
-          />
-        )}
-
-        {/* Grades Tab */}
-        {activeTab === 'grades' && (
-          <Grades
-            grades={grades}
-            loading={entriesLoading || testSubsLoading}
-          />
-        )}
-
-        {/* Schedule Tab */}
-        {activeTab === 'schedule' && (
-          <Schedule events={[]} />
-        )}
+          <section className="space-y-4">
+            <SectionHeader title="Grades" href="/dashboard/grades" label="All grades" />
+            <Card className="overflow-hidden p-0">
+              {grades.length === 0 ? (
+                <div className="text-muted-foreground p-8 text-center text-sm">
+                  No grades released yet.
+                </div>
+              ) : (
+                <ul className="divide-border divide-y">
+                  {grades.slice(0, 5).map((g) => {
+                    const itemPct = pct(g.score, g.outOf);
+                    const linkedTitle =
+                      g.testSubmission?.test.title ?? g.submissionEntry?.submission.title ?? g.title;
+                    const href = g.testSubmission
+                      ? `/dashboard/tests/review/${g.testSubmission.test.id}`
+                      : g.submissionEntry
+                        ? `/dashboard/submissions/${g.submissionEntry.submission.id}`
+                        : null;
+                    const Row = (
+                      <div className="flex items-center gap-3 px-5 py-3">
+                        <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
+                          <GraduationCap className="size-4" />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <p className="truncate text-sm font-medium text-foreground">{linkedTitle}</p>
+                          <p className="text-muted-foreground truncate text-xs">{g.type}</p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <Badge variant={itemPct >= 50 ? "soft" : "secondary"} className="tabular-nums">
+                            {itemPct}%
+                          </Badge>
+                          <span className="font-display tabular-nums text-foreground text-sm">
+                            {g.score}<span className="text-muted-foreground"> / {g.outOf}</span>
+                          </span>
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <li key={g.id}>
+                        {href ? <Link href={href} className="hover:bg-muted/40 block transition-colors">{Row}</Link> : Row}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+          </section>
+        </div>
       </div>
     </div>
   );
 }
 
-function StudentCourseSkeleton() {
+function HeroStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Skeleton className="h-5 w-20 rounded" />
-              <div className="h-6 border-l border-border"></div>
-              <div>
-                <Skeleton className="h-6 w-40 mb-1 rounded" />
-                <Skeleton className="h-4 w-24 rounded" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="bg-primary-foreground/8 backdrop-blur-sm rounded-lg p-3 border border-primary-foreground/15">
+      <p className="text-primary-foreground/70 text-xs flex items-center gap-1.5">
+        <Hourglass className="size-3" />
+        {label}
+      </p>
+      <p className="font-display mt-1 text-xl tabular-nums">{value}</p>
+    </div>
+  );
+}
 
-      {/* Hero Section */}
-      <div className="bg-primary text-primary-foreground border-b-2 border-brand-terracotta">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex items-center justify-between gap-10">
-            <div className="hidden md:block">
-              <Skeleton className="h-60 w-60 rounded-lg bg-primary-foreground/10" />
-            </div>
-            <div className="flex-1">
-              <Skeleton className="h-8 w-64 mb-2 rounded bg-primary-foreground/10" />
-              <Skeleton className="h-4 w-96 mb-4 rounded bg-primary-foreground/10" />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                {[...Array(2)].map((_, i) => (
-                  <Skeleton key={i} className="h-20 rounded-xl bg-primary-foreground/10" />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-8">
-            <Skeleton className="h-2 w-full rounded-full bg-primary-foreground/10" />
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex pt-4 space-x-6">
-            {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-8 w-28 !rounded-none" />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Skeleton */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="mb-6">
-            <Skeleton className="h-5 w-1/3 mb-2 rounded" />
-            <Skeleton className="h-24 w-full rounded" />
-          </div>
-        ))}
-      </div>
+function SectionHeader({ title, href, label }: { title: string; href: string; label: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">{title}</h2>
+      <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+        <Link href={href}>
+          {label}
+          <ArrowRight className="size-3" />
+        </Link>
+      </Button>
     </div>
   );
 }

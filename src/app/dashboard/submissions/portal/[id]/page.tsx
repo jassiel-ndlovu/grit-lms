@@ -265,7 +265,7 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
         onCancel={dialogState.onCancel}
       />
       
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
         <div className="max-w-4xl mx-auto px-6 py-8">
           {/* Header */}
           <div className="mb-8">
@@ -411,7 +411,7 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
                   
                   <label
                     htmlFor="file-upload"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     Choose Files
@@ -472,7 +472,7 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
                   <button
                     onClick={handleSubmit}
                     disabled={uploadedFiles.length === 0 || submitting}
-                    className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-slate-300 disabled:to-slate-300 text-white font-medium rounded-xl shadow-lg hover:shadow-xl disabled:shadow-none transition-all duration-200 flex items-center gap-2 disabled:cursor-not-allowed"
+                    className="px-8 py-3 bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-slate-300 disabled:to-slate-300 text-white font-medium rounded-xl shadow-lg hover:shadow-xl disabled:shadow-none transition-all duration-200 flex items-center gap-2 disabled:cursor-not-allowed"
                   >
                     {submitting ? (
                       <>
@@ -502,23 +502,23 @@ export default function SubmissionPortal({ params }: SubmissionPortalProps) {
               </h3>
               <ul className="space-y-2 text-sm text-slate-600">
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
                   Ensure all files are in the accepted formats
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
                   Maximum file size is 4MB per file
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
                   Submit only one file at a time; multiple file uploads are not allowed
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
                   You can resubmit before the deadline
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 flex-shrink-0" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
                   Review your submission after uploading
                 </li>
               </ul>

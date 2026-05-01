@@ -281,3 +281,13 @@ export const GradeTestSubmissionSchema = z.object({
 export type GradeTestSubmissionInput = z.infer<
   typeof GradeTestSubmissionSchema
 >;
+
+/** Periodic draft save while the student is mid-test. Idempotent — keeps the
+ *  submission in IN_PROGRESS, just updates the answers JSON column. */
+export const SaveTestAnswersDraftSchema = z.object({
+  submissionId: CuidSchema,
+  answers: z.unknown(),
+});
+export type SaveTestAnswersDraftInput = z.infer<
+  typeof SaveTestAnswersDraftSchema
+>;

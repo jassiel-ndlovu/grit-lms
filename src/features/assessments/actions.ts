@@ -34,6 +34,7 @@ import {
   DeleteTestSchema,
   GradeTestSubmissionSchema,
   StartTestSubmissionSchema,
+  SaveTestAnswersDraftSchema,
   SubmitTestAnswersSchema,
   UpdateTestWithQuestionsSchema,
   type CreateTestQuestionTree,
@@ -487,4 +488,44 @@ export const gradeTestSubmission = tutorActionClient
     revalidatePath("/dashboard/notifications");
 
     return { gradeId: result.gradeId, submissionId: submission.id };
+  });
+
+/* ------------------------------------------------------------------------- */
+/* saveTestAnswersDraft                                                       */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Periodic in-progress save while the student is mid-test. Validates that
+ * the submission belongs to the calling student and that it's still
+ * IN_PROGRESS (refuses to overwrite SUBMITTED / GRADED rows). Doesn't emit
+ * notifications or revalidate the bell — this fires on a debounce.
+ */
+export const saveTestAnswersDraft = studentActionClient
+  .schema(SaveTestAnswersDraftSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const student = await prisma.student.findUnique({
+      where: { email: ctx.session.user.email },
+      select: { id: true },
+    });
+    if (!student) throw new Error("Student profile not found");
+
+    const submission = await prisma.testSubmission.findUnique({
+      where: { id: parsedInput.submissionId },
+      select: { studentId: true, status: true },
+    });
+    if (!submission) throw new Error("Submission not found");
+    if (submission.studentId !== student.id) {
+      throw new Error("This submission isn't yours");
+    }
+    if (submission.status !== "IN_PROGRESS") {
+      throw new Error("This submission is no longer editable");
+    }
+
+    await prisma.testSubmission.update({
+      where: { id: parsedInput.submissionId },
+      data: { answers: parsedInput.answers as Prisma.InputJsonValue },
+      select: { id: true },
+    });
+
+    return { ok: true };
   });
