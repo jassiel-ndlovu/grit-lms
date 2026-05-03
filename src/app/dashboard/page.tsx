@@ -124,7 +124,7 @@ export default async function DashboardLanding() {
       title: test.title,
       course: test.course.name,
       date: test.dueDate,
-      href: `/dashboard/tests/${test.id}`,
+      href: `/dashboard/tests/pre-test/${test.id}`,
     }));
 
   const entryStatuses = await Promise.all(

@@ -38,10 +38,10 @@ export function CourseCard({
       )}
     >
       <Link href={href} className="block">
-        <div className="bg-muted relative aspect-[16/9] w-full overflow-hidden">
+        <div className="bg-muted relative aspect-video w-full overflow-hidden">
           {(course.imageUrl) ? (
             <Image
-              src={course.imageUrl.includes("course") ?`/images/${course.imageUrl}` : course.imageUrl}
+              src={course.imageUrl}
               alt={course.name}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

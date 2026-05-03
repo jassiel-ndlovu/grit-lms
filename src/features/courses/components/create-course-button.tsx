@@ -37,7 +37,7 @@ export function CreateCourseButton({
           New course
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-screen overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create a new course</DialogTitle>
           <DialogDescription>
