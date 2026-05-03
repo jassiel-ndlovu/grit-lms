@@ -159,9 +159,9 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
           <div className="flex flex-col gap-8 md:flex-row md:items-center">
             {course.imageUrl && (
               <div className="hidden w-60 shrink-0 md:block">
-                <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-primary-foreground/10 border border-primary-foreground/15">
+                <div className="relative aspect-video overflow-hidden rounded-lg bg-primary-foreground/10 border border-primary-foreground/15">
                   <Image
-                    src={course.imageUrl.includes("course") ? `/images/${course.imageUrl}` : course.imageUrl}
+                    src={course.imageUrl}
                     alt={course.name}
                     fill
                     className="object-cover"

@@ -120,7 +120,7 @@ export default async function StudentTestsPage() {
               submission?.status === "GRADED" ||
               submission?.status === "SUBMITTED"
                 ? `/dashboard/tests/review/${test.id}`
-                : `/dashboard/tests/${test.id}`
+                : `/dashboard/tests/pre-test/${test.id}`
             }
           />
         ))}
