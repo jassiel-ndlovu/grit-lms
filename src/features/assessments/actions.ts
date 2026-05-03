@@ -65,7 +65,10 @@ async function createQuestionTree(
         parentId,
         order: node.order ?? null,
         question: node.question,
-        type: node.type,
+        // Cast: NONE was added to the Zod enum; Prisma client needs
+        // `npx prisma generate` to pick it up. Once regenerated this cast
+        // becomes a no-op.
+        type: node.type as Parameters<typeof tx.testQuestion.create>[0]["data"]["type"],
         points: node.points,
         options: node.options ?? [],
         answer:

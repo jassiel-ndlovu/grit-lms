@@ -1,6 +1,7 @@
 "use client"
 
 import { ReactNode } from 'react';
+import { MathProvider } from '@/app/components/math-provider';
 import Footer from './models/footer'
 import Header from './models/header';
 import Nav from './models/nav';
@@ -18,6 +19,7 @@ import { EventProvider } from '@/context/EventContext';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
+    <MathProvider>
     <div className="h-full max-h-screen flex flex-col">
       {/* Layout Container */}
       <div className="flex flex-1">
@@ -58,5 +60,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Footer */}
       <Footer />
     </div>
+    </MathProvider>
   );
 }

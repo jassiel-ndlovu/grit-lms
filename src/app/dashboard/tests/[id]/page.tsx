@@ -1,255 +1,176 @@
-"use client";
+/**
+ * /dashboard/tests/[id] - student test runner.
+ *
+ * Server Component shell that resolves the student's submission state and
+ * either loads the in-progress runner or routes to the pre-test landing
+ * (no submission yet) or the review page (already submitted/graded).
+ *
+ * Tree handling: Prisma's `include: { subQuestions: true }` gives us the
+ * full set of TestQuestions for the test as a flat array, but the parent
+ * relation is one level deep on each row. We rebuild the tree on the
+ * server (top-level questions get their direct children embedded; the
+ * runner doesn't need to traverse deeper than the API normally serves).
+ */
 
-import React, { use, useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { LoadingOverlay } from '../components/loading-overlay';
-import { TimeWarning } from '../components/time-warning';
-import { useErrorPages } from '../../components/error-pages';
-import { useTestSession } from '../hooks/use-test-session';
-import { TestTakingPageSkeleton } from '../skeletons/test-taking-skeleton';
-import { InternetStatus } from '../components/internet-status';
-import { TestHeader } from '../components/test-header';
-import { TestNavigation } from '../components/test-navigation';
-import { QuestionArea } from '../components/question-area';
-import { SubmitConfirmation } from '../components/submit-confirmation';
+import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
-type TestTakingPageProps = {
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { Button } from "@/components/ui/button";
+
+import {
+  getTestDetailById,
+  getTestSubmissionByStudentAndTest,
+  studentCanAccessTest,
+  type TestDetail,
+} from "@/features/assessments/queries";
+import {
+  TestRunner,
+  type RunnerQuestion,
+} from "@/features/assessments/components/test-runner";
+
+interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function TestTakingPage({ params }: TestTakingPageProps) {
-  const { id } = use(params);
-  const router = useRouter();
-  const { renderErrorPage, renderAccessDeniedPage } = useErrorPages();
-  const [currentQuestionId, setCurrentQuestionId] = useState<string>('');
+export const metadata = { title: "Test" };
 
-  const {
-    // State
-    test,
-    courses,
-    answers,
-    matchingAnswers,
-    timeRemaining,
-    isUploading,
-    isSaving,
-    isSubmitting,
-    showSubmitConfirmation,
-    showAnswers,
-    loadingState,
-    errorMessage,
-    hasInternet,
-    expandedQuestions,
-    autoSubmitted,
+/**
+ * Build the runner-shaped tree from the flat questions array Prisma
+ * returns. We only embed direct children for now (the schema's
+ * `include: { subQuestions: true }` is one-deep); if multi-level nesting
+ * lands in authoring later, expand the recursion here.
+ */
+function buildTree(all: TestDetail["questions"]): RunnerQuestion[] {
+  const byId = new Map(all.map((q) => [q.id, q]));
 
-    // Actions
-    setShowSubmitConfirmation,
-    setShowAnswers,
-    handleAnswerChange,
-    handleMatchingAnswerChange,
-    handleSaveProgress,
-    handleSubmitTest,
-    handleClearAnswer,
-    handleClearFileUploadAnswer,
-    getQuestionStatus,
-    toggleQuestionExpansion
-  } = useTestSession(id);
-
-  // Handle auto-submit redirect
-  useEffect(() => {
-    if (autoSubmitted) {
-      console.log('Auto-submit occurred, preparing redirect...');
-      // The redirect is handled within the hook, but we can show a message
-    }
-  }, [autoSubmitted]);
-
-  // Function to get flat list of all questions
-  const getFlatQuestions = useCallback((questions: AppTypes.TestQuestion[]): AppTypes.TestQuestion[] => {
-    const flat: AppTypes.TestQuestion[] = [];
-
-    const flatten = (q: AppTypes.TestQuestion) => {
-      flat.push(q);
-      if (q.subQuestions) {
-        // @ts-expect-error subQuestions and parent are irrelevant here
-        q.subQuestions.forEach(flatten);
-      }
+  function toRunner(q: TestDetail["questions"][number]): RunnerQuestion {
+    return {
+      id: q.id,
+      question: q.question,
+      type: q.type,
+      points: q.points,
+      options: q.options,
+      language: q.language,
+      matchPairs: q.matchPairs,
+      reorderItems: q.reorderItems,
+      blankCount: q.blankCount,
+      parentId: q.parentId,
+      order: q.order,
+      subQuestions: [],
     };
+  }
 
-    questions.forEach(flatten);
-    return flat;
-  }, []);
+  // Group by parentId for fast lookup, sort each bucket.
+  const byParent = new Map<string | null, TestDetail["questions"]>();
+  for (const q of all) {
+    const key = q.parentId ?? null;
+    const list = byParent.get(key);
+    if (list) list.push(q);
+    else byParent.set(key, [q]);
+  }
+  for (const list of byParent.values()) {
+    list.sort(
+      (a, b) =>
+        (a.order ?? 0) - (b.order ?? 0) ||
+        a.createdAt.getTime() - b.createdAt.getTime(),
+    );
+  }
 
-  const flatQuestions = test ? getFlatQuestions(test.questions) : [];
-
-  // Update navigation to use IDs
-  const handleQuestionSelect = (questionId: string) => {
-    setCurrentQuestionId(questionId);
-  };
-
-  // Show warning when time is running low
-  const showTimeWarning = timeRemaining !== null && timeRemaining > 0 && timeRemaining <= 300; // 5 minutes
-
-  // Render different states
-  if (loadingState === 'expired') {
-    return renderErrorPage({
-      errorType: "timeout",
-      message: errorMessage || "This test is no longer available. The due date has passed.",
-      title: "Test Not Available",
-      showGoBack: true,
-      showGoHome: true,
-      onGoHome: () => router.push("/dashboard"),
-      onGoBack: () => router.push("/dashboard/tests"),
+  function build(parentId: string | null): RunnerQuestion[] {
+    const direct = byParent.get(parentId) ?? [];
+    return direct.map((q) => {
+      const node = toRunner(q);
+      node.subQuestions = build(q.id);
+      return node;
     });
   }
 
-  if (!hasInternet) {
-    return renderAccessDeniedPage({
-      reason: "No internet connection. Please check your connection and try again.",
-      resourceType: "test",
-      onGoBack: () => router.push('/dashboard/tests')
-    });
+  // Touch byId to silence the unused-var warning when build() doesn't need it.
+  void byId;
+  return build(null);
+}
+
+export default async function TestRunnerPage({ params }: PageProps) {
+  const { id: testId } = await params;
+
+  const session = await auth();
+  if (!session?.user) redirect("/");
+  if (session.user.role !== "STUDENT") redirect("/dashboard");
+
+  const student = await prisma.student.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!student) {
+    return (
+      <div className="text-muted-foreground p-8 text-sm">
+        No student profile found for this account.
+      </div>
+    );
   }
 
-  if (loadingState === 'timeout') {
-    return renderErrorPage({
-      errorType: "timeout",
-      message: errorMessage || "Test loading timed out. Please go back and try again.",
-      title: "Test Timed Out",
-      showContactSupport: true,
-      showGoBack: true,
-      onGoBack: () => router.push("/dashboard/tests"),
-    });
+  const canAccess = await studentCanAccessTest(testId, student.id);
+  if (!canAccess) {
+    return (
+      <div className="text-muted-foreground p-8 text-sm">
+        This test isn&apos;t available right now.
+      </div>
+    );
   }
 
-  if (loadingState === 'error') {
-    return renderErrorPage({
-      errorType: "generic",
-      message: errorMessage || "Unable to load the test. Please contact your tutor if this persists.",
-      title: "Could not load Test",
-      showRetry: true,
-      showGoBack: true,
-      onGoBack: () => router.push("/dashboard/tests"),
-    });
+  const [test, submission] = await Promise.all([
+    getTestDetailById(testId),
+    getTestSubmissionByStudentAndTest(student.id, testId),
+  ]);
+
+  if (!test) notFound();
+
+  if (!submission) {
+    redirect(`/dashboard/tests/pre-test/${testId}`);
+  }
+  if (submission.status === "SUBMITTED" || submission.status === "GRADED") {
+    redirect(`/dashboard/tests/review/${testId}`);
   }
 
-  if (loadingState === 'loading' || !test || !courses.length) {
-    return <TestTakingPageSkeleton />;
-  }
+  const treeQuestions = buildTree(test.questions);
 
-  if (test.dueDate && new Date(test.dueDate) < new Date()) {
-    return renderErrorPage({
-      errorType: "timeout",
-      message: errorMessage || "This test is no longer available. The due date has passed.",
-      title: "Test Not Available",
-      showGoBack: true,
-      showGoHome: true,
-      onGoHome: () => router.push("/dashboard"),
-      onGoBack: () => router.push("/dashboard/tests"),
-    });
-  }
-
-  if (!test.isActive) {
-    return renderErrorPage({
-      errorType: "validation",
-      message: "This test is still in draft. We apologise that you can see this. We are fixing this bug.",
-      title: "Test Not Available",
-      showGoBack: true,
-      showGoHome: true,
-      onGoHome: () => router.push("/dashboard"),
-      onGoBack: () => router.push("/dashboard/tests"),
-    });
-  }
-
-  const answeredCount = Object.keys(answers).filter(key =>
-    answers[key] !== undefined && answers[key] !== '' && answers[key] !== null
-  ).length;
+  // The legacy answers JSON is keyed by questionId. Coerce to a record
+  // (handles the case where it's stored as null or {}).
+  const initialAnswers: Record<string, unknown> =
+    submission.answers &&
+    typeof submission.answers === "object" &&
+    !Array.isArray(submission.answers)
+      ? (submission.answers as Record<string, unknown>)
+      : {};
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/20">
-      <InternetStatus hasInternet={hasInternet} />
-
-      {/* Time warning for low time */}
-      {showTimeWarning && (
-        <TimeWarning
-          timeRemaining={timeRemaining}
-          onDismiss={() => console.log('Warning dismissed')}
-        />
-      )}
-
-      {/* Auto-submit notification */}
-      {autoSubmitted && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg">
-            Time expired! Your test has been automatically submitted.
-          </div>
-        </div>
-      )}
-
-      {/* Loading overlay for save operations */}
-      {isSaving && <LoadingOverlay message="Saving your progress..." />}
-
-      {/* Submitting overlay */}
-      {isSubmitting && (
-        <LoadingOverlay message="Submitting your test... Please wait." />
-      )}
-
-      {/* Header */}
-      <TestHeader
-        test={test}
-        courses={courses}
-        timeRemaining={timeRemaining}
-        isSaving={isSaving}
-        isUploading={isUploading}
-        onSaveProgress={handleSaveProgress}
-        onSubmit={() => setShowSubmitConfirmation(true)}
-      />
-
-      <div className="max-w-7xl mx-auto p-4 lg:p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
-          {/* Navigation Sidebar */}
-          <div className="lg:col-span-1">
-            <TestNavigation
-              test={test}
-              flatQuestions={flatQuestions}
-              currentQuestionId={currentQuestionId}
-              answeredCount={answeredCount}
-              showAnswers={showAnswers}
-              expandedQuestions={expandedQuestions}
-              onQuestionSelect={handleQuestionSelect}
-              onToggleAnswers={() => setShowAnswers(!showAnswers)}
-              onToggleExpansion={toggleQuestionExpansion}
-              getQuestionStatus={getQuestionStatus}
-            />
-          </div>
-
-          {/* Main Question Area */}
-          <div className="lg:col-span-3">
-            <QuestionArea
-              test={test}
-              currentQuestionId={currentQuestionId}
-              flatQuestions={flatQuestions}
-              answers={answers}
-              matchingAnswers={matchingAnswers}
-              isUploading={isUploading}
-              onQuestionChange={handleQuestionSelect}
-              onAnswerChange={handleAnswerChange}
-              onMatchingAnswerChange={handleMatchingAnswerChange}
-              onClearAnswer={handleClearAnswer}
-              onClearFileUploadAnswer={handleClearFileUploadAnswer}
-            />
+    <div className="bg-background min-h-screen">
+      <div className="bg-card border-b border-border">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex h-14 items-center">
+            <Button asChild variant="ghost" size="sm" className="-ml-2">
+              <Link href={`/dashboard/courses/${test.courseId}`}>
+                <ArrowLeft className="size-4" /> Back to course
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Submit Confirmation */}
-      {showSubmitConfirmation && (
-        <SubmitConfirmation
-          test={test}
-          answeredCount={answeredCount}
-          isSubmitting={isSubmitting}
-          onCancel={() => setShowSubmitConfirmation(false)}
-          onSubmit={handleSubmitTest}
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <TestRunner
+          testId={test.id}
+          submissionId={submission.id}
+          title={test.title}
+          questions={treeQuestions}
+          initialAnswers={initialAnswers}
+          timeLimit={test.timeLimit}
+          startedAt={submission.startedAt}
         />
-      )}
+      </div>
     </div>
   );
 }
