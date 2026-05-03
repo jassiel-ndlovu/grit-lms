@@ -380,6 +380,10 @@ enum QuestionType {
   REORDER
   FILL_IN_THE_BLANK
   NUMERIC
+  // Context-only — parent questions that group sub-questions but aren't
+  // themselves answerable. Tutor authoring should reject NONE for any
+  // question without subQuestions.
+  NONE
 }
 
 enum SubmissionStatus {

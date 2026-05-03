@@ -3,25 +3,26 @@
 /**
  * TestRunner — student-facing client island that proctors a test session.
  *
- * Question tree handling:
- *   The TestQuestion model uses a parentId self-relation. A "parent"
- *   question is typically a passage / context block; children are
- *   individually-gradable items. Both can be answered, so the runner
- *   walks the full tree depth-first and treats every node as a step. When
- *   the current step has a parentId we render the parent question text as
- *   a separate "Context" card above the input so the student keeps the
- *   prompt in view across sub-questions. The sidebar grid uses a 1-based
- *   sequential numbering across the flattened list so jumps stay simple.
+ * Tree handling:
+ *   The TestQuestion model uses a parentId self-relation. A parent question
+ *   either accepts an answer (any normal QuestionType) OR acts as pure
+ *   context for its children (type === "NONE"). Sub-questions are always
+ *   answerable.
+ *
+ *   Each navigable step in the runner is a TOP-LEVEL question. When the
+ *   step has children we render them stacked inline beneath the parent,
+ *   each with its own input. The student writes one answer per question
+ *   regardless of nesting; the runner stores them in a flat record keyed
+ *   by questionId.
  *
  * Behaviour:
- *   - Owns answer state per questionId. Persists periodically to the
- *     server via the saveTestAnswersDraft action (debounced ~3s) so
- *     accidental refreshes don't lose work.
- *   - Computes timeRemaining from `startedAt + timeLimit*60s`. When the
- *     timer hits zero the runner auto-submits the current answer set
- *     (no user confirmation - the legacy semantic).
- *   - Online/offline indicator next to the timer so the student knows
- *     drafts may not be persisting if connection drops.
+ *   - Owns answer state per questionId. Persists periodically via
+ *     saveTestAnswersDraft (debounced ~3s) so refresh doesn't lose work.
+ *   - Computes timeRemaining from `startedAt + timeLimit*60s`. Auto-submits
+ *     at zero (no user confirmation - legacy semantic).
+ *   - Online/offline indicator next to the timer.
+ *   - Sidebar lists top-level questions with a "X parts" subtitle when a
+ *     parent has sub-questions. Click jumps directly to that step.
  */
 
 import * as React from "react";
@@ -33,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import LessonMarkdown from "@/app/components/markdown";
 
 import {
   saveTestAnswersDraft,
@@ -41,30 +43,23 @@ import {
 import { QuestionRenderer, type RendererQuestion } from "./question-renderer";
 
 /**
- * Question shape consumed by the runner. The page wrapper flattens the
- * tree depth-first and annotates each row with `depth` (0 for top-level,
- * 1 for direct sub-question, etc.) plus an optional `parentText` so the
- * runner doesn't have to re-resolve the parent on every render.
- *
- * `displayLabel` is the dotted path the sidebar uses, e.g. "1", "1.a",
- * "1.b", "2" — built once on the server.
+ * Question shape consumed by the runner. Top-level questions carry an
+ * embedded `subQuestions` array (typed recursively); leaf questions just
+ * have an empty array. The page wrapper builds this shape from Prisma's
+ * `include: { subQuestions: true }` payload.
  */
 export interface RunnerQuestion extends RendererQuestion {
   parentId: string | null;
   order: number | null;
-  depth: number;
-  /** Pre-resolved text of the parent question, if any. */
-  parentText: string | null;
-  /** Pre-rendered numeric/dotted label for the sidebar (e.g. "1", "1.a"). */
-  displayLabel: string;
+  /** Always present — empty array when there are no children. */
+  subQuestions: RunnerQuestion[];
 }
 
 export interface TestRunnerProps {
   testId: string;
   submissionId: string;
-  /** Test title for the header. */
   title: string;
-  /** Every question in the test, flattened depth-first by the page wrapper. */
+  /** Top-level questions only. Children live on `subQuestions`. */
   questions: RunnerQuestion[];
   /** Restored answer state from a previous session (or empty object). */
   initialAnswers: Record<string, unknown>;
@@ -89,6 +84,16 @@ function isAnswered(value: unknown): boolean {
   if (typeof value === "string") return value.trim() !== "";
   if (typeof value === "object") return Object.keys(value as object).length > 0;
   return true;
+}
+
+/** Walk a top-level question + its sub-questions, calling f on each. */
+function forEachAnswerable(
+  q: RunnerQuestion,
+  f: (q: RunnerQuestion) => void,
+): void {
+  // NONE-typed questions don't accept an answer; skip them in counts.
+  if ((q.type as string) !== "NONE") f(q);
+  for (const child of q.subQuestions) forEachAnswerable(child, f);
 }
 
 export function TestRunner({
@@ -175,7 +180,7 @@ export function TestRunner({
           answers: answersRef.current,
         });
         if (result?.serverError) throw new Error(result.serverError);
-        toast.success(auto ? "Time up — submitted automatically" : "Test submitted");
+        toast.success(auto ? "Time up - submitted automatically" : "Test submitted");
         router.push(`/dashboard/tests/review/${testId}`);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Submission failed");
@@ -208,20 +213,29 @@ export function TestRunner({
   }
 
   const current = questions[currentIdx];
-  const answeredCount = questions.filter((q) => isAnswered(answers[q.id])).length;
+
+  // Aggregate answered/total across the full tree (parents + sub-questions,
+  // skipping NONE-typed parents which don't take answers).
+  let totalAnswerable = 0;
+  let totalAnswered = 0;
+  for (const q of questions) {
+    forEachAnswerable(q, (node) => {
+      totalAnswerable += 1;
+      if (isAnswered(answers[node.id])) totalAnswered += 1;
+    });
+  }
 
   const lowOnTime =
     timeRemaining != null && timeRemaining <= 60 && timeRemaining > 0;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_240px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       {/* ───── Main pane ───── */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-muted-foreground text-xs">
-              Question {current.displayLabel} of {questions.length} ·{" "}
-              {current.points} {current.points === 1 ? "point" : "points"}
+              Question {currentIdx + 1} of {questions.length}
             </p>
             <h1 className="font-display mt-1 text-xl leading-tight tracking-tight text-foreground">
               {title}
@@ -234,7 +248,7 @@ export function TestRunner({
                 "inline-flex items-center gap-1 text-xs",
                 online ? "text-muted-foreground" : "text-destructive",
               )}
-              title={online ? "Online" : "Offline — drafts will retry on reconnect"}
+              title={online ? "Online" : "Offline - drafts will retry on reconnect"}
             >
               {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
               {online ? "Online" : "Offline"}
@@ -255,35 +269,14 @@ export function TestRunner({
           </div>
         </div>
 
-        {/* Parent context — only present when current is a sub-question. */}
-        {current.parentText && (
-          <Card className="bg-muted/40 space-y-2 p-5">
-            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-              Context
-            </p>
-            <p className="text-foreground whitespace-pre-wrap text-sm">
-              {current.parentText}
-            </p>
-          </Card>
-        )}
-
-        <Card className="space-y-5 p-6">
-          {current.depth > 0 && (
-            <p className="text-brand-terracotta text-xs font-medium tabular-nums">
-              Sub-question {current.displayLabel}
-            </p>
-          )}
-          <p className="text-foreground whitespace-pre-wrap text-sm font-medium">
-            {current.question}
-          </p>
-          <QuestionRenderer
-            question={current}
-            value={answers[current.id]}
-            onChange={(v) => updateAnswer(current.id, v)}
-            disabled={submitting || timeRemaining === 0}
-            testId={testId}
-          />
-        </Card>
+        <QuestionView
+          question={current}
+          path={String(currentIdx + 1)}
+          answers={answers}
+          onAnswer={updateAnswer}
+          disabled={submitting || timeRemaining === 0}
+          testId={testId}
+        />
 
         <div className="flex items-center justify-between gap-3">
           <Button
@@ -319,7 +312,7 @@ export function TestRunner({
         </div>
       </div>
 
-      {/* ───── Sidebar (question grid) ───── */}
+      {/* ───── Sidebar (question list) ───── */}
       <aside className="space-y-3 lg:sticky lg:top-24 lg:self-start">
         <Card className="p-4">
           <div className="flex items-baseline justify-between gap-2">
@@ -327,44 +320,58 @@ export function TestRunner({
               Questions
             </h2>
             <span className="text-muted-foreground text-xs tabular-nums">
-              {answeredCount}/{questions.length}
+              {totalAnswered}/{totalAnswerable}
             </span>
           </div>
           <ul className="mt-3 space-y-1">
             {questions.map((q, i) => {
-              const answered = isAnswered(answers[q.id]);
               const active = i === currentIdx;
+              // A top-level row is "complete" when every answerable node in
+              // its sub-tree has an answer.
+              let groupTotal = 0;
+              let groupDone = 0;
+              forEachAnswerable(q, (node) => {
+                groupTotal += 1;
+                if (isAnswered(answers[node.id])) groupDone += 1;
+              });
+              const allDone = groupTotal > 0 && groupDone === groupTotal;
               return (
                 <li key={q.id}>
                   <button
                     type="button"
                     onClick={() => setCurrentIdx(i)}
                     disabled={submitting}
-                    style={{ paddingLeft: `${0.5 + q.depth * 0.75}rem` }}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md py-1.5 pr-2 text-left text-xs transition-colors",
+                      "flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-xs transition-colors",
                       active
                         ? "bg-brand-terracotta/10 text-foreground ring-1 ring-brand-terracotta/40"
-                        : answered
+                        : allDone
                           ? "text-foreground hover:bg-muted/40"
                           : "text-muted-foreground hover:bg-muted/40",
                     )}
-                    aria-label={`Go to question ${q.displayLabel}${answered ? " (answered)" : ""}`}
+                    aria-label={`Go to question ${i + 1}${allDone ? " (complete)" : ""}`}
                   >
-                    {answered ? (
+                    {allDone ? (
                       <CheckCircle2
                         className={cn(
-                          "size-3.5 shrink-0",
+                          "mt-0.5 size-3.5 shrink-0",
                           active ? "text-brand-terracotta" : "text-brand-terracotta/70",
                         )}
                       />
                     ) : (
-                      <Circle className="size-3.5 shrink-0 opacity-50" />
+                      <Circle className="mt-0.5 size-3.5 shrink-0 opacity-50" />
                     )}
-                    <span className="tabular-nums w-8 shrink-0 font-medium">
-                      {q.displayLabel}
+                    <span className="tabular-nums w-5 shrink-0 font-medium">
+                      {i + 1}
                     </span>
-                    <span className="truncate flex-1">{q.question}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="line-clamp-2">{q.question}</span>
+                      {q.subQuestions.length > 0 && (
+                        <span className="text-muted-foreground/80 mt-0.5 block text-[11px] tabular-nums">
+                          {groupDone}/{groupTotal} parts
+                        </span>
+                      )}
+                    </span>
                   </button>
                 </li>
               );
@@ -380,4 +387,101 @@ export function TestRunner({
       </aside>
     </div>
   );
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/* QuestionView                                                              */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Renders a single question card. When the question is a parent with
+ * sub-questions, each child renders as a stacked card beneath the parent,
+ * recursively. The parent itself only gets an input when its type !== NONE.
+ */
+function QuestionView({
+  question,
+  path,
+  answers,
+  onAnswer,
+  disabled,
+  testId,
+}: {
+  question: RunnerQuestion;
+  /** Display path (e.g. "1", "1.a") used as a small caption above the input. */
+  path: string;
+  answers: Record<string, unknown>;
+  onAnswer: (questionId: string, next: unknown) => void;
+  disabled?: boolean;
+  testId: string;
+}) {
+  const isContext = (question.type as string) === "NONE";
+  const hasChildren = question.subQuestions.length > 0;
+
+  return (
+    <Card className={cn("space-y-5 p-6", question.parentId && "border-brand-terracotta/30")}>
+      <div className="space-y-2">
+        <p
+          className={cn(
+            "text-xs font-medium tabular-nums",
+            isContext ? "text-muted-foreground" : "text-brand-terracotta",
+          )}
+        >
+          {isContext
+            ? `Context ${path}`
+            : `Question ${path} - ${question.points} ${question.points === 1 ? "point" : "points"}`}
+        </p>
+        <LessonMarkdown content={question.question} />
+      </div>
+
+      {!isContext && (
+        <QuestionRenderer
+          question={question}
+          value={answers[question.id]}
+          onChange={(v) => onAnswer(question.id, v)}
+          disabled={disabled}
+          testId={testId}
+        />
+      )}
+
+      {hasChildren && (
+        <div className="space-y-4 border-l-2 border-brand-terracotta/20 pl-4 sm:pl-6">
+          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+            Parts ({question.subQuestions.length})
+          </p>
+          {question.subQuestions.map((child, i) => {
+            // Sub-question path uses lettered labels at depth 1 ("1.a"),
+            // numeric beyond. Depth is just path-segment count.
+            const childPath = nextPath(path, i, depthOf(path));
+            return (
+              <QuestionView
+                key={child.id}
+                question={child}
+                path={childPath}
+                answers={answers}
+                onAnswer={onAnswer}
+                disabled={disabled}
+                testId={testId}
+              />
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+const SUB_LETTERS = "abcdefghijklmnopqrstuvwxyz";
+
+/** Build a child label given the parent path and current depth. */
+function nextPath(parentPath: string, childIdx: number, parentDepth: number): string {
+  const segment =
+    parentDepth === 0
+      ? (SUB_LETTERS[childIdx % SUB_LETTERS.length] ?? String(childIdx + 1))
+      : String(childIdx + 1);
+  return `${parentPath}.${segment}`;
+}
+
+/** Depth = how many separators are in the path so far ("1" = 0, "1.a" = 1). */
+function depthOf(path: string): number {
+  return path.split(".").length - 1;
 }

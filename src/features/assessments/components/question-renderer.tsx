@@ -33,7 +33,8 @@ type QuestionType =
   | "MATCHING"
   | "REORDER"
   | "FILL_IN_THE_BLANK"
-  | "NUMERIC";
+  | "NUMERIC"
+  | "NONE"; // Context-only, for grouping sub-questions.
 
 export interface RendererQuestion {
   id: string;

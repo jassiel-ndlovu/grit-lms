@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import LessonMarkdown from "@/app/components/markdown";
 
 import {
   getTestDetailById,
@@ -201,9 +202,7 @@ export default async function TestReviewPage({ params }: PageProps) {
                     <p className="text-muted-foreground text-xs">
                       Question {idx + 1} · {q.points} pts
                     </p>
-                    <p className="text-foreground mt-1 whitespace-pre-wrap text-sm font-medium">
-                      {q.question}
-                    </p>
+<div className="mt-1"><LessonMarkdown content={q.question} className="prose-sm" /></div>
                   </div>
                   {qg && (
                     <div className="text-right shrink-0">
@@ -220,9 +219,9 @@ export default async function TestReviewPage({ params }: PageProps) {
                     </div>
                   )}
                 </div>
-                {qg?.feedback && (
+{qg?.feedback && (
                   <div className="bg-muted/50 rounded-md p-3 text-sm italic text-foreground">
-                    {qg.feedback}
+                    <LessonMarkdown content={qg.feedback} />
                   </div>
                 )}
               </li>
