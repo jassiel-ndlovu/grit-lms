@@ -82,8 +82,13 @@ export async function issueUploadToken(opts: IssueTokenOptions) {
 
       const { tokenPayload } = await opts.authorize({ payload, pathname });
 
+      // Vercel Blob treats an absent `allowedContentTypes` as "accept
+      // anything"; passing `["*/*"]` (or any literal that doesn't match the
+      // upload's content-type) rejects with "Content type mismatch". So we
+      // omit the field entirely when the kind has no restriction.
+      const allowed = ALLOWED_CONTENT_TYPES[payload.kind];
       return {
-        allowedContentTypes: ALLOWED_CONTENT_TYPES[payload.kind],
+        ...(allowed ? { allowedContentTypes: allowed } : {}),
         maximumSizeInBytes: MAX_BYTES[payload.kind],
         addRandomSuffix: true,
         tokenPayload: tokenPayload ?? JSON.stringify({ kind: payload.kind }),
