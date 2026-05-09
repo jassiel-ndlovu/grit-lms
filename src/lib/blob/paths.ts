@@ -104,8 +104,17 @@ export function isValidPath(kind: BlobKind, pathname: string): boolean {
 /**
  * Allowed content types per blob kind. The server enforces this during
  * token issuance; clients should pass matching content-types or upload fails.
+ *
+ * Vercel Blob accepts:
+ *   - exact MIME types         e.g. "application/pdf"
+ *   - type-level wildcards     e.g. "image/*"
+ *   - the field being omitted  -> any content type
+ *
+ * It does NOT accept the literal star-slash-star wildcard; that matches nothing and rejects
+ * every upload with "Content type mismatch". Use `undefined` here when a
+ * kind should accept anything, and the token issuer skips the constraint.
  */
-export const ALLOWED_CONTENT_TYPES: Record<BlobKind, string[]> = {
+export const ALLOWED_CONTENT_TYPES: Record<BlobKind, string[] | undefined> = {
   [BlobKind.CourseCover]: ["image/png", "image/jpeg", "image/webp"],
   [BlobKind.LessonAttachment]: [
     "image/*",
@@ -120,8 +129,11 @@ export const ALLOWED_CONTENT_TYPES: Record<BlobKind, string[]> = {
     "text/plain",
     "text/markdown",
   ],
-  [BlobKind.LessonUpload]: ["*/*"],
-  [BlobKind.Submission]: ["*/*"],
+  // Lesson uploads and assignment submissions accept any file. The
+  // assignment's `fileType` field is a soft hint surfaced in the UI; we
+  // don't gate the upload itself on it.
+  [BlobKind.LessonUpload]: undefined,
+  [BlobKind.Submission]: undefined,
   [BlobKind.TestQuestionImage]: ["image/png", "image/jpeg", "image/webp"],
   [BlobKind.UserAvatar]: ["image/png", "image/jpeg", "image/webp"],
 };
