@@ -120,3 +120,65 @@ export const listQuestionGradesForTestSubmission = cache(
     });
   },
 );
+
+/* ------------------------------------------------------------------------- */
+/* Detail query for the canonical grade page                                  */
+/* ------------------------------------------------------------------------- */
+
+const detailInclude = {
+  course: {
+    select: {
+      id: true,
+      name: true,
+      tutor: { select: { id: true, fullName: true, email: true } },
+    },
+  },
+  testSubmission: {
+    include: {
+      uploadedFiles: true,
+      questionGrades: true,
+      test: {
+        include: {
+          questions: {
+            include: { subQuestions: true, parent: true },
+          },
+        },
+      },
+    },
+  },
+  submissionEntry: {
+    include: {
+      questionGrades: true,
+      submission: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          courseId: true,
+          totalPoints: true,
+          fileType: true,
+          maxAttempts: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.GradeInclude;
+
+export type GradeDetail = NonNullable<
+  Awaited<ReturnType<typeof getGradeWithDetails>>
+>;
+
+/**
+ * Full grade row with the linked test submission (answers + question tree
+ * + per-question grades) or submission entry (files + per-question grades),
+ * plus the course/tutor summary the page header needs.
+ *
+ * Returns null if the grade doesn't exist; the page should `notFound()`.
+ * Ownership/role gating happens in the page wrapper.
+ */
+export const getGradeWithDetails = cache(async (id: string) => {
+  return prisma.grade.findUnique({
+    where: { id },
+    include: detailInclude,
+  });
+});
