@@ -271,11 +271,7 @@ export default async function DashboardLanding() {
                 {recentGrades.map((g) => {
                   const itemPct = pct(g.score, g.outOf);
                   const linkedTitle = g.testSubmission?.test.title ?? g.submissionEntry?.submission.title ?? g.title;
-                  const href = g.testSubmission
-                    ? `/dashboard/tests/review/${g.testSubmission.test.id}`
-                    : g.submissionEntry
-                      ? `/dashboard/submissions/${g.submissionEntry.submission.id}`
-                      : null;
+                  const href = `/dashboard/grades/${g.id}`;
                   const Row = (
                     <div className="flex items-center gap-3 px-5 py-3">
                       <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
@@ -295,7 +291,7 @@ export default async function DashboardLanding() {
                   );
                   return (
                     <li key={g.id}>
-                      {href ? <Link href={href} className="hover:bg-muted/40 block transition-colors">{Row}</Link> : Row}
+                      <Link href={href} className="hover:bg-muted/40 block transition-colors">{Row}</Link>
                     </li>
                   );
                 })}

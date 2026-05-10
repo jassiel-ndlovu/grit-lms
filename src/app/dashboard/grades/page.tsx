@@ -5,6 +5,11 @@
  * grouped by course so the page reads like a transcript. Each row links
  * back to the corresponding test review or assignment review surface so
  * the student can see per-question feedback in context.
+ *
+ * No top-level directive — the App Router treats files without one as
+ * Server Components. We cannot use "use client" here because Next.js
+ * disallows exporting `metadata` from a client component, and async data
+ * fetching server-side is the whole point of this page.
  */
 
 import Link from "next/link";
@@ -88,7 +93,7 @@ export default async function StudentGradesPage() {
       </header>
 
       {grades.length === 0 ? (
-        <Card className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-12 text-center">
+        <Card className="flex min-h-70 flex-col items-center justify-center gap-4 p-12 text-center">
           <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
             <Award className="size-6" />
           </div>
@@ -138,11 +143,8 @@ export default async function StudentGradesPage() {
                       g.testSubmission?.test.title ??
                       g.submissionEntry?.submission.title ??
                       g.title;
-                    const href = g.testSubmission
-                      ? `/dashboard/tests/review/${g.testSubmission.test.id}`
-                      : g.submissionEntry
-                        ? `/dashboard/submissions/${g.submissionEntry.submission.id}`
-                        : null;
+                    // Canonical detail page handles both kinds.
+                    const href = `/dashboard/grades/${g.id}`;
 
                     const Row = (
                       <div className="flex items-center justify-between gap-3 px-5 py-3">
@@ -177,16 +179,12 @@ export default async function StudentGradesPage() {
 
                     return (
                       <li key={g.id}>
-                        {href ? (
-                          <Link
-                            href={href}
-                            className="hover:bg-muted/40 block transition-colors"
-                          >
-                            {Row}
-                          </Link>
-                        ) : (
-                          Row
-                        )}
+                        <Link
+                          href={href}
+                          className="hover:bg-muted/40 block transition-colors"
+                        >
+                          {Row}
+                        </Link>
                       </li>
                     );
                   })}
