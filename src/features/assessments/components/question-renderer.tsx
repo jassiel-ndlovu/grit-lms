@@ -91,6 +91,29 @@ export function QuestionRenderer(props: QuestionRendererProps) {
   }
 }
 
+
+/**
+ * Deterministic Fisher-Yates shuffle seeded by an arbitrary string.
+ * Stable for a given (input, seed) pair so list order doesn't change on
+ * re-render, but different per question so the answer isn't aligned.
+ */
+function seededShuffle<T>(arr: readonly T[], seed: string): T[] {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    const j = Math.abs(h) % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 /* ─── MULTIPLE_CHOICE ─────────────────────────────────────────────────── */
 
 function MultipleChoice({ question, value, onChange, disabled }: QuestionRendererProps) {
@@ -328,7 +351,12 @@ function Reorder({ question, value, onChange, disabled }: QuestionRendererProps)
 function Matching({ question, value, onChange, disabled }: QuestionRendererProps) {
   const pairs = (question.matchPairs ?? []) as Array<{ left: string; right: string }>;
   const leftItems = pairs.map((p) => p.left);
-  const rightOptions = Array.from(new Set(pairs.map((p) => p.right)));
+  // Shuffle the right column so options aren't aligned with their matches.
+  // Seed by question id so the order is stable across this question's renders.
+  const rightOptions = seededShuffle(
+    Array.from(new Set(pairs.map((p) => p.right))),
+    question.id,
+  );
 
   const current = Array.isArray(value) ? (value as Array<{ left: string; right: string }>) : [];
   function setRight(left: string, right: string) {

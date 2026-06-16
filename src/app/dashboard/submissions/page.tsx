@@ -7,7 +7,10 @@
  */
 
 import { redirect } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -19,6 +22,7 @@ import {
 } from "@/features/submissions/queries";
 import { SubmissionCard } from "@/features/submissions/components/submission-card";
 import { SubmissionGrid } from "@/features/submissions/components/submission-grid";
+import { TutorSubmissionActions } from "@/features/submissions/components/tutor-submission-actions";
 
 export const metadata = { title: "Submissions" };
 
@@ -121,13 +125,20 @@ export default async function SubmissionsIndexPage() {
 
     return (
       <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-        <header>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
-            Assignments
-          </h1>
-          <p className="text-muted-foreground mt-1.5 text-sm">
-            Every assignment you&apos;ve published, newest due-date first.
-          </p>
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+              Assignments
+            </h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              Every assignment you&apos;ve published, newest due-date first.
+            </p>
+          </div>
+          <Button asChild variant="brand">
+            <Link href="/dashboard/manage-courses">
+              <Plus className="size-4" /> New assignment
+            </Link>
+          </Button>
         </header>
 
         <SubmissionGrid
@@ -149,6 +160,13 @@ export default async function SubmissionsIndexPage() {
               key={s.id}
               submission={s}
               href={`/dashboard/submissions/${s.id}`}
+              actions={
+                <TutorSubmissionActions
+                  submissionId={s.id}
+                  submissionTitle={s.title}
+                  courseId={s.course.id}
+                />
+              }
             />
           ))}
         </SubmissionGrid>
