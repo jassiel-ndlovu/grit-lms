@@ -169,6 +169,29 @@ export function TestRunner({
     };
   }, [answers, submissionId, submitting]);
 
+  /* ───── Flush save (immediate, used by nav) ───── */
+  const saveNow = React.useCallback(async () => {
+    // Cancel any pending debounced save so we don't double-fire after.
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    setSaving(true);
+    try {
+      const result = await saveTestAnswersDraft({
+        submissionId,
+        answers: answersRef.current,
+      });
+      if (result?.serverError) {
+        console.warn("[TestRunner] flush save failed:", result.serverError);
+      }
+    } catch {
+      /* best-effort */
+    } finally {
+      setSaving(false);
+    }
+  }, [submissionId]);
+
   /* ───── Submission ───── */
   const onSubmit = React.useCallback(
     async (auto: boolean = false) => {
@@ -282,7 +305,12 @@ export function TestRunner({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setCurrentIdx((i) => Math.max(0, i - 1))}
+            onClick={async () => {
+              // Flush any pending answer to the DB before navigating so the
+              // student never loses what they just typed on this question.
+              await saveNow();
+              setCurrentIdx((i) => Math.max(0, i - 1));
+            }}
             disabled={submitting || currentIdx === 0}
           >
             ← Previous
@@ -291,9 +319,10 @@ export function TestRunner({
           {currentIdx < questions.length - 1 ? (
             <Button
               type="button"
-              onClick={() =>
-                setCurrentIdx((i) => Math.min(questions.length - 1, i + 1))
-              }
+              onClick={async () => {
+                await saveNow();
+                setCurrentIdx((i) => Math.min(questions.length - 1, i + 1));
+              }}
               disabled={submitting}
             >
               Next →
@@ -339,7 +368,10 @@ export function TestRunner({
                 <li key={q.id}>
                   <button
                     type="button"
-                    onClick={() => setCurrentIdx(i)}
+                    onClick={async () => {
+                      await saveNow();
+                      setCurrentIdx(i);
+                    }}
                     disabled={submitting}
                     className={cn(
                       "flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-xs transition-colors",

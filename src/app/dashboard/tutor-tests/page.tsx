@@ -8,14 +8,16 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Target } from "lucide-react";
+import { Plus, Target } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 import { listTestsByTutorId } from "@/features/assessments/queries";
+import { TutorTestActions } from "@/features/assessments/components/tutor-test-actions";
 
 export const metadata = { title: "Tests & Grading" };
 
@@ -46,15 +48,24 @@ export default async function TutorTestsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-      <header>
-        <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
-          Tests &amp; grading
-        </h1>
-        <p className="text-muted-foreground mt-1.5 text-sm">
-          Every test you have authored, newest due-date first. Authoring and
-          per-student grading are migrating to the new feature module - for
-          now this page links into the manage-course view.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+            Tests &amp; grading
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm">
+            Every test you have authored, newest due-date first. Click a card
+            to open its submissions, or jump to manage to edit content.
+          </p>
+        </div>
+        {/* Tutor authoring UI lands in a follow-up; for now we drop the
+            tutor into manage-courses where they can pick a course to add a
+            test against. */}
+        <Button asChild variant="brand">
+          <Link href="/dashboard/manage-courses">
+            <Plus className="size-4" /> New test
+          </Link>
+        </Button>
       </header>
 
       {tests.length === 0 ? (
@@ -74,10 +85,10 @@ export default async function TutorTestsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tests.map((t) => (
-            <Card key={t.id} className="group flex flex-col gap-3 p-5 transition-shadow hover:shadow-md">
-              <Link href={`/dashboard/manage-courses/${t.courseId}`} className="flex flex-1 flex-col gap-3">
+            <Card key={t.id} className="group relative flex flex-col gap-3 p-5 transition-shadow hover:shadow-md">
+              <Link href={`/dashboard/tutor-tests/${t.id}/submissions`} className="flex flex-1 flex-col gap-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
+                  <div className="min-w-0 space-y-1 pr-10">
                     <p className="text-muted-foreground text-xs">{t.course.name}</p>
                     <h3 className="font-display line-clamp-2 text-lg leading-tight tracking-tight text-foreground">
                       {t.title}
@@ -96,6 +107,9 @@ export default async function TutorTestsPage() {
                   <span>{t._count.submissions} submissions</span>
                 </div>
               </Link>
+              <div className="absolute top-3 right-3 z-10">
+                <TutorTestActions testId={t.id} testTitle={t.title} courseId={t.courseId} />
+              </div>
             </Card>
           ))}
         </div>
