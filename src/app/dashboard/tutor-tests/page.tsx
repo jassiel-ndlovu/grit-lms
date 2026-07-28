@@ -17,7 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 import { listTestsByTutorId } from "@/features/assessments/queries";
+import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TutorTestActions } from "@/features/assessments/components/tutor-test-actions";
+import { ImportTestDialog } from "@/features/assessments/components/import-test-dialog";
 
 export const metadata = { title: "Tests & Grading" };
 
@@ -44,7 +46,10 @@ export default async function TutorTestsPage() {
     );
   }
 
-  const tests = await listTestsByTutorId(tutor.id);
+  const [tests, courses] = await Promise.all([
+    listTestsByTutorId(tutor.id),
+    listCoursesByTutorId(tutor.id),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
@@ -61,11 +66,16 @@ export default async function TutorTestsPage() {
         {/* Tutor authoring UI lands in a follow-up; for now we drop the
             tutor into manage-courses where they can pick a course to add a
             test against. */}
-        <Button asChild variant="brand">
-          <Link href="/dashboard/tutor-tests/new">
-            <Plus className="size-4" /> New test
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ImportTestDialog
+            courses={courses.map((c) => ({ id: c.id, name: c.name }))}
+          />
+          <Button asChild variant="brand">
+            <Link href="/dashboard/tutor-tests/new">
+              <Plus className="size-4" /> New test
+            </Link>
+          </Button>
+        </div>
       </header>
 
       {tests.length === 0 ? (

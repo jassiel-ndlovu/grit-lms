@@ -13,7 +13,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Download, Eye, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+import { ExportTestButton } from "./export-test-button";
 
 import { deleteTest } from "../actions";
 
@@ -91,6 +93,23 @@ export function TutorTestActions({
             <Link href={`/dashboard/tutor-tests/${testId}/edit`}>
               <Pencil className="size-4" /> Edit
             </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(e) => {
+              // Prevent the menu from closing before the export completes.
+              e.preventDefault();
+            }}
+            className="p-0"
+          >
+            {/* Wrap the button so it inherits DropdownMenuItem's row
+                styling but keeps its own click handler for the download. */}
+            <ExportTestButton
+              testId={testId}
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start px-2 h-8"
+              label="Export JSON"
+            />
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

@@ -22,6 +22,7 @@ import {
   type TestDetail,
 } from "@/features/assessments/queries";
 import { TestForm } from "@/features/assessments/components/test-form";
+import { ExportTestButton } from "@/features/assessments/components/export-test-button";
 import type {
   EditorQuestion,
   EditorQuestionType,
@@ -123,11 +124,14 @@ export default async function EditTestPage({ params }: PageProps) {
       </div>
 
       <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
-        <header>
-          <p className="text-muted-foreground text-xs">{test.course.name}</p>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
-            Edit test
-          </h1>
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-muted-foreground text-xs">{test.course.name}</p>
+            <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+              Edit test
+            </h1>
+          </div>
+          <ExportTestButton testId={test.id} />
         </header>
 
         <TestForm

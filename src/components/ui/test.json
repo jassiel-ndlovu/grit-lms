@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "title": "Calculus review",
+  "description": "Chapter 3 self-check.",
+  "dueDate": "2025-12-31T23:59:00Z",
+  "timeLimit": 45,
+  "isActive": false,
+  "preTestInstructions": "You may use a calculator. Show your work in the essay questions.",
+  "questions": [
+    {
+      "type": "MULTIPLE_CHOICE",
+      "question": "What is the derivative of $f(x) = x^3$?",
+      "points": 2,
+      "options": ["$3x^2$", "$x^2$", "$3x$", "$x^4/4$"],
+      "answer": "$3x^2$",
+      "subQuestions": []
+    },
+    {
+      "type": "NONE",
+      "question": "Consider the function $g(x) = 2x^2 - 4x + 1$.",
+      "points": 0,
+      "subQuestions": [
+        {
+          "type": "SHORT_ANSWER",
+          "question": "What is $g'(x)$?",
+          "points": 2,
+          "answer": "4x - 4",
+          "subQuestions": []
+        },
+        {
+          "type": "NUMERIC",
+          "question": "At what $x$ value is the minimum of $g$?",
+          "points": 3,
+          "answer": 1,
+          "subQuestions": []
+        }
+      ]
+    },
+    {
+      "type": "MATCHING",
+      "question": "Match each function to its derivative.",
+      "points": 4,
+      "matchPairs": [
+        { "left": "$\\sin(x)$", "right": "$\\cos(x)$" },
+        { "left": "$\\cos(x)$", "right": "$-\\sin(x)$" },
+        { "left": "$e^x$",       "right": "$e^x$" }
+      ],
+      "answer": null,
+      "subQuestions": []
+    },
+    {
+      "type": "ESSAY",
+      "question": "Explain the geometric meaning of the derivative in one paragraph.",
+      "points": 5,
+      "answer": null,
+      "subQuestions": []
+    }
+  ]
+}
