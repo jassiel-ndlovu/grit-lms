@@ -213,7 +213,7 @@ export const updateTest = tutorActionClient
     }
 
     revalidatePath("/dashboard/tutor-tests");
-    revalidatePath(`/dashboard/tutor-tests/create/${updated.id}`);
+    revalidatePath(`/dashboard/tutor-tests/${updated.id}/edit`);
     revalidatePath(`/dashboard/courses/${updated.courseId}`);
     revalidatePath("/dashboard/tests");
     revalidatePath("/dashboard/notifications");
@@ -531,4 +531,53 @@ export const saveTestAnswersDraft = studentActionClient
     });
 
     return { ok: true };
+  });
+
+
+/* ------------------------------------------------------------------------- */
+/* importTest                                                                 */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Alias for createTest — exposed as `importTest` so the UI reads cleanly
+ * ("import" vs "create") and so we can add pre-flight logging or metric
+ * tags without churning the create-test call sites.
+ */
+export const importTest = createTest;
+
+
+/* ------------------------------------------------------------------------- */
+/* exportTestJson                                                             */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Return the full test as an import-schema-shaped JSON string. The tutor
+ * downloads it directly from the client; the action just gates on
+ * ownership so a tutor can't export somebody else's test.
+ */
+import { getTestDetailById, testBelongsToTutor } from "./queries";
+import { serializeTest } from "./lib/test-io";
+import { z } from "zod";
+import { CuidSchema } from "../shared/primitives";
+
+export const exportTestJson = tutorActionClient
+  .schema(z.object({ id: CuidSchema }))
+  .action(async ({ parsedInput, ctx }) => {
+    const tutor = await prisma.tutor.findUnique({
+      where: { email: ctx.session.user.email },
+      select: { id: true },
+    });
+    if (!tutor) throw new Error("Tutor profile not found");
+
+    const owns = await testBelongsToTutor(parsedInput.id, tutor.id);
+    if (!owns) throw new Error("You don't own this test");
+
+    const test = await getTestDetailById(parsedInput.id);
+    if (!test) throw new Error("Test not found");
+
+    const payload = serializeTest(test);
+    return {
+      filename: `${test.title.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 80) || "test"}.json`,
+      json: JSON.stringify(payload, null, 2),
+    };
   });
