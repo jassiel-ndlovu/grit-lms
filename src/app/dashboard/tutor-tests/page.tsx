@@ -62,7 +62,7 @@ export default async function TutorTestsPage() {
             tutor into manage-courses where they can pick a course to add a
             test against. */}
         <Button asChild variant="brand">
-          <Link href="/dashboard/manage-courses">
+          <Link href="/dashboard/tutor-tests/new">
             <Plus className="size-4" /> New test
           </Link>
         </Button>

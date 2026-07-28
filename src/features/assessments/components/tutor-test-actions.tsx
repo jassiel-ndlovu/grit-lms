@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 "use client";
 
 /**
@@ -86,7 +88,7 @@ export function TutorTestActions({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/manage-courses/${courseId}`}>
+            <Link href={`/dashboard/tutor-tests/${testId}/edit`}>
               <Pencil className="size-4" /> Edit
             </Link>
           </DropdownMenuItem>
