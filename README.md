@@ -1,7 +1,5 @@
 # Nexa LMS
 
-A calm learning space for tutors and their small classes.
-
 Nexa is an invite-only LMS built for individual tutors and tutoring practices.
 Tutors author courses, publish lessons with LaTeX (MathJax) + markdown, run
 timed tests with 12 question types and sub-questions, grade per-answer with
