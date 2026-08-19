@@ -28,6 +28,7 @@ import {
   studentCanAccessTest,
 } from "@/features/assessments/queries";
 import { BeginTestButton } from "@/features/assessments/components/begin-test-button";
+import LessonMarkdown from "@/app/components/markdown";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -138,9 +139,7 @@ export default async function PreTestPage({ params }: PageProps) {
               <ScrollText className="text-brand-terracotta size-4" />
               Before you begin
             </h2>
-            <p className="text-foreground whitespace-pre-wrap text-sm">
-              {test.preTestInstructions}
-            </p>
+            <LessonMarkdown content={test.preTestInstructions ?? ""} />
           </Card>
         )}
 
