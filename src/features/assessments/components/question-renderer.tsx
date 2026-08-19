@@ -205,14 +205,17 @@ function ShortAnswer({ value, onChange, disabled }: QuestionRendererProps) {
 /* ─── NUMERIC ─────────────────────────────────────────────────────────── */
 
 function Numeric({ value, onChange, disabled }: QuestionRendererProps) {
+  // We store the answer as a STRING now so students can type decimals /
+  // commas / negatives without the browser number-widget stealing keystrokes
+  // or dropping the trailing dot on values like "3.". The grader-side
+  // comparison already tolerates numeric strings.
   return (
     <Input
-      type="number"
-      value={typeof value === "number" || typeof value === "string" ? String(value) : ""}
-      onChange={(e) => {
-        const v = e.target.value;
-        onChange(v === "" ? null : Number(v));
-      }}
+      type="text"
+      inputMode="decimal"
+      pattern="[-+]?[0-9]*[.,]?[0-9]+"
+      value={typeof value === "string" ? value : typeof value === "number" ? String(value) : ""}
+      onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
       disabled={disabled}
       placeholder="0"
     />

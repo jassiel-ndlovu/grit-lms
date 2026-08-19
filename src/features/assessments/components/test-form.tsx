@@ -63,6 +63,7 @@ export interface TestFormProps {
     timeLimit: number | null;
     totalPoints: number;
     isActive: boolean;
+    releaseAutoMarksToStudent: boolean;
     preTestInstructions: string | null;
     questions: EditorQuestion[];
   };
@@ -128,6 +129,9 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
     defaultValues?.preTestInstructions ?? "",
   );
   const [isActive, setIsActive] = React.useState(defaultValues?.isActive ?? false);
+  const [releaseAutoMarks, setReleaseAutoMarks] = React.useState(
+    defaultValues?.releaseAutoMarksToStudent ?? false,
+  );
   const [questions, setQuestions] = React.useState<EditorQuestion[]>(
     defaultValues?.questions ?? [],
   );
@@ -186,6 +190,7 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
         timeLimit: timeLimit.trim() === "" ? null : Number(timeLimit),
         totalPoints: computedPoints,
         isActive: publish,
+        releaseAutoMarksToStudent: releaseAutoMarks,
         preTestInstructions:
           instructions.trim() === "" ? null : instructions,
         // The server schema types `questions` as CreateTestQuestionTree[].
@@ -310,6 +315,31 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
             placeholder="Rules, materials allowed, tone, etc. Rendered above the timer on the pre-test page."
           />
         </div>
+
+        {/* Release-to-student toggle for the auto-marker. When on, the
+            student sees their auto-marked grade the moment they submit
+            (with a note that subjective bits are still pending). When
+            off, the tutor still gets an auto-marked pre-fill in the
+            grading UI, but the student sees no grade until release. */}
+        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3">
+          <input
+            type="checkbox"
+            checked={releaseAutoMarks}
+            onChange={(e) => setReleaseAutoMarks(e.target.checked)}
+            className="mt-1 size-4 accent-brand-terracotta"
+          />
+          <span className="space-y-0.5 text-sm">
+            <span className="text-foreground block font-medium">
+              Release auto-marks to students at submit time
+            </span>
+            <span className="text-muted-foreground block text-xs">
+              Objective questions (multiple choice, matching, numeric, etc.)
+              are graded automatically from your answer keys. Subjective
+              questions still wait for you. Uncheck to keep all grades
+              hidden until you release them manually.
+            </span>
+          </span>
+        </label>
       </Card>
 
       {/* ───── Questions ───── */}

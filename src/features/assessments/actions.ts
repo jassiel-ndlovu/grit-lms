@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Assessment (Test) Server Actions — typed mutations callable from forms.
  *
@@ -28,6 +29,7 @@ import {
   tutorActionClient,
 } from "@/lib/safe-action";
 import { emitNotification } from "@/features/notifications/server";
+import { autoGradeSubmission } from "./lib/auto-grade";
 
 import {
   CreateTestWithQuestionsSchema,
@@ -357,6 +359,112 @@ export const submitTestAnswers = studentActionClient
       select: { id: true },
     });
 
+    // If the tutor turned on "release auto-marks to students", run the
+    // pure auto-grader against the tutor-supplied answer keys and write
+    // QuestionGrades + an overall Grade in one transaction. Subjective
+    // questions (ESSAY, CODE, FILE_UPLOAD, un-keyed SHORT_ANSWER) are
+    // left for the tutor to grade manually via GradingForm.
+    // Cast: `releaseAutoMarksToStudent` is a new field; the Prisma
+    // client needs `npx prisma generate` to pick it up. Until then read
+    // via a widened type so tsc stays happy.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const testForAuto = await prisma.test.findUnique({
+      where: { id: submission.test.id },
+      select: { releaseAutoMarksToStudent: true } as any,
+    }) as unknown as { releaseAutoMarksToStudent?: boolean } | null;
+
+    if (testForAuto?.releaseAutoMarksToStudent) {
+      const questions = await prisma.testQuestion.findMany({
+        where: { testId: submission.test.id },
+        select: {
+          id: true,
+          parentId: true,
+          order: true,
+          type: true,
+          points: true,
+          options: true,
+          answer: true,
+          matchPairs: true,
+          reorderItems: true,
+          blankCount: true,
+        },
+      });
+
+      const rawAnswers =
+        parsedInput.answers &&
+        typeof parsedInput.answers === "object" &&
+        !Array.isArray(parsedInput.answers)
+          ? (parsedInput.answers as Record<string, unknown>)
+          : {};
+
+      const { grades, autoScore, autoOutOf, pendingCount } = autoGradeSubmission(
+        questions,
+        rawAnswers,
+      );
+
+      if (grades.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          // Replace any existing QuestionGrades so re-submits don't
+          // accumulate stale rows.
+          await tx.questionGrade.deleteMany({
+            where: { testSubmissionId: submission.id },
+          });
+          await tx.questionGrade.createMany({
+            data: grades.map((g) => ({
+              questionId: g.questionId,
+              score: g.score,
+              outOf: g.outOf,
+              feedback: g.feedback,
+              testSubmissionId: submission.id,
+            })),
+          });
+
+          // Upsert overall Grade with the auto-total. If pendingCount > 0
+          // the outOf reflects only auto-graded questions; tutor grading
+          // will bump it up when they add manual scores.
+          await tx.grade.upsert({
+            where: { testSubmissionId: submission.id },
+            update: {
+              score: autoScore,
+              outOf: autoOutOf,
+              updatedAt: new Date(),
+            },
+            create: {
+              studentId: student.id,
+              courseId: submission.test.courseId,
+              type: "TEST",
+              title: submission.test.title,
+              score: autoScore,
+              outOf: autoOutOf,
+              finalComments:
+                pendingCount > 0
+                  ? `${pendingCount} question${pendingCount === 1 ? "" : "s"} still awaiting tutor review.`
+                  : null,
+              testSubmissionId: submission.id,
+            },
+          });
+
+          // Flip status to GRADED only when nothing is pending; otherwise
+          // keep SUBMITTED so the tutor knows subjective bits still need
+          // attention.
+          if (pendingCount === 0) {
+            await tx.testSubmission.update({
+              where: { id: submission.id },
+              data: {
+                status: "GRADED",
+                score: autoScore,
+              },
+            });
+          } else {
+            await tx.testSubmission.update({
+              where: { id: submission.id },
+              data: { score: autoScore },
+            });
+          }
+        });
+      }
+    }
+
     await prisma.activityLog.create({
       data: {
         userId: ctx.session.user.id,
@@ -580,4 +688,202 @@ export const exportTestJson = tutorActionClient
       filename: `${test.title.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 80) || "test"}.json`,
       json: JSON.stringify(payload, null, 2),
     };
+  });
+
+
+/* ------------------------------------------------------------------------- */
+/* deleteTestSubmission                                                       */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Tutor deletes a student's test submission. Ownership gate: the calling
+ * tutor must own the test the submission belongs to. Cascade: Prisma
+ * relations drop the linked Grade and QuestionGrades (both use onDelete:
+ * Cascade in schema.prisma).
+ */
+export const deleteTestSubmission = tutorActionClient
+  .schema(z.object({ id: CuidSchema }))
+  .action(async ({ parsedInput, ctx }) => {
+    const submission = await prisma.testSubmission.findUnique({
+      where: { id: parsedInput.id },
+      include: {
+        test: {
+          select: {
+            id: true,
+            courseId: true,
+            course: { select: { tutor: { select: { email: true } } } },
+          },
+        },
+      },
+    });
+    if (!submission) throw new Error("Submission not found");
+    if (submission.test.course.tutor.email !== ctx.session.user.email) {
+      throw new Error("You don't own this test");
+    }
+
+    await prisma.testSubmission.delete({ where: { id: parsedInput.id } });
+
+    revalidatePath(`/dashboard/tutor-tests/${submission.test.id}/submissions`);
+    revalidatePath(`/dashboard/courses/${submission.test.courseId}`);
+
+    return { id: parsedInput.id, testId: submission.test.id };
+  });
+
+/* ------------------------------------------------------------------------- */
+/* updateTestSubmissionStatus                                                 */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Tutor manually flips the status of a submission (e.g. mark LATE, roll
+ * back a GRADED submission to SUBMITTED so it re-enters the grading
+ * queue). Doesn't touch the Grade row — that's separate.
+ */
+export const updateTestSubmissionStatus = tutorActionClient
+  .schema(
+    z.object({
+      id: CuidSchema,
+      status: z.enum([
+        "IN_PROGRESS",
+        "SUBMITTED",
+        "GRADED",
+        "LATE",
+        "NOT_SUBMITTED",
+        "NOT_STARTED",
+      ]),
+    }),
+  )
+  .action(async ({ parsedInput, ctx }) => {
+    const submission = await prisma.testSubmission.findUnique({
+      where: { id: parsedInput.id },
+      include: {
+        test: {
+          select: {
+            id: true,
+            courseId: true,
+            course: { select: { tutor: { select: { email: true } } } },
+          },
+        },
+      },
+    });
+    if (!submission) throw new Error("Submission not found");
+    if (submission.test.course.tutor.email !== ctx.session.user.email) {
+      throw new Error("You don't own this test");
+    }
+
+    const updated = await prisma.testSubmission.update({
+      where: { id: parsedInput.id },
+      data: { status: parsedInput.status },
+      select: { id: true },
+    });
+
+    revalidatePath(
+      `/dashboard/tutor-tests/submissions/${submission.test.id}/${submission.studentId}`,
+    );
+    revalidatePath(`/dashboard/tutor-tests/${submission.test.id}/submissions`);
+
+    return { id: updated.id, status: parsedInput.status };
+  });
+
+
+/* ------------------------------------------------------------------------- */
+/* autoGradeSubmissionAction — tutor-triggered manual auto-grade              */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Runs the auto-grader against a submission on demand. Useful when the
+ * tutor didn't publish with releaseAutoMarksToStudent=true but wants to
+ * pre-fill scores from the answer keys anyway before doing subjective
+ * grading. Returns the counts so the UI can surface "N auto-marked, M
+ * pending".
+ */
+export const autoGradeSubmissionAction = tutorActionClient
+  .schema(z.object({ submissionId: CuidSchema }))
+  .action(async ({ parsedInput, ctx }) => {
+    const submission = await prisma.testSubmission.findUnique({
+      where: { id: parsedInput.submissionId },
+      include: {
+        test: {
+          select: {
+            id: true,
+            title: true,
+            courseId: true,
+            course: { select: { tutor: { select: { email: true } } } },
+          },
+        },
+      },
+    });
+    if (!submission) throw new Error("Submission not found");
+    if (submission.test.course.tutor.email !== ctx.session.user.email) {
+      throw new Error("You don't own this test");
+    }
+
+    const questions = await prisma.testQuestion.findMany({
+      where: { testId: submission.test.id },
+      select: {
+        id: true,
+        parentId: true,
+        order: true,
+        type: true,
+        points: true,
+        options: true,
+        answer: true,
+        matchPairs: true,
+        reorderItems: true,
+        blankCount: true,
+      },
+    });
+
+    const rawAnswers =
+      submission.answers &&
+      typeof submission.answers === "object" &&
+      !Array.isArray(submission.answers)
+        ? (submission.answers as Record<string, unknown>)
+        : {};
+
+    const { grades, autoScore, autoOutOf, autoCount, pendingCount } =
+      autoGradeSubmission(questions, rawAnswers);
+
+    if (grades.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        await tx.questionGrade.deleteMany({
+          where: { testSubmissionId: submission.id },
+        });
+        await tx.questionGrade.createMany({
+          data: grades.map((g) => ({
+            questionId: g.questionId,
+            score: g.score,
+            outOf: g.outOf,
+            feedback: g.feedback,
+            testSubmissionId: submission.id,
+          })),
+        });
+        await tx.grade.upsert({
+          where: { testSubmissionId: submission.id },
+          update: {
+            score: autoScore,
+            outOf: autoOutOf,
+            updatedAt: new Date(),
+          },
+          create: {
+            studentId: submission.studentId,
+            courseId: submission.test.courseId,
+            type: "TEST",
+            title: submission.test.title,
+            score: autoScore,
+            outOf: autoOutOf,
+            finalComments:
+              pendingCount > 0
+                ? `${pendingCount} question${pendingCount === 1 ? "" : "s"} still awaiting tutor review.`
+                : null,
+            testSubmissionId: submission.id,
+          },
+        });
+      });
+    }
+
+    revalidatePath(
+      `/dashboard/tutor-tests/submissions/${submission.test.id}/${submission.studentId}`,
+    );
+
+    return { autoCount, pendingCount, autoScore, autoOutOf };
   });

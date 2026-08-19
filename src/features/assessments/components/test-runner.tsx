@@ -303,7 +303,7 @@ export function TestRunner({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       {/* ───── Main pane ───── */}
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 bg-background/90 py-2 backdrop-blur">
           <div>
             <p className="text-muted-foreground text-xs">
               Question {currentIdx + 1} of {questions.length}
@@ -367,6 +367,7 @@ export function TestRunner({
           </div>
         </div>
 
+        <div className="max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
         <QuestionView
           question={current}
           path={String(currentIdx + 1)}
@@ -375,6 +376,7 @@ export function TestRunner({
           disabled={submitting || timeRemaining === 0}
           testId={testId}
         />
+        </div>
 
         <div className="flex items-center justify-between gap-3">
           <Button

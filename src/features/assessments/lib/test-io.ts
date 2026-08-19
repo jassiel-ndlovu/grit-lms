@@ -78,6 +78,7 @@ export const TestImportSchema = z.object({
   dueDate: z.string().min(1, "dueDate required"),
   timeLimit: z.number().int().positive().nullable().default(null),
   isActive: z.boolean().default(false),
+  releaseAutoMarksToStudent: z.boolean().default(false),
   preTestInstructions: z.string().nullable().default(null),
   questions: z.array(ImportQuestionSchema).default([]),
 });
@@ -96,6 +97,7 @@ export interface ParsedTestPayload {
   timeLimit: number | null;
   totalPoints: number;
   isActive: boolean;
+  releaseAutoMarksToStudent: boolean;
   questions: CreateTestQuestionTree[];
 }
 
@@ -167,6 +169,7 @@ export function parseTestJson(input: string | unknown): ParsedTestPayload {
     timeLimit: data.timeLimit,
     totalPoints: sumPoints(questions),
     isActive: data.isActive,
+    releaseAutoMarksToStudent: data.releaseAutoMarksToStudent,
     questions,
   };
 }
@@ -260,6 +263,12 @@ export function serializeTest(test: TestDetail): TestImportInput & {
     dueDate: test.dueDate.toISOString(),
     timeLimit: test.timeLimit,
     isActive: test.isActive,
+    // Cast: field exists in schema.prisma; `prisma generate` will surface
+    // it on the TestDetail type. Widen to unknown here until the client is
+    // regenerated to keep tsc quiet.
+    releaseAutoMarksToStudent:
+      (test as unknown as { releaseAutoMarksToStudent?: boolean })
+        .releaseAutoMarksToStudent ?? false,
     preTestInstructions: test.preTestInstructions,
     questions: top,
   };
@@ -300,6 +309,7 @@ Question text, options, and feedback are rendered with **react-markdown** +
   "dueDate": "ISO 8601 datetime, e.g. 2025-12-31T23:59:00Z",
   "timeLimit": 60,             // integer minutes, or null for untimed
   "isActive": false,           // true = publish, false = draft
+  "releaseAutoMarksToStudent": false, // true = auto-marks visible to students on submit
   "preTestInstructions": null, // string or null
   "questions": [ Question, ... ]
 }

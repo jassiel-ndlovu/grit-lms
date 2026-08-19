@@ -211,6 +211,7 @@ export const CreateTestWithQuestionsSchema = z.object({
   timeLimit: z.number().int().positive().nullable().default(null),
   totalPoints: z.number().int().nonnegative().default(0),
   isActive: z.boolean().default(false),
+  releaseAutoMarksToStudent: z.boolean().default(false),
   questions: z.array(CreateTestQuestionTreeSchema).default([]),
 });
 export type CreateTestWithQuestionsInput = z.infer<
@@ -232,6 +233,7 @@ export const UpdateTestWithQuestionsSchema = z.object({
   timeLimit: z.number().int().positive().nullable().optional(),
   totalPoints: z.number().int().nonnegative().optional(),
   isActive: z.boolean().optional(),
+  releaseAutoMarksToStudent: z.boolean().optional(),
   questions: z.array(CreateTestQuestionTreeSchema).optional(),
 });
 export type UpdateTestWithQuestionsInput = z.infer<
