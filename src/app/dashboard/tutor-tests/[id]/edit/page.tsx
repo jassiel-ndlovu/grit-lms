@@ -145,6 +145,8 @@ export default async function EditTestPage({ params }: PageProps) {
             timeLimit: test.timeLimit,
             totalPoints: test.totalPoints,
             isActive: test.isActive,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            releaseAutoMarksToStudent: (test as any).releaseAutoMarksToStudent ?? false,
             preTestInstructions: test.preTestInstructions,
             questions: editorQuestions,
           }}

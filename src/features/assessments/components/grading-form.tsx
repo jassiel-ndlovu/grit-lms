@@ -41,6 +41,9 @@ export type GradingQuestion = {
   blankCount: number | null;
   reorderItems: string[];
   matchPairs: unknown;
+  // Tutor's correct-answer key from test creation — displayed alongside
+  // the student's answer so the tutor can compare at a glance.
+  correctAnswer: unknown;
   subQuestions: GradingQuestion[];
 };
 
@@ -376,11 +379,23 @@ function QuestionCard({
 
       {!isContext && (
         <>
-          <div>
-            <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
-              Student answer
-            </p>
-            <AnswerView type={q.type} value={answer} />
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-600">
+                Student answer
+              </p>
+              <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+                <AnswerView type={q.type} value={answer} />
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-emerald-700">
+                Correct answer
+              </p>
+              <div className="rounded-md border border-emerald-200 bg-emerald-50/60 p-3">
+                <CorrectAnswerView q={q} />
+              </div>
+            </div>
           </div>
 
           <Separator />
@@ -544,3 +559,104 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
   }
 }
 
+
+
+/* ─── CorrectAnswerView — tutor-side key display ─────────────────────── */
+
+function CorrectAnswerView({ q }: { q: GradingQuestion }) {
+  switch (q.type) {
+    case "MULTIPLE_CHOICE":
+    case "TRUE_FALSE":
+    case "SHORT_ANSWER":
+    case "NUMERIC": {
+      const val = q.correctAnswer;
+      if (val == null || (typeof val === "string" && val.trim() === "")) {
+        return (
+          <p className="text-muted-foreground italic text-xs">
+            No key set — grade manually.
+          </p>
+        );
+      }
+      return (
+        <div className="text-foreground text-sm">
+          <LessonMarkdown content={String(val)} className="prose-sm" />
+        </div>
+      );
+    }
+    case "MULTI_SELECT": {
+      const arr = Array.isArray(q.correctAnswer) ? (q.correctAnswer as string[]) : [];
+      if (arr.length === 0) {
+        return <p className="text-muted-foreground italic text-xs">No key set.</p>;
+      }
+      return (
+        <ul className="text-foreground text-sm list-disc pl-5 space-y-0.5">
+          {arr.map((v, i) => (
+            <li key={i}>
+              <LessonMarkdown content={v} className="prose-sm" />
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    case "FILL_IN_THE_BLANK": {
+      const arr = Array.isArray(q.correctAnswer) ? (q.correctAnswer as string[]) : [];
+      if (arr.length === 0) {
+        return <p className="text-muted-foreground italic text-xs">No key set.</p>;
+      }
+      return (
+        <ol className="text-foreground text-sm list-decimal pl-5 space-y-0.5">
+          {arr.map((v, i) => (
+            <li key={i}>{v}</li>
+          ))}
+        </ol>
+      );
+    }
+    case "REORDER": {
+      const arr = q.reorderItems ?? [];
+      if (arr.length === 0) {
+        return <p className="text-muted-foreground italic text-xs">No key set.</p>;
+      }
+      return (
+        <ol className="text-foreground text-sm list-decimal pl-5 space-y-0.5">
+          {arr.map((v, i) => (
+            <li key={i}>
+              <LessonMarkdown content={v} className="prose-sm" />
+            </li>
+          ))}
+        </ol>
+      );
+    }
+    case "MATCHING": {
+      const pairs = (q.matchPairs ?? []) as Array<{ left: string; right: string }>;
+      if (pairs.length === 0) {
+        return <p className="text-muted-foreground italic text-xs">No pairs set.</p>;
+      }
+      return (
+        <ul className="text-foreground text-sm space-y-1">
+          {pairs.map((p, i) => (
+            <li key={i} className="flex items-center gap-2">
+              <span className="min-w-0">
+                <LessonMarkdown content={p.left} className="prose-sm" />
+              </span>
+              <span className="text-muted-foreground text-xs">→</span>
+              <span className="min-w-0">
+                <LessonMarkdown content={p.right} className="prose-sm" />
+              </span>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    case "ESSAY":
+    case "CODE":
+    case "FILE_UPLOAD":
+    case "NONE":
+      return (
+        <p className="text-muted-foreground italic text-xs">
+          Subjective — no fixed key. Grade using your own criteria.
+        </p>
+      );
+    default:
+      return null;
+  }
+}

@@ -33,6 +33,8 @@ import {
   GradingForm,
   type GradingQuestion,
 } from "@/features/assessments/components/grading-form";
+import { SubmissionAdminPanel } from "@/features/assessments/components/submission-admin-panel";
+import { AutoGradeButton } from "@/features/assessments/components/auto-grade-button";
 
 interface PageProps {
   params: Promise<{ testId: string; studentId: string }>;
@@ -83,6 +85,7 @@ function buildTree(all: TestDetail["questions"]): GradingQuestion[] {
       blankCount: q.blankCount,
       reorderItems: q.reorderItems,
       matchPairs: q.matchPairs,
+      correctAnswer: q.answer,
       subQuestions: build(q.id),
     }));
   }
@@ -240,6 +243,17 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
             )}
           </div>
         </header>
+
+        <div className="flex justify-end">
+          <AutoGradeButton submissionId={submission.id} />
+        </div>
+
+        <SubmissionAdminPanel
+          submissionId={submission.id}
+          testId={test.id}
+          studentName={student.fullName}
+          initialStatus={submission.status as "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "GRADED" | "LATE" | "NOT_SUBMITTED"}
+        />
 
         <GradingForm
           submissionId={submission.id}
