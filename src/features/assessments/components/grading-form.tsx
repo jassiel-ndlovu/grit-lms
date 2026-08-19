@@ -188,21 +188,27 @@ export function GradingForm({
 
   /* ─── Handlers ─── */
 
-  function updateScore(qid: string, next: string) {
+  // Stable callbacks — React.memo on QuestionCard relies on these keeping
+  // referential identity across renders so unchanged cards can skip an
+  // expensive MathJax re-typeset when the tutor is typing elsewhere.
+  const updateScore = React.useCallback((qid: string, next: string) => {
     setPerQ((prev) => ({
       ...prev,
       [qid]: { ...(prev[qid] ?? { score: "", feedback: "" }), score: next },
     }));
-  }
-  function updateFeedback(qid: string, next: string) {
+  }, []);
+  const updateFeedback = React.useCallback((qid: string, next: string) => {
     setPerQ((prev) => ({
       ...prev,
       [qid]: { ...(prev[qid] ?? { score: "", feedback: "" }), feedback: next },
     }));
-  }
-  function assignFull(qid: string, points: number) {
-    updateScore(qid, String(points));
-  }
+  }, []);
+  const assignFull = React.useCallback(
+    (qid: string, points: number) => {
+      updateScore(qid, String(points));
+    },
+    [updateScore],
+  );
 
   async function onSubmit() {
     if (outOfTotal <= 0) {
@@ -254,9 +260,9 @@ export function GradingForm({
           answer={answers[r.q.id]}
           score={perQ[r.q.id]?.score ?? ""}
           feedback={perQ[r.q.id]?.feedback ?? ""}
-          onScore={(v) => updateScore(r.q.id, v)}
-          onFeedback={(v) => updateFeedback(r.q.id, v)}
-          onAssignFull={() => assignFull(r.q.id, r.q.points)}
+          onScore={updateScore}
+          onFeedback={updateFeedback}
+          onAssignFull={assignFull}
         />
       ))}
 
@@ -336,7 +342,12 @@ export function GradingForm({
 /* QuestionCard                                                              */
 /* ──────────────────────────────────────────────────────────────────────── */
 
-function QuestionCard({
+/**
+ * Memoized so typing in one question's score / feedback input doesn't
+ * re-render every other card (which would trigger a full MathJax
+ * re-typeset per card and feel like buffering).
+ */
+const QuestionCard = React.memo(function QuestionCard({
   row,
   answer,
   score,
@@ -349,9 +360,9 @@ function QuestionCard({
   answer: unknown;
   score: string;
   feedback: string;
-  onScore: (v: string) => void;
-  onFeedback: (v: string) => void;
-  onAssignFull: () => void;
+  onScore: (qid: string, v: string) => void;
+  onFeedback: (qid: string, v: string) => void;
+  onAssignFull: (qid: string, points: number) => void;
 }) {
   const { q, path, depth, gradable } = row;
   const isContext = !gradable;
@@ -374,7 +385,7 @@ function QuestionCard({
             ? `Context ${path}`
             : `Question ${path} · ${q.points} ${q.points === 1 ? "point" : "points"}`}
         </p>
-        <LessonMarkdown content={q.question} />
+        <LessonMarkdown content={q.question} dynamic={false} />
       </div>
 
       {!isContext && (
@@ -410,7 +421,7 @@ function QuestionCard({
                   type="number"
                   className="h-9 w-20 text-right tabular-nums"
                   value={score}
-                  onChange={(e) => onScore(e.target.value)}
+                  onChange={(e) => onScore(row.q.id, e.target.value)}
                   min={0}
                   max={q.points}
                   placeholder="0"
@@ -422,7 +433,7 @@ function QuestionCard({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={onAssignFull}
+                  onClick={() => onAssignFull(row.q.id, row.q.points)}
                   title="Give full marks"
                   className="text-brand-terracotta"
                 >
@@ -438,7 +449,7 @@ function QuestionCard({
               <Textarea
                 rows={3}
                 value={feedback}
-                onChange={(e) => onFeedback(e.target.value)}
+                onChange={(e) => onFeedback(row.q.id, e.target.value)}
                 placeholder="Optional — markdown + LaTeX supported."
               />
             </div>
@@ -447,7 +458,7 @@ function QuestionCard({
       )}
     </Card>
   );
-}
+});
 
 /* ──────────────────────────────────────────────────────────────────────── */
 /* AnswerView — mirrors the read-only renderer on the grade review page.     */
@@ -579,7 +590,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
       }
       return (
         <div className="text-foreground text-sm">
-          <LessonMarkdown content={String(val)} className="prose-sm" />
+          <LessonMarkdown content={String(val)} className="prose-sm" dynamic={false} />
         </div>
       );
     }
@@ -592,7 +603,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
         <ul className="text-foreground text-sm list-disc pl-5 space-y-0.5">
           {arr.map((v, i) => (
             <li key={i}>
-              <LessonMarkdown content={v} className="prose-sm" />
+              <LessonMarkdown content={v} className="prose-sm" dynamic={false} />
             </li>
           ))}
         </ul>
@@ -620,7 +631,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
         <ol className="text-foreground text-sm list-decimal pl-5 space-y-0.5">
           {arr.map((v, i) => (
             <li key={i}>
-              <LessonMarkdown content={v} className="prose-sm" />
+              <LessonMarkdown content={v} className="prose-sm" dynamic={false} />
             </li>
           ))}
         </ol>
@@ -636,11 +647,11 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
           {pairs.map((p, i) => (
             <li key={i} className="flex items-center gap-2">
               <span className="min-w-0">
-                <LessonMarkdown content={p.left} className="prose-sm" />
+                <LessonMarkdown content={p.left} className="prose-sm" dynamic={false} />
               </span>
               <span className="text-muted-foreground text-xs">→</span>
               <span className="min-w-0">
-                <LessonMarkdown content={p.right} className="prose-sm" />
+                <LessonMarkdown content={p.right} className="prose-sm" dynamic={false} />
               </span>
             </li>
           ))}

@@ -94,6 +94,114 @@ async function createQuestionTree(
   }
 }
 
+/**
+ * Diff-based upsert for a test's question tree.
+ *
+ *   - Walks the incoming tree depth-first.
+ *   - When a node carries an `id` (from the editor's "id:<dbId>"
+ *     clientId prefix), UPDATE that row in place — keeping the DB id
+ *     stable so student answers keyed by that id remain linked.
+ *   - When a node lacks an `id`, CREATE a new row.
+ *   - After the walk, DELETE any pre-existing question row whose id
+ *     wasn't in the incoming set. That covers questions the tutor
+ *     removed from the editor.
+ *
+ * Runs inside the same transaction as the surrounding update, so a
+ * partial failure rolls the whole tree back.
+ */
+async function upsertQuestionTree(
+  tx: Prisma.TransactionClient,
+  testId: string,
+  nodes: CreateTestQuestionTree[],
+): Promise<void> {
+  // Collect all incoming ids across the tree first so we can compute the
+  // "to-delete" set at the end without re-walking.
+  const keptIds = new Set<string>();
+  function collectIds(list: CreateTestQuestionTree[]): void {
+    for (const n of list) {
+      if (n.id) keptIds.add(n.id);
+      if (n.subQuestions && n.subQuestions.length > 0) collectIds(n.subQuestions);
+    }
+  }
+  collectIds(nodes);
+
+  // Recursive walk that either updates in place or creates fresh, then
+  // recurses into subQuestions with the freshly-known parent id.
+  async function walk(
+    list: CreateTestQuestionTree[],
+    parentId: string | null,
+  ): Promise<void> {
+    for (const node of list) {
+      const data = {
+        testId,
+        parentId,
+        order: node.order ?? null,
+        question: node.question,
+        type: node.type,
+        points: node.points,
+        options: node.options ?? [],
+        answer:
+          node.answer === undefined
+            ? Prisma.JsonNull
+            : (node.answer as Prisma.InputJsonValue),
+        language: node.language ?? null,
+        matchPairs:
+          node.matchPairs === undefined
+            ? Prisma.JsonNull
+            : (node.matchPairs as Prisma.InputJsonValue),
+        reorderItems: node.reorderItems ?? [],
+        blankCount: node.blankCount ?? null,
+      };
+
+      let currentId: string;
+      if (node.id) {
+        // Verify the id belongs to this test before updating — protects
+        // against forged ids from a bad payload.
+        const existing = await tx.testQuestion.findFirst({
+          where: { id: node.id, testId },
+          select: { id: true },
+        });
+        if (existing) {
+          const updated = await tx.testQuestion.update({
+            where: { id: node.id },
+            data,
+            select: { id: true },
+          });
+          currentId = updated.id;
+        } else {
+          const created = await tx.testQuestion.create({
+            data,
+            select: { id: true },
+          });
+          currentId = created.id;
+          keptIds.add(created.id);
+        }
+      } else {
+        const created = await tx.testQuestion.create({
+          data,
+          select: { id: true },
+        });
+        currentId = created.id;
+        keptIds.add(created.id);
+      }
+
+      if (node.subQuestions && node.subQuestions.length > 0) {
+        await walk(node.subQuestions, currentId);
+      }
+    }
+  }
+  await walk(nodes, null);
+
+  // Sweep: delete any question this test used to have that wasn't in the
+  // incoming tree. QuestionGrade / UploadedFile rows cascade via Prisma
+  // relations, so student answers for those specific questions are
+  // dropped — which is the semantic the tutor asked for by removing
+  // the question.
+  await tx.testQuestion.deleteMany({
+    where: { testId, id: { notIn: Array.from(keptIds) } },
+  });
+}
+
 /* ------------------------------------------------------------------------- */
 /* createTest                                                                 */
 /* ------------------------------------------------------------------------- */
@@ -122,6 +230,9 @@ export const createTest = tutorActionClient
           timeLimit: parsedInput.timeLimit,
           totalPoints: parsedInput.totalPoints,
           isActive: parsedInput.isActive,
+          // Cast lets us write the new column before `prisma generate`
+          // picks it up in the DB client's TS types.
+          ...({ releaseAutoMarksToStudent: parsedInput.releaseAutoMarksToStudent } as Record<string, unknown>),
         },
         select: { id: true, title: true, courseId: true, isActive: true },
       });
@@ -181,6 +292,12 @@ export const updateTest = tutorActionClient
     if (parsedInput.timeLimit !== undefined) data.timeLimit = parsedInput.timeLimit;
     if (parsedInput.totalPoints !== undefined) data.totalPoints = parsedInput.totalPoints;
     if (parsedInput.isActive !== undefined) data.isActive = parsedInput.isActive;
+    if (parsedInput.releaseAutoMarksToStudent !== undefined) {
+      // Cast: field exists in prisma/schema.prisma but the generated
+      // client won't type-check the property until `prisma generate` runs.
+      (data as Record<string, unknown>).releaseAutoMarksToStudent =
+        parsedInput.releaseAutoMarksToStudent;
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       const t = await tx.test.update({
@@ -190,11 +307,14 @@ export const updateTest = tutorActionClient
       });
 
       if (parsedInput.questions !== undefined) {
-        // Replace the tree atomically. Cascade deletes the sub-question rows.
-        await tx.testQuestion.deleteMany({ where: { testId: t.id } });
-        if (parsedInput.questions.length > 0) {
-          await createQuestionTree(tx, t.id, parsedInput.questions);
-        }
+        // Diff-based upsert. Prior implementation wiped every question row
+        // on every edit, which meant question IDs churned and any student
+        // answers keyed by the old IDs became orphaned — the review page
+        // then showed "No answer recorded" even though the JSON payload
+        // was intact in the DB. This preserves the id when the editor
+        // sends one back (`id:<dbId>` in clientId round-trips through
+        // schemas.ts as CreateTestQuestionTree.id).
+        await upsertQuestionTree(tx, t.id, parsedInput.questions);
       }
 
       return t;

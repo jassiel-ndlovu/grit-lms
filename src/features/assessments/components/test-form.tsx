@@ -80,9 +80,16 @@ function splitDate(d: Date): { date: string; time: string } {
 
 const SUB_LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
-/** Strip the client-only `clientId` field before sending to the server. */
+/** Strip the client-only `clientId` field before sending to the server.
+ *  When the clientId encodes a DB id ("id:<dbId>") we forward that id
+ *  so updateTest can UPDATE the question in place instead of deleting
+ *  and recreating it — which would orphan any student answers keyed by
+ *  the old id. */
 function toServerTree(qs: EditorQuestion[]): unknown[] {
   return qs.map((q) => ({
+    // Preserve the DB id for existing questions so student answers stay
+    // linked. New questions omit this and get a fresh cuid on insert.
+    id: q.clientId.startsWith("id:") ? q.clientId.slice(3) : undefined,
     question: q.question,
     type: q.type,
     points: q.points,

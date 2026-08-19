@@ -166,6 +166,8 @@ export type DeleteTestInput = z.infer<typeof DeleteTestSchema>;
  * tree into a flat insert with parentId pointers.
  */
 export type CreateTestQuestionTree = {
+  /** Existing DB id when the tutor is editing; absent for new questions. */
+  id?: string;
   question: string;
   type: z.infer<typeof QuestionTypeSchema>;
   points: number;
@@ -182,6 +184,7 @@ export type CreateTestQuestionTree = {
 export const CreateTestQuestionTreeSchema: z.ZodType<CreateTestQuestionTree> =
   z.lazy(() =>
     z.object({
+      id: CuidSchema.optional(),
       question: NonEmptyString,
       type: QuestionTypeSchema,
       points: z.number().int().nonnegative(),
