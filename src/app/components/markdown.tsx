@@ -21,6 +21,15 @@ import { MathJax } from "better-react-mathjax";
 import { cn } from "@/lib/utils";
 
 export interface LessonMarkdownProps {
+  /**
+   * When true, MathJax re-typesets on every render — needed when the
+   * `content` prop is expected to change (e.g. lesson authoring preview).
+   * When false, typeset happens once on mount and skips subsequent renders,
+   * which matters for read-only content inside a form: any parent re-render
+   * (typing in a score input, for example) would otherwise cost a full
+   * MathJax pass per card. Default true to preserve existing call sites.
+   */
+  dynamic?: boolean;
   content?: string;
   /** Override prose width / colour overrides if the caller needs to. */
   className?: string;
@@ -44,9 +53,10 @@ export default function LessonMarkdown({
   content = "",
   className,
   maxImageWidth = "100%",
+  dynamic = true,
 }: LessonMarkdownProps) {
   return (
-    <MathJax dynamic>
+    <MathJax dynamic={dynamic}>
       <div
         className={cn(
           "prose prose-sm max-w-none break-words leading-relaxed text-foreground",
