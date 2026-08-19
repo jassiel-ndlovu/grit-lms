@@ -18,9 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, sanitizeFilename } from "@/lib/blob/paths";
 import { cn } from "@/lib/utils";
+import LessonMarkdown from "@/app/components/markdown";
 
 type QuestionType =
   | "MULTIPLE_CHOICE"
@@ -138,7 +140,7 @@ function MultipleChoice({ question, value, onChange, disabled }: QuestionRendere
           >
             <span
               className={cn(
-                "flex size-4 items-center justify-center rounded-full border",
+                "flex size-4 items-center justify-center rounded-full border shrink-0",
                 active
                   ? "border-brand-terracotta bg-brand-terracotta"
                   : "border-muted-foreground/40",
@@ -146,7 +148,9 @@ function MultipleChoice({ question, value, onChange, disabled }: QuestionRendere
             >
               {active && <span className="size-1.5 rounded-full bg-primary-foreground" />}
             </span>
-            {opt}
+            <span className="min-w-0 flex-1">
+              <LessonMarkdown content={opt} className="prose-sm" />
+            </span>
           </button>
         );
       })}
@@ -262,7 +266,7 @@ function MultiSelect({ question, value, onChange, disabled }: QuestionRendererPr
           >
             <span
               className={cn(
-                "flex size-4 items-center justify-center rounded-sm border",
+                "flex size-4 items-center justify-center rounded-sm border shrink-0",
                 active
                   ? "border-brand-terracotta bg-brand-terracotta"
                   : "border-muted-foreground/40",
@@ -274,7 +278,9 @@ function MultiSelect({ question, value, onChange, disabled }: QuestionRendererPr
                 </svg>
               )}
             </span>
-            {opt}
+            <span className="min-w-0 flex-1">
+              <LessonMarkdown content={opt} className="prose-sm" />
+            </span>
           </button>
         );
       })}
@@ -331,7 +337,7 @@ function Reorder({ question, value, onChange, disabled }: QuestionRendererProps)
           className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-sm"
         >
           <span className="text-muted-foreground tabular-nums w-5 text-xs">{i + 1}</span>
-          <span className="flex-1 text-foreground">{item}</span>
+          <span className="min-w-0 flex-1 text-foreground"><LessonMarkdown content={item} className="prose-sm" /></span>
           <div className="flex gap-1">
             <Button type="button" variant="outline" size="sm" onClick={() => move(i, -1)} disabled={disabled || i === 0}>
               ↑
@@ -371,18 +377,25 @@ function Matching({ question, value, onChange, disabled }: QuestionRendererProps
     <div className="space-y-2">
       {leftItems.map((left) => (
         <div key={left} className="grid grid-cols-2 items-center gap-3 rounded-md border border-border bg-card p-3">
-          <span className="text-sm text-foreground">{left}</span>
-          <select
+          <div className="min-w-0 text-sm text-foreground">
+            <LessonMarkdown content={left} className="prose-sm" />
+          </div>
+          <Select
             value={getRight(left)}
-            onChange={(e) => setRight(left, e.target.value)}
+            onValueChange={(v) => setRight(left, v)}
             disabled={disabled}
-            className="border-input bg-background h-9 rounded-md border px-2 text-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >
-            <option value="">Select match</option>
-            {rightOptions.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select match" />
+            </SelectTrigger>
+            <SelectContent>
+              {rightOptions.map((r) => (
+                <SelectItem key={r} value={r}>
+                  <LessonMarkdown content={r} className="prose-sm" />
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       ))}
     </div>

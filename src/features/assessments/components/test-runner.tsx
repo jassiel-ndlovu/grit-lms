@@ -69,7 +69,12 @@ export interface TestRunnerProps {
   startedAt: Date;
 }
 
-const SAVE_DEBOUNCE_MS = 3000;
+// Shorter debounce = quicker recovery from accidental refreshes.
+// MAX_WAIT_MS is the ceiling: if the user has been typing continuously
+// (essay questions, code answers) for this long, we force a save even
+// though the debounce hasn't settled yet.
+const SAVE_DEBOUNCE_MS = 1200;
+const SAVE_MAX_WAIT_MS = 15000;
 
 function formatTime(seconds: number): string {
   if (seconds < 0) seconds = 0;
@@ -117,6 +122,11 @@ export function TestRunner({
   const answersRef = React.useRef(answers);
   answersRef.current = answers;
 
+  // Timestamp of the last successful save. Used by the debounce effect to
+  // enforce SAVE_MAX_WAIT_MS so a continuously-typing student never goes
+  // longer than that window without a save.
+  const lastSavedAtRef = React.useRef<number>(Date.now());
+
   /* ───── Online/offline ───── */
   React.useEffect(() => {
     setOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -143,11 +153,21 @@ export function TestRunner({
     return Math.max(0, timeLimit * 60 - elapsedSec);
   }, [now, startedAt, timeLimit]);
 
-  /* ───── Debounced draft save ───── */
+  /* ───── Debounced draft save (with max-wait ceiling) ───── */
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => {
     if (submitting) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+
+    // If the user has been changing answers for longer than the max-wait
+    // ceiling without a successful save, fire immediately instead of
+    // waiting for the debounce to settle. This catches long-form answers
+    // (essays / code) where continuous typing would otherwise starve the
+    // debounce indefinitely.
+    const elapsed = Date.now() - lastSavedAtRef.current;
+    const delay =
+      elapsed >= SAVE_MAX_WAIT_MS ? 0 : SAVE_DEBOUNCE_MS;
+
     saveTimer.current = setTimeout(async () => {
       setSaving(true);
       try {
@@ -157,17 +177,43 @@ export function TestRunner({
         });
         if (result?.serverError) {
           console.warn("[TestRunner] draft save failed:", result.serverError);
+        } else {
+          lastSavedAtRef.current = Date.now();
         }
       } catch {
         /* best-effort */
       } finally {
         setSaving(false);
       }
-    }, SAVE_DEBOUNCE_MS);
+    }, delay);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [answers, submissionId, submitting]);
+
+  /* ───── Save on tab hidden / page unload ───── */
+  React.useEffect(() => {
+    function flushOnHide() {
+      if (submitting) return;
+      // Fire-and-forget; the browser may kill the request but this is best
+      // we can do without a Service Worker.
+      void saveTestAnswersDraft({
+        submissionId,
+        answers: answersRef.current,
+      }).then((result) => {
+        if (!result?.serverError) lastSavedAtRef.current = Date.now();
+      });
+    }
+    function onVisibility() {
+      if (document.visibilityState === "hidden") flushOnHide();
+    }
+    window.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("beforeunload", flushOnHide);
+    return () => {
+      window.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("beforeunload", flushOnHide);
+    };
+  }, [submissionId, submitting]);
 
   /* ───── Flush save (immediate, used by nav) ───── */
   const saveNow = React.useCallback(async () => {
@@ -184,6 +230,8 @@ export function TestRunner({
       });
       if (result?.serverError) {
         console.warn("[TestRunner] flush save failed:", result.serverError);
+      } else {
+        lastSavedAtRef.current = Date.now();
       }
     } catch {
       /* best-effort */
@@ -289,6 +337,33 @@ export function TestRunner({
                 {formatTime(timeRemaining)}
               </Badge>
             )}
+            {/* Ribbon-level Save + Submit. Save flushes the debounce so the
+                student can force a checkpoint before stepping away; Submit
+                fires the same onSubmit path the bottom-of-page button uses. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={saveNow}
+              disabled={submitting || saving}
+              title="Save progress"
+            >
+              <Save className="size-4" />
+              Save
+            </Button>
+            <Button
+              type="button"
+              variant="brand"
+              size="sm"
+              onClick={() => onSubmit(false)}
+              disabled={submitting}
+              title="Submit test"
+            >
+              {submitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              Submit
+            </Button>
           </div>
         </div>
 
