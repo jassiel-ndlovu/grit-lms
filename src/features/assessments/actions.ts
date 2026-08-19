@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Assessment (Test) Server Actions — typed mutations callable from forms.
  *

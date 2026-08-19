@@ -150,6 +150,11 @@ model Test {
   preTestInstructions  String?
   timeLimit            Int?
   totalPoints          Int
+  // When true, the auto-marker runs at submit time AND the resulting
+  // grade is visible to the student immediately. When false the tutor
+  // still gets an auto-grade suggestion in the grading UI, but the
+  // student sees no grade until the tutor releases it.
+  releaseAutoMarksToStudent Boolean            @default(false)
   AssessmentCompletion AssessmentCompletion[]
   course               Course                 @relation(fields: [courseId], references: [id])
   questions            TestQuestion[]
