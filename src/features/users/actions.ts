@@ -17,11 +17,17 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
-import { tutorActionClient } from "@/lib/safe-action";
+import {
+  authActionClient,
+  tutorActionClient,
+} from "@/lib/safe-action";
 
 import {
+  ChangeOwnPasswordSchema,
   CreateStudentUserSchema,
   ResetUserPasswordSchema,
+  UpdateOwnPreferencesSchema,
+  UpdateOwnProfileSchema,
 } from "./schemas";
 
 const BCRYPT_ROUNDS = 10;
@@ -97,4 +103,106 @@ export const resetUserPassword = tutorActionClient
     revalidatePath("/dashboard/manage-users");
 
     return { user };
+  });
+
+/* ------------------------------------------------------------------------- */
+/* Self-service — any signed-in user                                          */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Update the signed-in user's own profile. Applies to both the User row
+ * (name) and the linked Student/Tutor row (fullName + bio/imageUrl per
+ * role). Bio is tutor-only; imageUrl maps to `imageUrl` for students and
+ * `profileImageUrl` for tutors.
+ */
+export const updateOwnProfile = authActionClient
+  .schema(UpdateOwnProfileSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const email = ctx.session.user.email.toLowerCase();
+    const fullName = parsedInput.fullName.trim();
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { email },
+        data: { name: fullName },
+      });
+
+      if (ctx.session.user.role === "STUDENT") {
+        await tx.student.update({
+          where: { email },
+          data: {
+            fullName,
+            ...(parsedInput.imageUrl !== undefined
+              ? { imageUrl: parsedInput.imageUrl }
+              : {}),
+          },
+        });
+      } else if (ctx.session.user.role === "TUTOR") {
+        await tx.tutor.update({
+          where: { email },
+          data: {
+            fullName,
+            ...(parsedInput.bio !== undefined ? { bio: parsedInput.bio } : {}),
+            ...(parsedInput.imageUrl !== undefined
+              ? { profileImageUrl: parsedInput.imageUrl }
+              : {}),
+          },
+        });
+      }
+    });
+
+    revalidatePath("/dashboard/profile");
+    revalidatePath("/dashboard");
+    return { ok: true };
+  });
+
+/**
+ * Change the signed-in user's password. Verifies the current password
+ * before updating; the schema already enforces new === confirm.
+ */
+export const changeOwnPassword = authActionClient
+  .schema(ChangeOwnPasswordSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const email = ctx.session.user.email.toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, password: true },
+    });
+    if (!user) throw new Error("Account not found");
+
+    const ok = await bcrypt.compare(parsedInput.currentPassword, user.password);
+    if (!ok) throw new Error("Current password is incorrect");
+
+    const hashed = await bcrypt.hash(parsedInput.newPassword, BCRYPT_ROUNDS);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed },
+    });
+
+    return { ok: true };
+  });
+
+/**
+ * Upsert the signed-in user's preferences. Preferences default to Prisma
+ * defaults on create; on update only supplied fields are patched.
+ */
+export const updateOwnPreferences = authActionClient
+  .schema(UpdateOwnPreferencesSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const user = await prisma.user.findUnique({
+      where: { email: ctx.session.user.email.toLowerCase() },
+      select: { id: true },
+    });
+    if (!user) throw new Error("Account not found");
+
+    await prisma.userPreferences.upsert({
+      where: { userId: user.id },
+      // On create we still write timeZone as null so the column is set;
+      // Prisma applies its own defaults for the rest.
+      create: { userId: user.id, timeZone: null, ...parsedInput },
+      update: parsedInput,
+    });
+
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
   });
