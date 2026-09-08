@@ -107,9 +107,12 @@ export default async function CourseLessonsPage({
       : null;
 
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-      {/* Sidebar */}
-      <aside className="space-y-4">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-6 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+      {/* Sidebar — sticky at the top of the viewport (with its own overflow)
+          so long lesson bodies never orphan the lesson list. The height cap
+          gives the internal <ul> room to scroll while the back-button and
+          progress bar above stay visible. */}
+      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/courses/${courseId}`}>
             <ArrowLeft className="size-4" /> Back to course
@@ -151,7 +154,10 @@ export default async function CourseLessonsPage({
       <main className="min-w-0 space-y-6">
         {selectedLesson ? (
           <>
-            <div className="space-y-3">
+            {/* Sticky lesson header — badge, title, prev/next, mark-complete.
+                Stays pinned as the student reads through long lessons. The
+                backdrop keeps it legible over content that scrolls under it. */}
+            <div className="bg-background/95 sticky top-20 z-20 -mx-1 space-y-3 px-1 pt-2 pb-3 backdrop-blur">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">
                   Lesson {selectedIndex + 1} of {total}
