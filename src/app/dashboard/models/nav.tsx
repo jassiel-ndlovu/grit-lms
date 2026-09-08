@@ -32,6 +32,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   Award,
+  BarChart3,
   Bell,
   BookOpen,
   Calendar,
@@ -45,6 +46,7 @@ import {
   PenTool,
   Settings,
   User,
+  UserCog,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -78,6 +80,8 @@ const TUTOR_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { icon: Calendar, label: "Schedule", link: "/dashboard/calendar", description: "Events" },
   { icon: FileText, label: "Tests", link: "/dashboard/tutor-tests", description: "Grading" },
   { icon: PenTool, label: "Submissions", link: "/dashboard/submissions", description: "Review" },
+  { icon: BarChart3, label: "Analytics", link: "/dashboard/analytics", description: "Class performance" },
+  { icon: UserCog, label: "Users", link: "/dashboard/manage-users", description: "Manage accounts" },
   { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 
