@@ -6,6 +6,7 @@
  * client components in one role-branched RSC page.
  */
 
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 
@@ -25,25 +26,14 @@ import { SubmissionGrid } from "@/features/submissions/components/submission-gri
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { TutorSubmissionActions } from "@/features/submissions/components/tutor-submission-actions";
+import { TestsTabs } from "@/features/assessments/components/tests-tabs";
+import {
+  bucketCounts,
+  filterByBucket,
+  type FilterBucket,
+} from "@/features/assessments/lib/filters";
 
 export const metadata = { title: "Submissions" };
-
-// Sort assignments so the student sees items requiring action first, then
-// awaiting-grade, then completed. Mirrors the ordering on /dashboard/tests.
-const SUBMISSION_STATUS_ORDER: Record<string, number> = {
-  IN_PROGRESS: 0,
-  NOT_STARTED: 1,
-  NOT_SUBMITTED: 1,
-  LATE: 2,
-  SUBMITTED: 3,
-  GRADED: 4,
-};
-function statusKey(status: string | null | undefined, dueDate: Date): string {
-  if (!status) {
-    return dueDate.getTime() < Date.now() ? "LATE" : "NOT_STARTED";
-  }
-  return status;
-}
 
 export default async function SubmissionsIndexPage() {
   const session = await auth();
@@ -67,74 +57,108 @@ export default async function SubmissionsIndexPage() {
       subs.map((s) => getEntryByStudentAndSubmission(student.id, s.id)),
     );
 
-    // Zip + sort by status priority so needs-action items float to the top.
-    const rows = subs
-      .map((sub, i) => ({ sub, entry: entries[i] }))
-      .sort((a, b) => {
-        const aStatus = statusKey(a.entry?.status, a.sub.dueDate);
-        const bStatus = statusKey(b.entry?.status, b.sub.dueDate);
-        const orderDiff =
-          (SUBMISSION_STATUS_ORDER[aStatus] ?? 5) -
-          (SUBMISSION_STATUS_ORDER[bStatus] ?? 5);
-        if (orderDiff !== 0) return orderDiff;
-        return a.sub.dueDate.getTime() - b.sub.dueDate.getTime();
-      });
+    const rows = subs.map((sub, i) => ({
+      sub,
+      entry: entries[i],
+      dueDate: sub.dueDate,
+      status: entries[i]?.status ?? "NOT_STARTED",
+    }));
 
-    return (
-      <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
-        <header>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
-            Submissions
-          </h1>
-          <p className="text-muted-foreground mt-1.5 text-sm">
-            Active assignments across your courses.
-          </p>
-        </header>
+    const counts = bucketCounts(rows);
 
+    function renderBucket(b: FilterBucket) {
+      const filtered = filterByBucket(rows, b).sort(
+        (x, y) => x.sub.dueDate.getTime() - y.sub.dueDate.getTime(),
+      );
+      return (
         <SubmissionGrid
-          isEmpty={subs.length === 0}
+          isEmpty={filtered.length === 0}
           empty={
             <div className="border-input rounded-lg border border-dashed p-12 text-center">
               <Pencil className="text-muted-foreground mx-auto size-10" />
               <h3 className="font-display mt-3 text-lg text-foreground">
-                Nothing to submit
+                Nothing here
               </h3>
               <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
-                Assignments your tutors publish will show up here.
+                {b === "upcoming"
+                  ? "No upcoming assignments — you're caught up."
+                  : b === "missed"
+                    ? "No missed assignments. Nice."
+                    : b === "submitted"
+                      ? "No assignments awaiting a grade."
+                      : b === "graded"
+                        ? "No graded assignments yet."
+                        : "No active assignments."}
               </p>
             </div>
           }
         >
-          {rows.map(({ sub: s, entry }) => {
-            return (
-              <SubmissionCard
-                key={s.id}
-                submission={s}
-                entry={
-                  entry
-                    ? {
-                        status: entry.status as
-                          | "NOT_STARTED"
-                          | "IN_PROGRESS"
-                          | "SUBMITTED"
-                          | "GRADED"
-                          | "LATE"
-                          | "NOT_SUBMITTED",
-                        attemptNumber: entry.attemptNumber,
-                        grade: entry.grade
-                          ? {
-                              score: entry.grade.score,
-                              outOf: entry.grade.outOf,
-                            }
-                          : null,
-                      }
-                    : null
-                }
-                href={`/dashboard/submissions/${s.id}`}
-              />
-            );
-          })}
+          {filtered.map(({ sub: s, entry }) => (
+            <SubmissionCard
+              key={s.id}
+              submission={s}
+              entry={
+                entry
+                  ? {
+                      status: entry.status as
+                        | "NOT_STARTED"
+                        | "IN_PROGRESS"
+                        | "SUBMITTED"
+                        | "GRADED"
+                        | "LATE"
+                        | "NOT_SUBMITTED",
+                      attemptNumber: entry.attemptNumber,
+                      grade: entry.grade
+                        ? {
+                            score: entry.grade.score,
+                            outOf: entry.grade.outOf,
+                          }
+                        : null,
+                    }
+                  : null
+              }
+              href={`/dashboard/submissions/${s.id}`}
+            />
+          ))}
         </SubmissionGrid>
+      );
+    }
+
+    return (
+      <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
+        <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
+          <div className="flex flex-col gap-6 p-8 md:flex-row md:items-center md:justify-between">
+            <div className="max-w-xl">
+              <p className="text-primary-foreground/70 text-sm">Coursework</p>
+              <h1 className="font-display mt-1 text-4xl leading-tight tracking-tight">
+                Assignments
+              </h1>
+              <p className="text-primary-foreground/70 mt-3 text-sm">
+                Every assignment across your courses, grouped by status.
+              </p>
+            </div>
+            <div className="relative hidden h-40 w-56 shrink-0 md:block">
+              <Image
+                src="/illustrations/planning.svg"
+                alt=""
+                fill
+                priority
+                className="object-contain"
+              />
+            </div>
+          </div>
+        </section>
+
+        <TestsTabs
+          counts={counts}
+          panels={{
+            all: renderBucket("all"),
+            upcoming: renderBucket("upcoming"),
+            missed: renderBucket("missed"),
+            submitted: renderBucket("submitted"),
+            graded: renderBucket("graded"),
+          }}
+        />
       </div>
     );
   }

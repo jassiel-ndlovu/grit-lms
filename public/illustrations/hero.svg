@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="hero placeholder illustration">
+  <defs>
+    <clipPath id="r"><rect x="0" y="0" width="400" height="400" rx="28"/></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="400" height="400" fill="#f3e2cf"/>
+    <circle cx="200" cy="210" r="140" fill="#f26b3a" opacity="0.14"/>
+    <!-- ground line -->
+    <line x1="60" y1="320" x2="340" y2="320" stroke="#2f2a26" stroke-width="3" stroke-linecap="round"/>
+    <!-- desk -->
+    <rect x="120" y="250" width="160" height="14" rx="7" fill="#2f2a26"/>
+    <rect x="150" y="264" width="10" height="56" fill="#2f2a26"/>
+    <rect x="240" y="264" width="10" height="56" fill="#2f2a26"/>
+    <!-- laptop -->
+    <rect x="160" y="212" width="80" height="52" rx="6" fill="#f26b3a"/>
+    <rect x="168" y="220" width="64" height="36" rx="3" fill="#f3e2cf"/>
+    <rect x="176" y="228" width="34" height="4" rx="2" fill="#a43a2a"/>
+    <rect x="176" y="238" width="46" height="4" rx="2" fill="#c9c1b4"/>
+    <rect x="176" y="248" width="26" height="4" rx="2" fill="#c9c1b4"/>
+    <!-- character -->
+    <circle cx="200" cy="150" r="30" fill="#f6cbb0"/>
+    <path d="M170 148a30 30 0 0 1 60 0 60 60 0 0 0-60 0z" fill="#2f2a26"/>
+    <rect x="176" y="180" width="48" height="60" rx="20" fill="#a43a2a"/>
+    <!-- arms to laptop -->
+    <path d="M180 205 Q168 232 176 244" stroke="#f6cbb0" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path d="M220 205 Q232 232 224 244" stroke="#f6cbb0" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <!-- floating accents -->
+    <rect x="96" y="120" width="20" height="20" rx="5" fill="#f26b3a" transform="rotate(15 106 130)"/>
+    <circle cx="300" cy="140" r="10" fill="#a43a2a"/>
+    <path d="M292 96 l6 12 12 2 -9 9 2 12 -11-6 -11 6 2-12 -9-9 12-2z" fill="#f26b3a" opacity="0.9"/>
+  </g>
+</svg>
