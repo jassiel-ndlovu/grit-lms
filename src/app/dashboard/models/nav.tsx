@@ -86,9 +86,9 @@ const TUTOR_NAV_ITEMS: ReadonlyArray<NavItem> = [
 ];
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { icon: User, label: "Profile", link: "#" }, // /dashboard/account
-  { icon: Settings, label: "Settings", link: "#" }, // /dashboard/settings
-  { icon: HelpCircle, label: "Help", link: "#" }, // /dashboard/help
+  { icon: User, label: "Profile", link: "/dashboard/profile", description: "You" },
+  { icon: Settings, label: "Settings", link: "/dashboard/settings", description: "Preferences" },
+  { icon: HelpCircle, label: "Help", link: "/dashboard/help", description: "FAQs & contact" },
 ];
 
 /**
