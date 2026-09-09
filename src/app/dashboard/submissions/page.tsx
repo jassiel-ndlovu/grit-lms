@@ -196,7 +196,7 @@ export default async function SubmissionsIndexPage() {
             </p>
           </div>
           <Button asChild variant="brand">
-            <Link href="/dashboard/manage-courses">
+            <Link href="/dashboard/submissions/create">
               <Plus className="size-4" /> New assignment
             </Link>
           </Button>

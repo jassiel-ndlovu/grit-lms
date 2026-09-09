@@ -238,6 +238,10 @@ model Submission {
   lastDueDate      DateTime?
   description      String
   descriptionFiles String[]
+  // Optional memo/solutions files a tutor can release after grading —
+  // separate from `descriptionFiles`, which are the brief given up-front.
+  // Students only see these once they've been added.
+  memoFileUrls     String[]          @default([])
   totalPoints      Int               @default(1)
   isActive         Boolean?          @default(true)
   course           Course            @relation(fields: [courseId], references: [id])

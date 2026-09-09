@@ -12,11 +12,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
+  BookOpen,
   CalendarDays,
   ExternalLink,
   FileText,
   GraduationCap,
   Hourglass,
+  Paperclip,
   Users,
 } from "lucide-react";
 
@@ -33,6 +35,19 @@ import {
   listEntriesForSubmission,
 } from "@/features/submissions/queries";
 import { SubmissionForm } from "@/features/submissions/components/submission-form";
+import LessonMarkdown from "@/app/components/markdown";
+import {
+  parseSectionFeedback,
+  sectionOrdinal,
+} from "@/features/submissions/lib/sections";
+
+function fileNameFromUrl(url: string): string {
+  try {
+    return decodeURIComponent(url.split("?")[0]).split("/").pop() ?? url;
+  } catch {
+    return url;
+  }
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -129,9 +144,11 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
               <FileText className="text-brand-terracotta size-4" />
               Brief
             </h2>
-            <p className="text-foreground whitespace-pre-wrap text-sm">
-              {submission.description}
-            </p>
+            {/* Markdown + MathJax rendered via LessonMarkdown so tutors can
+                use $…$ / $$…$$ math and standard markdown in the brief. */}
+            <div className="text-sm">
+              <LessonMarkdown content={submission.description} />
+            </div>
             {submission.descriptionFiles &&
               submission.descriptionFiles.length > 0 && (
                 <ul className="mt-2 space-y-1 text-sm">
@@ -143,7 +160,8 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                         rel="noreferrer"
                         className="text-brand-terracotta inline-flex items-center gap-1 hover:underline"
                       >
-                        Resource
+                        <Paperclip className="size-3" />
+                        {fileNameFromUrl(url)}
                         <ExternalLink className="size-3" />
                       </Link>
                     </li>
@@ -200,10 +218,13 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                   </p>
                 </div>
               </div>
-              {entry.feedback && (
-                <p className="text-muted-foreground max-w-md text-right text-sm italic">
-                  &ldquo;{entry.feedback}&rdquo;
-                </p>
+              {grade.finalComments && (
+                <div className="max-w-md text-right text-sm">
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                    Feedback
+                  </p>
+                  <p className="text-foreground mt-1">{grade.finalComments}</p>
+                </div>
               )}
             </div>
           )}
@@ -216,6 +237,122 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
             disabled={graded}
           />
         </Card>
+
+        {/* Per-section breakdown — only shown when the tutor chose to grade
+            section-by-section AND the entry is graded. */}
+        {graded &&
+          entry?.questionGrades &&
+          entry.questionGrades.length > 0 && (
+            <Card className="p-6">
+              <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
+                <BookOpen className="text-brand-terracotta size-4" />
+                Section breakdown
+              </h2>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Your tutor split this into sections. Click any memo link to
+                open the model answer for that part.
+              </p>
+              <Separator className="my-4" />
+              <ul className="space-y-4">
+                {[...entry.questionGrades]
+                  .sort(
+                    (a, b) =>
+                      sectionOrdinal(a.questionId) -
+                      sectionOrdinal(b.questionId),
+                  )
+                  .map((qg, idx) => {
+                    const parsed = parseSectionFeedback(qg.feedback);
+                    const title = parsed?.title ?? `Section ${idx + 1}`;
+                    const remarks = parsed?.remarks ?? qg.feedback ?? "";
+                    const pct =
+                      qg.outOf > 0
+                        ? Math.round((qg.score / qg.outOf) * 100)
+                        : null;
+                    const good = pct != null && pct >= 50;
+                    return (
+                      <li
+                        key={qg.id}
+                        className={`border-l-4 ${good ? "border-emerald-500" : "border-destructive"} bg-muted/30 rounded-md p-4`}
+                      >
+                        <div className="flex flex-wrap items-baseline justify-between gap-3">
+                          <h3 className="font-medium text-foreground">
+                            {title}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            {pct != null && (
+                              <Badge
+                                variant={good ? "brand" : "secondary"}
+                                className="tabular-nums"
+                              >
+                                {pct}%
+                              </Badge>
+                            )}
+                            <span className="font-display tabular-nums text-foreground text-sm">
+                              {qg.score}
+                              <span className="text-muted-foreground">
+                                {" "}
+                                / {qg.outOf}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                        {remarks && (
+                          <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
+                            {remarks}
+                          </p>
+                        )}
+                        {parsed?.memoFileUrl && (
+                          <div className="mt-3">
+                            <a
+                              href={parsed.memoFileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-brand-terracotta inline-flex items-center gap-1 text-xs hover:underline"
+                            >
+                              <Paperclip className="size-3" />
+                              Memo for this section
+                            </a>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+              </ul>
+            </Card>
+          )}
+
+        {/* Assignment-wide memo files — visible to students only once the
+            tutor has released them (may be empty until then). */}
+        {graded &&
+          submission.memoFileUrls &&
+          submission.memoFileUrls.length > 0 && (
+            <Card className="p-6">
+              <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
+                <Paperclip className="text-brand-terracotta size-4" />
+                Memo &amp; model answers
+              </h2>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Solution notes shared by your tutor for this assignment.
+              </p>
+              <Separator className="my-4" />
+              <ul className="space-y-1 text-sm">
+                {submission.memoFileUrls.map((url) => (
+                  <li key={url}>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand-terracotta inline-flex items-center gap-1 hover:underline"
+                    >
+                      <FileText className="size-3" />
+                      {fileNameFromUrl(url)}
+                      <ExternalLink className="size-3" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
       </div>
     );
   }
@@ -247,8 +384,8 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/manage-courses/${submission.courseId}`}>
-            ← Back to course
+          <Link href="/dashboard/submissions">
+            ← Back to assignments
           </Link>
         </Button>
 

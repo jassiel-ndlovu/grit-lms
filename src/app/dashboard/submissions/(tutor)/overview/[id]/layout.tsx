@@ -26,15 +26,20 @@ export default function TestLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header — back label reflects what the user is actually going back to:
+          "assignments" from the overview, or the "overview" from a per-student
+          grading page. */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push(goBackUrl)}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="inline-flex items-center gap-1 rounded p-1 text-sm text-gray-600 hover:bg-gray-100"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:inline">
+                {studentId ? "Back to overview" : "Back to assignments"}
+              </span>
             </button>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <FileText className="text-blue-600 bg-blue-100 rounded p-2" size={40} />
