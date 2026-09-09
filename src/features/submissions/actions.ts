@@ -30,9 +30,14 @@ import {
   CreateSubmissionInputSchema,
   DeleteSubmissionSchema,
   GradeSubmissionEntrySchema,
+  GradeSubmissionEntryWithSectionsSchema,
   SubmitSubmissionEntrySchema,
   UpdateSubmissionInputSchema,
 } from "./schemas";
+import {
+  sectionQuestionId,
+  stringifySectionFeedback,
+} from "./lib/sections";
 
 /* ------------------------------------------------------------------------- */
 /* createSubmission                                                          */
@@ -62,6 +67,7 @@ export const createSubmission = tutorActionClient
         totalPoints: parsedInput.totalPoints,
         isActive: parsedInput.isActive,
         descriptionFiles: parsedInput.descriptionFiles,
+        memoFileUrls: parsedInput.memoFileUrls,
         createdAt: new Date(),
       },
       select: { id: true, title: true, courseId: true, isActive: true },
@@ -116,6 +122,8 @@ export const updateSubmission = tutorActionClient
     if (parsedInput.isActive !== undefined) data.isActive = parsedInput.isActive;
     if (parsedInput.descriptionFiles !== undefined)
       data.descriptionFiles = parsedInput.descriptionFiles;
+    if (parsedInput.memoFileUrls !== undefined)
+      data.memoFileUrls = parsedInput.memoFileUrls;
 
     const updated = await prisma.submission.update({
       where: { id: parsedInput.id },
@@ -346,6 +354,113 @@ export const gradeEntry = tutorActionClient
     );
 
     revalidatePath(`/dashboard/submissions/${entry.submission.id}`);
+    revalidatePath(`/dashboard/courses/${entry.submission.courseId}`);
+    revalidatePath("/dashboard/notifications");
+
+    return { gradeId: result.gradeId, entryId: entry.id };
+  });
+
+/* ------------------------------------------------------------------------- */
+/* gradeEntryWithSections                                                     */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Extended grading path. Accepts an optional list of sections; each is
+ * stored as a QuestionGrade row keyed to the entry. Sections replace any
+ * previously-stored sections for this entry (wipe-and-recreate — safe
+ * because section rows carry no downstream references).
+ *
+ * If `sections` is empty, this behaves exactly like `gradeEntry` — the
+ * tutor gets to skip section-level breakdown entirely.
+ */
+export const gradeEntryWithSections = tutorActionClient
+  .schema(GradeSubmissionEntryWithSectionsSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const entry = await prisma.submissionEntry.findUnique({
+      where: { id: parsedInput.entryId },
+      include: {
+        submission: {
+          select: {
+            id: true,
+            title: true,
+            courseId: true,
+            course: { select: { tutor: { select: { email: true } } } },
+          },
+        },
+      },
+    });
+    if (!entry) throw new Error("Entry not found");
+    if (entry.submission.course.tutor.email !== ctx.session.user.email) {
+      throw new Error("You don't own this assignment");
+    }
+
+    const studentId = entry.studentId;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Wipe & recreate the section rows for this entry. Section rows are
+      // scoped tightly (questionId like `sec:N`, submissionEntryId set), so
+      // there's no risk of collateral loss.
+      await tx.questionGrade.deleteMany({
+        where: { submissionEntryId: entry.id },
+      });
+
+      if (parsedInput.sections.length > 0) {
+        await tx.questionGrade.createMany({
+          data: parsedInput.sections.map((s, i) => ({
+            questionId: sectionQuestionId(i),
+            submissionEntryId: entry.id,
+            score: s.score,
+            outOf: s.outOf,
+            feedback: stringifySectionFeedback(s),
+          })),
+        });
+      }
+
+      const grade = await tx.grade.upsert({
+        where: { submissionEntryId: entry.id },
+        update: {
+          score: parsedInput.score,
+          outOf: parsedInput.outOf,
+          finalComments: parsedInput.feedback,
+          updatedAt: new Date(),
+        },
+        create: {
+          studentId,
+          courseId: entry.submission.courseId,
+          type: "SUBMISSION",
+          title: entry.submission.title,
+          score: parsedInput.score,
+          outOf: parsedInput.outOf,
+          finalComments: parsedInput.feedback,
+          submissionEntryId: entry.id,
+        },
+        select: { id: true },
+      });
+
+      await tx.submissionEntry.update({
+        where: { id: entry.id },
+        data: { status: "GRADED", feedback: parsedInput.feedback ?? "" },
+      });
+
+      return { gradeId: grade.id };
+    });
+
+    await emitNotification(
+      {
+        title: "Grade Released",
+        message: `You received ${parsedInput.score}/${parsedInput.outOf} for "${entry.submission.title}".`,
+        link: `/dashboard/submissions/${entry.submission.id}`,
+        type: "SUBMISSION_GRADED",
+        priority: "NORMAL",
+        studentId,
+      },
+      { revalidate: false },
+    );
+
+    revalidatePath(`/dashboard/submissions/${entry.submission.id}`);
+    revalidatePath(
+      `/dashboard/submissions/overview/${entry.submission.id}/${studentId}`,
+    );
     revalidatePath(`/dashboard/courses/${entry.submission.courseId}`);
     revalidatePath("/dashboard/notifications");
 
