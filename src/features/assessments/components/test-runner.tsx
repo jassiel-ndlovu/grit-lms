@@ -303,7 +303,10 @@ export function TestRunner({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       {/* ───── Main pane ───── */}
       <div className="space-y-4">
-        <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 bg-background/90 py-2 backdrop-blur">
+        {/* Sticks BELOW the dashboard header (which itself is sticky at
+            top-0, z-40). top-20 clears the header's ~5rem footprint; z-30
+            keeps us above the question body but below the header. */}
+        <div className="bg-background/90 sticky top-20 z-30 flex flex-wrap items-center justify-between gap-3 py-2 backdrop-blur">
           <div>
             <p className="text-muted-foreground text-xs">
               Question {currentIdx + 1} of {questions.length}
@@ -367,7 +370,9 @@ export function TestRunner({
           </div>
         </div>
 
-        <div className="max-h-[calc(100vh-14rem)] overflow-y-auto pr-1">
+        {/* No height cap — let the question consume as much vertical space
+            as it needs. Scrolling happens at the page level, so the sticky
+            top-of-page header and the sticky sidebar both stay pinned. */}
         <QuestionView
           question={current}
           path={String(currentIdx + 1)}
@@ -376,7 +381,6 @@ export function TestRunner({
           disabled={submitting || timeRemaining === 0}
           testId={testId}
         />
-        </div>
 
         <div className="flex items-center justify-between gap-3">
           <Button
@@ -418,9 +422,14 @@ export function TestRunner({
         </div>
       </div>
 
-      {/* ───── Sidebar (question list) ───── */}
-      <aside className="space-y-3 lg:sticky lg:top-24 lg:self-start">
-        <Card className="p-4">
+      {/* ───── Sidebar (question list) ─────
+          Sticky + capped at viewport height so the list itself scrolls
+          rather than pushing the page down when there are many questions.
+          `top-24` clears the sticky page header + a little breathing room;
+          the inner <ul> owns the overflow so the "Questions" header and
+          the autosave footnote stay visible while the list scrolls. */}
+      <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:flex lg:flex-col lg:overflow-hidden">
+        <Card className="flex min-h-0 flex-col p-4">
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="font-display text-sm leading-tight text-foreground">
               Questions
@@ -429,7 +438,7 @@ export function TestRunner({
               {totalAnswered}/{totalAnswerable}
             </span>
           </div>
-          <ul className="mt-3 space-y-1">
+          <ul className="mt-3 space-y-1 overflow-y-auto pr-1">
             {questions.map((q, i) => {
               const active = i === currentIdx;
               // A top-level row is "complete" when every answerable node in

@@ -93,9 +93,10 @@ export default async function ManageLessonsPage({
     : null;
 
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-      {/* Sidebar */}
-      <aside className="space-y-4">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-6 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+      {/* Sidebar — sticky + independently scrollable so it stays visible
+          while editing long lesson bodies on the right. */}
+      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/manage-courses/${courseId}`}>
             <ArrowLeft className="size-4" /> Back to course
