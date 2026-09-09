@@ -425,51 +425,60 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
             </div>
           ) : (
             <ul className="divide-border divide-y">
-              {entries.map((e) => (
-                <li
-                  key={e.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">
-                      {e.student.fullName}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {e.fileUrl.length}{" "}
-                      {e.fileUrl.length === 1 ? "file" : "files"} · attempt{" "}
-                      {e.attemptNumber}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Badge
-                      variant={
-                        e.status === "GRADED"
-                          ? "brand"
-                          : e.status === "SUBMITTED"
-                            ? "soft"
-                            : "secondary"
-                      }
+              {entries.map((e) => {
+                // Each row links to the per-student grading page. Wrapping the
+                // whole <li> content in a Link makes the row keyboard-focusable
+                // and gives the tutor a natural "click the student to grade
+                // them" affordance.
+                const href = `/dashboard/submissions/overview/${submission.id}/${e.studentId}`;
+                return (
+                  <li key={e.id}>
+                    <Link
+                      href={href}
+                      className="hover:bg-muted/40 focus-visible:bg-muted/40 flex flex-wrap items-center justify-between gap-3 px-5 py-3 transition-colors"
                     >
-                      {e.status === "GRADED"
-                        ? "Graded"
-                        : e.status === "SUBMITTED"
-                          ? "Awaiting grade"
-                          : e.status === "LATE"
-                            ? "Late"
-                            : "In progress"}
-                    </Badge>
-                    {e.grade && (
-                      <span className="font-display tabular-nums text-foreground text-sm">
-                        {e.grade.score}
-                        <span className="text-muted-foreground">
-                          {" "}
-                          / {e.grade.outOf}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                </li>
-              ))}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {e.student.fullName}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {e.fileUrl.length}{" "}
+                          {e.fileUrl.length === 1 ? "file" : "files"} · attempt{" "}
+                          {e.attemptNumber}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <Badge
+                          variant={
+                            e.status === "GRADED"
+                              ? "brand"
+                              : e.status === "SUBMITTED"
+                                ? "soft"
+                                : "secondary"
+                          }
+                        >
+                          {e.status === "GRADED"
+                            ? "Graded"
+                            : e.status === "SUBMITTED"
+                              ? "Awaiting grade"
+                              : e.status === "LATE"
+                                ? "Late"
+                                : "In progress"}
+                        </Badge>
+                        {e.grade && (
+                          <span className="font-display tabular-nums text-foreground text-sm">
+                            {e.grade.score}
+                            <span className="text-muted-foreground">
+                              {" "}
+                              / {e.grade.outOf}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>

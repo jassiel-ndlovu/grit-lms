@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCourses } from "@/context/CourseContext";
 import { useSubmission } from "@/context/SubmissionContext";
 import { useSubmissionEntries } from "@/context/SubmissionEntryContext";
@@ -245,30 +246,45 @@ export default function SubmissionDetailTutor() {
                 <tbody className="divide-y divide-gray-200">
                   {entries.map(
                     entry => {
+                      const gradeHref = `/dashboard/submissions/overview/${submission.id}/${entry.studentId}`;
                       const actions = [
-                        { 
-                          label: "View Details", 
-                          icon: <ChevronRight className="w-4 h-4" />, 
-                          onClick: () => handleViewDetails(entry.studentId) 
+                        {
+                          label: "View / grade",
+                          icon: <ChevronRight className="w-4 h-4" />,
+                          onClick: () => handleViewDetails(entry.studentId)
                         },
-                        { 
-                          label: "Delete Entry", 
-                          icon: <Trash2 className="w-4 h-4" />, 
-                          onClick: () => handleDeleteSubmissionEntry(entry.id), 
-                          danger: true 
+                        {
+                          label: "Delete Entry",
+                          icon: <Trash2 className="w-4 h-4" />,
+                          onClick: () => handleDeleteSubmissionEntry(entry.id),
+                          danger: true
                         },
                       ];
+                      const gradePct =
+                        entry.grade && entry.grade.outOf > 0
+                          ? Math.round((entry.grade.score / entry.grade.outOf) * 100)
+                          : null;
                       return (
-                        <tr key={entry.id} className="hover:bg-gray-50">
+                        <tr
+                          key={entry.id}
+                          className="hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => handleViewDetails(entry.studentId)}
+                        >
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
+                            {/* Explicit link so keyboard nav + right-click "open in new tab"
+                                work; the row's onClick is just a convenience for mouse users. */}
+                            <Link
+                              href={gradeHref}
+                              onClick={(e) => e.stopPropagation()}
+                              className="block hover:text-blue-600"
+                            >
                               <div className="text-sm font-medium text-gray-900">
                                 {entry.student.fullName}
                               </div>
                               <div className="text-sm text-gray-500">
                                 {entry.student.email}
                               </div>
-                            </div>
+                            </Link>
                           </td>
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -287,10 +303,15 @@ export default function SubmissionDetailTutor() {
                           </td>
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {entry.grade ? `${entry.grade}%` : 'Not graded'}
+                            {entry.grade
+                              ? `${entry.grade.score}/${entry.grade.outOf}${gradePct != null ? ` (${gradePct}%)` : ''}`
+                              : 'Not graded'}
                           </td>
 
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <td
+                            className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <ActionsMenu title="Submission Entry Actions" actions={actions} />
                           </td>
                         </tr>
