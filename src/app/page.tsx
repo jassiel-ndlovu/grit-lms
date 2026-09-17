@@ -1,13 +1,18 @@
 /**
  * / — public marketing landing.
  *
- * Server Component. Marketing hero with texture, animated hero content,
- * a feature grid, three-step "how it works", a mock dashboard, FAQ, and
- * CTAs. Textures use inline SVG data URIs so no image assets are needed.
- * Animations are pure CSS (a scoped <style> tag scopes keyframes to the
- * page) so no client bundle is required.
+ * Server Component. The page is built from the same Inkwell tokens as the
+ * dashboard — parchment background, Fraunces display serif, terracotta as
+ * the single accent — so someone signing in doesn't cross a visual border
+ * between the marketing site and the product.
+ *
+ * Illustrations come from /public/illustrations. Motion lives in small
+ * client islands (app/components/motion.tsx) so only the wrappers ship
+ * framer-motion; all copy stays server-rendered, and every animation is a
+ * no-op under `prefers-reduced-motion`.
  */
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -15,25 +20,28 @@ import {
   Bell,
   CalendarDays,
   CheckCircle2,
+  FileText,
   GraduationCap,
   Mail,
-  Pencil,
-  ShieldCheck,
+  PenTool,
   Sparkles,
-  Target,
 } from "lucide-react";
 
-/* ─── App name + mailto helpers ───────────────────────────────────────── */
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { APP_CONTACT, APP_NAME, APP_TAGLINE } from "@/lib/branding";
 
-const APP_NAME = "Nexa LMS";
-const APP_TAGLINE = "A calm learning space for tutors and their students.";
+import { Float, HeroIn, Reveal, Stagger, StaggerItem } from "./components/motion";
 
-const SIGNUP_EMAIL = "nkosijassiel@gmail.com";
-const SIGNUP_SUBJECT = "Nexa LMS access request";
+/* ─── Access-request mailto ────────────────────────────────────────────── */
+
+const SIGNUP_SUBJECT = `${APP_NAME} access request`;
 const SIGNUP_BODY = [
   "Hi,",
   "",
-  "I would like an account on Nexa LMS.",
+  `I would like an account on ${APP_NAME}.`,
   "",
   "  Name:  ",
   "  Role:  (Student / Tutor)",
@@ -44,33 +52,95 @@ const SIGNUP_BODY = [
   "Thanks!",
 ].join("\n");
 
-const mailtoHref = `mailto:${SIGNUP_EMAIL}?subject=${encodeURIComponent(
+const mailtoHref = `mailto:${APP_CONTACT.email}?subject=${encodeURIComponent(
   SIGNUP_SUBJECT,
 )}&body=${encodeURIComponent(SIGNUP_BODY)}`;
 
-export const metadata = { title: APP_NAME };
+export const metadata = { title: APP_NAME, description: APP_TAGLINE };
 
-/* ─── Texture tokens (kept as CSS custom properties so sections can    */
-/*     re-use them consistently)                                        */
+/* ─── Content ──────────────────────────────────────────────────────────── */
 
-const DOT_GRID_BG =
-  "radial-gradient(circle at 1px 1px, rgba(15,23,42,0.08) 1px, transparent 0)";
-const NOISE_GRAIN_BG =
-  // Inline SVG turbulence noise → adds a subtle paper-like grain over solid fills
-  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0.02 0 0 0 0 0.02 0 0 0 0 0.02 0 0 0 0.55 0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.6'/></svg>\")";
+const FEATURES = [
+  {
+    icon: BookOpen,
+    title: "Courses & lessons",
+    body: "Structured lessons with markdown, LaTeX via MathJax, embedded video, and downloadable resources.",
+  },
+  {
+    icon: FileText,
+    title: "Tests & quizzes",
+    body: "Twelve question types — matching, reorder, fill-in-the-blank, file upload — with sub-questions and context blocks.",
+  },
+  {
+    icon: PenTool,
+    title: "Assignments",
+    body: "File-drop submissions with attempt tracking, deadlines, per-section marks and memo files.",
+  },
+  {
+    icon: CheckCircle2,
+    title: "Grading that explains itself",
+    body: "Mark every answer individually with markdown feedback. Students see their answer next to the comment.",
+  },
+  {
+    icon: CalendarDays,
+    title: "One shared schedule",
+    body: "Lectures, exams, meetings and due dates on a single calendar, with repeating events for anything weekly.",
+  },
+  {
+    icon: Bell,
+    title: "Notifications",
+    body: "Grades, assignments and test releases fan out automatically. No inbox archaeology.",
+  },
+] as const;
+
+const STEPS = [
+  {
+    title: "Request access",
+    body: "Send an email. We create your account — student or tutor — and add you to the right course.",
+    art: "/illustrations/planning.svg",
+  },
+  {
+    title: "Sign in",
+    body: "Your credentials arrive by email. Signing in drops you on a dashboard built for your role.",
+    art: "/illustrations/research-paper.svg",
+  },
+  {
+    title: "Learn or teach",
+    body: "Students work through courses, tests and grades. Tutors author material, then mark what comes back.",
+    art: "/illustrations/success-factors.svg",
+  },
+] as const;
+
+const FAQ = [
+  {
+    q: "Can I sign up myself?",
+    a: "Not directly — accounts are created for you by a tutor or the platform admin. That keeps course rosters tidy and prevents random signups. Request access and we'll set you up.",
+  },
+  {
+    q: "What kinds of questions do the tests support?",
+    a: "Multiple choice, multi-select, true/false, short answer, essay, numeric, fill-in-the-blank, matching, reorder, code and file upload — plus 'context' parent blocks that group sub-questions.",
+  },
+  {
+    q: "Can tutors write maths?",
+    a: "Yes. Lesson text, question prompts and tutor feedback all render through MathJax — inline maths with $…$ and display maths with $$…$$.",
+  },
+  {
+    q: "Can I bulk-create tests?",
+    a: "Yes — the test editor imports JSON. Copy the built-in prompt, have an LLM generate the JSON, and paste it back. Exported tests re-import unchanged.",
+  },
+] as const;
 
 /* ─── Page ─────────────────────────────────────────────────────────────── */
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-slate-900 antialiased">
-      <PageStyles />
+    <div className="bg-background text-foreground min-h-screen antialiased">
       <Header />
       <main>
         <Hero />
         <Features />
         <HowItWorks />
-        <ScreenshotBlock />
+        <Audiences />
         <Faq />
         <ClosingCta />
       </main>
@@ -79,605 +149,484 @@ export default function LandingPage() {
   );
 }
 
-/* ─── Scoped keyframes + prefers-reduced-motion opt-out ──────────────── */
-
-function PageStyles() {
-  return (
-    <style>{`
-      @keyframes rise {
-        from { opacity: 0; transform: translateY(14px); }
-        to   { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes drift {
-        0%, 100% { transform: translateY(0) translateX(0); }
-        50%      { transform: translateY(-14px) translateX(8px); }
-      }
-      @keyframes shimmer {
-        0%   { background-position: 0% 50%; }
-        100% { background-position: 200% 50%; }
-      }
-      @keyframes marquee {
-        from { transform: translateX(0); }
-        to   { transform: translateX(-50%); }
-      }
-      @keyframes pulseRing {
-        0%   { box-shadow: 0 0 0 0 rgba(234,88,12,0.35); }
-        70%  { box-shadow: 0 0 0 14px rgba(234,88,12,0); }
-        100% { box-shadow: 0 0 0 0 rgba(234,88,12,0); }
-      }
-      .rise-in       { animation: rise 700ms ease-out both; }
-      .rise-in-2     { animation: rise 700ms ease-out 120ms both; }
-      .rise-in-3     { animation: rise 700ms ease-out 240ms both; }
-      .rise-in-4     { animation: rise 700ms ease-out 360ms both; }
-      .drift-slow    { animation: drift 9s ease-in-out infinite; }
-      .drift-slower  { animation: drift 14s ease-in-out infinite; }
-      .shimmer-text {
-        background-image: linear-gradient(90deg,#0f172a 0%,#ea580c 45%,#0f172a 90%);
-        background-size: 200% 100%;
-        background-clip: text;
-        -webkit-background-clip: text;
-        color: transparent;
-        animation: shimmer 6s ease-in-out infinite;
-      }
-      .cta-pulse::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        animation: pulseRing 2.4s ease-out infinite;
-        pointer-events: none;
-      }
-      .marquee-track { animation: marquee 40s linear infinite; }
-      @media (prefers-reduced-motion: reduce) {
-        .rise-in, .rise-in-2, .rise-in-3, .rise-in-4,
-        .drift-slow, .drift-slower, .shimmer-text,
-        .cta-pulse::after, .marquee-track {
-          animation: none !important;
-        }
-      }
-    `}</style>
-  );
-}
-
-/* ─── Header ────────────────────────────────────────────────────────── */
+/* ─── Header ───────────────────────────────────────────────────────────── */
 
 function Header() {
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
+    <header className="border-border/60 bg-background/80 sticky top-0 z-30 border-b backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="relative flex size-8 items-center justify-center overflow-hidden rounded-md bg-slate-900 text-white">
+        <Link href="/" className="flex items-center gap-2.5">
+          <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-md">
             <GraduationCap className="size-4" />
-            <span className="pointer-events-none absolute -inset-1 bg-gradient-to-br from-orange-500/30 via-transparent to-transparent" />
-          </div>
-          <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>
+          </span>
+          <span className="font-display text-lg leading-none tracking-tight">
+            {APP_NAME}
+          </span>
         </Link>
-        <nav className="flex items-center gap-2">
-          <a
-            href={mailtoHref}
-            className="hidden rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 sm:inline-flex"
-          >
-            Request access
-          </a>
-          <Link
-            href="/auth"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-          >
-            Sign in
-          </Link>
+        <nav className="flex items-center gap-1.5">
+          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+            <a href={mailtoHref}>Request access</a>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/auth">Sign in</Link>
+          </Button>
         </nav>
       </div>
     </header>
   );
 }
 
-/* ─── Hero ─────────────────────────────────────────────────────────── */
+/* ─── Hero ─────────────────────────────────────────────────────────────── */
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-slate-200/70">
-      {/* Warm radial glow */}
+    <section className="border-border/60 relative overflow-hidden border-b">
+      {/* A single warm bloom behind the headline, plus a faint dot grid.
+          Both are decorative and inert to screen readers. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(1200px 500px at 50% -20%, rgba(251,146,60,0.18), transparent 70%)",
-        }}
+        className="bg-brand-terracotta/10 pointer-events-none absolute -top-40 left-1/2 size-[36rem] -translate-x-1/2 rounded-full blur-3xl"
       />
-      {/* Dot grid overlay */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-70"
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
         style={{
-          backgroundImage: DOT_GRID_BG,
-          backgroundSize: "22px 22px",
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, var(--muted-foreground) 1px, transparent 0)",
+          backgroundSize: "28px 28px",
           maskImage:
-            "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+            "radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%)",
         }}
       />
-      {/* Floating decorative shapes */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute top-24 left-8 hidden size-24 rounded-3xl border border-orange-200/70 bg-orange-100/40 shadow-inner drift-slow md:block"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-16 right-10 hidden size-32 rounded-full border border-slate-200/70 bg-white/60 shadow-inner drift-slower md:block"
-      />
 
-      <div className="relative mx-auto max-w-6xl px-6 py-20 sm:py-28">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="rise-in mb-4 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-100/70 px-3 py-1 text-xs font-medium text-orange-700 shadow-sm">
-            <ShieldCheck className="size-3" />
-            Invite-only · onboarded by your tutor
-          </p>
-          <h1 className="rise-in-2 text-4xl leading-tight font-semibold tracking-tight sm:text-6xl">
-            <span className="shimmer-text">{APP_TAGLINE}</span>
-          </h1>
-          <p className="rise-in-3 mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-            {APP_NAME} keeps courses, lessons, assessments, and grades in
-            one calm interface. No feature bloat — just the shape of a
-            good class.
-          </p>
-          <div className="rise-in-4 mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a
-              href={mailtoHref}
-              className="cta-pulse relative inline-flex items-center gap-2 rounded-md bg-orange-600 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-orange-600/20 transition-transform hover:-translate-y-0.5 hover:bg-orange-700"
-            >
-              <Mail className="size-4" />
-              Request access
-            </a>
-            <Link
-              href="/auth"
-              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white/80 px-5 py-3 text-sm font-medium text-slate-800 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-400 hover:bg-white"
-            >
-              Sign in
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </div>
-          <p className="rise-in-4 mt-4 text-xs text-slate-500">
-            Requesting access opens your email app with a short message pre-filled.
-          </p>
+      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 py-20 sm:py-28 lg:grid-cols-[1.05fr_1fr]">
+        <div>
+          <HeroIn>
+            <Badge variant="soft" className="mb-5">
+              <Sparkles className="mr-1 size-3" />
+              Built for small classes
+            </Badge>
+          </HeroIn>
+
+          <HeroIn delay={0.08}>
+            <h1 className="font-display text-4xl leading-[1.08] tracking-tight text-foreground sm:text-6xl">
+              A calm place to
+              <span className="text-brand-terracotta"> teach</span> and
+              <span className="text-brand-terracotta"> learn</span>.
+            </h1>
+          </HeroIn>
+
+          <HeroIn delay={0.16}>
+            <p className="text-muted-foreground mt-5 max-w-xl text-base leading-relaxed sm:text-lg">
+              Lessons, assessments, grading and the schedule in one place —
+              without the noise of a university-scale platform. {APP_NAME} is
+              built for a tutor and the students they actually know.
+            </p>
+          </HeroIn>
+
+          <HeroIn delay={0.24}>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Button asChild variant="brand" size="lg">
+                <a href={mailtoHref}>
+                  <Mail className="size-4" />
+                  Request access
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link href="/auth">
+                  Sign in
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </HeroIn>
+
+          <HeroIn delay={0.32}>
+            <dl className="border-border/60 mt-10 grid max-w-md grid-cols-3 gap-4 border-t pt-6">
+              {[
+                { k: "12", v: "question types" },
+                { k: "MathJax", v: "in every field" },
+                { k: "0", v: "ads, ever" },
+              ].map((s) => (
+                <div key={s.v}>
+                  <dt className="font-display text-xl leading-none text-foreground">
+                    {s.k}
+                  </dt>
+                  <dd className="text-muted-foreground mt-1 text-xs">{s.v}</dd>
+                </div>
+              ))}
+            </dl>
+          </HeroIn>
         </div>
 
-        {/* Trust marquee — courses/subjects a small tutoring practice might teach.
-            Purely decorative texture; duplicates content once so the loop is seamless. */}
-        <div
-          className="relative mt-16 overflow-hidden"
-          style={{
-            maskImage:
-              "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
-          }}
-        >
-          <div className="marquee-track flex gap-8 whitespace-nowrap text-xs font-medium text-slate-500">
-            {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((label, i) => (
-              <span
-                key={`${label}-${i}`}
-                className="inline-flex items-center gap-2"
-              >
-                <span className="size-1.5 rounded-full bg-orange-400" />
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
+        <HeroIn delay={0.2} className="relative">
+          <Float>
+            <div className="relative mx-auto aspect-square w-full max-w-lg">
+              <Image
+                src="/illustrations/teacher-student.svg"
+                alt=""
+                fill
+                priority
+                className="object-contain"
+                sizes="(max-width: 1024px) 80vw, 480px"
+              />
+            </div>
+          </Float>
+        </HeroIn>
       </div>
     </section>
   );
 }
 
-const MARQUEE_ITEMS = [
-  "Grade 11 Maths",
-  "IEB Physics",
-  "Cambridge English",
-  "IGCSE History",
-  "Introductory Economics",
-  "AP Calculus",
-  "Grade 12 Life Sciences",
-  "SAT Prep",
-];
-
-/* ─── Features ─────────────────────────────────────────────────────── */
-
-const FEATURES: {
-  title: string;
-  body: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  {
-    icon: BookOpen,
-    title: "Courses & lessons",
-    body: "Tutors publish structured lessons with markdown, LaTeX (MathJax), embedded videos, and downloadable resources.",
-  },
-  {
-    icon: Target,
-    title: "Tests & quizzes",
-    body: "12 question types including matching, reorder, fill-in-the-blank, and file upload — with sub-questions and context blocks.",
-  },
-  {
-    icon: Pencil,
-    title: "Assignments",
-    body: "File-drop submissions with attempt tracking, deadlines, and per-file feedback for the tutor.",
-  },
-  {
-    icon: GraduationCap,
-    title: "Per-question grading",
-    body: "Grade every answer individually with markdown feedback. Students see their own answer next to each grade.",
-  },
-  {
-    icon: CalendarDays,
-    title: "Shared schedule",
-    body: "Lectures, exams, meetings, and due dates all land on one calendar. Toggle between month and list views.",
-  },
-  {
-    icon: Bell,
-    title: "Notifications",
-    body: "Grades, assignments, and test releases fan out automatically. No inbox archaeology.",
-  },
-];
+/* ─── Features ─────────────────────────────────────────────────────────── */
 
 function Features() {
   return (
-    <section className="relative border-b border-slate-200 py-20 sm:py-24">
-      {/* Subtle paper grain */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{ backgroundImage: NOISE_GRAIN_BG }}
-      />
-      <div className="relative mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
-            <Sparkles className="size-3 text-orange-600" />
-            Built for small tutoring practices
-          </p>
-          <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+    <section className="border-border/60 border-b py-20 sm:py-24">
+      <div className="mx-auto max-w-6xl px-6">
+        <Reveal className="max-w-2xl">
+          <p className="text-brand-terracotta text-xs font-medium uppercase tracking-wider">
             What&apos;s inside
-          </h2>
-          <p className="mt-3 text-base text-slate-600">
-            Everything a small tutoring practice needs. Nothing it doesn&apos;t.
           </p>
-        </div>
-        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="font-display mt-2 text-3xl leading-tight tracking-tight text-foreground sm:text-4xl">
+            Everything a course needs, nothing it doesn&apos;t
+          </h2>
+        </Reveal>
+
+        <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
-            <FeatureCard key={f.title} feature={f} />
+            <StaggerItem key={f.title}>
+              <Card className="hover:border-brand-terracotta/40 h-full p-6 transition-colors">
+                <span className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md">
+                  <f.icon className="size-4" />
+                </span>
+                <h3 className="font-display mt-4 text-lg leading-tight text-foreground">
+                  {f.title}
+                </h3>
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                  {f.body}
+                </p>
+              </Card>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </div>
     </section>
   );
 }
 
-function FeatureCard({
-  feature,
-}: {
-  feature: (typeof FEATURES)[number];
-}) {
-  const Icon = feature.icon;
-  return (
-    <div className="group relative rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 rounded-t-lg bg-gradient-to-r from-orange-400/0 via-orange-400/70 to-orange-400/0 opacity-0 transition-opacity group-hover:opacity-100" />
-      <div className="mb-4 flex size-11 items-center justify-center rounded-md bg-gradient-to-br from-orange-100 to-orange-50 text-orange-700 ring-1 ring-orange-200/60 transition-transform group-hover:scale-110">
-        <Icon className="size-5" />
-      </div>
-      <h3 className="text-lg font-medium tracking-tight text-slate-900">
-        {feature.title}
-      </h3>
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-        {feature.body}
-      </p>
-    </div>
-  );
-}
-
-/* ─── How it works ──────────────────────────────────────────────────── */
-
-const STEPS: { title: string; body: string }[] = [
-  {
-    title: "Request access",
-    body: "Send us an email. We create your account (student or tutor) and add you to the right course.",
-  },
-  {
-    title: "Sign in",
-    body: "You get an email with your credentials. Sign in and you land on a personal dashboard for your role.",
-  },
-  {
-    title: "Learn or teach",
-    body: "Students see courses, tests, and grades. Tutors author lessons and assessments, then grade student work.",
-  },
-];
+/* ─── How it works ─────────────────────────────────────────────────────── */
 
 function HowItWorks() {
   return (
-    <section className="relative overflow-hidden border-b border-slate-200 py-20 sm:py-24">
-      {/* Warm tinted band with dot grid */}
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-orange-50/50 via-slate-50/70 to-white"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-50"
-        style={{ backgroundImage: DOT_GRID_BG, backgroundSize: "24px 24px" }}
-      />
-      <div className="relative mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-            How it works
-          </h2>
-          <p className="mt-3 text-base text-slate-600">
-            Three steps from &ldquo;interested&rdquo; to &ldquo;in class.&rdquo;
+    <section className="border-border/60 bg-muted/30 border-b py-20 sm:py-24">
+      <div className="mx-auto max-w-6xl px-6">
+        <Reveal className="max-w-2xl">
+          <p className="text-brand-terracotta text-xs font-medium uppercase tracking-wider">
+            Getting started
           </p>
-        </div>
-        {/* Steps + a connecting line on md+ */}
-        <div className="relative mt-14">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-6 hidden h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-orange-300 to-transparent md:block"
-          />
-          <ol className="relative grid grid-cols-1 gap-6 md:grid-cols-3">
-            {STEPS.map((s, i) => (
-              <li
-                key={s.title}
-                className="relative rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-transform hover:-translate-y-1"
-              >
-                <div className="cta-pulse relative mb-3 inline-flex size-10 items-center justify-center rounded-full bg-orange-600 text-sm font-semibold text-white shadow-md">
-                  {i + 1}
+          <h2 className="font-display mt-2 text-3xl leading-tight tracking-tight text-foreground sm:text-4xl">
+            Three steps, one email
+          </h2>
+        </Reveal>
+
+        <ol className="mt-14 space-y-16">
+          {STEPS.map((step, i) => {
+            const flip = i % 2 === 1;
+            return (
+              <li key={step.title}>
+                <div className="grid items-center gap-8 md:grid-cols-2">
+                  <Reveal
+                    from={flip ? "right" : "left"}
+                    className={flip ? "md:order-2" : undefined}
+                  >
+                    <div className="flex items-baseline gap-4">
+                      <span className="font-display text-brand-terracotta/40 text-5xl leading-none tabular-nums">
+                        {i + 1}
+                      </span>
+                      <div>
+                        <h3 className="font-display text-2xl leading-tight text-foreground">
+                          {step.title}
+                        </h3>
+                        <p className="text-muted-foreground mt-2 max-w-md text-sm leading-relaxed">
+                          {step.body}
+                        </p>
+                      </div>
+                    </div>
+                  </Reveal>
+
+                  <Reveal
+                    from={flip ? "left" : "right"}
+                    delay={0.1}
+                    className={flip ? "md:order-1" : undefined}
+                  >
+                    <div className="relative mx-auto aspect-[4/3] w-full max-w-sm">
+                      <Image
+                        src={step.art}
+                        alt=""
+                        fill
+                        className="object-contain"
+                        sizes="(max-width: 768px) 80vw, 360px"
+                      />
+                    </div>
+                  </Reveal>
                 </div>
-                <h3 className="text-lg font-medium tracking-tight text-slate-900">
-                  {s.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  {s.body}
-                </p>
               </li>
-            ))}
-          </ol>
-        </div>
+            );
+          })}
+        </ol>
       </div>
     </section>
   );
 }
 
-/* ─── Screenshot mock ───────────────────────────────────────────────── */
+/* ─── Audiences ────────────────────────────────────────────────────────── */
 
-function ScreenshotBlock() {
-  return (
-    <section className="relative overflow-hidden border-b border-slate-200 py-20 sm:py-24">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(900px 400px at 80% 20%, rgba(251,146,60,0.10), transparent 70%)",
-        }}
-      />
-      <div className="relative mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-            A dashboard that stays out of the way
-          </h2>
-          <p className="mt-3 text-base text-slate-600">
-            Your day &mdash; up-next deadlines, in-progress lessons, and recent
-            grades &mdash; all on one screen.
-          </p>
-        </div>
-        <div className="mt-12">
-          <MockDashboard />
-        </div>
-      </div>
-    </section>
-  );
-}
+function Audiences() {
+  const panels = [
+    {
+      art: "/illustrations/mathematics-tutor.svg",
+      eyebrow: "For tutors",
+      title: "Author once, mark faster",
+      points: [
+        "Write lessons and tests with markdown and maths",
+        "Import a whole test from JSON, export it back out",
+        "Grade per section, attach a memo, release when ready",
+        "Weight assessments however your course actually works",
+      ],
+    },
+    {
+      art: "/illustrations/curious.svg",
+      eyebrow: "For students",
+      title: "Know where you stand",
+      points: [
+        "Every course, test and deadline on one dashboard",
+        "Drafts save as you work — a refresh costs nothing",
+        "See the mark next to the answer that earned it",
+        "Model answers and memos once they're released",
+      ],
+    },
+  ];
 
-function MockDashboard() {
   return (
-    <div className="relative mx-auto max-w-4xl">
-      {/* Glow behind the card */}
-      <div
-        aria-hidden
-        className="absolute -inset-4 rounded-2xl bg-gradient-to-r from-orange-300/30 via-orange-100/40 to-slate-200/40 blur-2xl"
-      />
-      <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-        <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
-          <span className="size-2.5 rounded-full bg-red-400/70" />
-          <span className="size-2.5 rounded-full bg-yellow-400/70" />
-          <span className="size-2.5 rounded-full bg-green-400/70" />
-          <span className="ml-3 text-xs text-slate-500">
-            {APP_NAME} · Dashboard
-          </span>
-          <span className="ml-auto inline-flex items-center gap-1 text-xs text-slate-400">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-green-500" />
-            </span>
-            Live
-          </span>
-        </div>
-        <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-3">
-          <MockCard title="Progress" value="72%" hint="8 of 11 lessons" />
-          <MockCard title="Up next" value="3" hint="2 tests · 1 assignment" />
-          <MockCard title="Average" value="86%" hint="across 12 grades" />
-          <div className="col-span-full rounded-lg border border-slate-200 bg-slate-50/40 p-4">
-            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">
-              Up next
-            </p>
-            <ul className="space-y-2 text-sm">
-              {[
-                { label: "Calculus quiz", meta: "Due Fri · 45 min", tag: "Test" },
-                { label: "Essay: causes of WWI", meta: "Due Mon · Draft", tag: "Assignment" },
-                { label: "Lab session", meta: "Wed 3:00pm", tag: "Event" },
-              ].map((r) => (
-                <li
-                  key={r.label}
-                  className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 transition-transform hover:-translate-y-0.5 hover:shadow"
-                >
-                  <span className="flex items-center gap-2 text-slate-800">
-                    <span className="size-1.5 rounded-full bg-orange-500" />
-                    {r.label}
-                  </span>
-                  <span className="flex items-center gap-3 text-xs text-slate-500">
-                    <span>{r.meta}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
-                      {r.tag}
+    <section className="border-border/60 border-b py-20 sm:py-24">
+      <div className="mx-auto grid max-w-6xl gap-6 px-6 md:grid-cols-2">
+        {panels.map((p, i) => (
+          <Reveal key={p.eyebrow} delay={i * 0.1}>
+            <Card className="flex h-full flex-col p-8">
+              <div className="relative mx-auto aspect-[4/3] w-full max-w-64">
+                <Image
+                  src={p.art}
+                  alt=""
+                  fill
+                  className="object-contain"
+                  sizes="(max-width: 768px) 70vw, 256px"
+                />
+              </div>
+              <p className="text-brand-terracotta mt-6 text-xs font-medium uppercase tracking-wider">
+                {p.eyebrow}
+              </p>
+              <h3 className="font-display mt-2 text-2xl leading-tight text-foreground">
+                {p.title}
+              </h3>
+              <ul className="mt-5 space-y-2.5">
+                {p.points.map((point) => (
+                  <li key={point} className="flex gap-2.5 text-sm">
+                    <CheckCircle2 className="text-brand-terracotta mt-0.5 size-4 shrink-0" />
+                    <span className="text-muted-foreground leading-relaxed">
+                      {point}
                     </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </Reveal>
+        ))}
       </div>
-    </div>
+    </section>
   );
 }
 
-function MockCard({
-  title,
-  value,
-  hint,
-}: {
-  title: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-        {title}
-      </p>
-      <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">
-        {value}
-      </p>
-      <p className="mt-1 text-xs text-slate-500">{hint}</p>
-    </div>
-  );
-}
-
-/* ─── FAQ ──────────────────────────────────────────────────────────── */
-
-const FAQ: { q: string; a: string }[] = [
-  {
-    q: "Can I sign up myself?",
-    a: "Not directly — accounts are created for you by a tutor or the platform admin. That keeps course rosters tidy and prevents random signups. Click 'Request access' and we'll set you up.",
-  },
-  {
-    q: "What kinds of questions do the tests support?",
-    a: "Multiple choice, multi-select, true/false, short answer, essay, numeric, fill-in-the-blank, matching, reorder, code, file upload — plus 'context' parent blocks that group sub-questions.",
-  },
-  {
-    q: "Can tutors write math?",
-    a: "Yes. Lesson descriptions, question prompts, and tutor feedback all render with MathJax — inline math with $…$ and display math with $$…$$.",
-  },
-  {
-    q: "Can I bulk-create tests?",
-    a: "Yes — the tutor test editor supports JSON import. Copy the built-in LLM prompt, ask ChatGPT/Claude to generate the JSON, and paste it back in.",
-  },
-];
+/* ─── FAQ ──────────────────────────────────────────────────────────────── */
 
 function Faq() {
   return (
-    <section className="relative overflow-hidden border-b border-slate-200 py-20 sm:py-24">
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/60 to-white"
-      />
-      <div className="relative mx-auto max-w-3xl px-6">
-        <div className="text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+    <section className="border-border/60 bg-muted/30 border-b py-20 sm:py-24">
+      <div className="mx-auto max-w-3xl px-6">
+        <Reveal>
+          <h2 className="font-display text-center text-3xl leading-tight tracking-tight text-foreground sm:text-4xl">
             Common questions
           </h2>
-        </div>
-        <dl className="mt-12 space-y-6">
+        </Reveal>
+
+        <Stagger className="mt-12 space-y-3">
           {FAQ.map((item) => (
-            <div
-              key={item.q}
-              className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md"
-            >
-              <span
-                aria-hidden
-                className="absolute inset-y-0 left-0 w-1 origin-top scale-y-0 bg-orange-500 transition-transform group-hover:scale-y-100"
-              />
-              <dt className="text-base font-medium text-slate-900">{item.q}</dt>
-              <dd className="mt-2 text-sm leading-relaxed text-slate-600">
-                {item.a}
-              </dd>
-            </div>
+            <StaggerItem key={item.q}>
+              <Card className="group border-l-brand-terracotta/0 hover:border-l-brand-terracotta border-l-2 p-6 transition-colors">
+                <h3 className="font-medium text-foreground">{item.q}</h3>
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                  {item.a}
+                </p>
+              </Card>
+            </StaggerItem>
           ))}
-        </dl>
+        </Stagger>
       </div>
     </section>
   );
 }
 
-/* ─── Closing CTA ──────────────────────────────────────────────────── */
+/* ─── Closing CTA ──────────────────────────────────────────────────────── */
 
 function ClosingCta() {
   return (
-    <section className="relative overflow-hidden border-b border-slate-200 py-24">
-      {/* Big warm gradient with dot grid overlay */}
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(1000px 500px at 50% 0%, rgba(251,146,60,0.18), transparent 70%), linear-gradient(to bottom, #fff, #fff)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-60"
-        style={{ backgroundImage: DOT_GRID_BG, backgroundSize: "22px 22px" }}
-      />
-      <div className="relative mx-auto max-w-3xl px-6 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-          Ready when you are.
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-base text-slate-600">
-          Send us a note — we&apos;ll set up your account, add you to your
-          course, and send credentials.
-        </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <a
-            href={mailtoHref}
-            className="cta-pulse relative inline-flex items-center gap-2 rounded-md bg-orange-600 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-orange-600/20 transition-transform hover:-translate-y-0.5 hover:bg-orange-700"
-          >
-            <Mail className="size-4" />
-            Request access
-          </a>
-          <Link
-            href="/auth"
-            className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-800 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-400 hover:bg-white"
-          >
-            <CheckCircle2 className="size-4" />
-            I already have an account
-          </Link>
+    <section className="px-6 py-20 sm:py-24">
+      <Reveal className="mx-auto max-w-5xl">
+        <div className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground relative overflow-hidden rounded-lg">
+          <div
+            aria-hidden
+            className="bg-brand-terracotta/20 pointer-events-none absolute -right-20 -top-20 size-72 rounded-full blur-3xl"
+          />
+          <div className="relative grid items-center gap-8 p-10 md:grid-cols-[1.2fr_1fr] sm:p-14">
+            <div>
+              <h2 className="font-display text-3xl leading-tight tracking-tight sm:text-4xl">
+                Ready when you are
+              </h2>
+              <p className="text-primary-foreground/70 mt-4 max-w-md text-sm leading-relaxed sm:text-base">
+                Accounts are created by hand so rosters stay tidy. Tell us who
+                you are and which course you&apos;re joining, and we&apos;ll do
+                the rest.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button asChild variant="brand" size="lg">
+                  <a href={mailtoHref}>
+                    <Mail className="size-4" />
+                    Request access
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="lg"
+                  className="text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                >
+                  <Link href="/auth">
+                    I already have an account
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            <Float distance={8} duration={8}>
+              <div className="relative mx-auto aspect-square w-full max-w-64">
+                <Image
+                  src="/illustrations/launching.svg"
+                  alt=""
+                  fill
+                  className="object-contain"
+                  sizes="(max-width: 768px) 60vw, 256px"
+                />
+              </div>
+            </Float>
+          </div>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
 
-/* ─── Footer ───────────────────────────────────────────────────────── */
+/* ─── Footer ───────────────────────────────────────────────────────────── */
 
 function Footer() {
   return (
-    <footer className="py-10">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 text-xs text-slate-500 sm:flex-row">
-        <p>
-          © {new Date().getFullYear()} {APP_NAME}. Learning, well composed.
-        </p>
-        <div className="flex items-center gap-4">
-          <a href={mailtoHref} className="hover:text-slate-800">
-            Contact
+    <footer className="border-border/60 border-t">
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="flex flex-wrap items-start justify-between gap-8">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <span className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-md">
+                <GraduationCap className="size-3.5" />
+              </span>
+              <span className="font-display leading-none tracking-tight">
+                {APP_NAME}
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-3 max-w-xs text-sm">
+              {APP_TAGLINE}
+            </p>
+          </div>
+
+          <div className="flex gap-12">
+            <div>
+              <p className="text-foreground text-xs font-medium uppercase tracking-wider">
+                Product
+              </p>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li>
+                  <Link
+                    href="/auth"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </li>
+                <li>
+                  <a
+                    href={mailtoHref}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Request access
+                  </a>
+                </li>
+                <li>
+                  <Link
+                    href="/support"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Support
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-foreground text-xs font-medium uppercase tracking-wider">
+                Legal
+              </p>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li>
+                  <Link
+                    href="/privacy-policy"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Privacy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/terms-of-service"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Terms
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <Separator className="my-8" />
+
+        <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-xs">
+          <p>
+            © {new Date().getFullYear()} {APP_NAME}. {APP_CONTACT.location}.
+          </p>
+          <a
+            href={`mailto:${APP_CONTACT.email}`}
+            className="hover:text-foreground transition-colors"
+          >
+            {APP_CONTACT.email}
           </a>
-          <Link href="/privacy-policy" className="hover:text-slate-800">
-            Privacy
-          </Link>
-          <Link href="/terms-of-service" className="hover:text-slate-800">
-            Terms
-          </Link>
         </div>
       </div>
     </footer>
