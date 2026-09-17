@@ -126,6 +126,21 @@ model CourseEvent {
   createdAt   DateTime  @default(now())
   courseId    String
   course      Course    @relation(fields: [courseId], references: [id])
+
+  // Recurrence. `date` is the first occurrence; the rest are derived at
+  // read time by expandOccurrences() rather than being materialised as
+  // rows, so editing the series edits one record.
+  //   repeatFrequency = NONE  -> a one-off event, every field below ignored
+  //   repeatInterval  = every N days/weeks/months/years
+  //   repeatWeekdays  = WEEKLY only; 0=Sunday .. 6=Saturday. Empty means
+  //                     "same weekday as `date`".
+  //   repeatUntil / repeatCount = the two ways a series can end. Both null
+  //                     means open-ended and the caller's window bounds it.
+  repeatFrequency RepeatFrequency @default(NONE)
+  repeatInterval  Int             @default(1)
+  repeatWeekdays  Int[]           @default([])
+  repeatUntil     DateTime?
+  repeatCount     Int?
 }
 
 model Quiz {
@@ -155,6 +170,11 @@ model Test {
   // still gets an auto-grade suggestion in the grading UI, but the
   // student sees no grade until the tutor releases it.
   releaseAutoMarksToStudent Boolean            @default(false)
+  // Share of the course's final mark, as a percentage (e.g. 30 = 30%).
+  // null means "no explicit weight" and the gradebook falls back to
+  // weighting this assessment by its totalPoints relative to the other
+  // unweighted assessments. See features/grades/lib/weighting.ts.
+  weight               Float?
   AssessmentCompletion AssessmentCompletion[]
   course               Course                 @relation(fields: [courseId], references: [id])
   questions            TestQuestion[]
@@ -243,6 +263,9 @@ model Submission {
   // Students only see these once they've been added.
   memoFileUrls     String[]          @default([])
   totalPoints      Int               @default(1)
+  // Percentage share of the course's final mark; null = weight by points.
+  // Mirrors Test.weight - see features/grades/lib/weighting.ts.
+  weight           Float?
   isActive         Boolean?          @default(true)
   course           Course            @relation(fields: [courseId], references: [id])
   entries          SubmissionEntry[]
@@ -402,6 +425,14 @@ enum SubmissionStatus {
   IN_PROGRESS
   NOT_SUBMITTED
   NOT_STARTED
+}
+
+enum RepeatFrequency {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
 }
 
 enum EventType {

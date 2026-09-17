@@ -76,6 +76,12 @@ export function EntryGradingForm({
 }: EntryGradingFormProps) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
+  // Sections with a memo upload still in flight. Saving mid-upload would
+  // persist the section with memoFileUrl still null and silently lose the
+  // file the tutor just picked.
+  const [uploadingIdx, setUploadingIdx] = React.useState<Set<number>>(
+    () => new Set(),
+  );
   const [score, setScore] = React.useState<number>(defaultValues.score);
   const [outOf, setOutOf] = React.useState<number>(
     defaultValues.outOf || totalPointsDefault || 1,
@@ -115,8 +121,18 @@ export function EntryGradingForm({
     toast.success(`Summed: ${nextScore}/${nextOutOf || 0}.`);
   }
 
+  function markUploading(i: number, on: boolean) {
+    setUploadingIdx((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(i);
+      else next.delete(i);
+      return next;
+    });
+  }
+
   async function handleMemoUpload(i: number, file: File) {
     updateSection(i, { memoFileUrl: null });
+    markUploading(i, true);
     const uploadingToast = toast.loading(`Uploading ${file.name}…`);
     try {
       const { url } = await uploadFile({
@@ -130,7 +146,19 @@ export function EntryGradingForm({
       toast.error(err instanceof Error ? err.message : "Upload failed", {
         id: uploadingToast,
       });
+    } finally {
+      markUploading(i, false);
     }
+  }
+
+  /** True when a section carries anything the tutor would expect to keep. */
+  function sectionHasContent(s: EntryGradingFormSection): boolean {
+    return (
+      s.title.trim().length > 0 ||
+      s.remarks.trim().length > 0 ||
+      s.memoFileUrl !== null ||
+      s.score > 0
+    );
   }
 
   async function onSave() {
@@ -142,17 +170,32 @@ export function EntryGradingForm({
       toast.error("Score can't exceed the out-of.");
       return;
     }
-    const cleanedSections = sectionsOn
-      ? sections
-          .filter((s) => s.title.trim().length > 0)
-          .map((s) => ({
-            title: s.title.trim(),
-            remarks: s.remarks,
-            score: s.score,
-            outOf: s.outOf,
-            memoFileUrl: s.memoFileUrl,
-          }))
-      : [];
+    if (uploadingIdx.size > 0) {
+      toast.error("A memo is still uploading - wait for it to finish.");
+      return;
+    }
+
+    // Keep every section the tutor put something into. This used to filter
+    // on a non-empty title, so attaching a memo to an otherwise-untitled
+    // section threw the section (and the memo) away on save without saying
+    // anything. Untitled sections get a positional name instead.
+    const kept = sectionsOn ? sections.filter(sectionHasContent) : [];
+
+    // The server schema requires outOf > 0 per section; catch it here so the
+    // tutor gets a pointed message rather than a generic rejection.
+    const badIdx = kept.findIndex((s) => s.outOf <= 0);
+    if (badIdx !== -1) {
+      toast.error(`Section ${badIdx + 1} needs an out-of greater than zero.`);
+      return;
+    }
+
+    const cleanedSections = kept.map((s, i) => ({
+      title: s.title.trim() || `Section ${i + 1}`,
+      remarks: s.remarks,
+      score: s.score,
+      outOf: s.outOf,
+      memoFileUrl: s.memoFileUrl,
+    }));
 
     setPending(true);
     try {
@@ -165,6 +208,20 @@ export function EntryGradingForm({
       });
       if (res?.serverError) {
         toast.error(res.serverError);
+        return;
+      }
+      // A schema rejection comes back as validationErrors with no data -
+      // that used to fall through to the success toast, so a refused save
+      // looked identical to a successful one and the memo just vanished.
+      if (res?.validationErrors) {
+        console.warn("[EntryGradingForm] rejected:", res.validationErrors);
+        toast.error(
+          "Some fields were rejected - check each section's score and out-of.",
+        );
+        return;
+      }
+      if (!res?.data) {
+        toast.error("Save did not complete. Please try again.");
         return;
       }
       toast.success("Grade saved.");
@@ -349,13 +406,18 @@ export function EntryGradingForm({
                   <div className="flex flex-wrap items-center gap-3">
                     <label className="border-input hover:bg-muted/40 inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-xs">
                       <FileUp className="size-3.5" />
-                      {s.memoFileUrl ? "Replace memo" : "Attach memo (optional)"}
+                      {uploadingIdx.has(i)
+                        ? "Uploading…"
+                        : s.memoFileUrl
+                          ? "Replace memo"
+                          : "Attach memo (optional)"}
                       <input
                         type="file"
                         className="hidden"
+                        disabled={uploadingIdx.has(i)}
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          if (f) handleMemoUpload(i, f);
+                          if (f) void handleMemoUpload(i, f);
                           e.target.value = "";
                         }}
                       />
@@ -404,7 +466,7 @@ export function EntryGradingForm({
       <div className="flex justify-end">
         <Button
           onClick={onSave}
-          disabled={pending}
+          disabled={pending || uploadingIdx.size > 0}
           className="bg-brand-terracotta text-brand-terracotta-foreground hover:opacity-90"
         >
           {pending ? (

@@ -45,28 +45,33 @@ const MatchPairSchema = z.object({
 type ImportQuestion = {
   type: (typeof QUESTION_TYPES)[number];
   question: string;
-  points?: number;
-  options?: string[];
+  points?: number | null;
+  options?: string[] | null;
   answer?: unknown;
   language?: string | null;
   matchPairs?: Array<{ left: string; right: string }> | null;
-  reorderItems?: string[];
+  reorderItems?: string[] | null;
   blankCount?: number | null;
-  subQuestions?: ImportQuestion[];
+  subQuestions?: ImportQuestion[] | null;
 };
 
+// Every array/scalar field is `.nullable()` as well as `.optional()`. A
+// hand-written file omits the fields it doesn't need, but a file produced
+// from a DB row can legitimately carry an explicit `null` (Prisma stores
+// matchPairs/blankCount/language as nullable columns). Rejecting null here
+// is what broke export -> import round-tripping.
 const ImportQuestionSchema: z.ZodType<ImportQuestion> = z.lazy(() =>
   z.object({
     type: z.enum(QUESTION_TYPES),
     question: z.string(),
-    points: z.number().int().nonnegative().optional(),
-    options: z.array(z.string()).optional(),
+    points: z.number().int().nonnegative().nullable().optional(),
+    options: z.array(z.string()).nullable().optional(),
     answer: z.unknown().optional(),
     language: z.string().nullable().optional(),
-    matchPairs: z.array(MatchPairSchema).optional(),
-    reorderItems: z.array(z.string()).optional(),
+    matchPairs: z.array(MatchPairSchema).nullable().optional(),
+    reorderItems: z.array(z.string()).nullable().optional(),
     blankCount: z.number().int().positive().nullable().optional(),
-    subQuestions: z.array(ImportQuestionSchema).optional(),
+    subQuestions: z.array(ImportQuestionSchema).nullable().optional(),
   }),
 );
 
@@ -193,18 +198,44 @@ export function toCreateInput(
 /* ------------------------------------------------------------------------- */
 
 type SerializedQuestion = {
-  type: ( typeof QUESTION_TYPES)[number];
+  type: (typeof QUESTION_TYPES)[number];
   question: string;
   points: number;
-  options: string[];
-  answer: unknown;
-  language: string | null;
-  matchPairs: Array<{ left: string; right: string }> | null;
-  reorderItems: string[];
-  blankCount: number | null;
   subQuestions: SerializedQuestion[];
+  options?: string[];
+  answer?: unknown;
+  language?: string;
+  matchPairs?: Array<{ left: string; right: string }>;
+  reorderItems?: string[];
+  blankCount?: number;
 };
 
+/** Types that carry a list of choices. */
+const HAS_OPTIONS = new Set(["MULTIPLE_CHOICE", "MULTI_SELECT"]);
+
+/**
+ * Types whose `answer` column is meaningful. The rest are either graded
+ * manually (ESSAY/CODE/FILE_UPLOAD), keyed by a dedicated column
+ * (MATCHING/REORDER), or non-answerable (NONE).
+ */
+const HAS_ANSWER = new Set([
+  "MULTIPLE_CHOICE",
+  "MULTI_SELECT",
+  "TRUE_FALSE",
+  "SHORT_ANSWER",
+  "NUMERIC",
+  "FILL_IN_THE_BLANK",
+]);
+
+/**
+ * Emit only the fields the guide says belong to this question's type, and
+ * drop anything null/empty. Two reasons:
+ *
+ *   1. The file has to satisfy TestImportSchema — a blanket `matchPairs:
+ *      null` on a multiple-choice question used to fail the import outright.
+ *   2. An exported test doubles as a template a tutor pastes into an LLM,
+ *      and irrelevant null fields invite the model to fill them in.
+ */
 function serializeQuestion(
   q: TestDetail["questions"][number],
   byParent: Map<string | null, TestDetail["questions"]>,
@@ -214,20 +245,34 @@ function serializeQuestion(
       (a.order ?? 0) - (b.order ?? 0) ||
       a.createdAt.getTime() - b.createdAt.getTime(),
   );
-  return {
+
+  const out: SerializedQuestion = {
     type: q.type,
     question: q.question,
     points: q.points,
-    options: q.options,
-    answer: q.answer,
-    language: q.language,
-    matchPairs: Array.isArray(q.matchPairs)
-      ? (q.matchPairs as Array<{ left: string; right: string }>)
-      : null,
-    reorderItems: q.reorderItems,
-    blankCount: q.blankCount,
     subQuestions: children.map((c) => serializeQuestion(c, byParent)),
   };
+
+  if (HAS_OPTIONS.has(q.type) && q.options.length > 0) {
+    out.options = q.options;
+  }
+  if (HAS_ANSWER.has(q.type) && q.answer != null) {
+    out.answer = q.answer;
+  }
+  if (q.type === "CODE" && q.language) {
+    out.language = q.language;
+  }
+  if (q.type === "MATCHING" && Array.isArray(q.matchPairs)) {
+    out.matchPairs = q.matchPairs as Array<{ left: string; right: string }>;
+  }
+  if (q.type === "REORDER" && q.reorderItems.length > 0) {
+    out.reorderItems = q.reorderItems;
+  }
+  if (q.type === "FILL_IN_THE_BLANK" && q.blankCount != null) {
+    out.blankCount = q.blankCount;
+  }
+
+  return out;
 }
 
 /**

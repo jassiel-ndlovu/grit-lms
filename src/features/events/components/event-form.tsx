@@ -9,13 +9,19 @@
  *
  * Date is split across a date input and a time input for usability;
  * the form merges them into a single ISO timestamp before submitting.
+ *
+ * Repeat settings mirror the columns on CourseEvent. Only the first
+ * occurrence is stored; the calendar derives the rest via
+ * features/events/lib/recurrence.ts. A series ends either on a date or
+ * after N occurrences - the form makes that an explicit either/or so the
+ * two can't contradict each other.
  */
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -39,7 +45,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { Separator } from "@/components/ui/separator";
+
 import { createCourseEvent, updateCourseEvent } from "../actions";
+import { describeRecurrence, type RepeatFrequency } from "../lib/recurrence";
+
+const WEEKDAYS: Array<{ value: number; short: string; label: string }> = [
+  { value: 0, short: "S", label: "Sunday" },
+  { value: 1, short: "M", label: "Monday" },
+  { value: 2, short: "T", label: "Tuesday" },
+  { value: 3, short: "W", label: "Wednesday" },
+  { value: 4, short: "T", label: "Thursday" },
+  { value: 5, short: "F", label: "Friday" },
+  { value: 6, short: "S", label: "Saturday" },
+];
+
+
 
 const FormSchema = z.object({
   id: z.string().optional(),
@@ -60,6 +81,16 @@ const FormSchema = z.object({
   duration: z.string().optional(),
   location: z.string().optional().nullable(),
   link: z.string().optional().nullable(),
+
+  /* Repeat. Kept as strings because they come straight off inputs. */
+  repeatFrequency: z
+    .enum(["NONE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"])
+    .default("NONE"),
+  repeatInterval: z.string().default("1"),
+  repeatWeekdays: z.array(z.number().int().min(0).max(6)).default([]),
+  endMode: z.enum(["never", "on", "after"]).default("never"),
+  repeatUntil: z.string().default(""),
+  repeatCount: z.string().default(""),
 });
 type FormValues = z.input<typeof FormSchema>;
 type FormOutput = z.output<typeof FormSchema>;
@@ -75,6 +106,11 @@ export interface EventFormProps {
     duration: number | null;
     location: string | null;
     link: string | null;
+    repeatFrequency: RepeatFrequency;
+    repeatInterval: number;
+    repeatWeekdays: number[];
+    repeatUntil: Date | null;
+    repeatCount: number | null;
   }>;
   onSuccess?: () => void;
 }
@@ -112,8 +148,55 @@ export function EventForm({
       duration: defaultValues?.duration ? String(defaultValues.duration) : "",
       location: defaultValues?.location ?? "",
       link: defaultValues?.link ?? "",
+      repeatFrequency: defaultValues?.repeatFrequency ?? "NONE",
+      repeatInterval: String(defaultValues?.repeatInterval ?? 1),
+      repeatWeekdays: defaultValues?.repeatWeekdays ?? [],
+      endMode: defaultValues?.repeatUntil
+        ? "on"
+        : defaultValues?.repeatCount != null
+          ? "after"
+          : "never",
+      repeatUntil: defaultValues?.repeatUntil
+        ? splitDate(defaultValues.repeatUntil).date
+        : "",
+      repeatCount:
+        defaultValues?.repeatCount != null
+          ? String(defaultValues.repeatCount)
+          : "",
     },
   });
+
+  // Watched so the repeat panel can show/hide its dependent controls and
+  // render a live plain-English summary of the rule.
+  const repeatFrequency = form.watch("repeatFrequency");
+  const repeatInterval = form.watch("repeatInterval");
+  const repeatWeekdays = form.watch("repeatWeekdays");
+  const endMode = form.watch("endMode");
+  const repeatUntil = form.watch("repeatUntil");
+  const repeatCount = form.watch("repeatCount");
+  const repeats = repeatFrequency !== "NONE";
+
+  const summary = React.useMemo(
+    () =>
+      describeRecurrence({
+        repeatFrequency: repeatFrequency as RepeatFrequency,
+        repeatInterval: Number(repeatInterval) || 1,
+        repeatWeekdays: repeatWeekdays ?? [],
+        repeatUntil:
+          endMode === "on" && repeatUntil ? new Date(repeatUntil) : null,
+        repeatCount:
+          endMode === "after" && repeatCount ? Number(repeatCount) : null,
+      }),
+    [repeatFrequency, repeatInterval, repeatWeekdays, endMode, repeatUntil, repeatCount],
+  );
+
+  function toggleWeekday(day: number) {
+    const current = form.getValues("repeatWeekdays") ?? [];
+    const next = current.includes(day)
+      ? current.filter((d) => d !== day)
+      : [...current, day].sort((a, b) => a - b);
+    form.setValue("repeatWeekdays", next, { shouldDirty: true });
+  }
 
   const isEdit = Boolean(defaultValues?.id);
 
@@ -140,6 +223,27 @@ export function EventForm({
             : null,
         link:
           values.link && values.link.length > 0 ? values.link : "",
+
+        repeatFrequency: values.repeatFrequency,
+        repeatInterval: Number(values.repeatInterval) || 1,
+        // Weekday selection only means anything for a weekly series; send
+        // an empty list otherwise so a leftover selection from a frequency
+        // the tutor changed their mind about can't survive the save.
+        repeatWeekdays:
+          values.repeatFrequency === "WEEKLY" ? (values.repeatWeekdays ?? []) : [],
+        repeatUntil:
+          values.repeatFrequency !== "NONE" &&
+          values.endMode === "on" &&
+          values.repeatUntil
+            ? // End of the chosen day, so an occurrence ON that day counts.
+              new Date(`${values.repeatUntil}T23:59:59`)
+            : null,
+        repeatCount:
+          values.repeatFrequency !== "NONE" &&
+          values.endMode === "after" &&
+          values.repeatCount
+            ? Number(values.repeatCount)
+            : null,
       };
 
       if (isEdit && values.id) {
@@ -311,6 +415,177 @@ export function EventForm({
             </FormItem>
           )}
         />
+
+        <Separator />
+
+        {/* ───── Repeat ───── */}
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="repeatFrequency"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <Repeat className="size-4" /> Repeat
+                </FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="NONE">Does not repeat</SelectItem>
+                    <SelectItem value="DAILY">Daily</SelectItem>
+                    <SelectItem value="WEEKLY">Weekly</SelectItem>
+                    <SelectItem value="MONTHLY">Monthly</SelectItem>
+                    <SelectItem value="YEARLY">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {repeats && (
+            <div className="border-border space-y-4 rounded-md border p-4">
+              <FormField
+                control={form.control}
+                name="repeatInterval"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Every</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={52}
+                          className="w-20 tabular-nums"
+                          {...field}
+                        />
+                      </FormControl>
+                      <span className="text-muted-foreground text-sm">
+                        {repeatFrequency === "DAILY"
+                          ? "day(s)"
+                          : repeatFrequency === "WEEKLY"
+                            ? "week(s)"
+                            : repeatFrequency === "MONTHLY"
+                              ? "month(s)"
+                              : "year(s)"}
+                      </span>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {repeatFrequency === "WEEKLY" && (
+                <FormItem>
+                  <FormLabel>On these days</FormLabel>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAYS.map((d) => {
+                      const on = (repeatWeekdays ?? []).includes(d.value);
+                      return (
+                        <button
+                          key={d.value}
+                          type="button"
+                          onClick={() => toggleWeekday(d.value)}
+                          aria-pressed={on}
+                          aria-label={d.label}
+                          className={
+                            on
+                              ? "border-brand-terracotta bg-brand-terracotta text-brand-terracotta-foreground size-9 rounded-full border text-sm font-medium"
+                              : "border-input hover:border-brand-terracotta/50 size-9 rounded-full border text-sm"
+                          }
+                        >
+                          {d.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <FormDescription>
+                    Leave all unselected to repeat on the same weekday as the
+                    start date.
+                  </FormDescription>
+                </FormItem>
+              )}
+
+              <FormField
+                control={form.control}
+                name="endMode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ends</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="never">Never</SelectItem>
+                        <SelectItem value="on">On a date</SelectItem>
+                        <SelectItem value="after">
+                          After a number of occurrences
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {endMode === "on" && (
+                <FormField
+                  control={form.control}
+                  name="repeatUntil"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {endMode === "after" && (
+                <FormField
+                  control={form.control}
+                  name="repeatCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of occurrences</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={365}
+                          className="w-28 tabular-nums"
+                          placeholder="10"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Counts the first occurrence.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {summary && (
+                <p className="text-muted-foreground border-t pt-3 text-xs">
+                  {summary}.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="flex justify-end">
           <Button type="submit" disabled={pending}>
