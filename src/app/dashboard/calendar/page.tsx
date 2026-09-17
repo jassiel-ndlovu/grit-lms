@@ -44,6 +44,56 @@ import {
   type CalendarItem,
 } from "@/features/events/components/calendar-view";
 import { CreateEventButton } from "@/features/events/components/create-event-button";
+import { occurrencesOf } from "@/features/events/lib/recurrence";
+
+/**
+ * How far ahead the calendar materialises repeating events. The grid only
+ * ever shows one month at a time, but the list below it and the month
+ * stepper both want a run of future occurrences ready to go.
+ */
+function calendarWindow(): { start: Date; end: Date } {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setFullYear(end.getFullYear() + 1);
+  return { start, end };
+}
+
+/**
+ * Turn one CourseEvent row into one calendar item per occurrence. The id
+ * is suffixed with the occurrence timestamp so React keys stay unique and
+ * the detail dialog opens the right instance; the event's real id is still
+ * the prefix if a caller needs it.
+ */
+function expandEventItems<
+  T extends {
+    id: string;
+    type: string;
+    title: string;
+    date: Date;
+    description: string;
+    location: string | null;
+    duration: number | null;
+    link: string | null;
+    course: { id: string; name: string };
+  },
+>(events: T[], window: { start: Date; end: Date }) {
+  return events.flatMap((e) =>
+    occurrencesOf(e, window.start, window.end).map((date) => ({
+      id: `${e.id}#${date.getTime()}`,
+      kind: "event" as const,
+      type: e.type,
+      title: e.title,
+      date,
+      course: { id: e.course.id, name: e.course.name },
+      description: e.description,
+      location: e.location,
+      duration: e.duration,
+      link: e.link,
+      href: null,
+    })),
+  );
+}
 
 interface PageProps {
   searchParams: Promise<{ view?: string }>;
@@ -110,19 +160,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
     ]);
 
     items = [
-      ...events.map((e) => ({
-        id: e.id,
-        kind: "event" as const,
-        type: e.type,
-        title: e.title,
-        date: e.date,
-        course: { id: e.course.id, name: e.course.name },
-        description: e.description,
-        location: e.location,
-        duration: e.duration,
-        link: e.link,
-        href: null,
-      })),
+      ...expandEventItems(events, calendarWindow()),
       ...tests.map((t) => ({
         id: t.id,
         kind: "test" as const,
@@ -179,19 +217,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
     );
 
     items = [
-      ...events.map((e) => ({
-        id: e.id,
-        kind: "event" as const,
-        type: e.type,
-        title: e.title,
-        date: e.date,
-        course: { id: e.course.id, name: e.course.name },
-        description: e.description,
-        location: e.location,
-        duration: e.duration,
-        link: e.link,
-        href: null,
-      })),
+      ...expandEventItems(events, calendarWindow()),
       ...perCourse.flatMap(({ course, tests, subs }) => [
         ...tests.map((t) => ({
           id: t.id,

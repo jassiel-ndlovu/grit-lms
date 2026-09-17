@@ -47,6 +47,11 @@ export const createCourseEvent = tutorActionClient
         duration: parsedInput.duration,
         link: parsedInput.link,
         courseId: parsedInput.courseId,
+        repeatFrequency: parsedInput.repeatFrequency,
+        repeatInterval: parsedInput.repeatInterval,
+        repeatWeekdays: parsedInput.repeatWeekdays,
+        repeatUntil: parsedInput.repeatUntil,
+        repeatCount: parsedInput.repeatCount,
       },
       select: { id: true, courseId: true },
     });
@@ -78,6 +83,16 @@ export const updateCourseEvent = tutorActionClient
     if (parsedInput.location !== undefined) data.location = parsedInput.location;
     if (parsedInput.duration !== undefined) data.duration = parsedInput.duration;
     if (parsedInput.link !== undefined) data.link = parsedInput.link;
+    if (parsedInput.repeatFrequency !== undefined)
+      data.repeatFrequency = parsedInput.repeatFrequency;
+    if (parsedInput.repeatInterval !== undefined)
+      data.repeatInterval = parsedInput.repeatInterval;
+    if (parsedInput.repeatWeekdays !== undefined)
+      data.repeatWeekdays = parsedInput.repeatWeekdays;
+    if (parsedInput.repeatUntil !== undefined)
+      data.repeatUntil = parsedInput.repeatUntil;
+    if (parsedInput.repeatCount !== undefined)
+      data.repeatCount = parsedInput.repeatCount;
 
     const updated = await prisma.courseEvent.update({
       where: { id: parsedInput.id },

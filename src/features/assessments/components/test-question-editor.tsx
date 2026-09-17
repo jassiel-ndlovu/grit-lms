@@ -19,15 +19,25 @@
  *
  * Sub-questions render recursively at any depth. NONE-typed parents are
  * marked with a "Context" pill in the header so tutors can spot them.
+ *
+ * Attachments: a tutor can drop an image or a document onto the question
+ * body (or pick one with the paperclip). The file is uploaded to Blob and a
+ * markdown reference is appended to the question text - images embed
+ * inline, everything else renders as a download link. Storing it in the
+ * text means attachments need no schema of their own and travel with the
+ * question through import/export and the runner.
  */
 
 import * as React from "react";
 import {
   ChevronDown,
   ChevronUp,
+  Loader2,
+  Paperclip,
   Plus,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -40,6 +50,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { uploadFile } from "@/lib/blob/client";
+import { BlobKind, testQuestionImagePath } from "@/lib/blob/paths";
 import { cn } from "@/lib/utils";
 
 /* ─── Shape ────────────────────────────────────────────────────────────── */
@@ -120,6 +132,12 @@ export interface TestQuestionEditorProps {
   /** Dotted label such as "1" or "1.a" — computed by the parent. */
   label: string;
   depth: number;
+  /**
+   * Test the question belongs to, used to scope attachment upload paths.
+   * A test being created for the first time has no id yet, so the parent
+   * passes "draft" and the blobs simply live under tests/draft/.
+   */
+  testId?: string;
 }
 
 export function TestQuestionEditor({
@@ -130,14 +148,57 @@ export function TestQuestionEditor({
   onMoveDown,
   label,
   depth,
+  testId = "draft",
 }: TestQuestionEditorProps) {
   const isContext = question.type === "NONE";
+  const [uploading, setUploading] = React.useState(false);
+  const [dragOver, setDragOver] = React.useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
   function patch<K extends keyof EditorQuestion>(
     key: K,
     value: EditorQuestion[K],
   ) {
     onChange({ ...question, [key]: value });
+  }
+
+  /**
+   * Upload each file and append a markdown reference to the question body.
+   * Text is accumulated locally and written back in a single patch so a
+   * multi-file drop doesn't fight itself over stale state.
+   */
+  async function attachFiles(files: FileList | File[]) {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    setUploading(true);
+    let text = question.question;
+    try {
+      for (const file of list) {
+        const t = toast.loading(`Uploading ${file.name}…`);
+        try {
+          const { url } = await uploadFile({
+            kind: BlobKind.TestQuestionImage,
+            pathname: testQuestionImagePath(testId, question.clientId, file.name),
+            file,
+          });
+          const isImage = file.type.startsWith("image/");
+          const snippet = isImage
+            ? `![${file.name}](${url})`
+            : `[${file.name}](${url})`;
+          text = text.trim().length > 0 ? `${text}\n\n${snippet}` : snippet;
+          toast.success(`Attached ${file.name}.`, { id: t });
+        } catch (err) {
+          toast.error(
+            `${file.name}: ${err instanceof Error ? err.message : "Upload failed"}`,
+            { id: t },
+          );
+        }
+      }
+    } finally {
+      setUploading(false);
+    }
+    if (text !== question.question) patch("question", text);
   }
 
   function updateType(nextType: EditorQuestionType) {
@@ -294,19 +355,72 @@ export function TestQuestionEditor({
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-foreground text-xs font-medium">
-          {isContext ? "Context text" : "Question"}
-        </label>
-        <Textarea
-          rows={3}
-          value={question.question}
-          onChange={(e) => patch("question", e.target.value)}
-          placeholder={
-            isContext
-              ? "Passage / instructions the sub-questions refer to..."
-              : "What is the derivative of $x^2$?"
-          }
-        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="text-foreground text-xs font-medium">
+            {isContext ? "Context text" : "Question"}
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground hidden text-[11px] sm:inline">
+              Images embed inline; other files become download links.
+            </span>
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              className="hidden"
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+              disabled={uploading}
+              onChange={(e) => {
+                const list = e.target.files;
+                if (list && list.length > 0) void attachFiles(list);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Paperclip className="size-3.5" />
+              )}
+              Attach
+            </Button>
+          </div>
+        </div>
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!uploading) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            if (uploading) return;
+            const dropped = e.dataTransfer.files;
+            if (dropped && dropped.length > 0) void attachFiles(dropped);
+          }}
+          className={cn(
+            "rounded-md transition-colors",
+            dragOver && "ring-brand-terracotta/60 bg-brand-terracotta/5 ring-2",
+          )}
+        >
+          <Textarea
+            rows={3}
+            value={question.question}
+            onChange={(e) => patch("question", e.target.value)}
+            placeholder={
+              isContext
+                ? "Passage / instructions the sub-questions refer to…"
+                : "What is the derivative of $x^2$? — or drop an image / PDF here"
+            }
+          />
+        </div>
       </div>
 
       {!isContext && <TypeSpecificFields question={question} patch={patch} />}
@@ -335,6 +449,7 @@ export function TestQuestionEditor({
                 }
                 label={childLabel}
                 depth={depth + 1}
+                testId={testId}
               />
             );
           })}

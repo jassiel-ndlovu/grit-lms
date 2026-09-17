@@ -93,6 +93,16 @@ export const EventTypeSchema = z.enum([
 ]);
 export type EventType = z.infer<typeof EventTypeSchema>;
 
+/** How a CourseEvent repeats. NONE = a single, one-off event. */
+export const RepeatFrequencySchema = z.enum([
+  "NONE",
+  "DAILY",
+  "WEEKLY",
+  "MONTHLY",
+  "YEARLY",
+]);
+export type RepeatFrequency = z.infer<typeof RepeatFrequencySchema>;
+
 export const FileTypeSchema = z.enum(["PDF", "DOCX", "ZIP", "JPEG", "OTHER"]);
 export type FileType = z.infer<typeof FileTypeSchema>;
 

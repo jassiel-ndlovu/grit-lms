@@ -385,6 +385,7 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
                 }
                 label={String(i + 1)}
                 depth={0}
+                testId={defaultValues?.id ?? "draft"}
               />
             ))}
           </div>

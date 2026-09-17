@@ -12,8 +12,8 @@
  *   courses/<courseId>/lessons/<lessonId>/attachments/<sanitized-filename>
  *   courses/<courseId>/lessons/<lessonId>/uploaded/<sanitized-filename>
  *   submissions/<submissionId>/<sanitized-filename>
- *   tests/<testId>/questions/<questionId>/<sanitized-filename>
- *   tests/<testId>/answers/<questionId>/<sanitized-filename>
+ *   tests/<testId>/questions/<questionId>/<sanitized-filename>   (tutor)
+ *   tests/<testId>/answers/<questionId>/<sanitized-filename>     (student)
  *   users/<userId>/avatar/<sanitized-filename>
  *
  * Random suffixes are added by Vercel Blob (`addRandomSuffix: true`), so
@@ -153,7 +153,19 @@ export const ALLOWED_CONTENT_TYPES: Record<BlobKind, string[] | undefined> = {
   // don't gate the upload itself on it.
   [BlobKind.LessonUpload]: undefined,
   [BlobKind.Submission]: undefined,
-  [BlobKind.TestQuestionImage]: ["image/png", "image/jpeg", "image/webp"],
+  // Named "image" historically, but a question attachment is whatever the
+  // tutor wants to hang off the question text - a diagram, a data sheet, a
+  // PDF extract. Restricting this to images is what removed the feature.
+  [BlobKind.TestQuestionImage]: [
+    "image/*",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain",
+    "text/csv",
+  ],
   // Answers to FILE_UPLOAD questions are arbitrary student work (scans,
   // PDFs, spreadsheets, photos of handwriting) — same "accept anything"
   // policy as assignment submissions.
@@ -170,7 +182,7 @@ export const MAX_BYTES: Record<BlobKind, number> = {
   [BlobKind.LessonAttachment]: 100 * 1024 * 1024, // 100 MB
   [BlobKind.LessonUpload]: 200 * 1024 * 1024, // 200 MB
   [BlobKind.Submission]: 200 * 1024 * 1024, // 200 MB
-  [BlobKind.TestQuestionImage]: 5 * 1024 * 1024, // 5 MB
+  [BlobKind.TestQuestionImage]: 25 * 1024 * 1024, // 25 MB
   [BlobKind.TestAnswer]: 50 * 1024 * 1024, // 50 MB
   [BlobKind.UserAvatar]: 2 * 1024 * 1024, // 2 MB
 };

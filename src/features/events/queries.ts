@@ -11,6 +11,25 @@ import { cache } from "react";
 
 import { prisma } from "@/lib/db";
 
+/**
+ * A repeating event's `date` column holds only the FIRST occurrence, so a
+ * weekly lecture that started in February is "in the past" by that column
+ * while still running today. Anything filtering for upcoming events has to
+ * let those rows through and leave the real filtering to
+ * expandOccurrences() - see features/events/lib/recurrence.ts.
+ */
+function upcomingOrRecurring(from: Date) {
+  return {
+    OR: [
+      { date: { gte: from } },
+      {
+        repeatFrequency: { not: "NONE" as const },
+        OR: [{ repeatUntil: null }, { repeatUntil: { gte: from } }],
+      },
+    ],
+  };
+}
+
 export type CourseEventListItem = Awaited<
   ReturnType<typeof listEventsByCourseId>
 >[number];
@@ -39,7 +58,7 @@ export const listEventsByCourseId = cache(async (courseId: string) => {
 export const listUpcomingEventsForStudent = cache(async (studentId: string) => {
   return prisma.courseEvent.findMany({
     where: {
-      date: { gte: new Date() },
+      ...upcomingOrRecurring(new Date()),
       course: { students: { some: { id: studentId } } },
     },
     orderBy: { date: "asc" },
@@ -59,7 +78,7 @@ export const listUpcomingEventsForStudent = cache(async (studentId: string) => {
 export const listUpcomingEventsForTutor = cache(async (tutorId: string) => {
   return prisma.courseEvent.findMany({
     where: {
-      date: { gte: new Date() },
+      ...upcomingOrRecurring(new Date()),
       course: { tutorId },
     },
     orderBy: { date: "asc" },
