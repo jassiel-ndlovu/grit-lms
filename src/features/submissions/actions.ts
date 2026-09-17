@@ -354,6 +354,9 @@ export const gradeEntry = tutorActionClient
     );
 
     revalidatePath(`/dashboard/submissions/${entry.submission.id}`);
+    revalidatePath(
+      `/dashboard/submissions/overview/${entry.submission.id}/${studentId}`,
+    );
     revalidatePath(`/dashboard/courses/${entry.submission.courseId}`);
     revalidatePath("/dashboard/notifications");
 

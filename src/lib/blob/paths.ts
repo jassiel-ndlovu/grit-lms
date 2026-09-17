@@ -13,6 +13,7 @@
  *   courses/<courseId>/lessons/<lessonId>/uploaded/<sanitized-filename>
  *   submissions/<submissionId>/<sanitized-filename>
  *   tests/<testId>/questions/<questionId>/<sanitized-filename>
+ *   tests/<testId>/answers/<questionId>/<sanitized-filename>
  *   users/<userId>/avatar/<sanitized-filename>
  *
  * Random suffixes are added by Vercel Blob (`addRandomSuffix: true`), so
@@ -33,6 +34,8 @@ export const BlobKind = {
   LessonUpload: "lesson-upload",
   Submission: "submission",
   TestQuestionImage: "test-question-image",
+  /** A student's file answer to a FILE_UPLOAD test question. */
+  TestAnswer: "test-answer",
   UserAvatar: "user-avatar",
 } as const;
 
@@ -70,6 +73,20 @@ export function testQuestionImagePath(
   return `tests/${testId}/questions/${questionId}/${sanitizeFilename(filename)}`;
 }
 
+/**
+ * Where a student's answer to a FILE_UPLOAD question lives. Deliberately a
+ * different prefix from `testQuestionImagePath` — question images are tutor
+ * -authored content, answers are student work, and the two carry different
+ * upload permissions.
+ */
+export function testAnswerPath(
+  testId: string,
+  questionId: string,
+  filename: string,
+): string {
+  return `tests/${testId}/answers/${questionId}/${sanitizeFilename(filename)}`;
+}
+
 export function userAvatarPath(userId: string, filename: string): string {
   return `users/${userId}/avatar/${sanitizeFilename(filename)}`;
 }
@@ -94,6 +111,8 @@ export function isValidPath(kind: BlobKind, pathname: string): boolean {
       return /^submissions\/[^/]+\/[^/]+$/.test(pathname);
     case BlobKind.TestQuestionImage:
       return /^tests\/[^/]+\/questions\/[^/]+\/[^/]+$/.test(pathname);
+    case BlobKind.TestAnswer:
+      return /^tests\/[^/]+\/answers\/[^/]+\/[^/]+$/.test(pathname);
     case BlobKind.UserAvatar:
       return /^users\/[^/]+\/avatar\/[^/]+$/.test(pathname);
     default:
@@ -135,6 +154,10 @@ export const ALLOWED_CONTENT_TYPES: Record<BlobKind, string[] | undefined> = {
   [BlobKind.LessonUpload]: undefined,
   [BlobKind.Submission]: undefined,
   [BlobKind.TestQuestionImage]: ["image/png", "image/jpeg", "image/webp"],
+  // Answers to FILE_UPLOAD questions are arbitrary student work (scans,
+  // PDFs, spreadsheets, photos of handwriting) — same "accept anything"
+  // policy as assignment submissions.
+  [BlobKind.TestAnswer]: undefined,
   [BlobKind.UserAvatar]: ["image/png", "image/jpeg", "image/webp"],
 };
 
@@ -148,5 +171,6 @@ export const MAX_BYTES: Record<BlobKind, number> = {
   [BlobKind.LessonUpload]: 200 * 1024 * 1024, // 200 MB
   [BlobKind.Submission]: 200 * 1024 * 1024, // 200 MB
   [BlobKind.TestQuestionImage]: 5 * 1024 * 1024, // 5 MB
+  [BlobKind.TestAnswer]: 50 * 1024 * 1024, // 50 MB
   [BlobKind.UserAvatar]: 2 * 1024 * 1024, // 2 MB
 };

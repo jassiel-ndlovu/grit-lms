@@ -3,8 +3,8 @@
 /**
  * TutorSubmissionActions — three-dot dropdown on tutor assignment cards.
  *   - View submissions  → /dashboard/submissions/[id]
- *   - Edit              → /dashboard/manage-courses/[courseId] (until the
- *                          dedicated assignment editor lands)
+ *   - Edit              → /dashboard/submissions/create/[id] (the assignment
+ *                          editor; it doubles as the create form)
  *   - Delete            → confirmation → deleteSubmission action
  */
 
@@ -46,6 +46,9 @@ export function TutorSubmissionActions({
   submissionTitle,
   courseId,
 }: TutorSubmissionActionsProps) {
+  // Kept on the props for callers (and for a future "back to course" item);
+  // the Edit item now goes straight to the assignment editor.
+  void courseId;
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
@@ -86,7 +89,7 @@ export function TutorSubmissionActions({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/manage-courses/${courseId}`}>
+            <Link href={`/dashboard/submissions/create/${submissionId}`}>
               <Pencil className="size-4" /> Edit
             </Link>
           </DropdownMenuItem>

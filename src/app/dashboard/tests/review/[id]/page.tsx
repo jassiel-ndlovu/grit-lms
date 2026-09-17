@@ -34,6 +34,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { toFileAnswers } from "@/features/assessments/lib/file-answers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -625,14 +626,22 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
       );
     }
     case "FILE_UPLOAD": {
-      const v = value as { fileUrl?: string; fileName?: string } | null;
-      if (!v?.fileUrl) return <p className="text-muted-foreground italic text-xs">No file uploaded.</p>;
+      const uploads = toFileAnswers(value);
+      if (uploads.length === 0) {
+        return <p className="text-muted-foreground italic text-xs">No file uploaded.</p>;
+      }
       return (
-        <a href={v.fileUrl} target="_blank" rel="noreferrer" className="text-brand-terracotta inline-flex items-center gap-1 text-sm hover:underline">
-          <FileText className="size-3" />
-          {v.fileName ?? "View file"}
-          <ExternalLink className="size-3" />
-        </a>
+        <ul className="space-y-1">
+          {uploads.map((f, i) => (
+            <li key={`${f.fileUrl}-${i}`}>
+              <a href={f.fileUrl} target="_blank" rel="noreferrer" className="text-brand-terracotta inline-flex items-center gap-1 text-sm hover:underline">
+                <FileText className="size-3" />
+                {f.fileName}
+                <ExternalLink className="size-3" />
+              </a>
+            </li>
+          ))}
+        </ul>
       );
     }
     default:

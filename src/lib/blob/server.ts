@@ -32,6 +32,7 @@ export const ClientPayloadSchema = z.object({
     BlobKind.LessonUpload,
     BlobKind.Submission,
     BlobKind.TestQuestionImage,
+    BlobKind.TestAnswer,
     BlobKind.UserAvatar,
   ]),
 });

@@ -12,7 +12,8 @@
  */
 
 import * as React from "react";
-import { Loader2, Trash2, Upload } from "lucide-react";
+import { FileText, Loader2, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,7 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadFile } from "@/lib/blob/client";
-import { BlobKind, sanitizeFilename } from "@/lib/blob/paths";
+import { BlobKind, testAnswerPath } from "@/lib/blob/paths";
+import { toFileAnswers, type TestFileAnswer } from "../lib/file-answers";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
 
@@ -407,31 +409,62 @@ function Matching({ question, value, onChange, disabled }: QuestionRendererProps
 
 /* ─── FILE_UPLOAD ────────────────────────────────────────────────────── */
 
+/**
+ * Students attach one or more files. Answers are stored as an ARRAY of
+ * {fileUrl, fileType, fileName} — `toFileAnswers` reads back the legacy
+ * single-object shape too, so an attempt started before this change still
+ * shows its files.
+ *
+ * Uploads go to BlobKind.TestAnswer (student-writable, any content type),
+ * NOT TestQuestionImage — that kind is tutor-only and images-only, which
+ * silently rejected every student upload.
+ */
 function FileUpload({ question, value, onChange, disabled, testId }: QuestionRendererProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  type UploadedAnswer = { fileUrl: string; fileType: string; fileName: string };
-  const current = (value && typeof value === "object" && "fileUrl" in (value as object))
-    ? (value as UploadedAnswer)
-    : null;
+  const files = React.useMemo(() => toFileAnswers(value), [value]);
 
-  async function handleFile(file: File) {
+  async function handleFiles(list: FileList) {
     setUploading(true);
-    try {
-      const { url } = await uploadFile({
-        kind: BlobKind.TestQuestionImage,
-        pathname: `tests/${testId}/questions/${question.id}/${sanitizeFilename(file.name)}`,
-        file,
-      });
-      onChange({
-        fileUrl: url,
-        fileType: file.type || "OTHER",
-        fileName: file.name,
-      });
-    } finally {
-      setUploading(false);
+    setError(null);
+    const uploaded: TestFileAnswer[] = [];
+
+    for (const file of Array.from(list)) {
+      const t = toast.loading(`Uploading ${file.name}…`);
+      try {
+        const { url } = await uploadFile({
+          kind: BlobKind.TestAnswer,
+          pathname: testAnswerPath(testId, question.id, file.name),
+          file,
+        });
+        uploaded.push({
+          fileUrl: url,
+          fileType: file.type || "OTHER",
+          fileName: file.name,
+        });
+        toast.success(`Uploaded ${file.name}.`, { id: t });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Upload failed";
+        // Surface it both ways: the toast for the moment, the inline message
+        // so the student still sees why nothing attached after it fades.
+        toast.error(`${file.name}: ${message}`, { id: t });
+        setError(message);
+      }
     }
+
+    if (uploaded.length > 0) {
+      // Read from `files` (already normalised) so appending to a legacy
+      // single-object answer upgrades it to the array shape.
+      onChange([...files, ...uploaded]);
+    }
+    setUploading(false);
+  }
+
+  function removeAt(i: number) {
+    const next = files.filter((_, idx) => idx !== i);
+    onChange(next.length > 0 ? next : null);
   }
 
   return (
@@ -439,38 +472,56 @@ function FileUpload({ question, value, onChange, disabled, testId }: QuestionRen
       <input
         ref={inputRef}
         type="file"
+        multiple
         className="hidden"
         disabled={disabled || uploading}
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void handleFile(f);
+          const list = e.target.files;
+          if (list && list.length > 0) void handleFiles(list);
           e.target.value = "";
         }}
       />
-      {current ? (
-        <Card className="flex items-center gap-3 p-3">
-          <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md">
-            <Upload className="size-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">{current.fileName}</p>
-            <a href={current.fileUrl} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground text-xs">
-              Open file
-            </a>
-          </div>
-          {!disabled && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-destructive"
-              onClick={() => onChange(null)}
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          )}
-        </Card>
-      ) : (
+
+      {files.length > 0 && (
+        <ul className="space-y-2">
+          {files.map((f, i) => (
+            <li key={`${f.fileUrl}-${i}`}>
+              <Card className="flex items-center gap-3 p-3">
+                <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md">
+                  <FileText className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {f.fileName}
+                  </p>
+                  <a
+                    href={f.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-muted-foreground hover:text-foreground text-xs"
+                  >
+                    Open file
+                  </a>
+                </div>
+                {!disabled && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => removeAt(i)}
+                    aria-label={`Remove ${f.fileName}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                )}
+              </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!disabled && (
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -483,9 +534,19 @@ function FileUpload({ question, value, onChange, disabled, testId }: QuestionRen
             <Upload className="text-brand-terracotta size-5" />
           )}
           <p className="text-muted-foreground">
-            {uploading ? "Uploading..." : "Click to upload a file"}
+            {uploading
+              ? "Uploading…"
+              : files.length > 0
+                ? "Add another file"
+                : "Click to upload a file"}
           </p>
         </button>
+      )}
+
+      {error && (
+        <p className="text-destructive text-xs" role="alert">
+          {error}
+        </p>
       )}
     </div>
   );
