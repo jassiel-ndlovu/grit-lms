@@ -11,7 +11,9 @@
  *   - All uploads require a valid session.
  *   - course-cover, lesson-attachment, lesson-upload, test-question-image
  *     → TUTOR only.
- *   - submission → STUDENT only.
+ *   - submission → STUDENT (their own work) or TUTOR (memo / model-answer
+ *     files attached to the same assignment).
+ *   - test-answer → STUDENT only (answer to a FILE_UPLOAD question).
  *   - user-avatar → any logged-in user (uploads to their own folder).
  */
 
@@ -72,8 +74,15 @@ function assertRoleAllowsKind(role: string, kind: ClientPayload["kind"]): void {
       }
       return;
     case BlobKind.Submission:
+      // Both sides write into an assignment's folder: students upload the
+      // work, tutors upload memo / model-answer files alongside it.
+      if (role !== "STUDENT" && role !== "TUTOR") {
+        throw new Error("Student or tutor role required for submission uploads");
+      }
+      return;
+    case BlobKind.TestAnswer:
       if (role !== "STUDENT") {
-        throw new Error("Student role required for submission uploads");
+        throw new Error("Student role required for test answer uploads");
       }
       return;
     case BlobKind.UserAvatar:

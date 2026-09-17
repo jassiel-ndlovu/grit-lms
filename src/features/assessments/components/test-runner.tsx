@@ -27,7 +27,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, Loader2, Save, Wifi, WifiOff } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, Loader2, Save, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -117,6 +117,10 @@ export function TestRunner({
   const [submitting, setSubmitting] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [online, setOnline] = React.useState(true);
+  // Last draft-save outcome. Draft saves used to fail silently into
+  // console.warn, so a student whose work wasn't persisting had no way to
+  // know until they reloaded and found it gone.
+  const [saveError, setSaveError] = React.useState<string | null>(null);
   const [now, setNow] = React.useState(() => Date.now());
 
   const answersRef = React.useRef(answers);
@@ -153,6 +157,35 @@ export function TestRunner({
     return Math.max(0, timeLimit * 60 - elapsedSec);
   }, [now, startedAt, timeLimit]);
 
+  /* ───── Draft persistence ─────
+      Single writer used by the debounce, the nav flush, and the explicit
+      Save button, so every path reports failures the same way. */
+  const persistDraft = React.useCallback(async () => {
+    setSaving(true);
+    try {
+      const result = await saveTestAnswersDraft({
+        submissionId,
+        answers: answersRef.current,
+      });
+      const message =
+        result?.serverError ??
+        (result?.validationErrors ? "Answer format rejected by the server" : null);
+      if (message) {
+        console.warn("[TestRunner] draft save failed:", message);
+        setSaveError(message);
+      } else {
+        lastSavedAtRef.current = Date.now();
+        setSaveError(null);
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Network error";
+      console.warn("[TestRunner] draft save failed:", message);
+      setSaveError(message);
+    } finally {
+      setSaving(false);
+    }
+  }, [submissionId]);
+
   /* ───── Debounced draft save (with max-wait ceiling) ───── */
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => {
@@ -168,28 +201,13 @@ export function TestRunner({
     const delay =
       elapsed >= SAVE_MAX_WAIT_MS ? 0 : SAVE_DEBOUNCE_MS;
 
-    saveTimer.current = setTimeout(async () => {
-      setSaving(true);
-      try {
-        const result = await saveTestAnswersDraft({
-          submissionId,
-          answers: answersRef.current,
-        });
-        if (result?.serverError) {
-          console.warn("[TestRunner] draft save failed:", result.serverError);
-        } else {
-          lastSavedAtRef.current = Date.now();
-        }
-      } catch {
-        /* best-effort */
-      } finally {
-        setSaving(false);
-      }
+    saveTimer.current = setTimeout(() => {
+      void persistDraft();
     }, delay);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [answers, submissionId, submitting]);
+  }, [answers, submitting, persistDraft]);
 
   /* ───── Save on tab hidden / page unload ───── */
   React.useEffect(() => {
@@ -197,12 +215,7 @@ export function TestRunner({
       if (submitting) return;
       // Fire-and-forget; the browser may kill the request but this is best
       // we can do without a Service Worker.
-      void saveTestAnswersDraft({
-        submissionId,
-        answers: answersRef.current,
-      }).then((result) => {
-        if (!result?.serverError) lastSavedAtRef.current = Date.now();
-      });
+      void persistDraft();
     }
     function onVisibility() {
       if (document.visibilityState === "hidden") flushOnHide();
@@ -213,7 +226,7 @@ export function TestRunner({
       window.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("beforeunload", flushOnHide);
     };
-  }, [submissionId, submitting]);
+  }, [submitting, persistDraft]);
 
   /* ───── Flush save (immediate, used by nav) ───── */
   const saveNow = React.useCallback(async () => {
@@ -222,23 +235,8 @@ export function TestRunner({
       clearTimeout(saveTimer.current);
       saveTimer.current = null;
     }
-    setSaving(true);
-    try {
-      const result = await saveTestAnswersDraft({
-        submissionId,
-        answers: answersRef.current,
-      });
-      if (result?.serverError) {
-        console.warn("[TestRunner] flush save failed:", result.serverError);
-      } else {
-        lastSavedAtRef.current = Date.now();
-      }
-    } catch {
-      /* best-effort */
-    } finally {
-      setSaving(false);
-    }
-  }, [submissionId]);
+    await persistDraft();
+  }, [persistDraft]);
 
   /* ───── Submission ───── */
   const onSubmit = React.useCallback(
@@ -327,11 +325,18 @@ export function TestRunner({
               {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
               {online ? "Online" : "Offline"}
             </span>
-            {saving && (
+            {saving ? (
               <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
                 <Save className="size-3" /> Saving
               </span>
-            )}
+            ) : saveError ? (
+              <span
+                className="text-destructive inline-flex items-center gap-1 text-xs"
+                title={`Last save failed: ${saveError}`}
+              >
+                <AlertTriangle className="size-3" /> Not saved
+              </span>
+            ) : null}
             {timeRemaining != null && (
               <Badge
                 variant={lowOnTime ? "destructive" : "soft"}
@@ -498,9 +503,16 @@ export function TestRunner({
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs">
-            Drafts auto-save every {SAVE_DEBOUNCE_MS / 1000} seconds.
-          </p>
+          {saveError ? (
+            <p className="text-destructive text-xs">
+              Your last auto-save failed ({saveError}). Press Save to retry
+              before leaving this page.
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Drafts auto-save every {SAVE_DEBOUNCE_MS / 1000} seconds.
+            </p>
+          )}
         </Card>
       </aside>
     </div>

@@ -9,6 +9,10 @@
  * The tutor can either (a) drop a single total mark, or (b) break the
  * entry into sections with per-section score, remarks, and an optional
  * memo file.
+ *
+ * Entry point: the student list on /dashboard/submissions/[id]. Back links
+ * return there rather than to the legacy /dashboard/submissions/overview/[id]
+ * page, which is no longer part of the tutor flow.
  */
 
 import Link from "next/link";
@@ -93,8 +97,8 @@ export default async function StudentGradingPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-4xl space-y-4 px-6 py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/submissions/overview/${submissionId}`}>
-            ← Back to overview
+          <Link href={`/dashboard/submissions/${submissionId}`}>
+            ← Back to assignment
           </Link>
         </Button>
         <Card className="p-8 text-center">
@@ -134,8 +138,8 @@ export default async function StudentGradingPage({ params }: PageProps) {
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/submissions/overview/${submissionId}`}>
-            ← Back to overview
+          <Link href={`/dashboard/submissions/${submissionId}`}>
+            ← Back to assignment
           </Link>
         </Button>
       </div>

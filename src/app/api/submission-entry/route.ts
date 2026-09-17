@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         data: {
           title: "Assignment Submitted",
           message: `Your submission for "${submission.title}" has been received.`,
-          link: `/dashboard//submissions/${submission.id}`,
+          link: `/dashboard/submissions/${submission.id}`,
           type: "SUBMISSION_DUE",
           studentId: data.studentId,
           courseId: submission.courseId,
