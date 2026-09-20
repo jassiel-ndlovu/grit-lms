@@ -9,6 +9,9 @@
  *   higher up in the dashboard layout; this component just wraps its
  *   markdown output in <MathJax dynamic> so MathJax re-typesets when the
  *   DOM changes.
+ * - `\(…\)` / `\[…\]` are normalised to `$…$` / `$$…$$` before parsing.
+ *   CommonMark would otherwise eat the backslash as an escape and MathJax
+ *   would never see a delimiter — see lib/tex-delimiters.ts.
  * - Inline code = no language fence + no inner newlines. react-markdown v10
  *   dropped the `inline` prop; we infer it ourselves.
  */
@@ -19,6 +22,7 @@ import remarkGfm from "remark-gfm";
 import { MathJax } from "better-react-mathjax";
 
 import { cn } from "@/lib/utils";
+import { normalizeTexDelimiters } from "@/lib/tex-delimiters";
 
 export interface LessonMarkdownProps {
   /**
@@ -55,6 +59,10 @@ export default function LessonMarkdown({
   maxImageWidth = "100%",
   dynamic = true,
 }: LessonMarkdownProps) {
+  // Scans the whole string, so memoise it: `dynamic={false}` call sites
+  // exist precisely because parents re-render often (see the prop docs).
+  const source = React.useMemo(() => normalizeTexDelimiters(content), [content]);
+
   return (
     <MathJax dynamic={dynamic}>
       <div
@@ -178,7 +186,7 @@ export default function LessonMarkdown({
             ),
           }}
         >
-          {content}
+          {source}
         </ReactMarkdown>
       </div>
     </MathJax>

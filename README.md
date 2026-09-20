@@ -324,6 +324,22 @@ constraint entirely when the kind is unrestricted.
 - Lesson content, question prompts, student answers, tutor feedback, and
   grade comments all render through `src/app/components/markdown.tsx`.
 
+The paren and bracket delimiters only reach MathJax because
+`src/lib/tex-delimiters.ts` rewrites them to `$…$` / `$$…$$` before markdown
+parses the string. Without that step CommonMark reads `\(` as an escape for a
+literal `(` and the maths renders as plain text. Two consequences worth
+knowing:
+
+- Inside fenced code and inline code spans the delimiters are left alone, so
+  you can still document them. Four-space indented code is _not_ detected.
+- `\[` is ambiguous — it opens display maths in LaTeX but escapes a literal
+  `[` in markdown. A compact body with no spaces and no backslash is treated
+  as the escape, so a mark allocation like `**Integration** &emsp; \[26\]`
+  still renders as `[26]`. Write `\[ 26 \]` or `$$26$$` if you really do want
+  a lone number as display maths.
+
+`npx tsx scripts/check-tex-delimiters.ts` covers the rules above.
+
 ---
 
 ## Scripts
