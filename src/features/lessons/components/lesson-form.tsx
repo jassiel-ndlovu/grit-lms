@@ -193,7 +193,7 @@ export function LessonForm({
                 />
               </FormControl>
               <FormDescription>
-                Markdown formatting is supported, including math (KaTeX) and
+                Markdown formatting is supported, including math (MathJax) and
                 code blocks.
               </FormDescription>
               <FormMessage />
