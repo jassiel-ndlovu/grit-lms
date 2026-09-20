@@ -5,11 +5,8 @@
  * either loads the in-progress runner or routes to the pre-test landing
  * (no submission yet) or the review page (already submitted/graded).
  *
- * Tree handling: Prisma's `include: { subQuestions: true }` gives us the
- * full set of TestQuestions for the test as a flat array, but the parent
- * relation is one level deep on each row. We rebuild the tree on the
- * server (top-level questions get their direct children embedded; the
- * runner doesn't need to traverse deeper than the API normally serves).
+ * Tree handling lives in features/assessments/lib/question-tree.ts, shared
+ * with the tutor preview so both render an identical structure.
  */
 
 import { notFound, redirect } from "next/navigation";
@@ -24,74 +21,15 @@ import {
   getTestDetailById,
   getTestSubmissionByStudentAndTest,
   studentCanAccessTest,
-  type TestDetail,
 } from "@/features/assessments/queries";
-import {
-  TestRunner,
-  type RunnerQuestion,
-} from "@/features/assessments/components/test-runner";
+import { TestRunner } from "@/features/assessments/components/test-runner";
+import { buildRunnerTree } from "@/features/assessments/lib/question-tree";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export const metadata = { title: "Test" };
-
-/**
- * Build the runner-shaped tree from the flat questions array Prisma
- * returns. We only embed direct children for now (the schema's
- * `include: { subQuestions: true }` is one-deep); if multi-level nesting
- * lands in authoring later, expand the recursion here.
- */
-function buildTree(all: TestDetail["questions"]): RunnerQuestion[] {
-  const byId = new Map(all.map((q) => [q.id, q]));
-
-  function toRunner(q: TestDetail["questions"][number]): RunnerQuestion {
-    return {
-      id: q.id,
-      question: q.question,
-      type: q.type,
-      points: q.points,
-      options: q.options,
-      language: q.language,
-      matchPairs: q.matchPairs,
-      reorderItems: q.reorderItems,
-      blankCount: q.blankCount,
-      parentId: q.parentId,
-      order: q.order,
-      subQuestions: [],
-    };
-  }
-
-  // Group by parentId for fast lookup, sort each bucket.
-  const byParent = new Map<string | null, TestDetail["questions"]>();
-  for (const q of all) {
-    const key = q.parentId ?? null;
-    const list = byParent.get(key);
-    if (list) list.push(q);
-    else byParent.set(key, [q]);
-  }
-  for (const list of byParent.values()) {
-    list.sort(
-      (a, b) =>
-        (a.order ?? 0) - (b.order ?? 0) ||
-        a.createdAt.getTime() - b.createdAt.getTime(),
-    );
-  }
-
-  function build(parentId: string | null): RunnerQuestion[] {
-    const direct = byParent.get(parentId) ?? [];
-    return direct.map((q) => {
-      const node = toRunner(q);
-      node.subQuestions = build(q.id);
-      return node;
-    });
-  }
-
-  // Touch byId to silence the unused-var warning when build() doesn't need it.
-  void byId;
-  return build(null);
-}
 
 export default async function TestRunnerPage({ params }: PageProps) {
   const { id: testId } = await params;
@@ -135,7 +73,7 @@ export default async function TestRunnerPage({ params }: PageProps) {
     redirect(`/dashboard/tests/review/${testId}`);
   }
 
-  const treeQuestions = buildTree(test.questions);
+  const treeQuestions = buildRunnerTree(test.questions);
 
   // The legacy answers JSON is keyed by questionId. Coerce to a record
   // (handles the case where it's stored as null or {}).

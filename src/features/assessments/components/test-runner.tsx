@@ -23,11 +23,22 @@
  *   - Online/offline indicator next to the timer.
  *   - Sidebar lists top-level questions with a "X parts" subtitle when a
  *     parent has sub-questions. Click jumps directly to that step.
+ *
+ * Modes:
+ *   "student" (default) - the real sitting. Drafts autosave, the timer
+ *     auto-submits at zero, Submit finalises the attempt.
+ *   "preview" - a tutor checking their own test. Same component, same
+ *     renderers, same layout, so what they see is what students get.
+ *     Nothing autosaves; the timer counts down for realism but never
+ *     submits; and the answers the tutor gives are saved as the test's
+ *     ANSWER KEY rather than as an attempt. Running the preview through
+ *     this component rather than a lookalike is the point - a separate
+ *     preview would drift from the thing it claims to preview.
  */
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Circle, Loader2, Save, Wifi, WifiOff } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, Eye, Loader2, Save, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +48,7 @@ import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
 
 import {
+  saveTestAnswerKey,
   saveTestAnswersDraft,
   submitTestAnswers,
 } from "../actions";
@@ -55,9 +67,12 @@ export interface RunnerQuestion extends RendererQuestion {
   subQuestions: RunnerQuestion[];
 }
 
+export type RunnerMode = "student" | "preview";
+
 export interface TestRunnerProps {
   testId: string;
-  submissionId: string;
+  /** The attempt being written to. Omitted in preview - nothing is saved to one. */
+  submissionId?: string;
   title: string;
   /** Top-level questions only. Children live on `subQuestions`. */
   questions: RunnerQuestion[];
@@ -65,8 +80,10 @@ export interface TestRunnerProps {
   initialAnswers: Record<string, unknown>;
   /** Time limit in minutes, or null for untimed. */
   timeLimit: number | null;
-  /** When the submission was created — anchors the countdown. */
+  /** When the submission was created - anchors the countdown. */
   startedAt: Date;
+  /** Defaults to "student". See the mode notes at the top of this file. */
+  mode?: RunnerMode;
 }
 
 // Shorter debounce = quicker recovery from accidental refreshes.
@@ -109,8 +126,10 @@ export function TestRunner({
   initialAnswers,
   timeLimit,
   startedAt,
+  mode = "student",
 }: TestRunnerProps) {
   const router = useRouter();
+  const preview = mode === "preview";
 
   const [answers, setAnswers] = React.useState<Record<string, unknown>>(initialAnswers);
   const [currentIdx, setCurrentIdx] = React.useState(0);
@@ -121,7 +140,15 @@ export function TestRunner({
   // console.warn, so a student whose work wasn't persisting had no way to
   // know until they reloaded and found it gone.
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  // Preview-only: the tutor has changed an answer since the last explicit
+  // save. Used to warn before navigating away, since nothing autosaves.
+  const [dirty, setDirty] = React.useState(false);
   const [now, setNow] = React.useState(() => Date.now());
+  // The countdown can't render until we're on the client: the server would
+  // stamp one value into the HTML and hydration would compute another a
+  // second later, which React reports as a hydration mismatch.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
 
   const answersRef = React.useRef(answers);
   answersRef.current = answers;
@@ -146,21 +173,24 @@ export function TestRunner({
 
   /* ───── Timer tick (1s) ───── */
   React.useEffect(() => {
-    if (timeLimit == null) return;
+    if (timeLimit == null || preview) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [timeLimit]);
+  }, [timeLimit, preview]);
 
   const timeRemaining = React.useMemo(() => {
-    if (timeLimit == null) return null;
+    if (timeLimit == null || preview) return null;
     const elapsedSec = Math.floor((now - startedAt.getTime()) / 1000);
     return Math.max(0, timeLimit * 60 - elapsedSec);
-  }, [now, startedAt, timeLimit]);
+  }, [now, startedAt, timeLimit, preview]);
 
   /* ───── Draft persistence ─────
       Single writer used by the debounce, the nav flush, and the explicit
       Save button, so every path reports failures the same way. */
   const persistDraft = React.useCallback(async () => {
+    // Preview has no attempt to write to, and a half-typed memo shouldn't
+    // reach the database on a timer - the tutor saves the key explicitly.
+    if (preview || !submissionId) return;
     setSaving(true);
     try {
       const result = await saveTestAnswersDraft({
@@ -184,7 +214,7 @@ export function TestRunner({
     } finally {
       setSaving(false);
     }
-  }, [submissionId]);
+  }, [submissionId, preview]);
 
   /* ───── Debounced draft save (with max-wait ceiling) ───── */
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -220,13 +250,26 @@ export function TestRunner({
     function onVisibility() {
       if (document.visibilityState === "hidden") flushOnHide();
     }
+    // In preview there is nothing to flush; instead warn about unsaved
+    // work, because the tutor's answers only reach the database on Save.
+    function warnUnsaved(e: BeforeUnloadEvent) {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    }
+
+    if (preview) {
+      window.addEventListener("beforeunload", warnUnsaved);
+      return () => window.removeEventListener("beforeunload", warnUnsaved);
+    }
+
     window.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("beforeunload", flushOnHide);
     return () => {
       window.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("beforeunload", flushOnHide);
     };
-  }, [submitting, persistDraft]);
+  }, [submitting, persistDraft, preview, dirty]);
 
   /* ───── Flush save (immediate, used by nav) ───── */
   const saveNow = React.useCallback(async () => {
@@ -243,6 +286,40 @@ export function TestRunner({
     async (auto: boolean = false) => {
       if (submitting) return;
       setSubmitting(true);
+
+      // Preview: the tutor's answers are the memo, not an attempt.
+      if (preview) {
+        try {
+          const result = await saveTestAnswerKey({
+            testId,
+            answers: answersRef.current,
+          });
+          if (result?.serverError) throw new Error(result.serverError);
+          if (result?.validationErrors) {
+            throw new Error("Some answers were rejected. Check the values and retry.");
+          }
+          const n = result?.data?.updated ?? 0;
+          toast.success(
+            n === 0
+              ? "Nothing to save yet - answer a question first."
+              : `Answer key saved for ${n} ${n === 1 ? "question" : "questions"}.`,
+          );
+          setDirty(false);
+          router.refresh();
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Could not save the answer key");
+        } finally {
+          setSubmitting(false);
+        }
+        return;
+      }
+
+      if (!submissionId) {
+        toast.error("No attempt to submit.");
+        setSubmitting(false);
+        return;
+      }
+
       try {
         const result = await submitTestAnswers({
           submissionId,
@@ -256,18 +333,22 @@ export function TestRunner({
         setSubmitting(false);
       }
     },
-    [submissionId, router, testId, submitting],
+    [submissionId, router, testId, submitting, preview],
   );
 
   /* ───── Auto-submit on time expiry ───── */
   React.useEffect(() => {
+    // The countdown runs in preview so the tutor can see it, but it must
+    // never fire - there is no attempt to submit and no student waiting.
+    if (preview) return;
     if (timeRemaining === 0 && !submitting) {
       void onSubmit(true);
     }
-  }, [timeRemaining, submitting, onSubmit]);
+  }, [timeRemaining, submitting, onSubmit, preview]);
 
   function updateAnswer(questionId: string, next: unknown) {
     setAnswers((prev) => ({ ...prev, [questionId]: next }));
+    if (preview) setDirty(true);
   }
 
   if (questions.length === 0) {
@@ -301,6 +382,19 @@ export function TestRunner({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       {/* ───── Main pane ───── */}
       <div className="space-y-4">
+        {preview && (
+          <div className="border-brand-terracotta/40 bg-brand-terracotta/8 flex flex-wrap items-start gap-2 rounded-md border p-3">
+            <Eye className="text-brand-terracotta mt-0.5 size-4 shrink-0" />
+            <p className="text-foreground text-xs leading-relaxed">
+              <span className="font-medium">Preview.</span> This is exactly
+              what students see. Answers you give here are saved as the
+              answer key for this test - the memo their work is marked
+              against. Nothing autosaves; press{" "}
+              <span className="font-medium">Save answer key</span> when
+              you&apos;re done.
+            </p>
+          </div>
+        )}
         {/* Sticks BELOW the dashboard header (which itself is sticky at
             top-0, z-40). top-20 clears the header's ~5rem footprint; z-30
             keeps us above the question body but below the header. */}
@@ -315,16 +409,21 @@ export function TestRunner({
           </div>
 
           <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 text-xs",
-                online ? "text-muted-foreground" : "text-destructive",
-              )}
-              title={online ? "Online" : "Offline - drafts will retry on reconnect"}
-            >
-              {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
-              {online ? "Online" : "Offline"}
-            </span>
+            {!preview && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 text-xs",
+                  online ? "text-muted-foreground" : "text-destructive",
+                )}
+                title={online ? "Online" : "Offline - drafts will retry on reconnect"}
+              >
+                {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
+                {online ? "Online" : "Offline"}
+              </span>
+            )}
+            {preview && dirty && (
+              <span className="text-muted-foreground text-xs">Unsaved</span>
+            )}
             {saving ? (
               <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
                 <Save className="size-3" /> Saving
@@ -337,7 +436,16 @@ export function TestRunner({
                 <AlertTriangle className="size-3" /> Not saved
               </span>
             ) : null}
-            {timeRemaining != null && (
+            {preview && timeLimit != null && (
+              <Badge
+                variant="soft"
+                className="tabular-nums"
+                title="How long students get. The clock doesn't run in preview."
+              >
+                {formatTime(timeLimit * 60)} limit
+              </Badge>
+            )}
+            {mounted && timeRemaining != null && (
               <Badge
                 variant={lowOnTime ? "destructive" : "soft"}
                 className="tabular-nums"
@@ -348,29 +456,33 @@ export function TestRunner({
             {/* Ribbon-level Save + Submit. Save flushes the debounce so the
                 student can force a checkpoint before stepping away; Submit
                 fires the same onSubmit path the bottom-of-page button uses. */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={saveNow}
-              disabled={submitting || saving}
-              title="Save progress"
-            >
-              <Save className="size-4" />
-              Save
-            </Button>
+            {!preview && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={saveNow}
+                disabled={submitting || saving}
+                title="Save progress"
+              >
+                <Save className="size-4" />
+                Save
+              </Button>
+            )}
             <Button
               type="button"
               variant="brand"
               size="sm"
               onClick={() => onSubmit(false)}
               disabled={submitting}
-              title="Submit test"
+              title={preview ? "Save these answers as the answer key" : "Submit test"}
             >
               {submitting ? (
                 <Loader2 className="size-4 animate-spin" />
+              ) : preview ? (
+                <Save className="size-4" />
               ) : null}
-              Submit
+              {preview ? "Save answer key" : "Submit"}
             </Button>
           </div>
         </div>
@@ -421,7 +533,7 @@ export function TestRunner({
               disabled={submitting}
             >
               {submitting && <Loader2 className="size-4 animate-spin" />}
-              Submit test
+              {preview ? "Save answer key" : "Submit test"}
             </Button>
           )}
         </div>
@@ -503,7 +615,12 @@ export function TestRunner({
         </Card>
 
         <Card className="p-4">
-          {saveError ? (
+          {preview ? (
+            <p className="text-muted-foreground text-xs">
+              Ticks show which questions have a key recorded. Leave a
+              question blank to mark it manually.
+            </p>
+          ) : saveError ? (
             <p className="text-destructive text-xs">
               Your last auto-save failed ({saveError}). Press Save to retry
               before leaving this page.

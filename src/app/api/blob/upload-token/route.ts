@@ -13,7 +13,8 @@
  *     → TUTOR only.
  *   - submission → STUDENT (their own work) or TUTOR (memo / model-answer
  *     files attached to the same assignment).
- *   - test-answer → STUDENT only (answer to a FILE_UPLOAD question).
+ *   - test-answer → STUDENT (their answer) or TUTOR (the model answer,
+ *     recorded from the test preview).
  *   - user-avatar → any logged-in user (uploads to their own folder).
  */
 
@@ -81,8 +82,10 @@ function assertRoleAllowsKind(role: string, kind: ClientPayload["kind"]): void {
       }
       return;
     case BlobKind.TestAnswer:
-      if (role !== "STUDENT") {
-        throw new Error("Student role required for test answer uploads");
+      // Students upload their answer; tutors upload the model answer from
+      // the test preview, which is stored as that question's key.
+      if (role !== "STUDENT" && role !== "TUTOR") {
+        throw new Error("Student or tutor role required for test answer uploads");
       }
       return;
     case BlobKind.UserAvatar:

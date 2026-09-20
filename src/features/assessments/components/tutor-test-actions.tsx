@@ -4,16 +4,17 @@
 
 /**
  * TutorTestActions — three-dot dropdown on tutor test cards. Surfaces:
- *   - View submissions  → /dashboard/tutor-tests/[id]/submissions
- *   - Edit test         → /dashboard/manage-courses/[courseId] (until the
- *                          dedicated tutor authoring UI lands)
- *   - Delete            → confirmation AlertDialog → deleteTest action
+ *   - Preview as student → /dashboard/tutor-tests/[id]/preview
+ *   - View submissions   → /dashboard/tutor-tests/[id]/submissions
+ *   - Edit test          → /dashboard/tutor-tests/[id]/edit
+ *   - Export JSON        → download
+ *   - Delete             → confirmation AlertDialog → deleteTest action
  */
 
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, Eye, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Download, Eye, MoreVertical, Pencil, PlayCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,11 @@ export function TutorTestActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenuItem asChild>
+            <Link href={`/dashboard/tutor-tests/${testId}/preview`}>
+              <PlayCircle className="size-4" /> Preview as student
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href={`/dashboard/tutor-tests/${testId}/submissions`}>
               <Eye className="size-4" /> View submissions
