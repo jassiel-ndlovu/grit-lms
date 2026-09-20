@@ -225,28 +225,13 @@
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Legacy styles carried over from the pre-rewrite codebase.
-   These keep math rendering, the loading bar, and the question scrollbar
-   working until those features are touched in later chapters.
+   These keep the loading bar and the question scrollbar working until
+   those features are touched in later chapters.
+
+   The .katex rules that used to live here went with the KaTeX packages:
+   math is rendered by MathJax (better-react-mathjax), which emits its own
+   mjx-container markup and never produced a .katex element to style.
    ───────────────────────────────────────────────────────────────────────── */
-
-.katex-display {
-  overflow-x: auto hidden;
-  max-width: 100%;
-  margin: 0.5em 0;
-  white-space: normal;
-}
-
-.katex {
-  white-space: normal !important;
-}
-
-.katex-display > .katex {
-  white-space: normal;
-}
-
-.katex-display > .base {
-  margin: 0.25em 0;
-}
 
 @keyframes progress {
   0% { width: 0%; }
