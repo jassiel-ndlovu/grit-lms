@@ -785,6 +785,7 @@ export const importTest = createTest;
  */
 import { getTestDetailById, testBelongsToTutor } from "./queries";
 import { serializeTest } from "./lib/test-io";
+import { answerToKeyPatch } from "./lib/answer-key";
 import { z } from "zod";
 import { CuidSchema } from "../shared/primitives";
 
@@ -1006,4 +1007,116 @@ export const autoGradeSubmissionAction = tutorActionClient
     );
 
     return { autoCount, pendingCount, autoScore, autoOutOf };
+  });
+
+
+/* ------------------------------------------------------------------------- */
+/* saveTestAnswerKey                                                          */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Record the answers a tutor gave in the preview as the test's answer key.
+ *
+ * The preview renders the student runner verbatim, so the payload arrives
+ * in student-answer shape; `answerToKeyPatch` maps each one onto whichever
+ * column actually holds the key for that question type (see
+ * lib/answer-key.ts — MATCHING and REORDER don't use `answer`).
+ *
+ * Questions the tutor didn't touch are left alone rather than cleared, so
+ * previewing a test to check its rendering can never wipe a memo by
+ * accident. An answer that couldn't have come from the question (an option
+ * that isn't on the list, a reorder that dropped an item) is refused with
+ * the question number, because writing it back would change what students
+ * see.
+ */
+export const saveTestAnswerKey = tutorActionClient
+  .schema(
+    z.object({
+      testId: CuidSchema,
+      /** questionId -> the answer the runner produced. */
+      answers: z.record(z.string(), z.unknown()),
+    }),
+  )
+  .action(async ({ parsedInput, ctx }) => {
+    const tutor = await prisma.tutor.findUnique({
+      where: { email: ctx.session.user.email },
+      select: { id: true },
+    });
+    if (!tutor) throw new Error("Tutor profile not found");
+
+    const owns = await testBelongsToTutor(parsedInput.testId, tutor.id);
+    if (!owns) throw new Error("You don't own this test");
+
+    const questions = await prisma.testQuestion.findMany({
+      where: { testId: parsedInput.testId },
+      select: {
+        id: true,
+        type: true,
+        options: true,
+        matchPairs: true,
+        reorderItems: true,
+        blankCount: true,
+        order: true,
+        parentId: true,
+      },
+      orderBy: { order: "asc" },
+    });
+
+    // Number questions the way the runner labels them, so a rejection can
+    // point the tutor at the right card instead of a cuid.
+    const position = new Map<string, number>();
+    questions
+      .filter((q) => q.parentId == null)
+      .forEach((q, i) => position.set(q.id, i + 1));
+
+    const updates: Array<{ id: string; data: Prisma.TestQuestionUpdateInput }> = [];
+    const problems: string[] = [];
+
+    for (const q of questions) {
+      // Untouched questions keep whatever key they already had.
+      if (!(q.id in parsedInput.answers)) continue;
+
+      const result = answerToKeyPatch(q, parsedInput.answers[q.id]);
+      if (!result.ok) {
+        const label = position.get(q.id);
+        problems.push(
+          `${label ? `Question ${label}` : "A sub-question"}: ${result.reason}`,
+        );
+        continue;
+      }
+      if (Object.keys(result.patch).length === 0) continue;
+
+      const data: Prisma.TestQuestionUpdateInput = {};
+      if ("answer" in result.patch) {
+        data.answer =
+          result.patch.answer === null
+            ? Prisma.DbNull
+            : (result.patch.answer as Prisma.InputJsonValue);
+      }
+      if ("matchPairs" in result.patch) {
+        data.matchPairs = result.patch.matchPairs as Prisma.InputJsonValue;
+      }
+      if ("reorderItems" in result.patch) {
+        data.reorderItems = { set: result.patch.reorderItems };
+      }
+      updates.push({ id: q.id, data });
+    }
+
+    if (problems.length > 0) {
+      throw new Error(problems.join(" · "));
+    }
+
+    if (updates.length > 0) {
+      await prisma.$transaction(
+        updates.map((u) =>
+          prisma.testQuestion.update({ where: { id: u.id }, data: u.data }),
+        ),
+      );
+    }
+
+    revalidatePath(`/dashboard/tutor-tests/${parsedInput.testId}/preview`);
+    revalidatePath(`/dashboard/tutor-tests/${parsedInput.testId}/edit`);
+    revalidatePath("/dashboard/tutor-tests");
+
+    return { updated: updates.length };
   });

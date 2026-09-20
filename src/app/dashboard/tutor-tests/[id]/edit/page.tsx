@@ -9,7 +9,7 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PlayCircle } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -131,7 +131,14 @@ export default async function EditTestPage({ params }: PageProps) {
               Edit test
             </h1>
           </div>
-          <ExportTestButton testId={test.id} />
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/dashboard/tutor-tests/${test.id}/preview`}>
+                <PlayCircle className="size-4" /> Preview as student
+              </Link>
+            </Button>
+            <ExportTestButton testId={test.id} />
+          </div>
         </header>
 
         <TestForm
