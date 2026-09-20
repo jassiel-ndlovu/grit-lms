@@ -343,6 +343,9 @@ Question text, options, and feedback are rendered with **react-markdown** +
 - Inline LaTeX: \`$x^2 + 2x + 1$\` or \`\\(x^2 + 2x + 1\\)\`
 - Display LaTeX: \`$$\\int_0^1 x^2\\,dx$$\` or \`\\[ ... \\]\`
 - Literal \`$\` in fenced code is fine — code/pre blocks are skipped by MathJax.
+- Prefer the \`$\` forms. \`\\[ ... \\]\` is also markdown's escape for a
+  literal \`[\`, so a compact \`\\[26\\]\` is rendered as the text \`[26]\`
+  (handy for mark allocations) rather than as display maths.
 
 ## Root object
 
