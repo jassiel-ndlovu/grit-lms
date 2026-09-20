@@ -1,4 +1,9 @@
 import {
+  autoGradeSubmission,
+  isAutoMarkable,
+  isManuallyMarked,
+} from "../src/features/assessments/lib/auto-grade";
+import {
   answerToKeyPatch,
   seedAnswerFromKey,
   seedAnswersFromKeys,
@@ -297,6 +302,79 @@ check(
   ]),
   { a: "yes" },
 );
+
+/* ─── A model answer must never turn into a machine mark ───────────── */
+
+// The point of allowing solutions on subjective types is that students can
+// compare against them. If the presence of a key made the auto-grader mark
+// the question, a tutor adding a memo would silently start awarding marks
+// without anyone reading the work.
+
+const SUBJECTIVE = ["ESSAY", "CODE", "FILE_UPLOAD"] as const;
+for (const t of SUBJECTIVE) {
+  check(`${t} is not auto-markable`, isAutoMarkable(t), false);
+  check(`${t} is marked by hand`, isManuallyMarked(t), true);
+}
+check("NONE is neither auto-marked nor hand-marked", isManuallyMarked("NONE"), false);
+check("SHORT_ANSWER is still auto-markable", isAutoMarkable("SHORT_ANSWER"), true);
+
+function gradable(over: Record<string, unknown>) {
+  return {
+    id: "x",
+    parentId: null,
+    order: 0,
+    type: "SHORT_ANSWER",
+    points: 5,
+    options: [] as string[],
+    answer: null as unknown,
+    matchPairs: null as unknown,
+    reorderItems: [] as string[],
+    blankCount: null as number | null,
+    ...over,
+  };
+}
+
+// An essay with a model answer, and a student who typed exactly that.
+const essayResult = autoGradeSubmission(
+  [gradable({ id: "e", type: "ESSAY", answer: "The model answer." })],
+  { e: "The model answer." },
+);
+check("an ESSAY with a model answer is left pending", essayResult.pendingCount, 1);
+check("...and is not scored", essayResult.autoCount, 0);
+check("...and contributes nothing to the auto total", essayResult.autoOutOf, 0);
+check("...and produces no QuestionGrade row", essayResult.grades.length, 0);
+
+// Same for an upload whose key is a memo file.
+const uploadResult = autoGradeSubmission(
+  [
+    gradable({
+      id: "f",
+      type: "FILE_UPLOAD",
+      answer: [{ fileUrl: "https://x/memo.pdf", fileType: "application/pdf", fileName: "memo.pdf" }],
+    }),
+  ],
+  { f: [{ fileUrl: "https://x/s.pdf", fileType: "application/pdf", fileName: "s.pdf" }] },
+);
+check("a FILE_UPLOAD with a memo file is left pending", uploadResult.pendingCount, 1);
+check("...and is not scored", uploadResult.autoCount, 0);
+
+const codeResult = autoGradeSubmission(
+  [gradable({ id: "c", type: "CODE", answer: "def f(): pass" })],
+  { c: "def f(): pass" },
+);
+check("a CODE question with a model answer is left pending", codeResult.pendingCount, 1);
+check("...and is not scored", codeResult.autoCount, 0);
+
+// Mixed test: only the objective question is marked.
+const mixed = autoGradeSubmission(
+  [
+    gradable({ id: "s", type: "SHORT_ANSWER", answer: "yes", points: 3 }),
+    gradable({ id: "e2", type: "ESSAY", answer: "model", points: 7 }),
+  ],
+  { s: "yes", e2: "model" },
+);
+check("a mixed test marks only the objective question", [mixed.autoScore, mixed.autoOutOf], [3, 3]);
+check("...and leaves the essay pending", mixed.pendingCount, 1);
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

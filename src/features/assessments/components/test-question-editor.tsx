@@ -10,8 +10,9 @@
  * Type-specific fields:
  *   - MULTIPLE_CHOICE / MULTI_SELECT: options editor + correct choice(s)
  *   - TRUE_FALSE:                     radio for true / false
- *   - SHORT_ANSWER / NUMERIC / CODE:  free-text correct answer
- *   - ESSAY / FILE_UPLOAD:            no key answer (subjective / upload)
+ *   - SHORT_ANSWER / NUMERIC:         free-text correct answer
+ *   - ESSAY / CODE:                   optional model answer (manual marking)
+ *   - FILE_UPLOAD:                    optional model answer file(s)
  *   - MATCHING:                       list of {left, right} pairs
  *   - REORDER:                        list of items in intended order
  *   - FILL_IN_THE_BLANK:              blankCount + array of correct answers
@@ -52,6 +53,7 @@ import {
 } from "@/components/ui/select";
 import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, testQuestionImagePath } from "@/lib/blob/paths";
+import { toFileAnswers, type TestFileAnswer } from "../lib/file-answers";
 import { cn } from "@/lib/utils";
 
 /* ─── Shape ────────────────────────────────────────────────────────────── */
@@ -530,24 +532,38 @@ function TypeSpecificFields({
       );
     case "CODE":
       return (
-        <div className="space-y-1.5">
-          <label className="text-foreground text-xs font-medium">Language</label>
-          <Input
-            value={question.language ?? ""}
-            onChange={(e) => patch("language", e.target.value)}
-            placeholder="typescript, python, ..."
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-foreground text-xs font-medium">Language</label>
+            <Input
+              value={question.language ?? ""}
+              onChange={(e) => patch("language", e.target.value)}
+              placeholder="typescript, python, ..."
+            />
+          </div>
+          <ModelAnswerField
+            value={question.answer}
+            onChange={(v) => patch("answer", v)}
+            mono
+            placeholder="A reference implementation"
           />
-          <p className="text-muted-foreground text-xs">
-            Code responses are graded manually; no key answer needed.
-          </p>
         </div>
       );
     case "ESSAY":
+      return (
+        <ModelAnswerField
+          value={question.answer}
+          onChange={(v) => patch("answer", v)}
+          placeholder="What a full-mark answer covers..."
+        />
+      );
     case "FILE_UPLOAD":
       return (
-        <p className="text-muted-foreground text-xs italic">
-          Graded manually by the tutor after submission.
-        </p>
+        <ModelAnswerFiles
+          value={question.answer}
+          onChange={(v) => patch("answer", v)}
+          questionKey={question.clientId}
+        />
       );
     case "MATCHING":
       return (
@@ -575,6 +591,171 @@ function TypeSpecificFields({
     default:
       return null;
   }
+}
+
+/* ─── ModelAnswerField (ESSAY / CODE) ─── */
+
+/**
+ * A memo for a question nobody's machine can mark.
+ *
+ * Stored in the same `answer` column as a real key, which is safe because
+ * the auto-grader decides what to mark by TYPE, never by the presence of a
+ * key — see `isAutoMarkable` in lib/auto-grade.ts. Students see this in
+ * the review page next to their own answer, and the question stays
+ * "pending review" until a human puts a number on it.
+ */
+function ModelAnswerField({
+  value,
+  onChange,
+  placeholder,
+  mono,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  placeholder?: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-foreground text-xs font-medium">
+        Model answer <span className="text-muted-foreground">(optional)</span>
+      </label>
+      <Textarea
+        rows={mono ? 6 : 4}
+        value={typeof value === "string" ? value : ""}
+        onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
+        placeholder={placeholder}
+        className={cn(mono && "font-mono text-sm")}
+      />
+      <p className="text-muted-foreground text-xs">
+        Shown to students in the review page. This question is still marked
+        by hand — a model answer never scores it automatically.
+      </p>
+    </div>
+  );
+}
+
+/* ─── ModelAnswerFiles (FILE_UPLOAD) ─── */
+
+/**
+ * The same idea for upload questions: the tutor attaches the worked
+ * solution as one or more files. Stored in `answer` in the shape
+ * lib/file-answers.ts reads, so the review page renders it with the same
+ * code that renders a student's upload.
+ */
+function ModelAnswerFiles({
+  value,
+  onChange,
+  questionKey,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  questionKey: string;
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const files = React.useMemo(() => toFileAnswers(value), [value]);
+
+  async function add(list: FileList) {
+    setUploading(true);
+    const added: TestFileAnswer[] = [];
+    for (const file of Array.from(list)) {
+      const t = toast.loading(`Uploading ${file.name}\u2026`);
+      try {
+        const { url } = await uploadFile({
+          kind: BlobKind.TestQuestionImage,
+          pathname: testQuestionImagePath("memo", questionKey, file.name),
+          file,
+        });
+        added.push({
+          fileUrl: url,
+          fileType: file.type || "OTHER",
+          fileName: file.name,
+        });
+        toast.success(`Attached ${file.name}.`, { id: t });
+      } catch (err) {
+        toast.error(
+          `${file.name}: ${err instanceof Error ? err.message : "Upload failed"}`,
+          { id: t },
+        );
+      }
+    }
+    setUploading(false);
+    if (added.length > 0) onChange([...files, ...added]);
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-foreground text-xs font-medium">
+        Model answer <span className="text-muted-foreground">(optional)</span>
+      </label>
+
+      {files.length > 0 && (
+        <ul className="space-y-1.5">
+          {files.map((f, i) => (
+            <li
+              key={`${f.fileUrl}-${i}`}
+              className="border-border flex items-center gap-2 rounded-md border px-3 py-2"
+            >
+              <Paperclip className="text-muted-foreground size-3.5 shrink-0" />
+              <a
+                href={f.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="min-w-0 flex-1 truncate text-xs hover:underline"
+              >
+                {f.fileName}
+              </a>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                aria-label={`Remove ${f.fileName}`}
+                onClick={() => {
+                  const next = files.filter((_, idx) => idx !== i);
+                  onChange(next.length > 0 ? next : null);
+                }}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        className="hidden"
+        disabled={uploading}
+        onChange={(e) => {
+          const list = e.target.files;
+          if (list && list.length > 0) void add(list);
+          e.target.value = "";
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={uploading}
+        onClick={() => inputRef.current?.click()}
+      >
+        {uploading ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <Paperclip className="size-3.5" />
+        )}
+        {files.length > 0 ? "Add another file" : "Attach a worked solution"}
+      </Button>
+      <p className="text-muted-foreground text-xs">
+        Shown to students in the review page. This question is still marked
+        by hand.
+      </p>
+    </div>
+  );
 }
 
 /* ─── OptionsEditor (MC + MS) ─── */
