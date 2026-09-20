@@ -8,6 +8,10 @@
  *   - Skip: subjective (ESSAY, CODE, FILE_UPLOAD) or NONE, or the tutor
  *     didn't supply a correct-answer key.
  *
+ * Subjective questions are skipped even when a key IS present: tutors can
+ * record a model answer for students to compare against in review, and
+ * that memo must not turn into a machine mark.
+ *
  * The output is:
  *   {
  *     grades: [{ questionId, score, outOf, feedback: null }],
@@ -70,6 +74,27 @@ const AUTO_MARKABLE = new Set([
   "REORDER",
   "FILL_IN_THE_BLANK",
 ]);
+
+/**
+ * Whether this type is marked by the machine or by a human.
+ *
+ * Exported because the UI needs the same answer the grader uses: a tutor
+ * can record a model answer on a subjective question (ESSAY, CODE,
+ * FILE_UPLOAD) and students see it in review, but the presence of that
+ * memo must never make the question look auto-marked. Asking this function
+ * rather than re-listing the types keeps the two from drifting.
+ */
+export function isAutoMarkable(type: string): boolean {
+  return AUTO_MARKABLE.has(type);
+}
+
+/**
+ * True for types a human always marks. The inverse of `isAutoMarkable`
+ * minus NONE, which isn't a question at all.
+ */
+export function isManuallyMarked(type: string): boolean {
+  return type !== "NONE" && !AUTO_MARKABLE.has(type);
+}
 
 /** Given a question and the student's answer, return true if the answer
  *  matches the tutor's key, false otherwise. Callers only call this when

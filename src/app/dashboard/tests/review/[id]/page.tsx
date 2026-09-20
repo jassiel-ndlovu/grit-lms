@@ -8,7 +8,8 @@
  *   3. Performance summary table (name, submitted-at, auto/pending counts,
  *      total questions, current score).
  *   4. Per-question breakdown with colour-coded status per question:
- *      green = correct, red = incorrect, amber = pending, muted = context.
+ *      green = correct, sky = partially correct, red = incorrect,
+ *      amber = pending, muted = context.
  *      Student's answer displayed inline; correct answer revealed for
  *      graded questions so the student learns from the mistake.
  *
@@ -23,6 +24,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  CircleDot,
   Clock,
   ExternalLink,
   FileText,
@@ -35,6 +37,8 @@ import {
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { toFileAnswers } from "@/features/assessments/lib/file-answers";
+import { isManuallyMarked } from "@/features/assessments/lib/auto-grade";
+import { questionStatusTone } from "@/features/assessments/lib/review-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -407,26 +411,31 @@ function ReviewNode({
   // Status → colour scheme. Applied to the left border of each card so the
   // student can scan the list vertically for correctness at a glance.
   //   green — correct
+  //   sky   — partially correct (some marks, but not all)
   //   red   — incorrect
   //   amber — pending review (subjective, no grade yet)
   //   muted — context block
-  let statusTone: "correct" | "wrong" | "pending" | "unanswered" | "context";
-  if (isContext) statusTone = "context";
-  else if (!qg) statusTone = answered ? "pending" : "unanswered";
-  else if (qg.outOf > 0 && qg.score === qg.outOf) statusTone = "correct";
-  else if (qg.score === 0) statusTone = "wrong";
-  else statusTone = "correct"; // partial credit — count as correct-ish
+  //
+  // Partial credit used to be coloured green, which told a student who
+  // scored 4/6 that they had the question right. It gets its own tone:
+  // green is reserved for full marks.
+  const statusTone = questionStatusTone({ isContext, answered, grade: qg });
 
   const toneBorder = {
     correct: "border-l-emerald-500/70",
+    partial: "border-l-sky-500/70",
     wrong: "border-l-red-500/70",
     pending: "border-l-amber-500/70",
     unanswered: "border-l-slate-300",
     context: "border-l-muted-foreground/30",
   }[statusTone];
 
+  // Sky rather than another warm colour: amber already means "a human
+  // hasn't looked at this yet", and a second orange next to it would read
+  // as the same state at a glance.
   const tonePill = {
     correct: { label: "Correct", cls: "bg-emerald-100 text-emerald-800" },
+    partial: { label: "Partially correct", cls: "bg-sky-100 text-sky-800" },
     wrong: { label: "Incorrect", cls: "bg-red-100 text-red-800" },
     pending: { label: "Pending review", cls: "bg-amber-100 text-amber-800" },
     unanswered: { label: "Not answered", cls: "bg-slate-100 text-slate-600" },
@@ -455,6 +464,7 @@ function ReviewNode({
               )}
             >
               {statusTone === "correct" && <CheckCircle2 className="size-3" />}
+              {statusTone === "partial" && <CircleDot className="size-3" />}
               {statusTone === "wrong" && <XCircle className="size-3" />}
               {statusTone === "pending" && <Hourglass className="size-3" />}
               {statusTone === "unanswered" && <AlertTriangle className="size-3" />}
@@ -479,19 +489,28 @@ function ReviewNode({
                 ? "muted"
                 : statusTone === "correct"
                   ? "correct"
-                  : statusTone === "wrong"
-                    ? "wrong"
-                    : "neutral"
+                  : statusTone === "partial"
+                    ? "partial"
+                    : statusTone === "wrong"
+                      ? "wrong"
+                      : "neutral"
             }
             body={<AnswerView type={q.type} value={answers[q.id]} />}
           />
-          {canSeeGrades && (statusTone === "wrong" || statusTone === "pending") && (
-            <AnswerBlock
-              title="Correct answer"
-              tone="correct-outline"
-              body={<CorrectAnswerView q={q} />}
-            />
-          )}
+          {canSeeGrades &&
+            (statusTone === "wrong" ||
+              statusTone === "partial" ||
+              statusTone === "pending") &&
+            hasKey(q) && (
+              <AnswerBlock
+                // A manually-marked question has a model answer, not a
+                // "correct" one - calling it correct implies the student's
+                // differing answer was wrong, which is the tutor's call.
+                title={isManuallyMarked(q.type) ? "Model answer" : "Correct answer"}
+                tone="correct-outline"
+                body={<CorrectAnswerView q={q} />}
+              />
+            )}
         </div>
       )}
 
@@ -544,11 +563,12 @@ function AnswerBlock({
   body,
 }: {
   title: string;
-  tone: "correct" | "wrong" | "muted" | "neutral" | "correct-outline";
+  tone: "correct" | "partial" | "wrong" | "muted" | "neutral" | "correct-outline";
   body: React.ReactNode;
 }) {
   const cls = {
     correct: "border-emerald-200 bg-emerald-50",
+    partial: "border-sky-200 bg-sky-50",
     wrong: "border-red-200 bg-red-50",
     muted: "border-slate-200 bg-slate-50/60",
     neutral: "border-border bg-muted/40",
@@ -653,6 +673,32 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
   }
 }
 
+/**
+ * Does this question have anything to reveal? A subjective question with
+ * no model answer recorded has nothing worth a panel, and a NONE block is
+ * not a question at all.
+ */
+function hasKey(q: QuestionRow): boolean {
+  switch (q.type) {
+    case "NONE":
+      return false;
+    case "ESSAY":
+    case "CODE":
+      return typeof q.answer === "string" && q.answer.trim() !== "";
+    case "FILE_UPLOAD":
+      return toFileAnswers(q.answer).length > 0;
+    case "MATCHING":
+      return Array.isArray(q.matchPairs) && q.matchPairs.length > 0;
+    case "REORDER":
+      return (q.reorderItems ?? []).length > 0;
+    case "MULTI_SELECT":
+    case "FILL_IN_THE_BLANK":
+      return Array.isArray(q.answer) && q.answer.length > 0;
+    default:
+      return q.answer != null && String(q.answer).trim() !== "";
+  }
+}
+
 function CorrectAnswerView({ q }: { q: QuestionRow }) {
   switch (q.type) {
     case "MULTIPLE_CHOICE":
@@ -710,11 +756,44 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
       );
     }
 
+    // Subjective types have no machine-checkable key, but the tutor may
+    // have recorded a model answer. Showing it lets the student compare
+    // their work against what a full-mark response looks like; the mark
+    // itself still comes from a human.
     case "ESSAY":
-    case "CODE":
-    case "FILE_UPLOAD":
+    case "CODE": {
+      if (typeof q.answer !== "string" || q.answer.trim() === "") {
+        return <p className="text-muted-foreground italic text-xs">Graded manually — your tutor hasn&apos;t published a model answer.</p>;
+      }
+      return q.type === "CODE" ? (
+        <pre className="text-foreground whitespace-pre-wrap font-mono text-xs">{q.answer}</pre>
+      ) : (
+        <div className="text-foreground"><LessonMarkdown content={q.answer} className="prose-sm" /></div>
+      );
+    }
+
+    case "FILE_UPLOAD": {
+      const memo = toFileAnswers(q.answer);
+      if (memo.length === 0) {
+        return <p className="text-muted-foreground italic text-xs">Graded manually — your tutor hasn&apos;t published a model answer.</p>;
+      }
+      return (
+        <ul className="space-y-1">
+          {memo.map((f, i) => (
+            <li key={`${f.fileUrl}-${i}`}>
+              <a href={f.fileUrl} target="_blank" rel="noreferrer" className="text-brand-terracotta inline-flex items-center gap-1 text-sm hover:underline">
+                <FileText className="size-3" />
+                {f.fileName}
+                <ExternalLink className="size-3" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
     case "NONE":
-      return <p className="text-muted-foreground italic text-xs">Graded manually — no fixed correct answer.</p>;
+      return null;
 
     default:
       return null;

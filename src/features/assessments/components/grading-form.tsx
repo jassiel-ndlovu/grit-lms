@@ -665,15 +665,60 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
         </ul>
       );
     }
+    // Subjective types carry a model answer rather than a key. Showing it
+    // here gives the tutor their own memo to mark against without leaving
+    // the grading screen.
     case "ESSAY":
-    case "CODE":
-    case "FILE_UPLOAD":
-    case "NONE":
-      return (
-        <p className="text-muted-foreground italic text-xs">
-          Subjective — no fixed key. Grade using your own criteria.
-        </p>
+    case "CODE": {
+      if (typeof q.correctAnswer !== "string" || q.correctAnswer.trim() === "") {
+        return (
+          <p className="text-muted-foreground italic text-xs">
+            Subjective — no model answer recorded. Grade using your own criteria.
+          </p>
+        );
+      }
+      return q.type === "CODE" ? (
+        <pre className="text-foreground whitespace-pre-wrap font-mono text-xs">
+          {q.correctAnswer}
+        </pre>
+      ) : (
+        <div className="text-foreground">
+          <LessonMarkdown content={q.correctAnswer} className="prose-sm" dynamic={false} />
+        </div>
       );
+    }
+
+    case "FILE_UPLOAD": {
+      const memo = toFileAnswers(q.correctAnswer);
+      if (memo.length === 0) {
+        return (
+          <p className="text-muted-foreground italic text-xs">
+            Subjective — no model answer recorded. Grade using your own criteria.
+          </p>
+        );
+      }
+      return (
+        <ul className="space-y-1">
+          {memo.map((f, i) => (
+            <li key={`${f.fileUrl}-${i}`}>
+              <a
+                href={f.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-brand-terracotta inline-flex items-center gap-1 hover:underline"
+              >
+                <FileText className="size-3" />
+                {f.fileName}
+                <ExternalLink className="size-3" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    case "NONE":
+      return null;
     default:
       return null;
   }
