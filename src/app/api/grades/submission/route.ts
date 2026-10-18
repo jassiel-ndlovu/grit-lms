@@ -1,61 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+/**
+ * /api/grades/submission — fully retired.
+ *
+ * Grades are read and written by the RSC gradebook and the grading Server Actions.
+ * Nothing calls it any more: no page uses the `GradeContext` methods that
+ * hit this URL. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this file with `GradeContext`.
+ */
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const studentId = searchParams.get("studentId");
-  const entryId = searchParams.get("entryId");
+import { gone } from "@/lib/api-guard";
 
-  try {
-    if (entryId && studentId) {
-      const grades = await prisma.grade.findUnique({
-        where: {
-          studentId: studentId,
-          submissionEntryId: entryId,
-        },
-      });
+const replacement =
+  "Use src/features/grades/queries.ts and the grading Server Actions in src/features/assessments/actions.ts and src/features/submissions/actions.ts.";
 
-      return NextResponse.json(grades);
-    }
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { message: "Failed to fetch grades" },
-      { status: 500 }
-    );
-  }
+export function GET() {
+  return gone(replacement);
 }
 
-export async function POST(req: NextRequest) {
-  const data = await req.json();
-  try {
-    const grade = await prisma.grade.create({ data });
-
-    let url: string = "/dashboard";
-
-    if (grade.submissionEntryId) {
-      const entry = await prisma.submissionEntry.findUnique({
-        where: { id: grade.submissionEntryId },
-      });
-      url += `/submissions/${entry?.submissionId}`;
-    }
-
-    await prisma.notification.create({
-      data: {
-        title: "Grade Released",
-        message: `You received ${grade.score}/${grade.outOf} for "${grade.title}".`,
-        link: url,
-        type: "SUBMISSION_GRADED",
-        studentId: grade.studentId,
-      },
-    });
-
-    return NextResponse.json(grade, { status: 201 });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { message: "Failed to create grade" },
-      { status: 500 }
-    );
-  }
+export function POST() {
+  return gone(replacement);
 }
