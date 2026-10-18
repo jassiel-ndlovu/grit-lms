@@ -155,6 +155,8 @@ export default async function EditTestPage({ params }: PageProps) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             releaseAutoMarksToStudent: (test as any).releaseAutoMarksToStudent ?? false,
             preTestInstructions: test.preTestInstructions,
+            memoFileUrls: test.memoFileUrls,
+            labelScheme: test.labelScheme,
             questions: editorQuestions,
           }}
         />

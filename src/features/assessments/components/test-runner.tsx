@@ -53,6 +53,7 @@ import {
   submitTestAnswers,
 } from "../actions";
 import { QuestionRenderer, type RendererQuestion } from "./question-renderer";
+import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 
 /**
  * Question shape consumed by the runner. Top-level questions carry an
@@ -84,6 +85,8 @@ export interface TestRunnerProps {
   startedAt: Date;
   /** Defaults to "student". See the mode notes at the top of this file. */
   mode?: RunnerMode;
+  /** The test's question numbering (Test.labelScheme); empty = default. */
+  labelScheme?: string[];
 }
 
 // Shorter debounce = quicker recovery from accidental refreshes.
@@ -127,7 +130,12 @@ export function TestRunner({
   timeLimit,
   startedAt,
   mode = "student",
+  labelScheme,
 }: TestRunnerProps) {
+  const labels = React.useMemo(
+    () => labelTree(questions, normalizeScheme(labelScheme), (q) => q.id, (q) => q.subQuestions),
+    [questions, labelScheme],
+  );
   const router = useRouter();
   const preview = mode === "preview";
 
@@ -492,7 +500,8 @@ export function TestRunner({
             top-of-page header and the sticky sidebar both stay pinned. */}
         <QuestionView
           question={current}
-          path={String(currentIdx + 1)}
+          path={labels.get(current.id) ?? String(currentIdx + 1)}
+          labels={labels}
           answers={answers}
           onAnswer={updateAnswer}
           disabled={submitting || timeRemaining === 0}
@@ -584,7 +593,7 @@ export function TestRunner({
                           ? "text-foreground hover:bg-muted/40"
                           : "text-muted-foreground hover:bg-muted/40",
                     )}
-                    aria-label={`Go to question ${i + 1}${allDone ? " (complete)" : ""}`}
+                    aria-label={`Go to question ${labels.get(q.id) ?? i + 1}${allDone ? " (complete)" : ""}`}
                   >
                     {allDone ? (
                       <CheckCircle2
@@ -596,8 +605,8 @@ export function TestRunner({
                     ) : (
                       <Circle className="mt-0.5 size-3.5 shrink-0 opacity-50" />
                     )}
-                    <span className="tabular-nums w-5 shrink-0 font-medium">
-                      {i + 1}
+                    <span className="tabular-nums min-w-5 shrink-0 font-medium">
+                      {labels.get(q.id) ?? i + 1}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="line-clamp-2">{q.question}</span>
@@ -648,6 +657,7 @@ export function TestRunner({
 function QuestionView({
   question,
   path,
+  labels,
   answers,
   onAnswer,
   disabled,
@@ -656,6 +666,8 @@ function QuestionView({
   question: RunnerQuestion;
   /** Display path (e.g. "1", "1.a") used as a small caption above the input. */
   path: string;
+  /** id → label from the test's numbering scheme. */
+  labels: Map<string, string>;
   answers: Record<string, unknown>;
   onAnswer: (questionId: string, next: unknown) => void;
   disabled?: boolean;
@@ -698,12 +710,13 @@ function QuestionView({
           {question.subQuestions.map((child, i) => {
             // Sub-question path uses lettered labels at depth 1 ("1.a"),
             // numeric beyond. Depth is just path-segment count.
-            const childPath = nextPath(path, i, depthOf(path));
+            const childPath = labels.get(child.id) ?? nextPath(path, i, depthOf(path));
             return (
               <QuestionView
                 key={child.id}
                 question={child}
                 path={childPath}
+                labels={labels}
                 answers={answers}
                 onAnswer={onAnswer}
                 disabled={disabled}

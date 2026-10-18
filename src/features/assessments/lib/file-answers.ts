@@ -66,3 +66,25 @@ export function toFileAnswers(value: unknown): TestFileAnswer[] {
   const one = coerce(value);
   return one ? [one] : [];
 }
+
+/**
+ * A FILE_UPLOAD question's model answer (TestQuestion.answer) is either a
+ * list of memo files or, when the tutor wrote the solution out, a
+ * Markdown/MathJax string. Readers branch on this.
+ */
+export type FileUploadMemo =
+  | { kind: "files"; files: TestFileAnswer[] }
+  | { kind: "text"; text: string }
+  | null;
+
+export function toFileUploadMemo(value: unknown): FileUploadMemo {
+  if (typeof value === "string") {
+    // A bare URL string is the legacy single-file shape, not a solution.
+    if (/^https?:\/\/\S+$/.test(value.trim())) {
+      return { kind: "files", files: toFileAnswers(value) };
+    }
+    return value.trim() ? { kind: "text", text: value } : null;
+  }
+  const files = toFileAnswers(value);
+  return files.length > 0 ? { kind: "files", files } : null;
+}

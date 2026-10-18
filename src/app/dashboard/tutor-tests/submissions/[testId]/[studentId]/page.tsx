@@ -263,6 +263,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
           answers={answers}
           existingQuestionGrades={existingQuestionGrades}
           existingGrade={existingGrade}
+          labelScheme={test.labelScheme}
         />
       </div>
     </div>

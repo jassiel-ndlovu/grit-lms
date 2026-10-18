@@ -43,6 +43,7 @@ import {
 } from "@/features/submissions/queries";
 import { listGradesForStudentInCourse } from "@/features/grades/queries";
 import { listEventsByCourseId } from "@/features/events/queries";
+import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesson-tree";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -94,7 +95,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
   }
 
   // Pull every section in parallel.
-  const [lessons, completions, tests, assignments, events, grades] = await Promise.all([
+  const [allLessons, completions, tests, assignments, events, grades] = await Promise.all([
     listLessonsByCourseId(courseId),
     listCompletionsForStudentInCourse(student.id, courseId),
     listActiveTestsByCourseId(courseId),
@@ -122,8 +123,14 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
         !entry || (entry.status !== "GRADED" && entry.status !== "SUBMITTED"),
     );
 
+  // Reading order follows the lesson tree; group headings (NONE) have no
+  // content, so they don't count towards progress or the preview list.
+  const lessons = flattenLessonTree(buildLessonTree(allLessons), course.lessonLabelScheme)
+    .filter((f) => f.lesson.type !== "NONE")
+    .map((f) => ({ ...f.lesson, label: f.label }));
+
   const completedIds = new Set(completions.map((c) => c.lessonId));
-  const completedCount = completedIds.size;
+  const completedCount = lessons.filter((l) => completedIds.has(l.id)).length;
   const totalLessons = lessons.length;
   const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
@@ -231,7 +238,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
           ) : (
             <Card className="overflow-hidden p-0">
               <ul className="divide-border divide-y">
-                {lessons.slice(0, 6).map((lesson, i) => {
+                {lessons.slice(0, 6).map((lesson) => {
                   const done = completedIds.has(lesson.id);
                   return (
                     <li key={lesson.id}>
@@ -244,7 +251,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
                             done ? "bg-brand-terracotta/15 text-brand-terracotta" : "bg-muted text-muted-foreground"
                           }`}
                         >
-                          {done ? <CheckCircle2 className="size-4" /> : i + 1}
+                          {done ? <CheckCircle2 className="size-4" /> : lesson.label}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-foreground">

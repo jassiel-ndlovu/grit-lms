@@ -376,5 +376,29 @@ const mixed = autoGradeSubmission(
 check("a mixed test marks only the objective question", [mixed.autoScore, mixed.autoOutOf], [3, 3]);
 check("...and leaves the essay pending", mixed.pendingCount, 1);
 
+/* ─── FILE_UPLOAD text-solution memos ─────────────────────────────────── */
+
+const textMemo = q({ type: "FILE_UPLOAD", answer: "Integrate by parts: $\\int u\\,dv$" });
+check(
+  "an empty preview upload leaves a text memo alone",
+  answerToKeyPatch(textMemo, []),
+  { ok: true, patch: {} },
+);
+check(
+  "uploading in the preview replaces a text memo with the files",
+  answerToKeyPatch(textMemo, [{ fileUrl: "https://x/a.pdf", fileType: "application/pdf", fileName: "a.pdf" }]),
+  { ok: true, patch: { answer: [{ fileUrl: "https://x/a.pdf", fileType: "application/pdf", fileName: "a.pdf" }] } },
+);
+check(
+  "a text memo is not seeded into the preview as a fake file",
+  seedAnswerFromKey({ ...textMemo, answer: "Integrate by parts" }),
+  undefined,
+);
+check(
+  "an empty upload still clears a file memo",
+  answerToKeyPatch(q({ type: "FILE_UPLOAD", answer: [{ fileUrl: "https://x/a.pdf" }] }), []),
+  { ok: true, patch: { answer: null } },
+);
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

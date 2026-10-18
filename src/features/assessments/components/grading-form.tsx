@@ -22,12 +22,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTextarea } from "@/components/markdown-textarea";
+import {
+  DraftStatus,
+  RestoreDraftBanner,
+  SaveProgressButton,
+} from "@/components/draft-controls";
+import { useLocalDraft } from "@/lib/use-local-draft";
+import { formatLabel, normalizeScheme, type LabelScheme } from "@/lib/enum-labels";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
 
 import { gradeTestSubmission } from "../actions";
-import { toFileAnswers } from "../lib/file-answers";
+import { toFileAnswers, toFileUploadMemo } from "../lib/file-answers";
 
 /* ─── Shapes ───────────────────────────────────────────────────────────── */
 
@@ -71,6 +78,8 @@ export interface GradingFormProps {
     outOf: number;
     finalComments: string | null;
   } | null;
+  /** The test's question numbering (Test.labelScheme); empty = default. */
+  labelScheme?: string[];
 }
 
 /* ─── Flattening + helpers ─────────────────────────────────────────────── */
@@ -87,27 +96,19 @@ type FlatRow = {
   parentText: string | null;
   gradable: boolean;
 };
-const SUB_LETTERS = "abcdefghijklmnopqrstuvwxyz";
-
-function flatten(questions: GradingQuestion[]): FlatRow[] {
+function flatten(questions: GradingQuestion[], scheme: LabelScheme): FlatRow[] {
   const out: FlatRow[] = [];
-  function visit(q: GradingQuestion, parentPath: string, depth: number, parentText: string | null) {
+  function visit(q: GradingQuestion, pos: number[], parentText: string | null) {
     out.push({
       q,
-      path: parentPath,
-      depth,
+      path: formatLabel(scheme, pos),
+      depth: pos.length - 1,
       parentText,
       gradable: q.type !== "NONE",
     });
-    q.subQuestions.forEach((child, i) => {
-      const seg =
-        depth === 0
-          ? SUB_LETTERS[i % SUB_LETTERS.length] ?? String(i + 1)
-          : String(i + 1);
-      visit(child, `${parentPath}.${seg}`, depth + 1, q.question);
-    });
+    q.subQuestions.forEach((child, i) => visit(child, [...pos, i], q.question));
   }
-  questions.forEach((q, i) => visit(q, String(i + 1), 0, null));
+  questions.forEach((q, i) => visit(q, [i], null));
   return out;
 }
 
@@ -126,9 +127,13 @@ export function GradingForm({
   answers,
   existingQuestionGrades,
   existingGrade,
+  labelScheme,
 }: GradingFormProps) {
   const router = useRouter();
-  const rows = React.useMemo(() => flatten(questions), [questions]);
+  const rows = React.useMemo(
+    () => flatten(questions, normalizeScheme(labelScheme)),
+    [questions, labelScheme],
+  );
   const gradableRows = rows.filter((r) => r.gradable);
 
   // Index existing per-question grades by questionId.
@@ -167,6 +172,34 @@ export function GradingForm({
     existingGrade ? String(existingGrade.score) : null,
   );
   const [pending, setPending] = React.useState(false);
+
+  /* ─── Local auto-save ─── */
+
+  type GradingDraft = {
+    perQ: Record<string, PerQ>;
+    overallFeedback: string;
+    overrideOverall: string | null;
+  };
+  const draftData = React.useMemo<GradingDraft>(
+    () => ({ perQ, overallFeedback, overrideOverall }),
+    [perQ, overallFeedback, overrideOverall],
+  );
+  const draft = useLocalDraft<GradingDraft>({
+    key: `test-grade:${submissionId}`,
+    data: draftData,
+  });
+  function restoreDraft(d: GradingDraft) {
+    // Only take entries for questions that still exist on the test.
+    setPerQ((prev) => {
+      const next = { ...prev };
+      for (const [qid, v] of Object.entries(d.perQ ?? {})) {
+        if (qid in next && v) next[qid] = { score: String(v.score ?? ""), feedback: String(v.feedback ?? "") };
+      }
+      return next;
+    });
+    setOverallFeedback(d.overallFeedback ?? "");
+    setOverrideOverall(d.overrideOverall ?? null);
+  }
 
   /* ─── Derived totals ─── */
 
@@ -241,6 +274,8 @@ export function GradingForm({
         questionGrades,
       });
       if (result?.serverError) throw new Error(result.serverError);
+      if (result?.validationErrors) throw new Error("Some scores were rejected — check each question.");
+      draft.clear();
       toast.success(`Saved grade for ${studentName}`);
       router.push(`/dashboard/tutor-tests/${testId}/submissions`);
       router.refresh();
@@ -254,6 +289,7 @@ export function GradingForm({
 
   return (
     <div className="space-y-6 pb-40">
+      <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this grade" />
       {rows.map((r) => (
         <QuestionCard
           key={r.q.id}
@@ -276,11 +312,12 @@ export function GradingForm({
             Optional. Rendered with markdown + MathJax on the student review.
           </p>
         </div>
-        <Textarea
+        <MarkdownTextarea
           rows={6}
           value={overallFeedback}
           onChange={(e) => setOverallFeedback(e.target.value)}
           placeholder="Nice work overall. A few notes..."
+          previewTitle="Overall feedback preview"
         />
       </Card>
 
@@ -328,11 +365,15 @@ export function GradingForm({
               </span>
             )}
           </div>
-          <Button type="button" variant="brand" onClick={onSubmit} disabled={pending}>
-            {pending && <Loader2 className="size-4 animate-spin" />}
-            {existingGrade ? "Update grade" : "Save grade"}
-            <Save className="size-4" />
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <DraftStatus draft={draft} />
+            <SaveProgressButton draft={draft} />
+            <Button type="button" variant="brand" onClick={onSubmit} disabled={pending}>
+              {pending && <Loader2 className="size-4 animate-spin" />}
+              {existingGrade ? "Update grade" : "Save grade"}
+              <Save className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -447,11 +488,12 @@ const QuestionCard = React.memo(function QuestionCard({
               <label className="text-foreground text-xs font-medium">
                 Feedback
               </label>
-              <Textarea
+              <MarkdownTextarea
                 rows={3}
                 value={feedback}
                 onChange={(e) => onFeedback(row.q.id, e.target.value)}
                 placeholder="Optional — markdown + LaTeX supported."
+                previewTitle={`Feedback for ${row.path}`}
               />
             </div>
           </div>
@@ -689,7 +731,15 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
     }
 
     case "FILE_UPLOAD": {
-      const memo = toFileAnswers(q.correctAnswer);
+      const solution = toFileUploadMemo(q.correctAnswer);
+      if (solution?.kind === "text") {
+        return (
+          <div className="text-foreground">
+            <LessonMarkdown content={solution.text} className="prose-sm" dynamic={false} />
+          </div>
+        );
+      }
+      const memo = solution?.files ?? [];
       if (memo.length === 0) {
         return (
           <p className="text-muted-foreground italic text-xs">

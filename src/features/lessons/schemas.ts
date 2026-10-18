@@ -49,6 +49,13 @@ export type CreateAttachmentInput = z.infer<typeof CreateAttachmentSchema>;
 /* Lesson                                                                    */
 /* ------------------------------------------------------------------------- */
 
+/**
+ * CONTENT is an ordinary lesson. NONE is a content-free group heading that
+ * only exists to hold child lessons (mirrors QuestionType.NONE).
+ */
+export const LessonTypeSchema = z.enum(["CONTENT", "NONE"]);
+export type LessonType = z.infer<typeof LessonTypeSchema>;
+
 export const LessonSchema = z.object({
   id: CuidSchema,
   title: NonEmptyString.max(120, "Title too long"),
@@ -75,6 +82,9 @@ export const CreateLessonSchema = z.object({
   duration: z.number().int().positive().nullable().default(null),
   videoUrl: z.array(UrlSchema).default([]),
   attachments: z.array(CreateAttachmentSchema).default([]),
+  type: LessonTypeSchema.default("CONTENT"),
+  /** Parent lesson (a group or another lesson) in the same course. */
+  parentId: CuidSchema.nullable().default(null),
 });
 export type CreateLessonInput = z.infer<typeof CreateLessonSchema>;
 
@@ -91,8 +101,31 @@ export const UpdateLessonSchema = z.object({
   duration: z.number().int().positive().nullable().optional(),
   videoUrl: z.array(UrlSchema).optional(),
   attachments: z.array(CreateAttachmentSchema).optional(),
+  type: LessonTypeSchema.optional(),
+  parentId: CuidSchema.nullable().optional(),
 });
 export type UpdateLessonInput = z.infer<typeof UpdateLessonSchema>;
+
+/**
+ * Replace a course's whole lesson arrangement in one go — what the
+ * drag-and-drop reorder dialog produces. Every lesson in the course must
+ * appear exactly once.
+ */
+export type LessonOrderNode = { id: string; children: LessonOrderNode[] };
+export const LessonOrderNodeSchema: z.ZodType<LessonOrderNode> = z.lazy(() =>
+  z.object({ id: CuidSchema, children: z.array(LessonOrderNodeSchema).default([]) }),
+);
+export const ReorderLessonsSchema = z.object({
+  courseId: CuidSchema,
+  tree: z.array(LessonOrderNodeSchema),
+});
+export type ReorderLessonsInput = z.infer<typeof ReorderLessonsSchema>;
+
+/** enumitem-style lesson numbering for a course; [] = default scheme. */
+export const UpdateLessonLabelSchemeSchema = z.object({
+  courseId: CuidSchema,
+  scheme: z.array(z.string().max(120)).max(10),
+});
 
 export const DeleteLessonSchema = z.object({
   id: CuidSchema,

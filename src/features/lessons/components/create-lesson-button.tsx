@@ -32,12 +32,15 @@ export interface CreateLessonButtonProps {
   nextOrder?: number;
   /** Optional override for the trigger label. */
   label?: string;
+  /** Labelled lessons the new one may be nested under. */
+  parentOptions?: Array<{ id: string; label: string; title: string; depth: number }>;
 }
 
 export function CreateLessonButton({
   courseId,
   nextOrder = 0,
   label = "Add lesson",
+  parentOptions,
 }: CreateLessonButtonProps) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
@@ -54,13 +57,15 @@ export function CreateLessonButton({
         <DialogHeader>
           <DialogTitle>Create a new lesson</DialogTitle>
           <DialogDescription>
-            Add a title, description, and optionally videos and attachments.
+            Add a title, description, and optionally videos and attachments
+            — or make it a group that holds other lessons.
           </DialogDescription>
         </DialogHeader>
         <LessonForm
           className="max-h-[70vh] overflow-y-auto"
           courseId={courseId}
           defaultValues={{ order: nextOrder }}
+          parentOptions={parentOptions}
           onSuccess={({ id }) => {
             setOpen(false);
             router.push(

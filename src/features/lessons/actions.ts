@@ -32,9 +32,13 @@ import {
   CreateLessonSchema,
   DeleteLessonSchema,
   MarkLessonCompleteSchema,
+  ReorderLessonsSchema,
   UnmarkLessonCompleteSchema,
+  UpdateLessonLabelSchemeSchema,
   UpdateLessonSchema,
+  type LessonOrderNode,
 } from "./schemas";
+import { subtreeIds } from "./lib/lesson-tree";
 
 /* ------------------------------------------------------------------------- */
 /* Helpers                                                                   */
@@ -54,6 +58,24 @@ async function cleanupAttachmentBlobs(urls: string[]): Promise<void> {
       }
     }),
   );
+}
+
+/** A parent must be a lesson in the same course. Throws otherwise. */
+async function assertParentInCourse(parentId: string, courseId: string): Promise<void> {
+  const parent = await prisma.lesson.findUnique({
+    where: { id: parentId },
+    select: { courseId: true },
+  });
+  if (!parent || parent.courseId !== courseId) {
+    throw new Error("Parent lesson not found in this course");
+  }
+}
+
+function revalidateCourseLessons(courseId: string): void {
+  revalidatePath(`/dashboard/manage-courses/lessons/${courseId}`);
+  revalidatePath(`/dashboard/courses/lessons/${courseId}`);
+  revalidatePath(`/dashboard/manage-courses/${courseId}`);
+  revalidatePath(`/dashboard/courses/${courseId}`);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -81,17 +103,24 @@ export const createLesson = tutorActionClient
     if (course.tutor.email !== ctx.session.user.email) {
       throw new Error("You don't own this course");
     }
+    if (parsedInput.parentId) {
+      await assertParentInCourse(parsedInput.parentId, parsedInput.courseId);
+    }
+    const isGroup = parsedInput.type === "NONE";
 
     const created = await prisma.lesson.create({
       data: {
         title: parsedInput.title,
-        description: parsedInput.description,
+        // A group heading carries no content of its own.
+        description: isGroup ? null : parsedInput.description,
         order: parsedInput.order ?? 0,
-        duration: parsedInput.duration ?? null,
-        videoUrl: parsedInput.videoUrl ?? [],
+        duration: isGroup ? null : parsedInput.duration ?? null,
+        videoUrl: isGroup ? [] : parsedInput.videoUrl ?? [],
+        type: parsedInput.type,
+        ...(parsedInput.parentId ? { parent: { connect: { id: parsedInput.parentId } } } : {}),
         course: { connect: { id: parsedInput.courseId } },
         attachmentUrls: {
-          create: (parsedInput.attachments ?? []).map((a) => ({
+          create: (isGroup ? [] : parsedInput.attachments ?? []).map((a) => ({
             title: a.title,
             url: a.url,
           })),
@@ -165,6 +194,24 @@ export const updateLesson = tutorActionClient
     if (parsedInput.order !== undefined) data.order = parsedInput.order;
     if (parsedInput.duration !== undefined) data.duration = parsedInput.duration;
     if (parsedInput.videoUrl !== undefined) data.videoUrl = parsedInput.videoUrl;
+    if (parsedInput.type !== undefined) data.type = parsedInput.type;
+    if (parsedInput.parentId !== undefined) {
+      if (parsedInput.parentId === null) {
+        data.parentId = null;
+      } else {
+        await assertParentInCourse(parsedInput.parentId, existing.course.id);
+        // Nesting a lesson under itself or one of its own descendants
+        // would cut the whole branch off the tree.
+        const rows = await prisma.lesson.findMany({
+          where: { courseId: existing.course.id },
+          select: { id: true, parentId: true, order: true, createdAt: true },
+        });
+        if (subtreeIds(rows, existing.id).has(parsedInput.parentId)) {
+          throw new Error("A lesson can't be placed inside itself");
+        }
+        data.parentId = parsedInput.parentId;
+      }
+    }
     if (parsedInput.attachments !== undefined) {
       data.attachmentUrls = {
         deleteMany: {},
@@ -230,7 +277,15 @@ export const deleteLesson = tutorActionClient
     const courseId = existing.course.id;
     const attachmentUrls = existing.attachmentUrls.map((a) => a.url);
 
-    await prisma.lesson.delete({ where: { id: parsedInput.id } });
+    // Deleting a group must not delete its lessons: hand them to the
+    // deleted lesson's own parent, after its position.
+    await prisma.$transaction([
+      prisma.lesson.updateMany({
+        where: { parentId: parsedInput.id },
+        data: { parentId: existing.parentId, order: { increment: existing.order + 1 } },
+      }),
+      prisma.lesson.delete({ where: { id: parsedInput.id } }),
+    ]);
 
     // Best-effort cleanup of all attachment blobs.
     if (attachmentUrls.length > 0) {
@@ -243,6 +298,76 @@ export const deleteLesson = tutorActionClient
     revalidatePath(`/dashboard/courses/${courseId}`);
 
     return { id: parsedInput.id, courseId };
+  });
+
+/* ------------------------------------------------------------------------- */
+/* reorderLessons / updateLessonLabelScheme                                  */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Apply a whole arrangement from the reorder dialog: every lesson's parent
+ * and sibling position in one transaction.
+ */
+export const reorderLessons = tutorActionClient
+  .schema(ReorderLessonsSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const course = await prisma.course.findUnique({
+      where: { id: parsedInput.courseId },
+      select: { tutor: { select: { email: true } }, lessons: { select: { id: true } } },
+    });
+    if (!course) throw new Error("Course not found");
+    if (course.tutor.email !== ctx.session.user.email) {
+      throw new Error("You don't own this course");
+    }
+
+    const updates: Array<{ id: string; parentId: string | null; order: number }> = [];
+    const walk = (list: LessonOrderNode[], parentId: string | null) =>
+      list.forEach((n, i) => {
+        updates.push({ id: n.id, parentId, order: i });
+        walk(n.children, n.id);
+      });
+    walk(parsedInput.tree, null);
+
+    const known = new Set(course.lessons.map((l) => l.id));
+    const seen = new Set(updates.map((u) => u.id));
+    if (
+      seen.size !== updates.length ||
+      seen.size !== known.size ||
+      updates.some((u) => !known.has(u.id))
+    ) {
+      throw new Error("The lesson list changed while you were arranging it — reload and try again.");
+    }
+
+    await prisma.$transaction(
+      updates.map((u) =>
+        prisma.lesson.update({
+          where: { id: u.id },
+          data: { parentId: u.parentId, order: u.order },
+        }),
+      ),
+    );
+
+    revalidateCourseLessons(parsedInput.courseId);
+    return { count: updates.length };
+  });
+
+export const updateLessonLabelScheme = tutorActionClient
+  .schema(UpdateLessonLabelSchemeSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const course = await prisma.course.findUnique({
+      where: { id: parsedInput.courseId },
+      select: { tutor: { select: { email: true } } },
+    });
+    if (!course) throw new Error("Course not found");
+    if (course.tutor.email !== ctx.session.user.email) {
+      throw new Error("You don't own this course");
+    }
+    await prisma.course.update({
+      where: { id: parsedInput.courseId },
+      data: { lessonLabelScheme: parsedInput.scheme },
+    });
+    revalidateCourseLessons(parsedInput.courseId);
+    return { ok: true };
   });
 
 /* ------------------------------------------------------------------------- */

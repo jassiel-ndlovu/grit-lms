@@ -37,7 +37,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTextarea } from "@/components/markdown-textarea";
+import {
+  DraftStatus,
+  RestoreDraftBanner,
+  SaveProgressButton,
+} from "@/components/draft-controls";
+import { useLocalDraft } from "@/lib/use-local-draft";
 import { Separator } from "@/components/ui/separator";
 import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, submissionPath } from "@/lib/blob/paths";
@@ -95,6 +101,31 @@ export function EntryGradingForm({
       ? defaultValues.sections
       : [blank(totalPointsDefault || 10)],
   );
+
+  /* ─── Local auto-save ─── */
+
+  type EntryDraft = {
+    score: number;
+    outOf: number;
+    feedback: string;
+    sectionsOn: boolean;
+    sections: EntryGradingFormSection[];
+  };
+  const draftData = React.useMemo<EntryDraft>(
+    () => ({ score, outOf, feedback, sectionsOn, sections }),
+    [score, outOf, feedback, sectionsOn, sections],
+  );
+  const draft = useLocalDraft<EntryDraft>({
+    key: `entry-grade:${entryId}`,
+    data: draftData,
+  });
+  function restoreDraft(d: EntryDraft) {
+    setScore(Number(d.score) || 0);
+    setOutOf(Number(d.outOf) || totalPointsDefault || 1);
+    setFeedback(d.feedback ?? "");
+    setSectionsOn(Boolean(d.sectionsOn));
+    if (Array.isArray(d.sections) && d.sections.length > 0) setSections(d.sections);
+  }
 
   function updateSection(
     i: number,
@@ -224,6 +255,7 @@ export function EntryGradingForm({
         toast.error("Save did not complete. Please try again.");
         return;
       }
+      draft.clear();
       toast.success("Grade saved.");
       router.refresh();
     } catch (err) {
@@ -237,6 +269,7 @@ export function EntryGradingForm({
 
   return (
     <div className="space-y-6">
+      <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this grade" />
       <Card className="p-6">
         <div className="flex items-baseline justify-between gap-3">
           <div>
@@ -294,11 +327,12 @@ export function EntryGradingForm({
         </div>
         <div className="mt-4 space-y-2">
           <label className="text-sm font-medium">Overall feedback</label>
-          <Textarea
+          <MarkdownTextarea
             rows={3}
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="Optional — overall feedback for the student."
+            previewTitle="Overall feedback preview"
           />
         </div>
       </Card>
@@ -394,8 +428,9 @@ export function EntryGradingForm({
                     <label className="text-muted-foreground text-xs">
                       Remarks / comments
                     </label>
-                    <Textarea
+                    <MarkdownTextarea
                       rows={2}
+                      previewTitle={`${s.title.trim() || `Section ${i + 1}`} remarks`}
                       value={s.remarks}
                       onChange={(e) =>
                         updateSection(i, { remarks: e.target.value })
@@ -463,7 +498,9 @@ export function EntryGradingForm({
         )}
       </Card>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <DraftStatus draft={draft} />
+        <SaveProgressButton draft={draft} />
         <Button
           onClick={onSave}
           disabled={pending || uploadingIdx.size > 0}

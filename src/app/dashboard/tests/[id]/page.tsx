@@ -106,6 +106,7 @@ export default async function TestRunnerPage({ params }: PageProps) {
           questions={treeQuestions}
           initialAnswers={initialAnswers}
           timeLimit={test.timeLimit}
+          labelScheme={test.labelScheme}
           startedAt={submission.startedAt}
         />
       </div>

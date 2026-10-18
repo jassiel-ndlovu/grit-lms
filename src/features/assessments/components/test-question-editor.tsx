@@ -12,7 +12,8 @@
  *   - TRUE_FALSE:                     radio for true / false
  *   - SHORT_ANSWER / NUMERIC:         free-text correct answer
  *   - ESSAY / CODE:                   optional model answer (manual marking)
- *   - FILE_UPLOAD:                    optional model answer file(s)
+ *   - FILE_UPLOAD:                    optional model answer — file(s) OR a
+ *                                     Markdown/MathJax text solution
  *   - MATCHING:                       list of {left, right} pairs
  *   - REORDER:                        list of items in intended order
  *   - FILL_IN_THE_BLANK:              blankCount + array of correct answers
@@ -44,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTextarea, PreviewRenderButton } from "@/components/markdown-textarea";
 import {
   Select,
   SelectContent,
@@ -53,7 +55,11 @@ import {
 } from "@/components/ui/select";
 import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, testQuestionImagePath } from "@/lib/blob/paths";
-import { toFileAnswers, type TestFileAnswer } from "../lib/file-answers";
+import {
+  toFileAnswers,
+  toFileUploadMemo,
+  type TestFileAnswer,
+} from "../lib/file-answers";
 import { cn } from "@/lib/utils";
 
 /* ─── Shape ────────────────────────────────────────────────────────────── */
@@ -131,8 +137,10 @@ export interface TestQuestionEditorProps {
   onRemove: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-  /** Dotted label such as "1" or "1.a" — computed by the parent. */
+  /** Label such as "1" or "1.a" — computed by the form from its scheme. */
   label: string;
+  /** clientId → label for the whole tree, so sub-questions can look theirs up. */
+  labels?: Map<string, string>;
   depth: number;
   /**
    * Test the question belongs to, used to scope attachment upload paths.
@@ -149,6 +157,7 @@ export function TestQuestionEditor({
   onMoveUp,
   onMoveDown,
   label,
+  labels,
   depth,
   testId = "draft",
 }: TestQuestionEditorProps) {
@@ -265,7 +274,9 @@ export function TestQuestionEditor({
 
   return (
     <Card
+      id={`q-${question.clientId}`}
       className={cn(
+        "scroll-mt-24",
         "space-y-4 p-5",
         isContext && "border-muted-foreground/30 bg-muted/20",
         depth > 0 && "border-brand-terracotta/30",
@@ -365,6 +376,10 @@ export function TestQuestionEditor({
             <span className="text-muted-foreground hidden text-[11px] sm:inline">
               Images embed inline; other files become download links.
             </span>
+            <PreviewRenderButton
+              content={question.question}
+              title={`${isContext ? "Context" : "Question"} ${label} preview`}
+            />
             <input
               ref={fileRef}
               type="file"
@@ -434,9 +449,10 @@ export function TestQuestionEditor({
           </p>
           {question.subQuestions.map((child, i) => {
             const childLabel =
-              depth === 0
+              labels?.get(child.clientId) ??
+              (depth === 0
                 ? `${label}.${SUB_LETTERS[i % SUB_LETTERS.length] ?? i + 1}`
-                : `${label}.${i + 1}`;
+                : `${label}.${i + 1}`);
             return (
               <TestQuestionEditor
                 key={child.clientId}
@@ -450,6 +466,7 @@ export function TestQuestionEditor({
                     : undefined
                 }
                 label={childLabel}
+                labels={labels}
                 depth={depth + 1}
                 testId={testId}
               />
@@ -559,7 +576,7 @@ function TypeSpecificFields({
       );
     case "FILE_UPLOAD":
       return (
-        <ModelAnswerFiles
+        <FileUploadModelAnswer
           value={question.answer}
           onChange={(v) => patch("answer", v)}
           questionKey={question.clientId}
@@ -620,17 +637,100 @@ function ModelAnswerField({
       <label className="text-foreground text-xs font-medium">
         Model answer <span className="text-muted-foreground">(optional)</span>
       </label>
-      <Textarea
+      <MarkdownTextarea
         rows={mono ? 6 : 4}
         value={typeof value === "string" ? value : ""}
         onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
         placeholder={placeholder}
         className={cn(mono && "font-mono text-sm")}
+        previewTitle="Model answer preview"
       />
       <p className="text-muted-foreground text-xs">
         Shown to students in the review page. This question is still marked
         by hand — a model answer never scores it automatically.
       </p>
+    </div>
+  );
+}
+
+/* ─── FileUploadModelAnswer (FILE_UPLOAD) ─── */
+
+/**
+ * A FILE_UPLOAD question's memo is either a worked solution as a document
+ * (stored as the file-answer array, see lib/file-answers.ts) or written
+ * out in Markdown + MathJax like an ESSAY memo (stored as a string). The
+ * shape of `answer` is the mode, so nothing else needs to record it.
+ * Switching mode with something already entered asks first, because the
+ * other mode's value is discarded.
+ */
+function FileUploadModelAnswer({
+  value,
+  onChange,
+  questionKey,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  questionKey: string;
+}) {
+  const [mode, setMode] = React.useState<"files" | "text">(
+    toFileUploadMemo(value)?.kind === "text" ? "text" : "files",
+  );
+
+  function switchTo(next: "files" | "text") {
+    if (next === mode) return;
+    const hasValue = toFileUploadMemo(value) !== null;
+    if (
+      hasValue &&
+      !window.confirm(
+        next === "text"
+          ? "Switch to a text solution? The attached memo files will be removed from this question."
+          : "Switch to a document? The written solution will be removed from this question.",
+      )
+    ) {
+      return;
+    }
+    setMode(next);
+    onChange(null);
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-foreground text-xs font-medium">Model answer as</span>
+        <div className="border-border inline-flex rounded-md border p-0.5" role="radiogroup">
+          {(
+            [
+              ["files", "Document"],
+              ["text", "Text solution"],
+            ] as const
+          ).map(([m, name]) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              onClick={() => switchTo(m)}
+              className={cn(
+                "rounded px-2.5 py-1 text-xs transition-colors",
+                mode === m
+                  ? "bg-brand-terracotta text-brand-terracotta-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      </div>
+      {mode === "files" ? (
+        <ModelAnswerFiles value={value} onChange={onChange} questionKey={questionKey} />
+      ) : (
+        <ModelAnswerField
+          value={value}
+          onChange={onChange}
+          placeholder="Write the worked solution — Markdown and $\LaTeX$ supported…"
+        />
+      )}
     </div>
   );
 }

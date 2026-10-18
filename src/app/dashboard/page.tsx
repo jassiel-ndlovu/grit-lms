@@ -92,8 +92,10 @@ export default async function DashboardLanding() {
         listLessonsByCourseId(c.id),
         listCompletionsForStudentInCourse(student.id, c.id),
       ]);
-      const total = lessons.length;
-      const done = completions.length;
+      // Group headings (NONE lessons) hold no content to complete.
+      const readable = new Set(lessons.filter((l) => l.type !== "NONE").map((l) => l.id));
+      const total = readable.size;
+      const done = completions.filter((c) => readable.has(c.lessonId)).length;
       return {
         course: c,
         total,
