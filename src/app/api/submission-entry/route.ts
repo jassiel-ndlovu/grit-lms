@@ -17,6 +17,7 @@ import type { Session } from "next-auth";
 
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { notifyHandIn } from "@/features/notifications/server";
 import type { Role } from "@/features/shared/enums";
 import {
   forbidden,
@@ -129,16 +130,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // notification
-    await prisma.notification.create({
-      data: {
-        title: "Assignment Submitted",
-        message: `Your submission for "${submission.title}" has been received.`,
-        link: `/dashboard/submissions/${submission.id}`,
-        type: "SUBMISSION_DUE",
-        studentId: student.id,
-        courseId: submission.courseId,
-      },
+    // Receipt to the student, alert to the tutor (preference-aware).
+    await notifyHandIn({
+      kind: "assignment",
+      title: submission.title,
+      courseId: submission.courseId,
+      studentId: student.id,
+      studentLink: `/dashboard/submissions/${submission.id}`,
+      tutorLink: `/dashboard/submissions/overview/${submission.id}/${student.id}`,
     });
 
     return NextResponse.json(entry);

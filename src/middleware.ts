@@ -7,9 +7,9 @@ export default withAuth(
     const token = await getToken({ req });
     const { pathname } = req.nextUrl;
 
-    // If logged in and visiting login page → redirect to dashboard
+    // If logged in and visiting login page → their chosen start page
     if (token && pathname === "/") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      return NextResponse.redirect(new URL("/dashboard/start", req.url));
     }
 
     return NextResponse.next();

@@ -9,7 +9,7 @@ export interface ManagedUserRow {
   id: string;
   name: string;
   email: string;
-  role: "STUDENT" | "TUTOR" | "ADMIN";
+  role: "STUDENT" | "TUTOR" | "ADMIN" | "PARENT";
   createdAt: Date;
   hasStudentProfile: boolean;
   hasTutorProfile: boolean;

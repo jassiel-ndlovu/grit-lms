@@ -11,7 +11,10 @@ import {
   Bell,
   Bookmark,
   BookOpen,
+  CalendarDays,
+  ClipboardCheck,
   Clock,
+  Inbox,
   FileText,
   GraduationCap,
   MessageSquare,
@@ -38,6 +41,15 @@ const ICON_BY_TYPE: Record<NotificationType, LucideIcon> = {
   TEST_GRADED: GraduationCap,
   MESSAGE: MessageSquare,
   SYSTEM: Settings,
+  LESSON_UPDATED: BookOpen,
+  LESSON_DELETED: BookOpen,
+  EVENT_CREATED: CalendarDays,
+  EVENT_UPDATED: CalendarDays,
+  EVENT_DELETED: CalendarDays,
+  TEST_SUBMITTED: Inbox,
+  SUBMISSION_RECEIVED: Inbox,
+  STUDY_REMINDER: GraduationCap,
+  GRADING_REMINDER: ClipboardCheck,
 };
 
 export interface NotificationIconProps {

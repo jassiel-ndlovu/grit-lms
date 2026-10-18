@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import type { Session } from "next-auth";
 
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
 import { forbidden, requireApiRole } from "@/lib/api-guard";
 
 async function tutorOwnsSubmission(session: Session, id: string) {
@@ -45,15 +46,16 @@ export async function PUT(
     },
   });
 
-  await prisma.notification.create({
-  data: {
+  await emitNotification(
+  {
     title: "Submission Updated",
     message: `The submission "${submission.title}" has been updated.`,
     link: `/dashboard/submissions/${submission.id}`,
     type: "SUBMISSION_UPDATED",
     courseId: submission.courseId,
   },
-});
+  { revalidate: false },
+);
 
   return NextResponse.json(submission);
 }
@@ -73,14 +75,15 @@ export async function DELETE(
 
   const submission = await prisma.submission.delete({ where: { id: id } });
 
-  await prisma.notification.create({
-    data: {
+  await emitNotification(
+    {
       title: "Submission Deleted",
       message: `The submission "${submission.title}" has been removed.`,
       type: "SUBMISSION_DELETED",
       courseId: submission.courseId,
     },
-  });
+    { revalidate: false },
+  );
 
   return NextResponse.json({ success: true });
 }

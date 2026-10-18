@@ -1,9 +1,8 @@
 /**
  * Course event Server Actions.
  *
- * Replace /api/events POST/PUT/DELETE. No notification side-effects (legacy
- * routes didn't emit notifications either) — events are passive calendar
- * markers; if reminder logic returns later, hook it into emitNotification.
+ * Replace /api/events POST/PUT/DELETE. Each change notifies the course's
+ * students (EVENT_* — "Course & schedule updates" in their settings).
  */
 
 "use server";
@@ -12,8 +11,11 @@ import { revalidatePath } from "next/cache";
 
 import type { Prisma } from "@/generated/prisma";
 
+import { emitNotification } from "@/features/notifications/server";
 import { prisma } from "@/lib/db";
 import { tutorActionClient } from "@/lib/safe-action";
+
+import { eventChangeNotification } from "./notify";
 
 import {
   CreateCourseEventSchema,
@@ -53,8 +55,10 @@ export const createCourseEvent = tutorActionClient
         repeatUntil: parsedInput.repeatUntil,
         repeatCount: parsedInput.repeatCount,
       },
-      select: { id: true, courseId: true },
+      select: { id: true, courseId: true, title: true, type: true },
     });
+
+    await emitNotification(eventChangeNotification("created", created), { revalidate: false });
 
     revalidatePath(`/dashboard/courses/${created.courseId}`);
     revalidatePath(`/dashboard/manage-courses/${created.courseId}`);
@@ -97,8 +101,10 @@ export const updateCourseEvent = tutorActionClient
     const updated = await prisma.courseEvent.update({
       where: { id: parsedInput.id },
       data,
-      select: { id: true, courseId: true },
+      select: { id: true, courseId: true, title: true, type: true },
     });
+
+    await emitNotification(eventChangeNotification("updated", updated), { revalidate: false });
 
     revalidatePath(`/dashboard/courses/${updated.courseId}`);
     revalidatePath(`/dashboard/manage-courses/${updated.courseId}`);
@@ -121,6 +127,8 @@ export const deleteCourseEvent = tutorActionClient
 
     const courseId = existing.course.id;
     await prisma.courseEvent.delete({ where: { id: parsedInput.id } });
+
+    await emitNotification(eventChangeNotification("deleted", existing), { revalidate: false });
 
     revalidatePath(`/dashboard/courses/${courseId}`);
     revalidatePath(`/dashboard/manage-courses/${courseId}`);

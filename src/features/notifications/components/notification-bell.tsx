@@ -14,8 +14,7 @@
  * the chapter scope. Cross-user creates (e.g., a tutor publishes a lesson)
  * land on the next mount/refresh.
  *
- * The bell is Student-only: it should be conditionally rendered by the
- * parent based on session role.
+ * Every role has notifications, so the header renders the bell for all.
  */
 
 import * as React from "react";
@@ -27,6 +26,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { TimeAgo } from "@/components/time-ago";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -242,7 +242,7 @@ export function NotificationBell({
                         {n.message}
                       </p>
                       <p className="text-muted-foreground/80 mt-1 text-[11px]">
-                        {formatRelative(n.createdAt)}
+                        <TimeAgo date={n.createdAt} titlePrefix="Sent" />
                       </p>
                     </div>
                   </button>
@@ -271,21 +271,3 @@ export function NotificationBell({
   );
 }
 
-/**
- * Compact relative time formatter — the bell needs short labels and we
- * deliberately avoid pulling in a date library. Shows "just now",
- * "5m ago", "3h ago", "2d ago", or the locale date for older items.
- */
-function formatRelative(value: Date | string): string {
-  const date = typeof value === "string" ? new Date(value) : value;
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  const hours = Math.floor(diffMs / 3_600_000);
-  const days = Math.floor(diffMs / 86_400_000);
-
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
-}

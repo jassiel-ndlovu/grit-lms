@@ -4,13 +4,12 @@
  *
  * These replace the legacy /api/notifications PUT (mark all) and
  * /api/notifications/[id] PUT (mark one) routes. All three actions:
- *   1. Run through studentActionClient (auth + role asserted in middleware).
+ *   1. Run through authActionClient — every role has notifications.
  *   2. Validate input against a Zod schema.
- *   3. Verify ownership: a student can only flip notifications addressed
- *      to them directly OR to a course they're enrolled in. The check is
- *      shared with the read path via `getNotificationForStudent` /
- *      `buildRecipientWhere`, so visibility and write authorisation can
- *      never drift.
+ *   3. Verify ownership: a user can only flip notifications visible to
+ *      them. The check is shared with the read path via
+ *      `getNotificationForViewer` / `buildRecipientWhere`, so visibility
+ *      and write authorisation can never drift.
  *   4. Revalidate /dashboard (RSC bell data) and /dashboard/notifications
  *      (full page) so the next render picks up the new state.
  *
@@ -24,13 +23,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
-import { studentActionClient } from "@/lib/safe-action";
+import { authActionClient } from "@/lib/safe-action";
 
 import {
   buildRecipientWhere,
-  getNotificationForStudent,
-  getUnreadCountForStudent,
-  listNotificationsForStudent,
+  getNotificationForViewer,
+  getNotificationViewer,
+  getUnreadCount,
+  listNotifications,
 } from "./queries";
 import {
   MarkAllReadSchema,
@@ -41,21 +41,6 @@ import {
 /* ------------------------------------------------------------------------- */
 /* Helpers                                                                   */
 /* ------------------------------------------------------------------------- */
-
-/**
- * Resolve the calling user to a Student row. Both Server Actions need this
- * to scope ownership / recipient queries by studentId.
- */
-async function requireStudentRecord(email: string) {
-  const student = await prisma.student.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-  if (!student) {
-    throw new Error("Student profile not found");
-  }
-  return student;
-}
 
 function revalidateNotificationSurfaces() {
   revalidatePath("/dashboard/notifications");
@@ -68,14 +53,14 @@ function revalidateNotificationSurfaces() {
 
 /**
  * Flip a single notification to read. Verifies the row is visible to the
- * calling student before writing.
+ * caller before writing.
  */
-export const markNotificationRead = studentActionClient
+export const markNotificationRead = authActionClient
   .schema(MarkReadSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const student = await requireStudentRecord(ctx.session.user.email);
+    const viewer = await getNotificationViewer(ctx.session.user);
 
-    const visible = await getNotificationForStudent(parsedInput.id, student.id);
+    const visible = await getNotificationForViewer(parsedInput.id, viewer);
     if (!visible) {
       throw new Error("Notification not found");
     }
@@ -100,14 +85,14 @@ export const markNotificationRead = studentActionClient
 
 /**
  * Flip a single notification back to unread (clears `readAt`). Useful from
- * the full page when a student wants to revisit an item later.
+ * the full page when a user wants to revisit an item later.
  */
-export const markNotificationUnread = studentActionClient
+export const markNotificationUnread = authActionClient
   .schema(MarkUnreadSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const student = await requireStudentRecord(ctx.session.user.email);
+    const viewer = await getNotificationViewer(ctx.session.user);
 
-    const visible = await getNotificationForStudent(parsedInput.id, student.id);
+    const visible = await getNotificationForViewer(parsedInput.id, viewer);
     if (!visible) {
       throw new Error("Notification not found");
     }
@@ -130,16 +115,16 @@ export const markNotificationUnread = studentActionClient
 /* ------------------------------------------------------------------------- */
 
 /**
- * Bulk-flip every notification the calling student can see to read. Reuses
- * the same recipient filter as `listNotificationsForStudent`, so the
+ * Bulk-flip every notification the caller can see to read. Reuses
+ * the same recipient filter as `listNotifications`, so the
  * visibility set used here is exactly what the bell + full page show.
  */
-export const markAllNotificationsRead = studentActionClient
+export const markAllNotificationsRead = authActionClient
   .schema(MarkAllReadSchema)
   .action(async ({ ctx }) => {
-    const student = await requireStudentRecord(ctx.session.user.email);
+    const viewer = await getNotificationViewer(ctx.session.user);
 
-    const recipientWhere = await buildRecipientWhere(student.id);
+    const recipientWhere = await buildRecipientWhere(viewer);
 
     const result = await prisma.notification.updateMany({
       where: { AND: [recipientWhere, { isRead: false }] },
@@ -167,14 +152,14 @@ const BellInputSchema = z.object({
   limit: z.number().int().min(1).max(50).default(8),
 });
 
-export const getNotificationsForBell = studentActionClient
+export const getNotificationsForBell = authActionClient
   .schema(BellInputSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const student = await requireStudentRecord(ctx.session.user.email);
+    const viewer = await getNotificationViewer(ctx.session.user);
 
     const [unreadCount, items] = await Promise.all([
-      getUnreadCountForStudent(student.id),
-      listNotificationsForStudent(student.id, { limit: parsedInput.limit }),
+      getUnreadCount(viewer),
+      listNotifications(viewer, { limit: parsedInput.limit }),
     ]);
 
     return { unreadCount, items };

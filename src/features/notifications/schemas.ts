@@ -14,12 +14,10 @@
  *                                    required so next-safe-action's
  *                                    `schema()` has something to validate.
  *
- * Notifications fan out via an OR of `studentId` (direct recipient) or
- * `courseId` (broadcast to enrolled students). Read state lives on the
- * notification row itself, so a course-wide notification flips read for
- * everyone the moment the first student dismisses it. We're keeping that
- * legacy semantic for v2 — per-student read state would require a join
- * table and a migration.
+ * New notifications are written one row per recipient (`userId`), so read
+ * state and preferences are per user. Legacy rows (userId null) are still
+ * matched by `studentId` (direct) or `courseId` with no student (a course
+ * broadcast whose read state is shared by the whole class).
  *
  * Note: `link` is intentionally a plain nullable string (not a URL) because
  * the legacy data stores app-relative paths like
@@ -58,11 +56,17 @@ export type Notification = z.infer<typeof NotificationSchema>;
 /* ------------------------------------------------------------------------- */
 
 /**
- * At least one recipient anchor is required: either a direct student or a
- * course id (which fans out to enrolled students at read time). The Zod
- * refinement enforces it so calling code can't accidentally write a row
- * that nobody can read.
+ * Recipients are resolved from, in order of precedence:
+ *   - `userIds`    explicit users (any role)
+ *   - `studentId`  a single student (Student.id)
+ *   - `courseId`   everyone in the course on the `audience` side: its
+ *                  enrolled students (default) or its tutor
+ * `courseId` is also stored on each row as context. The refinement makes
+ * sure every emit has at least one way to find a recipient.
  */
+export const NotificationAudienceSchema = z.enum(["students", "tutor"]);
+export type NotificationAudience = z.infer<typeof NotificationAudienceSchema>;
+
 export const CreateNotificationInputSchema = z
   .object({
     title: NonEmptyString.max(200),
@@ -72,12 +76,17 @@ export const CreateNotificationInputSchema = z
     priority: NotificationPrioritySchema.default("NORMAL"),
     studentId: CuidSchema.nullable().optional(),
     courseId: CuidSchema.nullable().optional(),
+    userIds: z.array(CuidSchema).optional(),
+    audience: NotificationAudienceSchema.default("students"),
   })
-  .refine((v) => Boolean(v.studentId) || Boolean(v.courseId), {
-    message: "A notification must target a student, a course, or both.",
-    path: ["studentId"],
-  });
-export type CreateNotificationInput = z.infer<
+  .refine(
+    (v) => Boolean(v.userIds?.length) || Boolean(v.studentId) || Boolean(v.courseId),
+    {
+      message: "A notification must target users, a student, or a course.",
+      path: ["studentId"],
+    },
+  );
+export type CreateNotificationInput = z.input<
   typeof CreateNotificationInputSchema
 >;
 

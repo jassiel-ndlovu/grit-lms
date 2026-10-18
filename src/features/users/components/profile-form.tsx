@@ -35,7 +35,7 @@ import { updateOwnProfile } from "../actions";
 type FormValues = z.input<typeof UpdateOwnProfileSchema>;
 
 interface Props {
-  role: "STUDENT" | "TUTOR" | "ADMIN";
+  role: "STUDENT" | "TUTOR" | "ADMIN" | "PARENT";
   defaults: {
     fullName: string;
     bio?: string | null;

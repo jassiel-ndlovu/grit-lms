@@ -230,6 +230,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
           <EntryGradingForm
             entryId={entry.id}
             submissionId={submission.id}
+            studentName={entry.student.fullName}
             totalPointsDefault={submissionTotal}
             defaultValues={{
               score: defaultScore,

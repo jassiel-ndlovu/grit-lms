@@ -129,7 +129,7 @@ export default async function ProfilePage() {
             </p>
           </div>
           <ProfileForm
-            role={session.user.role as "STUDENT" | "TUTOR" | "ADMIN"}
+            role={session.user.role}
             defaults={{ fullName, bio, imageUrl }}
           />
         </Card>

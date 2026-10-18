@@ -1,9 +1,10 @@
 /**
  * /dashboard/settings — signed-in user preferences.
  *
- * Server Component. Reads (or creates on first visit) the user's
- * UserPreferences row and hands the current values to a client-side
- * SettingsForm. All writes flow through updateOwnPreferences.
+ * Server Component. Reads the user's UserPreferences (defaults if they
+ * have never saved) and hands the current values to a client-side
+ * SettingsForm, which shows only the options relevant to the user's role.
+ * All writes flow through updateOwnPreferences.
  */
 
 import Image from "next/image";
@@ -16,6 +17,8 @@ import {
   SettingsForm,
   type SettingsFormValues,
 } from "@/features/users/components/settings-form";
+import { getUserPreferences } from "@/features/users/preferences";
+import { resolveLocale } from "@/lib/datetime";
 
 export const metadata = { title: "Settings" };
 
@@ -23,45 +26,29 @@ export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user) redirect("/auth");
 
-  const email = session.user.email.toLowerCase();
   const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
+    where: { id: session.user.id },
+    select: { email: true, emailVerified: true },
   });
   if (!user) redirect("/auth");
 
-  // Ensure the preferences row exists so defaults line up. Upsert is
-  // cheap and lets us assume presence downstream.
-  const prefs = await prisma.userPreferences.upsert({
-    where: { userId: user.id },
-    create: { userId: user.id, timeZone: null },
-    update: {},
-  });
-
+  const prefs = await getUserPreferences(session.user.id);
   const defaults: SettingsFormValues = {
-    emailNotifications: prefs.emailNotifications,
-    pushNotifications: prefs.pushNotifications,
-    notificationFrequency: prefs.notificationFrequency as
-      | "IMMEDIATE"
-      | "DAILY"
-      | "WEEKLY"
-      | "NONE",
+    emailNotifications: prefs.emailNotifications && prefs.notificationFrequency !== "NONE",
+    notificationFrequency: prefs.notificationFrequency,
     notifyOnCourseUpdate: prefs.notifyOnCourseUpdate,
     notifyOnNewLesson: prefs.notifyOnNewLesson,
     notifyOnNewTest: prefs.notifyOnNewTest,
     notifyOnDueDateReminder: prefs.notifyOnDueDateReminder,
     notifyOnGrades: prefs.notifyOnGrades,
-    notifyOnMessages: prefs.notifyOnMessages,
-    darkMode: prefs.darkMode,
-    preferredLanguage: prefs.preferredLanguage,
-    timeZone: prefs.timeZone,
-    preferredView: prefs.preferredView as "LIST" | "GRID" | "TIMELINE",
     studyReminders: prefs.studyReminders,
-    defaultDashboardTab: prefs.defaultDashboardTab as
-      | "COURSES"
-      | "NOTIFICATIONS"
-      | "CALENDAR"
-      | "GRADES",
+    notifyOnSubmissions: prefs.notifyOnSubmissions,
+    notifyOnGradingQueue: prefs.notifyOnGradingQueue,
+    darkMode: prefs.darkMode,
+    preferredLanguage: resolveLocale(prefs.preferredLanguage),
+    timeZone: prefs.timeZone,
+    preferredView: prefs.preferredView,
+    defaultDashboardTab: prefs.defaultDashboardTab,
   };
 
   return (
@@ -76,8 +63,8 @@ export default async function SettingsPage() {
               Settings
             </h1>
             <p className="text-primary-foreground/70 mt-3 text-sm">
-              Fine-tune notifications, appearance and defaults. Changes save
-              when you click &ldquo;Save preferences&rdquo; at the bottom.
+              Choose what you hear about, how the app looks and where you
+              land. Changes apply when you click &ldquo;Save preferences&rdquo;.
             </p>
           </div>
           <div className="relative hidden h-32 w-40 shrink-0 md:block">
@@ -92,7 +79,12 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      <SettingsForm defaults={defaults} />
+      <SettingsForm
+        role={session.user.role}
+        email={user.email}
+        emailVerified={user.emailVerified !== null}
+        defaults={defaults}
+      />
     </div>
   );
 }

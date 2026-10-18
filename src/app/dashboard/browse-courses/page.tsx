@@ -16,6 +16,7 @@ import { auth } from "@/lib/auth";
 import { listAllCourses } from "@/features/courses/queries";
 import { CourseCard } from "@/features/courses/components/course-card";
 import { CourseGrid } from "@/features/courses/components/course-grid";
+import { getUserPreferences } from "@/features/users/preferences";
 
 export const metadata = { title: "Browse courses" };
 
@@ -37,6 +38,7 @@ export default async function BrowseCoursesPage() {
       </header>
 
       <CourseGrid
+        view={(await getUserPreferences(session.user.id)).preferredView}
         isEmpty={courses.length === 0}
         empty={
           <div className="border-input rounded-lg border border-dashed p-12 text-center">

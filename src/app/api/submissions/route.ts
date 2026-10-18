@@ -14,6 +14,7 @@ import { NextResponse } from "next/server";
 
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
 import {
   forbidden,
   requireApiRole,
@@ -92,15 +93,16 @@ export async function POST(req: Request) {
     },
   });
 
-  await prisma.notification.create({
-    data: {
+  await emitNotification(
+    {
       title: "New Submission",
       message: `Assignment "${submission.title}" has been created.`,
       link: `/dashboard/submissions/${submission.id}`,
       type: "SUBMISSION_CREATED",
       courseId: submission.courseId,
     },
-  });
+    { revalidate: false },
+  );
 
   return NextResponse.json(submission);
 }

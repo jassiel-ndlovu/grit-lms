@@ -16,6 +16,7 @@ import { prisma } from "@/lib/db";
 import { listCoursesByStudentId } from "@/features/courses/queries";
 import { CourseCard } from "@/features/courses/components/course-card";
 import { CourseGrid } from "@/features/courses/components/course-grid";
+import { getUserPreferences } from "@/features/users/preferences";
 
 export const metadata = { title: "My courses" };
 
@@ -50,6 +51,7 @@ export default async function StudentCoursesPage() {
       </header>
 
       <CourseGrid
+        view={(await getUserPreferences(session.user.id)).preferredView}
         isEmpty={courses.length === 0}
         empty={
           <div className="border-input rounded-lg border border-dashed p-12 text-center">

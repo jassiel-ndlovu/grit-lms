@@ -5,6 +5,8 @@
 
 import { z } from "zod";
 
+import { isValidTimeZone, LANGUAGES } from "@/lib/datetime";
+
 import { CuidSchema, EmailSchema, NonEmptyString } from "../shared/primitives";
 import {
   DashboardTabSchema,
@@ -37,7 +39,7 @@ export const UserPreferencesSchema = z.object({
   darkMode: z.boolean().default(false),
   preferredLanguage: z.string().default("EN"),
   timeZone: z.string().nullable(),
-  preferredView: PreferredViewSchema.default("LIST"),
+  preferredView: PreferredViewSchema.default("GRID"),
   studyReminders: z.boolean().default(false),
   defaultDashboardTab: DashboardTabSchema.default("COURSES"),
 });
@@ -139,11 +141,21 @@ export const UpdateOwnPreferencesSchema = z.object({
   notifyOnGrades: z.boolean().optional(),
   notifyOnMessages: z.boolean().optional(),
   darkMode: z.boolean().optional(),
-  preferredLanguage: z.string().max(10).optional(),
-  timeZone: z.string().max(64).nullable().optional(),
+  preferredLanguage: z
+    .string()
+    .refine((v) => LANGUAGES.some((l) => l.value === v), "Unsupported language")
+    .optional(),
+  timeZone: z
+    .string()
+    .max(64)
+    .refine(isValidTimeZone, "Unknown time zone")
+    .nullable()
+    .optional(),
   preferredView: PreferredViewSchema.optional(),
   studyReminders: z.boolean().optional(),
   defaultDashboardTab: DashboardTabSchema.optional(),
+  notifyOnSubmissions: z.boolean().optional(),
+  notifyOnGradingQueue: z.boolean().optional(),
 });
 export type UpdateOwnPreferencesInput = z.infer<
   typeof UpdateOwnPreferencesSchema

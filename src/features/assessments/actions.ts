@@ -28,7 +28,7 @@ import {
   studentActionClient,
   tutorActionClient,
 } from "@/lib/safe-action";
-import { emitNotification } from "@/features/notifications/server";
+import { emitNotification, notifyHandIn } from "@/features/notifications/server";
 import { autoGradeSubmission } from "./lib/auto-grade";
 
 import {
@@ -597,18 +597,14 @@ export const submitTestAnswers = studentActionClient
       },
     });
 
-    await emitNotification(
-      {
-        title: "Test Submitted",
-        message: `Your test "${submission.test.title}" has been submitted.`,
-        link: `/dashboard/tests/review/${submission.test.id}`,
-        type: "TEST_DUE",
-        priority: "NORMAL",
-        studentId: student.id,
-        courseId: submission.test.courseId,
-      },
-      { revalidate: false },
-    );
+    await notifyHandIn({
+      kind: "test",
+      title: submission.test.title,
+      courseId: submission.test.courseId,
+      studentId: student.id,
+      studentLink: `/dashboard/tests/review/${submission.test.id}`,
+      tutorLink: `/dashboard/tutor-tests/submissions/${submission.test.id}/${student.id}`,
+    });
 
     revalidatePath(`/dashboard/tests/${submission.test.id}`);
     revalidatePath(`/dashboard/tests/review/${submission.test.id}`);
@@ -711,8 +707,9 @@ export const gradeTestSubmission = tutorActionClient
         type: "TEST_GRADED",
         priority: "NORMAL",
         studentId,
+        courseId: submission.test.courseId,
       },
-      { revalidate: false },
+      { revalidate: false, email: parsedInput.notifyByEmail },
     );
 
     revalidatePath(`/dashboard/tutor-tests/submissions/${submission.test.id}`);

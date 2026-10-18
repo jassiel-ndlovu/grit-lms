@@ -86,6 +86,26 @@ const TUTOR_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 
+// Admin and parent portals are placeholders for now — a landing page plus
+// the shared pages every role has.
+const ADMIN_NAV_ITEMS: ReadonlyArray<NavItem> = [
+  { icon: Home, label: "Dashboard", link: "/dashboard", description: "Platform overview" },
+  { icon: UserCog, label: "Users", link: "/dashboard/manage-users", description: "Manage accounts" },
+  { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
+];
+
+const PARENT_NAV_ITEMS: ReadonlyArray<NavItem> = [
+  { icon: Home, label: "Dashboard", link: "/dashboard", description: "Your learners" },
+  { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
+];
+
+const NAV_ITEMS_BY_ROLE: Record<string, ReadonlyArray<NavItem>> = {
+  STUDENT: STUDENT_NAV_ITEMS,
+  TUTOR: TUTOR_NAV_ITEMS,
+  ADMIN: ADMIN_NAV_ITEMS,
+  PARENT: PARENT_NAV_ITEMS,
+};
+
 const BOTTOM_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { icon: User, label: "Profile", link: "/dashboard/profile", description: "You" },
   { icon: Settings, label: "Settings", link: "/dashboard/settings", description: "Preferences" },
@@ -128,7 +148,7 @@ export default function Nav() {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = useMemo(
-    () => (session?.user.role === "TUTOR" ? TUTOR_NAV_ITEMS : STUDENT_NAV_ITEMS),
+    () => NAV_ITEMS_BY_ROLE[session?.user.role ?? "STUDENT"] ?? STUDENT_NAV_ITEMS,
     [session?.user.role],
   );
 

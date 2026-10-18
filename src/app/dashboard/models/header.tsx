@@ -4,7 +4,7 @@
  * Layout:
  *   - Left: page title (Fraunces display) + warm muted greeting / role chip.
  *   - Center: search input (token-driven, focus ring branded terracotta).
- *   - Right: help link, NotificationBell (students only), profile dropdown.
+ *   - Right: help link, NotificationBell, profile dropdown.
  */
 
 "use client";
@@ -27,6 +27,8 @@ import {
 import { useProfile } from "@/context/ProfileContext";
 import Skeleton from "../components/skeleton";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
+import { useDateContext } from "@/components/preferences-provider";
+import { greetingFor } from "@/lib/datetime";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -61,13 +63,6 @@ function getPageTitle(pathname: string) {
   return PAGE_TITLES[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
 }
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export default function DashboardHeader() {
   const { profile, session } = useProfile();
   const pathname = usePathname();
@@ -75,7 +70,8 @@ export default function DashboardHeader() {
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  const showNotificationBell = session?.user?.role === "STUDENT";
+  const dateCtx = useDateContext();
+  const showNotificationBell = Boolean(session?.user);
   const firstName = profile?.fullName?.split(" ")[0];
 
   return (
@@ -103,7 +99,7 @@ export default function DashboardHeader() {
             </div>
             {profile ? (
               <p className="mt-0.5 text-sm text-muted-foreground">
-                {getGreeting()}
+                {greetingFor(new Date(), dateCtx.timeZone)}
                 {firstName ? `, ${firstName}` : ""}.
               </p>
             ) : (

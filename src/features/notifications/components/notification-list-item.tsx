@@ -19,6 +19,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DateTimeText, TimeAgo } from "@/components/time-ago";
 import { cn } from "@/lib/utils";
 
 import { markNotificationRead, markNotificationUnread } from "../actions";
@@ -136,13 +137,17 @@ export function NotificationListItem({
             <p className="text-muted-foreground mt-0.5 text-sm">
               {notification.message}
             </p>
-            <p className="text-muted-foreground/80 mt-1.5 inline-flex items-center gap-1 text-xs">
+            <p className="text-muted-foreground/80 mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs">
               <Clock className="size-3" />
-              {formatRelative(notification.createdAt)}
-              {notification.readAt && (
+              <TimeAgo date={notification.createdAt} titlePrefix="Sent" />
+              <span aria-hidden>·</span>
+              <span>
+                Sent <DateTimeText date={notification.createdAt} />
+              </span>
+              {notification.isRead && notification.readAt && (
                 <span className="ml-2 inline-flex items-center gap-1">
                   <Check className="size-3" />
-                  Read {formatRelative(notification.readAt)}
+                  Read <TimeAgo date={notification.readAt} titlePrefix="Read" />
                 </span>
               )}
             </p>
@@ -174,16 +179,3 @@ export function NotificationListItem({
   );
 }
 
-function formatRelative(value: Date | string): string {
-  const date = typeof value === "string" ? new Date(value) : value;
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  const hours = Math.floor(diffMs / 3_600_000);
-  const days = Math.floor(diffMs / 86_400_000);
-
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
-}

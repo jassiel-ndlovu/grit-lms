@@ -27,6 +27,15 @@ export async function GET(req: NextRequest) {
       });
 
       return NextResponse.json(tutor);
+    } else if (role === 'admin' || role === 'parent') {
+      // No separate profile table for these roles yet; the User row is it.
+      const user = await prisma.user.findUnique({
+        where: { id: token.id },
+        select: { id: true, name: true, email: true },
+      });
+      return NextResponse.json(
+        user ? { id: user.id, fullName: user.name, email: user.email } : null,
+      );
     } else {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
