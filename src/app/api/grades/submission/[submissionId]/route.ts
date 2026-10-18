@@ -1,19 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * /api/grades/submission/[submissionId] — fully retired.
+ *
+ * Grades are read and written by the RSC gradebook and the grading Server Actions.
+ * Nothing calls it any more: no page uses the `GradeContext` methods that
+ * hit this URL. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this file with `GradeContext`.
+ */
 
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { gone } from "@/lib/api-guard";
 
-type Params = { params: Promise<{ submissionId: string }> };
+const replacement =
+  "Use src/features/grades/queries.ts and the grading Server Actions in src/features/assessments/actions.ts and src/features/submissions/actions.ts.";
 
-export async function GET(_: Request, { params }: Params) {
-  const { submissionId } = await params;
-
-  try {
-    const grades = await prisma.questionGrade.findMany({
-      where: { testSubmissionId: submissionId },
-    });
-    return NextResponse.json(grades);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+export function GET() {
+  return gone(replacement);
 }

@@ -1,81 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { emitNotification } from "@/features/notifications/server";
-import { $Enums } from "@/generated/prisma";
+/**
+ * /api/grades/[id] — fully retired.
+ *
+ * Grades are read and written by the RSC gradebook and the grading Server Actions.
+ * Nothing calls it any more: no page uses the `GradeContext` methods that
+ * hit this URL. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this file with `GradeContext`.
+ */
 
-type Params = { params: Promise<{ id: string }> };
+import { gone } from "@/lib/api-guard";
 
-export async function GET(req: NextRequest, { params }: Params) {
-  const { id } = await params;
+const replacement =
+  "Use src/features/grades/queries.ts and the grading Server Actions in src/features/assessments/actions.ts and src/features/submissions/actions.ts.";
 
-  try {
-    const grade = await prisma.grade.findUnique({ where: { id: id } });
-    if (!grade)
-      return NextResponse.json({ message: "Grade not found" }, { status: 404 });
-    return NextResponse.json(grade);
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { message: "Failed to fetch grade" },
-      { status: 500 }
-    );
-  }
+export function GET() {
+  return gone(replacement);
 }
 
-export async function PUT(req: NextRequest, { params }: Params) {
-  const { id } = await params;
-  const data = await req.json();
-  try {
-    const grade = await prisma.grade.update({ where: { id: id }, data });
-
-    let url: string = "/dashboard";
-    let ntype: $Enums.NotificationType = "TEST_GRADED";
-
-    if (grade.testSubmissionId) {
-      const tsub = await prisma.testSubmission.findUnique({
-        where: { id: grade.testSubmissionId },
-      });
-      url += `/tests/review/${tsub?.testId}`;
-    } else if (grade.submissionEntryId) {
-      const entry = await prisma.submissionEntry.findUnique({
-        where: { id: grade.submissionEntryId },
-      });
-      url += `/submissions/${entry?.submissionId}`;
-      ntype = "SUBMISSION_GRADED";
-    }
-
-    await emitNotification(
-      {
-        title: "Grade Released",
-        message: `You received ${grade.score}/${grade.outOf} for "${grade.title}".`,
-        link: url,
-        type: ntype,
-        studentId: grade.studentId,
-      },
-      { revalidate: false },
-    );
-
-    return NextResponse.json(grade);
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { message: "Failed to update grade" },
-      { status: 500 }
-    );
-  }
+export function PUT() {
+  return gone(replacement);
 }
 
-export async function DELETE(req: NextRequest, { params }: Params) {
-  const { id } = await params;
-
-  try {
-    await prisma.grade.delete({ where: { id: id } });
-    return NextResponse.json({ message: "Grade deleted" });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { message: "Failed to delete grade" },
-      { status: 500 }
-    );
-  }
+export function DELETE() {
+  return gone(replacement);
 }

@@ -1,70 +1,27 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { emitNotification } from "@/features/notifications/server";
-import { eventChangeNotification } from "@/features/events/notify";
+/**
+ * /api/events/[id] — fully retired.
+ *
+ * Event reads go through `src/features/events/queries.ts`; updates and
+ * deletes go through `updateCourseEvent` / `deleteCourseEvent` in
+ * `src/features/events/actions.ts`. The only legacy callers (the client
+ * calendars in src/app/dashboard/calendar) are imported nowhere.
+ *
+ * TODO[chapter-3-cleanup]: drop this file with `EventContext`.
+ */
 
-type Params = { 
-  params: Promise<{ id: string }>
+import { gone } from "@/lib/api-guard";
+
+const replacement =
+  "Use src/features/events/queries.ts and the updateCourseEvent / deleteCourseEvent Server Actions (src/features/events/actions.ts).";
+
+export function GET() {
+  return gone(replacement);
 }
 
-export async function GET(_: Request, { params }: Params) {
-  const { id } = await params;
-
-  try {
-    const event = await prisma.courseEvent.findUnique({
-      where: { id: id },
-    });
-    if (!event) {
-      return NextResponse.json({ message: "Event not found" }, { status: 404 });
-    }
-    return NextResponse.json(event);
-  } catch {
-    return NextResponse.json(
-      { message: "Failed to fetch event" },
-      { status: 500 }
-    );
-  }
+export function PUT() {
+  return gone(replacement);
 }
 
-export async function PUT(
-  req: Request,
-  { params }: Params
-) {
-  const { id } = await params;
-
-  try {
-    const body = await req.json();
-    const updated = await prisma.courseEvent.update({
-      where: { id: id },
-      data: {
-        ...body,
-        date: body.date ? new Date(body.date) : undefined,
-      },
-    });
-    await emitNotification(eventChangeNotification("updated", updated), { revalidate: false });
-    return NextResponse.json(updated);
-  } catch {
-    return NextResponse.json(
-      { message: "Failed to update event" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  _: Request,
-  { params }: Params
-) {
-  const { id } = await params;
-
-  try {
-    const deleted = await prisma.courseEvent.delete({ where: { id: id } });
-    await emitNotification(eventChangeNotification("deleted", deleted), { revalidate: false });
-    return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json(
-      { message: "Failed to delete event" },
-      { status: 500 }
-    );
-  }
+export function DELETE() {
+  return gone(replacement);
 }

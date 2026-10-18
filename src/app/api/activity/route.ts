@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
+import { gone } from "@/lib/api-guard";
+
 export async function GET(req: NextRequest) {
   try {
     const token = await getToken({ req });
@@ -80,47 +82,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const token = await getToken({ req });
-
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { userId, action, targetId, meta } = body;
-
-    if (!userId || !action) {
-      return NextResponse.json(
-        { error: "User ID and action are required" },
-        { status: 400 }
-      );
-    }
-
-    const activity = await prisma.activityLog.create({
-      data: {
-        userId: userId,
-        action,
-        targetId,
-        meta: meta || {},
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(activity, { status: 201 });
-  } catch (error) {
-    console.error("Error creating activity:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
+/**
+ * Retired — nothing calls `logActivity` any more, and this handler let any
+ * signed-in user write log rows for any userId. Server code writes
+ * ActivityLog rows directly.
+ */
+export function POST() {
+  return gone("Activity rows are written server-side.");
 }

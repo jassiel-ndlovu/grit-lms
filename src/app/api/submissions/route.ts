@@ -1,8 +1,35 @@
+/**
+ * /api/submissions — legacy route for the client pages under
+ * /dashboard/submissions (create, overview, portal, review).
+ *
+ * GET only returns assignments in courses the caller can see (own courses
+ * for a tutor, enrolled courses for a student). POST mirrors
+ * `createSubmission` in `src/features/submissions/actions.ts`: tutor only,
+ * and the tutor must own the course.
+ *
+ * TODO[chapter-3-cleanup]: drop this file once those pages are retired.
+ */
+
 import { NextResponse } from "next/server";
+
+import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
 import { emitNotification } from "@/features/notifications/server";
+import {
+  forbidden,
+  requireApiRole,
+  requireApiSession,
+  tutorOwnsCourse,
+  visibleCoursesWhere,
+} from "@/lib/api-guard";
 
 export async function GET(req: Request) {
+  const guard = await requireApiSession();
+  if (!guard.ok) return guard.response;
+
+  const visible = visibleCoursesWhere(guard.session);
+  if (!visible) return forbidden();
+
   const { searchParams } = new URL(req.url);
   const courseIds = searchParams.get("courseIds");
   const courseId = searchParams.get("courseId");
@@ -10,66 +37,27 @@ export async function GET(req: Request) {
   const studentId = searchParams.get("studentId");
   const subId = searchParams.get("id");
 
+  const findVisible = (course: Prisma.CourseWhereInput) =>
+    prisma.submission.findMany({
+      where: { course: { AND: [course, visible] } },
+      orderBy: { dueDate: "asc" },
+    });
+
   if (courseId && studentId) {
-    const submissions = await prisma.submission.findMany({
-      where: {
-        course: {
-          id: courseId,
-          students: {
-            some: {
-              id: studentId,
-            },
-          },
-        },
-      },
-      orderBy: { dueDate: "asc" },
-    });
-
-    return NextResponse.json(submissions);
+    return NextResponse.json(
+      await findVisible({ id: courseId, students: { some: { id: studentId } } }),
+    );
   } else if (courseIds) {
-    const ids = courseIds.split(",");
-
-    const submissions = await prisma.submission.findMany({
-      where: {
-        courseId: {
-          in: ids,
-        },
-      },
-      orderBy: { dueDate: "asc" },
-    });
-
-    return NextResponse.json(submissions);
+    return NextResponse.json(await findVisible({ id: { in: courseIds.split(",") } }));
   } else if (studentId) {
-    const submissions = await prisma.submission.findMany({
-      where: {
-        course: {
-          students: {
-            some: {
-              id: studentId,
-            },
-          },
-        },
-      },
-      orderBy: { dueDate: "asc" },
-    });
-
-    return NextResponse.json(submissions);
+    return NextResponse.json(
+      await findVisible({ students: { some: { id: studentId } } }),
+    );
   } else if (tutorId) {
-    const submissions = await prisma.submission.findMany({
-      where: {
-        course: {
-          tutorId: tutorId,
-        },
-      },
-      orderBy: { dueDate: "asc" },
-    });
-
-    return NextResponse.json(submissions);
+    return NextResponse.json(await findVisible({ tutorId }));
   } else if (subId) {
-    const submission = await prisma.submission.findUnique({
-      where: {
-        id: subId,
-      },
+    const submission = await prisma.submission.findFirst({
+      where: { id: subId, course: visible },
     });
 
     return NextResponse.json(submission);
@@ -80,7 +68,14 @@ export async function GET(req: Request) {
 
 // POST /api/submissions
 export async function POST(req: Request) {
+  const guard = await requireApiRole("TUTOR");
+  if (!guard.ok) return guard.response;
+
   const body = await req.json();
+
+  if (!(await tutorOwnsCourse(guard.session, body.courseId))) {
+    return forbidden("You don't own this course");
+  }
 
   const submission = await prisma.submission.create({
     data: {

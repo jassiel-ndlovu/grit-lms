@@ -1,19 +1,23 @@
-import { prisma } from '@/lib/db';
-import { NextResponse } from 'next/server';
+/**
+ * /api/students/[id] — fully retired.
+ *
+ * Student accounts are managed through the user-management Server Actions.
+ * Nothing calls it any more: no page uses the `StudentContext` methods that
+ * hit this URL. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this file with `StudentContext`.
+ */
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const data = await req.json();
-  const { id } = await params;
+import { gone } from "@/lib/api-guard";
 
-  const updated = await prisma.student.update({
-    where: { id: id },
-    data,
-  });
-  return NextResponse.json(updated);
+const replacement =
+  "Use src/features/students/queries.ts and the Server Actions in src/features/users/actions.ts (/dashboard/manage-users).";
+
+export function PUT() {
+  return gone(replacement);
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  await prisma.student.delete({ where: { id: id } });
-  return new NextResponse('Deleted', { status: 204 });
+export function DELETE() {
+  return gone(replacement);
 }
