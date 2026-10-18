@@ -20,11 +20,13 @@
  * auto-grader (see lib/auto-grade.ts, which only looks at AUTO_MARKABLE).
  */
 
-import { toFileAnswers } from "./file-answers";
+import { toFileAnswers, toFileUploadMemo } from "./file-answers";
 
 export interface KeyQuestion {
   id: string;
   type: string;
+  /** The stored key, when the caller has it. Only FILE_UPLOAD consults it. */
+  answer?: unknown;
   options: string[];
   matchPairs: unknown;
   reorderItems: string[];
@@ -214,6 +216,11 @@ export function answerToKeyPatch(
 
     case "FILE_UPLOAD": {
       const files = toFileAnswers(answer);
+      // A text-solution memo can't be expressed through the runner's file
+      // picker, so an empty upload in the preview must not erase it.
+      if (files.length === 0 && toFileUploadMemo(question.answer)?.kind === "text") {
+        return { ok: true, patch: {} };
+      }
       return { ok: true, patch: { answer: files.length > 0 ? files : null } };
     }
 
@@ -256,8 +263,9 @@ export function seedAnswerFromKey(
       return question.reorderItems.length > 0 ? question.reorderItems : undefined;
 
     case "FILE_UPLOAD": {
-      const files = toFileAnswers(question.answer);
-      return files.length > 0 ? files : undefined;
+      // A text memo has no file-picker equivalent; leave the preview blank.
+      const memo = toFileUploadMemo(question.answer);
+      return memo?.kind === "files" ? memo.files : undefined;
     }
 
     default:

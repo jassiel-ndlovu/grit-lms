@@ -1,78 +1,33 @@
-import { ArrowLeft } from "lucide-react";
-import Skeleton from "../../components/skeleton";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
+/** Loading state for the assignment create/edit page — mirrors its layout. */
 export default function SubmissionFormSkeleton() {
   return (
-    <div className="h-full px-6 pt-6 pb-10 bg-gray-50 overflow-y-auto">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <button className="text-blue-600 hover:text-blue-800 mb-4 flex items-center" disabled>
-            <ArrowLeft className="w-4 h-4 mr-3" /> Back to Submissions
-          </button>
-          <Skeleton className="h-7 w-64 mb-2" />
+    <div className="bg-background min-h-screen">
+      <div className="bg-card border-b border-border">
+        <div className="mx-auto flex h-14 max-w-5xl items-center px-6">
+          <Skeleton className="h-5 w-36" />
+        </div>
+      </div>
+      <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-80" />
         </div>
-
-        <div className="bg-white p-6 border border-gray-200 space-y-6">
-          {/* Title */}
-          <div>
-            <Skeleton className="h-4 w-32 mb-2" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-
-          {/* Description */}
-          <div>
-            <Skeleton className="h-4 w-28 mb-2" />
-            <Skeleton className="h-20 w-full mb-2" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-
-          {/* Instruction Files */}
-          <div>
-            <Skeleton className="h-4 w-40 mb-2" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-
-          {/* Course */}
-          <div>
-            <Skeleton className="h-4 w-20 mb-2" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-
-          {/* File Type */}
-          <div>
-            <Skeleton className="h-4 w-36 mb-2" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-
-          {/* Due Date */}
-          <div>
-            <Skeleton className="h-4 w-24 mb-2" />
-            <Skeleton className="h-9 w-full" />
-          </div>
-
-          {/* Last Due Date */}
-          <div>
-            <Skeleton className="h-4 w-48 mb-2" />
-            <Skeleton className="h-9 w-full mb-2" />
-            <Skeleton className="h-3 w-64" />
-          </div>
-
-          {/* Max Attempts */}
-          <div>
-            <Skeleton className="h-4 w-32 mb-2" />
-            <div className="flex gap-2">
-              <Skeleton className="h-9 w-full" />
+        {[0, 1, 2].map((i) => (
+          <Card key={i} className="space-y-5 p-6">
+            <Skeleton className="h-5 w-32" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-24" />
               <Skeleton className="h-9 w-full" />
             </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-end space-x-4 pt-6">
-            <Skeleton className="h-9 w-32" />
-            <Skeleton className="h-9 w-40" />
-          </div>
-        </div>
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          </Card>
+        ))}
       </div>
     </div>
   );

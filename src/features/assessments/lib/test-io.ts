@@ -84,6 +84,8 @@ export const TestImportSchema = z.object({
   timeLimit: z.number().int().positive().nullable().default(null),
   isActive: z.boolean().default(false),
   releaseAutoMarksToStudent: z.boolean().default(false),
+  /** enumitem-style numbering, one template per level; omitted = default. */
+  labelScheme: z.array(z.string().max(120)).max(10).default([]),
   preTestInstructions: z.string().nullable().default(null),
   questions: z.array(ImportQuestionSchema).default([]),
 });
@@ -103,6 +105,10 @@ export interface ParsedTestPayload {
   totalPoints: number;
   isActive: boolean;
   releaseAutoMarksToStudent: boolean;
+  labelScheme: string[];
+  // Memo documents are blob URLs tied to the source deployment, so they
+  // aren't carried through import/export.
+  memoFileUrls: string[];
   questions: CreateTestQuestionTree[];
 }
 
@@ -175,6 +181,8 @@ export function parseTestJson(input: string | unknown): ParsedTestPayload {
     totalPoints: sumPoints(questions),
     isActive: data.isActive,
     releaseAutoMarksToStudent: data.releaseAutoMarksToStudent,
+    labelScheme: data.labelScheme,
+    memoFileUrls: [],
     questions,
   };
 }
@@ -315,6 +323,7 @@ export function serializeTest(test: TestDetail): TestImportInput & {
       (test as unknown as { releaseAutoMarksToStudent?: boolean })
         .releaseAutoMarksToStudent ?? false,
     preTestInstructions: test.preTestInstructions,
+    labelScheme: test.labelScheme,
     questions: top,
   };
 }

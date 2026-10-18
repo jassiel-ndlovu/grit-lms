@@ -63,6 +63,9 @@ export async function applyAnswerKey({
       blankCount: true,
       order: true,
       parentId: true,
+      // Needed so a FILE_UPLOAD text memo isn't wiped by the preview,
+      // which can only ever produce files — see answerToKeyPatch.
+      answer: true,
     },
     orderBy: { order: "asc" },
   });

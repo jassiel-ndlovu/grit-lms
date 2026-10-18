@@ -1,6 +1,17 @@
 "use client";
 
-import LessonMarkdown from "@/app/components/markdown";
+/**
+ * /dashboard/submissions/create/[[id]] — tutor creates or edits an
+ * assignment. Legacy context-backed page, restyled to the Inkwell
+ * components the rest of the tutor surfaces use. Fields and save
+ * behaviour are unchanged.
+ *
+ * Progress auto-saves to this device (useLocalDraft) so a dropped
+ * connection or a dead laptop doesn't lose a half-written brief. Files
+ * picked but not yet uploaded can't be kept that way — they live in
+ * browser memory until "Create" uploads them.
+ */
+
 import { useCourses } from "@/context/CourseContext";
 import { useProfile } from "@/context/ProfileContext";
 import { useSubmission } from "@/context/SubmissionContext";
@@ -8,25 +19,36 @@ import { useEvents } from "@/context/EventContext";
 import { $Enums } from "@/generated/prisma";
 import { uploadFile } from "@/lib/blob";
 import { formatDate, formatForDateTimeLocal, parseDateTimeLocal } from "@/lib/functions";
-import { ArrowLeft, Download, EyeOff } from "lucide-react";
+import { ArrowLeft, CalendarClock, Download, EyeOff, FileText, Loader2, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import SubmissionFormSkeleton from "../../../skeletons/submission-form-skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MarkdownTextarea } from "@/components/markdown-textarea";
+import {
+  DraftStatus,
+  RestoreDraftBanner,
+  SaveProgressButton,
+} from "@/components/draft-controls";
+import { useLocalDraft } from "@/lib/use-local-draft";
 
 type MaxAttemptOptions = "Limited" | "Unlimited";
 
 export default function SubmissionForm() {
   const { id } = useParams();
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-
-  useMemo(() => {
-    if (id) {
-      setIsEditing(true);
-    } else {
-      setIsEditing(false);
-    }
-  }, [id]);
+  const isEditing = Boolean(id);
 
   // Contexts
   const { loading: coursesLoading, fetchCoursesByTutorId } = useCourses();
@@ -64,6 +86,29 @@ export default function SubmissionForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Local auto-save. Held until an edited assignment has loaded, so the
+  // baseline is the real record rather than the blank placeholder.
+  const draftData = useMemo(
+    () => ({ formData, maxAttemptsOption, maxAttempts }),
+    [formData, maxAttemptsOption, maxAttempts],
+  );
+  const draft = useLocalDraft({
+    key: isEditing ? `assignment-edit:${id}` : "assignment-new",
+    data: draftData,
+    enabled: !isEditing || submission !== null,
+  });
+  function restoreDraft(d: typeof draftData) {
+    const f = d.formData ?? {};
+    setFormData({
+      ...f,
+      // JSON turned the dates into strings.
+      dueDate: f.dueDate ? new Date(f.dueDate) : new Date(),
+      lastDueDate: f.lastDueDate ? new Date(f.lastDueDate) : null,
+    });
+    setMaxAttemptsOption(d.maxAttemptsOption === "Unlimited" ? "Unlimited" : "Limited");
+    setMaxAttempts(Number(d.maxAttempts) || 1);
+  }
 
   // fetch courses
   useEffect(() => {
@@ -189,6 +234,7 @@ export default function SubmissionForm() {
         }
       }
 
+      draft.clear();
       router.push("/dashboard/submissions");
     } catch (error) {
       console.error("Error saving submission:", error);
@@ -242,250 +288,280 @@ export default function SubmissionForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/dashboard/submissions"
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Submissions
-          </Link>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {isEditing ? "Edit Submission" : "Create New Submission"}
-              </h1>
-              <p className="text-gray-600">
-                {isEditing ? "Update submission details" : "Set up a new assignment for your students"}
-              </p>
-            </div>
-            
-            {/* Active/Inactive Toggle */}
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700">
-                {formData.isActive ? 'Active' : 'Draft'}
-              </span>
-              <button
-                type="button"
-                onClick={toggleActiveStatus}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  formData.isActive ? 'bg-green-600' : 'bg-gray-300'
-                }`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                  formData.isActive ? 'translate-x-6' : 'translate-x-1'
-                }`} />
-              </button>
-            </div>
+    <div className="bg-background min-h-screen">
+      <div className="bg-card border-b border-border">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="flex h-14 items-center">
+            <Button asChild variant="ghost" size="sm" className="-ml-2">
+              <Link href="/dashboard/submissions">
+                <ArrowLeft className="size-4" /> Back to assignments
+              </Link>
+            </Button>
           </div>
         </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="mx-auto max-w-5xl space-y-6 px-6 py-10 pb-40">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+              {isEditing ? "Edit assignment" : "New assignment"}
+            </h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              {isEditing ? "Update the assignment details." : "Set up a new assignment for your students."}
+            </p>
+          </div>
+
+          {/* Active/Inactive Toggle */}
+          <div className="border-border bg-card flex items-center gap-3 rounded-md border px-3 py-2">
+            <Badge variant={formData.isActive ? "soft" : "secondary"}>
+              {formData.isActive ? "Active" : "Draft"}
+            </Badge>
+            <span className="text-muted-foreground text-xs">Visible to students</span>
+            <Switch
+              checked={Boolean(formData.isActive)}
+              onCheckedChange={toggleActiveStatus}
+              aria-label="Visible to students"
+            />
+          </div>
+        </header>
+
+        <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this assignment" />
 
         {/* Status Indicator */}
         {!formData.isActive && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <EyeOff className="w-5 h-5 text-yellow-600 mr-2" />
-              <p className="text-yellow-800 text-sm">
-                This submission is currently in draft mode and won&apos;t be visible to students.
-              </p>
-            </div>
+          <div className="border-brand-terracotta/30 bg-brand-terracotta/5 flex items-center gap-2 rounded-lg border px-4 py-3">
+            <EyeOff className="text-brand-terracotta size-4 shrink-0" />
+            <p className="text-foreground text-sm">
+              This assignment is in draft mode and won&apos;t be visible to students.
+            </p>
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assignment Title *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                className={`w-full px-3 py-2 border text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.title ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Enter assignment title..."
-              />
-              {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
-            </div>
+        {/* ───── Details ───── */}
+        <Card className="space-y-5 p-6">
+          <SectionTitle title="Details" />
 
-            {/* Description with Markdown support */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                className={`w-full px-3 py-2 border text-sm font-mono rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.description ? "border-red-500" : "border-gray-300"
-                }`}
-                rows={4}
-                placeholder="Enter assignment description or instructions (Markdown supported)..."
-              />
-              {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+          {/* Title */}
+          <Field label="Assignment title" required error={errors.title}>
+            <Input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+              aria-invalid={Boolean(errors.title)}
+              placeholder="Enter assignment title..."
+            />
+          </Field>
 
-              {/* Markdown Preview */}
-              {formData.description && (
-                <div className="mt-3 p-4 bg-gray-50 rounded-lg border">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Preview:</label>
-                  <div className="text-sm">
-                    <LessonMarkdown content={formData.description} />
-                  </div>
-                </div>
-              )}
-            </div>
+          {/* Description with Markdown support */}
+          <Field
+            label="Description"
+            required
+            error={errors.description}
+            hint="Markdown and MathJax supported — use Preview render to check it."
+          >
+            <MarkdownTextarea
+              value={formData.description}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              className="font-mono text-sm"
+              aria-invalid={Boolean(errors.description)}
+              rows={4}
+              placeholder="Enter assignment description or instructions (Markdown supported)..."
+              previewTitle="Assignment description preview"
+            />
+          </Field>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Course Selection */}
+            <Field label="Course" required error={errors.courseId}>
+              <Select
+                value={formData.courseId || undefined}
+                onValueChange={(v) => setFormData((prev) => ({ ...prev, courseId: v }))}
+              >
+                <SelectTrigger className="w-full" aria-invalid={Boolean(errors.courseId)}>
+                  <SelectValue placeholder="Select a course..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
 
             {/* Total Points */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Total Points *
-              </label>
-              <input
+            <Field label="Total points" required error={errors.totalPoints}>
+              <Input
                 type="number"
                 min={1}
                 value={formData.totalPoints}
                 onChange={(e) => setFormData((prev) => ({ ...prev, totalPoints: Number(e.target.value) }))}
-                className={`w-full px-3 py-2 border text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.totalPoints ? "border-red-500" : "border-gray-300"
-                }`}
+                aria-invalid={Boolean(errors.totalPoints)}
                 placeholder="Enter total points..."
               />
-              {errors.totalPoints && <p className="mt-1 text-sm text-red-600">{errors.totalPoints}</p>}
-            </div>
+            </Field>
+          </div>
+        </Card>
 
-            {/* Description Files */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Instruction Files (Optional)
-              </label>
+        {/* ───── Instruction files ───── */}
+        <Card className="space-y-4 p-6">
+          <SectionTitle title="Instruction files" optional />
 
-              {/* Existing uploaded files */}
-              {(formData.descriptionFiles && formData.descriptionFiles.length > 0) && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Files:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.descriptionFiles.map((fileUrl, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center gap-2 px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm"
-                      >
-                        <a
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline flex items-center gap-1"
-                        >
-                          <Download className="w-3 h-3" />
-                          File {index + 1}
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => removeUploadedFile(index)}
-                          className="text-red-500 hover:text-red-700 text-xs"
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Dropzone for new files */}
-              <div
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  ref={fileInputRef}
-                />
-                <div className="text-gray-500">
-                  <p className="text-sm">Drop files here or click to browse</p>
-                  <p className="text-xs text-gray-400 mt-1">Files will be uploaded and available to students</p>
-                </div>
-              </div>
-
-              {/* New files to be uploaded */}
-              {files.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Files to upload:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {files.map((file, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                      >
-                        {file.name}
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="text-red-500 hover:text-red-700 text-xs"
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Course Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Course *
-              </label>
-              <select
-                value={formData.courseId}
-                onChange={(e) => setFormData(prev => ({ ...prev, courseId: e.target.value }))}
-                className={`w-full px-3 py-2 border text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.courseId ? 'border-red-500' : 'border-gray-300'
-                }`}
-              >
-                <option value="">Select a course...</option>
-                {courses.map(course => (
-                  <option key={course.id} value={course.id}>
-                    {course.name}
-                  </option>
+          {/* Existing uploaded files */}
+          {formData.descriptionFiles && formData.descriptionFiles.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-xs">Existing files</p>
+              <ul className="space-y-1.5">
+                {formData.descriptionFiles.map((fileUrl, index) => (
+                  <li
+                    key={index}
+                    className="border-border bg-card flex items-center gap-3 rounded-md border px-3 py-2"
+                  >
+                    <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-7 shrink-0 items-center justify-center rounded">
+                      <Download className="size-3.5" />
+                    </div>
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-w-0 flex-1 truncate text-sm hover:underline"
+                    >
+                      File {index + 1}
+                    </a>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive size-7"
+                      onClick={() => removeUploadedFile(index)}
+                      aria-label={`Remove file ${index + 1}`}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
+                  </li>
                 ))}
-              </select>
-              {errors.courseId && <p className="mt-1 text-sm text-red-600">{errors.courseId}</p>}
+              </ul>
             </div>
+          )}
 
-            {/* File Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Accepted File Types
-              </label>
-              <select
-                value={formData.fileType}
-                onChange={(e) => setFormData((prev) => ({ ...prev, fileType: e.target.value as $Enums.FileType }))}
-                className="w-full px-3 py-2 border border-gray-300 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
+          {/* Dropzone for new files */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            onClick={() => fileInputRef.current?.click()}
+            className="border-input bg-muted/30 hover:border-brand-terracotta/40 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed p-8 text-sm transition-colors"
+          >
+            <input
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              ref={fileInputRef}
+            />
+            <Upload className="text-brand-terracotta size-5" />
+            <p className="text-muted-foreground">Drop files here or click to browse</p>
+            <p className="text-muted-foreground text-xs">Files will be uploaded and available to students</p>
+          </div>
+
+          {/* New files to be uploaded */}
+          {files.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-muted-foreground text-xs">Files to upload</p>
+              <ul className="space-y-1.5">
+                {files.map((file, index) => (
+                  <li
+                    key={index}
+                    className="border-brand-terracotta/30 bg-brand-terracotta/5 flex items-center gap-3 rounded-md border px-3 py-2"
+                  >
+                    <FileText className="text-brand-terracotta size-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate text-sm">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive size-7"
+                      onClick={() => removeFile(index)}
+                      aria-label={`Remove ${file.name}`}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-muted-foreground text-[11px]">
+                Picked files upload when you save, and aren&apos;t part of the auto-saved progress.
+              </p>
+            </div>
+          )}
+        </Card>
+
+        {/* ───── Submission rules ───── */}
+        <Card className="space-y-5 p-6">
+          <SectionTitle title="Submission rules" />
+
+          {/* File Type */}
+          <Field label="Accepted file types">
+            <Select
+              value={formData.fileType}
+              onValueChange={(v) => setFormData((prev) => ({ ...prev, fileType: v as $Enums.FileType }))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {fileTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value}>
                     {option.label}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
+              </SelectContent>
+            </Select>
+          </Field>
 
+          {/* Max Attempts */}
+          <Field label="Max attempts" error={errors.maxAttempts}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Select
+                value={maxAttemptsOption}
+                onValueChange={(v) => setMaxAttemptsOption(v as MaxAttemptOptions)}
+              >
+                <SelectTrigger className="w-full" aria-invalid={Boolean(errors.maxAttempts)}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Limited">Limited</SelectItem>
+                  <SelectItem value="Unlimited">Unlimited</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                value={maxAttemptsOption === "Limited" ? maxAttempts : ""}
+                min={1}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  setFormData((prev) => ({ ...prev, maxAttempts: value }));
+                  setMaxAttempts(value);
+                }}
+                disabled={maxAttemptsOption === "Unlimited"}
+                aria-invalid={Boolean(errors.maxAttempts)}
+                placeholder="Number of attempts"
+              />
+            </div>
+          </Field>
+        </Card>
+
+        {/* ───── Schedule ───── */}
+        <Card className="space-y-5 p-6">
+          <SectionTitle
+            title="Schedule"
+            icon={<CalendarClock className="text-brand-terracotta size-4" />}
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Due Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Due Date *</label>
-              <input
+            <Field label="Due date" required error={errors.dueDate}>
+              <Input
                 type="datetime-local"
                 value={formData.dueDate ? formatForDateTimeLocal(new Date(formData.dueDate)) : ""}
                 onChange={(e) =>
@@ -494,17 +570,17 @@ export default function SubmissionForm() {
                     dueDate: parseDateTimeLocal(e.target.value)
                   }))
                 }
-                className={`w-full px-3 py-2 border text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.dueDate ? "border-red-500" : "border-gray-300"
-                }`}
+                aria-invalid={Boolean(errors.dueDate)}
               />
-              {errors.dueDate && <p className="mt-1 text-sm text-red-600">{errors.dueDate}</p>}
-            </div>
+            </Field>
 
             {/* Last Due Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Extended Due Date (optional)</label>
-              <input
+            <Field
+              label="Extended due date"
+              optional
+              hint="If provided, students can still resubmit after the main due date until this deadline."
+            >
+              <Input
                 type="datetime-local"
                 value={formData.lastDueDate ? formatForDateTimeLocal(new Date(formData.lastDueDate)) : ""}
                 onChange={(e) =>
@@ -513,82 +589,97 @@ export default function SubmissionForm() {
                     lastDueDate: e.target.value ? parseDateTimeLocal(e.target.value) : null
                   }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-gray-500">
-                If provided, students can still resubmit after the main due date until this deadline.
-              </p>
-            </div>
+            </Field>
+          </div>
+        </Card>
 
-            {/* Max Attempts */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Max Attempts</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <select
-                  value={maxAttemptsOption}
-                  onChange={(e) => setMaxAttemptsOption(e.target.value as MaxAttemptOptions)}
-                  className={`px-3 py-2 border text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.maxAttempts ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="Limited">Limited</option>
-                  <option value="Unlimited">Unlimited</option>
-                </select>
-                <input
-                  type="number"
-                  value={maxAttemptsOption === "Limited" ? maxAttempts : ""}
-                  min={1}
-                  onChange={(e) => {
-                    const value = Number(e.target.value);
-                    setFormData((prev) => ({ ...prev, maxAttempts: value }));
-                    setMaxAttempts(value);
-                  }}
-                  disabled={maxAttemptsOption === "Unlimited"}
-                  className={`px-3 py-2 border text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.maxAttempts ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="Number of attempts"
-                />
-              </div>
-              {errors.maxAttempts && <p className="mt-1 text-sm text-red-600">{errors.maxAttempts}</p>}
-            </div>
+        {/* Submit Error */}
+        {errors.submit && (
+          <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
+            <p className="text-destructive text-sm">{errors.submit}</p>
+          </div>
+        )}
 
-            {/* Submit Error */}
-            {errors.submit && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{errors.submit}</p>
-              </div>
-            )}
-
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
-              <button
+        {/* ───── Sticky save bar ───── */}
+        <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
+            <DraftStatus draft={draft} />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => router.push("/dashboard/submissions")}
-                className="px-4 py-2 text-gray-700 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <SaveProgressButton draft={draft} />
+              <Button
                 type="submit"
+                variant="brand"
                 disabled={coursesLoading || submissionLoading || isUploading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-sm text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isUploading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    {isEditing ? "Updating..." : "Creating..."}
-                  </div>
-                ) : isEditing ? (
-                  "Update Submission"
-                ) : (
-                  "Create Submission"
-                )}
-              </button>
+                {isUploading && <Loader2 className="size-4 animate-spin" />}
+                {isUploading
+                  ? isEditing ? "Updating..." : "Creating..."
+                  : isEditing ? "Update assignment" : "Create assignment"}
+              </Button>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
+      </form>
+    </div>
+  );
+}
+
+function SectionTitle({
+  title,
+  optional,
+  icon,
+}: {
+  title: string;
+  optional?: boolean;
+  icon?: ReactNode;
+}) {
+  return (
+    <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
+      {icon}
+      {title}
+      {optional && (
+        <span className="text-muted-foreground font-sans text-xs font-normal">(optional)</span>
+      )}
+    </h2>
+  );
+}
+
+function Field({
+  label,
+  required,
+  optional,
+  error,
+  hint,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  optional?: boolean;
+  error?: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-foreground text-xs font-medium">
+        {label}
+        {required && <span className="text-brand-terracotta"> *</span>}
+        {optional && <span className="text-muted-foreground"> (optional)</span>}
+      </label>
+      {children}
+      {error ? (
+        <p className="text-destructive text-xs">{error}</p>
+      ) : hint ? (
+        <p className="text-muted-foreground text-xs">{hint}</p>
+      ) : null}
     </div>
   );
 }

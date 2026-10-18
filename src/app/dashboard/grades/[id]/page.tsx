@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import LessonMarkdown from "@/app/components/markdown";
 
 import {
@@ -204,6 +205,12 @@ function TestBreakdown({ grade }: { grade: GradeDetail }) {
     );
   }
   const top = byParent.get(null) ?? [];
+  const labels = labelTree(
+    top,
+    normalizeScheme(test.labelScheme),
+    (q) => q.id,
+    (q) => byParent.get(q.id) ?? [],
+  );
 
   return (
     <Card className="overflow-hidden p-0">
@@ -221,7 +228,8 @@ function TestBreakdown({ grade }: { grade: GradeDetail }) {
           <li key={q.id} className="px-5 py-5">
             <QuestionReview
               question={q}
-              path={String(i + 1)}
+              path={labels.get(q.id) ?? String(i + 1)}
+              labels={labels}
               children_={byParent.get(q.id) ?? []}
               byParent={byParent}
               qgByQ={qgByQ}
@@ -262,10 +270,12 @@ function QuestionReview({
   byParent,
   qgByQ,
   answers,
+  labels,
   depth = 0,
 }: {
   question: QuestionRow;
   path: string;
+  labels: Map<string, string>;
   children_: QuestionRow[];
   byParent: Map<string | null, QuestionRow[]>;
   qgByQ: Map<string | null, QGRow>;
@@ -319,14 +329,16 @@ function QuestionReview({
         <div className="space-y-4 border-l-2 border-brand-terracotta/20 pl-4 sm:pl-6">
           {children_.map((c, i) => {
             const childPath =
-              depth === 0
+              labels.get(c.id) ??
+              (depth === 0
                 ? `${path}.${SUB_LETTERS[i % SUB_LETTERS.length] ?? i + 1}`
-                : `${path}.${i + 1}`;
+                : `${path}.${i + 1}`);
             return (
               <QuestionReview
                 key={c.id}
                 question={c}
                 path={childPath}
+                labels={labels}
                 children_={byParent.get(c.id) ?? []}
                 byParent={byParent}
                 qgByQ={qgByQ}

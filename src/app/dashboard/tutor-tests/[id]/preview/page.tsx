@@ -120,6 +120,7 @@ export default async function PreviewTestPage({ params }: PageProps) {
           questions={questions}
           initialAnswers={initialAnswers}
           timeLimit={test.timeLimit}
+          labelScheme={test.labelScheme}
           // No attempt exists, so anchor the countdown at page load. It's
           // there to show the tutor how much time students get; it never
           // submits anything.

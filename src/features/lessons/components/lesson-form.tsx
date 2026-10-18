@@ -10,6 +10,10 @@
  * The same Zod schema runs client-side (via zodResolver) and server-side
  * inside the Server Action — single source of truth.
  *
+ * Lessons can be grouped: `parentId` nests a lesson under another one, and
+ * a NONE-typed lesson is a content-free group heading. Its content fields
+ * are hidden but kept, so switching a lesson back to CONTENT loses nothing.
+ *
  * Attachments and video URLs are managed by their dedicated controlled
  * sub-components (AttachmentManager, VideoUrlList). The form composes them
  * via RHF FormFields so all state lives in one place and `handleSubmit`
@@ -26,7 +30,14 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTextarea } from "@/components/markdown-textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -70,7 +81,14 @@ export interface LessonFormProps {
   onSuccess?: (result: { id: string; courseId: string }) => void;
   /** Optional class for the outer wrapper. */
   className?: string;
+  /**
+   * Lessons this one may be placed under, already labelled. The caller
+   * excludes the lesson itself and its descendants.
+   */
+  parentOptions?: Array<{ id: string; label: string; title: string; depth: number }>;
 }
+
+const TOP_LEVEL = "__top__";
 
 export function LessonForm({
   courseId,
@@ -78,6 +96,7 @@ export function LessonForm({
   redirectTo,
   onSuccess,
   className,
+  parentOptions = [],
 }: LessonFormProps) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -100,10 +119,13 @@ export function LessonForm({
       duration: defaultValues?.duration ?? null,
       videoUrl: defaultValues?.videoUrl ?? [],
       attachments: defaultValues?.attachments ?? [],
+      type: defaultValues?.type ?? "CONTENT",
+      parentId: defaultValues?.parentId ?? null,
     },
   });
 
   const isEdit = Boolean(defaultValues?.id);
+  const isGroup = form.watch("type") === "NONE";
 
   async function onSubmit(values: FormOutput) {
     setPending(true);
@@ -125,6 +147,8 @@ export function LessonForm({
           duration: values.duration ?? null,
           videoUrl: cleanVideos,
           attachments: cleanAttachments,
+          type: values.type,
+          parentId: values.parentId ?? null,
         });
         const result = await updateLesson(parsed);
         if (result?.serverError) throw new Error(result.serverError);
@@ -139,6 +163,8 @@ export function LessonForm({
           duration: values.duration ?? null,
           videoUrl: cleanVideos,
           attachments: cleanAttachments,
+          type: values.type,
+          parentId: values.parentId ?? null,
         });
         const result = await createLesson(parsed);
         if (result?.serverError) throw new Error(result.serverError);
@@ -175,6 +201,80 @@ export function LessonForm({
           )}
         />
 
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Kind</FormLabel>
+                <FormControl>
+                  <div className="border-border inline-flex w-fit rounded-md border p-0.5" role="radiogroup">
+                    {(
+                      [
+                        ["CONTENT", "Lesson"],
+                        ["NONE", "Group (no content)"],
+                      ] as const
+                    ).map(([v, name]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        role="radio"
+                        aria-checked={field.value === v}
+                        onClick={() => field.onChange(v)}
+                        className={cn(
+                          "rounded px-3 py-1 text-xs transition-colors",
+                          field.value === v
+                            ? "bg-brand-terracotta text-brand-terracotta-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </FormControl>
+                <FormDescription>
+                  A group is a heading that holds other lessons.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="parentId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Inside</FormLabel>
+                <Select
+                  value={field.value ?? TOP_LEVEL}
+                  onValueChange={(v) => field.onChange(v === TOP_LEVEL ? null : v)}
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={TOP_LEVEL}>Top level</SelectItem>
+                    {parentOptions.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span style={{ paddingLeft: p.depth * 12 }} className="tabular-nums">
+                          {p.label} · {p.title}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>Nest this under a group or another lesson.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {!isGroup && (
         <FormField
           control={form.control}
           name="description"
@@ -182,7 +282,7 @@ export function LessonForm({
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea
+                <MarkdownTextarea
                   rows={10}
                   placeholder="Write your lesson content in Markdown…"
                   value={field.value ?? ""}
@@ -190,6 +290,7 @@ export function LessonForm({
                   onBlur={field.onBlur}
                   name={field.name}
                   className="font-mono text-sm"
+                  previewTitle="Lesson preview"
                 />
               </FormControl>
               <FormDescription>
@@ -200,6 +301,7 @@ export function LessonForm({
             </FormItem>
           )}
         />
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
@@ -219,12 +321,14 @@ export function LessonForm({
                   />
                 </FormControl>
                 <FormDescription>
-                  Lower values appear first in the lesson list.
+                  Position among its siblings — lower comes first. Rearrange
+                  in the sidebar for drag-and-drop.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
+          {!isGroup && (
           <FormField
             control={form.control}
             name="duration"
@@ -247,8 +351,11 @@ export function LessonForm({
               </FormItem>
             )}
           />
+          )}
         </div>
 
+        {!isGroup && (
+        <>
         <FormField
           control={form.control}
           name="videoUrl"
@@ -287,11 +394,13 @@ export function LessonForm({
             </FormItem>
           )}
         />
+        </>
+        )}
 
         <div className="flex justify-end gap-2">
           <Button type="submit" disabled={pending}>
             {pending && <Loader2 className="size-4 animate-spin" />}
-            {isEdit ? "Save changes" : "Create lesson"}
+            {isEdit ? "Save changes" : isGroup ? "Create group" : "Create lesson"}
           </Button>
         </div>
       </form>

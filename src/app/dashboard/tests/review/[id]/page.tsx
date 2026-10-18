@@ -36,7 +36,8 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { toFileAnswers } from "@/features/assessments/lib/file-answers";
+import { toFileAnswers, toFileUploadMemo } from "@/features/assessments/lib/file-answers";
+import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import { isManuallyMarked } from "@/features/assessments/lib/auto-grade";
 import { questionStatusTone } from "@/features/assessments/lib/review-status";
 import { Badge } from "@/components/ui/badge";
@@ -169,6 +170,12 @@ export default async function TestReviewPage({ params }: PageProps) {
     );
   }
   const topQuestions = byParent.get(null) ?? [];
+  const labels = labelTree(
+    topQuestions,
+    normalizeScheme(test.labelScheme),
+    (q) => q.id,
+    (q) => byParent.get(q.id) ?? [],
+  );
 
   // Tallies for the summary strip. Walk every gradable node in the tree.
   const stats = { total: 0, answered: 0, autoMarked: 0, pending: 0, correct: 0 };
@@ -316,6 +323,29 @@ export default async function TestReviewPage({ params }: PageProps) {
         </Card>
       )}
 
+      {/* ───── Test memo (tutor's worked solutions) — only once graded ───── */}
+      {graded && test.memoFileUrls.length > 0 && (
+        <Card className="space-y-3 p-5">
+          <div>
+            <h2 className="font-display text-sm leading-tight text-foreground">Memo</h2>
+            <p className="text-muted-foreground text-xs">
+              Your tutor&apos;s worked solutions for this test.
+            </p>
+          </div>
+          <ul className="space-y-1">
+            {test.memoFileUrls.map((url, i) => (
+              <li key={`${url}-${i}`}>
+                <a href={url} target="_blank" rel="noreferrer" className="text-brand-terracotta inline-flex items-center gap-1 text-sm hover:underline">
+                  <FileText className="size-3" />
+                  {memoName(url)}
+                  <ExternalLink className="size-3" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       {/* ───── Per-question breakdown ───── */}
       <Card className="overflow-hidden p-0">
         <div className="flex items-baseline justify-between gap-3 px-5 py-4">
@@ -333,7 +363,8 @@ export default async function TestReviewPage({ params }: PageProps) {
             <li key={q.id} className="px-5 py-5">
               <ReviewNode
                 q={q}
-                path={String(i + 1)}
+                path={labels.get(q.id) ?? String(i + 1)}
+                labels={labels}
                 answers={answers}
                 qgByQ={qgByQ}
                 byParent={byParent}
@@ -348,6 +379,15 @@ export default async function TestReviewPage({ params }: PageProps) {
 }
 
 /* ─── Helpers + subcomponents ──────────────────────────────────────────── */
+
+function memoName(url: string): string {
+  try {
+    const last = decodeURIComponent(url.split("?")[0]).split("/").pop() ?? url;
+    return last.replace(/-[A-Za-z0-9]{20,}(\.[^.]+)$/, "$1");
+  } catch {
+    return url;
+  }
+}
 
 function hasAnswer(v: unknown): boolean {
   if (v == null) return false;
@@ -394,10 +434,12 @@ function ReviewNode({
   qgByQ,
   byParent,
   canSeeGrades,
+  labels,
   depth = 0,
 }: {
   q: QuestionRow;
   path: string;
+  labels: Map<string, string>;
   answers: Record<string, unknown>;
   qgByQ: Map<string | null, { score: number; outOf: number; feedback: string | null }>;
   byParent: Map<string | null, QuestionRow[]>;
@@ -542,7 +584,8 @@ function ReviewNode({
               <ReviewNode
                 key={c.id}
                 q={c}
-                path={`${path}.${seg}`}
+                path={labels.get(c.id) ?? `${path}.${seg}`}
+                labels={labels}
                 answers={answers}
                 qgByQ={qgByQ}
                 byParent={byParent}
@@ -686,7 +729,7 @@ function hasKey(q: QuestionRow): boolean {
     case "CODE":
       return typeof q.answer === "string" && q.answer.trim() !== "";
     case "FILE_UPLOAD":
-      return toFileAnswers(q.answer).length > 0;
+      return toFileUploadMemo(q.answer) !== null;
     case "MATCHING":
       return Array.isArray(q.matchPairs) && q.matchPairs.length > 0;
     case "REORDER":
@@ -773,13 +816,16 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
     }
 
     case "FILE_UPLOAD": {
-      const memo = toFileAnswers(q.answer);
-      if (memo.length === 0) {
+      const solution = toFileUploadMemo(q.answer);
+      if (!solution) {
         return <p className="text-muted-foreground italic text-xs">Graded manually — your tutor hasn&apos;t published a model answer.</p>;
+      }
+      if (solution.kind === "text") {
+        return <div className="text-foreground"><LessonMarkdown content={solution.text} className="prose-sm" /></div>;
       }
       return (
         <ul className="space-y-1">
-          {memo.map((f, i) => (
+          {solution.files.map((f, i) => (
             <li key={`${f.fileUrl}-${i}`}>
               <a href={f.fileUrl} target="_blank" rel="noreferrer" className="text-brand-terracotta inline-flex items-center gap-1 text-sm hover:underline">
                 <FileText className="size-3" />

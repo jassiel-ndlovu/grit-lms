@@ -22,14 +22,29 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus } from "lucide-react";
+import { ArrowUpDown, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownTextarea } from "@/components/markdown-textarea";
+import { TreeReorderDialog, type ReorderNode } from "@/components/tree-reorder-dialog";
+import { LabelSchemeDialog } from "@/components/label-scheme-dialog";
+import {
+  DraftStatus,
+  RestoreDraftBanner,
+  SaveProgressButton,
+} from "@/components/draft-controls";
+import { useLocalDraft } from "@/lib/use-local-draft";
+import {
+  isDefaultScheme,
+  labelTree,
+  normalizeScheme,
+  type LabelScheme,
+} from "@/lib/enum-labels";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -44,6 +59,7 @@ import {
   blankQuestion,
   type EditorQuestion,
 } from "./test-question-editor";
+import { TestMemoFiles } from "./test-memo-files";
 
 export interface TestFormCourse {
   id: string;
@@ -65,6 +81,8 @@ export interface TestFormProps {
     isActive: boolean;
     releaseAutoMarksToStudent: boolean;
     preTestInstructions: string | null;
+    memoFileUrls?: string[];
+    labelScheme?: string[];
     questions: EditorQuestion[];
   };
 }
@@ -78,18 +96,20 @@ function splitDate(d: Date): { date: string; time: string } {
   return { date: `${yyyy}-${mm}-${dd}`, time: `${hh}:${mi}` };
 }
 
-const SUB_LETTERS = "abcdefghijklmnopqrstuvwxyz";
-
 /** Strip the client-only `clientId` field before sending to the server.
  *  When the clientId encodes a DB id ("id:<dbId>") we forward that id
  *  so updateTest can UPDATE the question in place instead of deleting
  *  and recreating it — which would orphan any student answers keyed by
  *  the old id. */
 function toServerTree(qs: EditorQuestion[]): unknown[] {
-  return qs.map((q) => ({
+  return qs.map((q, i) => ({
     // Preserve the DB id for existing questions so student answers stay
     // linked. New questions omit this and get a fresh cuid on insert.
     id: q.clientId.startsWith("id:") ? q.clientId.slice(3) : undefined,
+    // Position among siblings. Without it every row stored order = null and
+    // the read side fell back to createdAt, so reordering existing
+    // questions never stuck.
+    order: i,
     question: q.question,
     type: q.type,
     points: q.points,
@@ -101,6 +121,46 @@ function toServerTree(qs: EditorQuestion[]): unknown[] {
     blankCount: q.blankCount,
     subQuestions: toServerTree(q.subQuestions),
   }));
+}
+
+/** Shape persisted by the local auto-save. */
+interface TestDraft {
+  title: string;
+  description: string;
+  courseId: string;
+  dateStr: string;
+  timeStr: string;
+  timeLimit: string;
+  instructions: string;
+  releaseAutoMarks: boolean;
+  memoFileUrls: string[];
+  labelScheme: LabelScheme;
+  questions: EditorQuestion[];
+}
+
+function toReorderTree(qs: EditorQuestion[]): ReorderNode[] {
+  return qs.map((q) => ({ id: q.clientId, children: toReorderTree(q.subQuestions) }));
+}
+
+/** Rebuild the question tree in the arrangement the reorder dialog returned. */
+function fromReorderTree(nodes: ReorderNode[], byId: Map<string, EditorQuestion>): EditorQuestion[] {
+  return nodes.flatMap((n) => {
+    const q = byId.get(n.id);
+    return q ? [{ ...q, subQuestions: fromReorderTree(n.children, byId) }] : [];
+  });
+}
+
+function indexQuestions(qs: EditorQuestion[], into = new Map<string, EditorQuestion>()) {
+  for (const q of qs) {
+    into.set(q.clientId, q);
+    indexQuestions(q.subQuestions, into);
+  }
+  return into;
+}
+
+function plainSnippet(text: string): string {
+  const t = text.replace(/!\[[^\]]*\]\([^)]*\)/g, "[image]").replace(/\s+/g, " ").trim();
+  return t.length > 80 ? `${t.slice(0, 80)}…` : t || "(empty)";
 }
 
 /** Sum points across the tree, skipping NONE-typed context blocks. */
@@ -142,9 +202,67 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
   const [questions, setQuestions] = React.useState<EditorQuestion[]>(
     defaultValues?.questions ?? [],
   );
+  const [memoFileUrls, setMemoFileUrls] = React.useState<string[]>(
+    defaultValues?.memoFileUrls ?? [],
+  );
+  const [labelScheme, setLabelScheme] = React.useState<LabelScheme>(
+    normalizeScheme(defaultValues?.labelScheme),
+  );
+  const [reorderOpen, setReorderOpen] = React.useState(false);
   const [pending, setPending] = React.useState<"draft" | "publish" | null>(null);
 
   const computedPoints = sumPoints(questions);
+  const labels = React.useMemo(
+    () => labelTree(questions, labelScheme, (q) => q.clientId, (q) => q.subQuestions),
+    [questions, labelScheme],
+  );
+
+  const depths = React.useMemo(() => {
+    const m = new Map<string, number>();
+    const walk = (qs: EditorQuestion[], d: number) =>
+      qs.forEach((q) => {
+        m.set(q.clientId, d);
+        walk(q.subQuestions, d + 1);
+      });
+    walk(questions, 0);
+    return m;
+  }, [questions]);
+
+  /* ─── Local auto-save ─── */
+
+  const draftData = React.useMemo<TestDraft>(
+    () => ({
+      title,
+      description,
+      courseId,
+      dateStr,
+      timeStr,
+      timeLimit,
+      instructions,
+      releaseAutoMarks,
+      memoFileUrls,
+      labelScheme,
+      questions,
+    }),
+    [title, description, courseId, dateStr, timeStr, timeLimit, instructions, releaseAutoMarks, memoFileUrls, labelScheme, questions],
+  );
+  const draft = useLocalDraft<TestDraft>({
+    key: defaultValues?.id ? `test-edit:${defaultValues.id}` : "test-new",
+    data: draftData,
+  });
+  function restoreDraft(d: TestDraft) {
+    setTitle(d.title ?? "");
+    setDescription(d.description ?? "");
+    if (d.courseId && courses.some((c) => c.id === d.courseId)) setCourseId(d.courseId);
+    setDateStr(d.dateStr ?? dateStr);
+    setTimeStr(d.timeStr ?? timeStr);
+    setTimeLimit(d.timeLimit ?? "");
+    setInstructions(d.instructions ?? "");
+    setReleaseAutoMarks(Boolean(d.releaseAutoMarks));
+    setMemoFileUrls(Array.isArray(d.memoFileUrls) ? d.memoFileUrls : []);
+    setLabelScheme(normalizeScheme(d.labelScheme));
+    setQuestions(Array.isArray(d.questions) ? d.questions : []);
+  }
 
   /* ─── Question mutators ─── */
 
@@ -200,6 +318,8 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
         releaseAutoMarksToStudent: releaseAutoMarks,
         preTestInstructions:
           instructions.trim() === "" ? null : instructions,
+        memoFileUrls,
+        labelScheme: isDefaultScheme(labelScheme) ? [] : labelScheme,
         // The server schema types `questions` as CreateTestQuestionTree[].
         // We cast because toServerTree strips clientId + normalizes shape.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -212,12 +332,16 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
           ...payload,
         });
         if (result?.serverError) throw new Error(result.serverError);
+        if (result?.validationErrors) throw new Error("Some fields were rejected — check every question has text.");
         toast.success(publish ? "Test published" : "Draft saved");
       } else {
         const result = await createTest(payload);
         if (result?.serverError) throw new Error(result.serverError);
+        if (result?.validationErrors) throw new Error("Some fields were rejected — check every question has text.");
         toast.success(publish ? "Test published" : "Draft saved");
       }
+      // The server has it now; the local safety copy has done its job.
+      draft.clear();
       router.push("/dashboard/tutor-tests");
       router.refresh();
     } catch (e) {
@@ -228,6 +352,8 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
 
   return (
     <div className="space-y-6 pb-40">
+      <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this test" />
+
       {/* ───── Metadata ───── */}
       <Card className="space-y-5 p-6">
         <div className="flex items-baseline justify-between gap-3">
@@ -254,11 +380,12 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
           <label className="text-foreground text-xs font-medium">
             Description
           </label>
-          <Textarea
+          <MarkdownTextarea
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Short blurb the students see on their tests list."
+            previewTitle="Description preview"
           />
         </div>
 
@@ -315,11 +442,12 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
           <label className="text-foreground text-xs font-medium">
             Pre-test instructions
           </label>
-          <Textarea
+          <MarkdownTextarea
             rows={4}
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
             placeholder="Rules, materials allowed, tone, etc. Rendered above the timer on the pre-test page."
+            previewTitle="Pre-test instructions preview"
           />
         </div>
 
@@ -347,6 +475,22 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
             </span>
           </span>
         </label>
+
+        <div className="space-y-1.5">
+          <label className="text-foreground text-xs font-medium">
+            Memo <span className="text-muted-foreground">(optional)</span>
+          </label>
+          <p className="text-muted-foreground text-xs">
+            The full worked solutions for this test, if you have them as a
+            document. Students can open it from their review page once their
+            attempt has been graded.
+          </p>
+          <TestMemoFiles
+            testId={defaultValues?.id ?? "draft"}
+            value={memoFileUrls}
+            onChange={setMemoFileUrls}
+          />
+        </div>
       </Card>
 
       {/* ───── Questions ───── */}
@@ -360,10 +504,60 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
               {questions.length} top-level · {computedPoints} points total
             </p>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
-            <Plus className="size-3" /> Add question
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <LabelSchemeDialog scheme={labelScheme} onChange={setLabelScheme} noun="question" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={questions.length === 0}
+              onClick={() => setReorderOpen(true)}
+            >
+              <ArrowUpDown className="size-3.5" /> Rearrange
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
+              <Plus className="size-3" /> Add question
+            </Button>
+          </div>
         </div>
+
+        {/* Jump list — one chip per question, so long tests are navigable by label. */}
+        {labels.size > 1 && (
+          <nav aria-label="Jump to question" className="flex flex-wrap gap-1">
+            {[...labels.entries()].map(([id, label]) => {
+              const depth = depths.get(id) ?? 0;
+              return (
+                <a
+                  key={id}
+                  href={`#q-${id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById(`q-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className={cn(
+                    "border-border bg-card hover:border-brand-terracotta/50 hover:text-foreground rounded border px-1.5 py-0.5 text-[11px] tabular-nums transition-colors",
+                    depth === 0 ? "text-foreground font-medium" : "text-muted-foreground",
+                  )}
+                >
+                  {label}
+                </a>
+              );
+            })}
+          </nav>
+        )}
+
+        <TreeReorderDialog
+          open={reorderOpen}
+          onOpenChange={setReorderOpen}
+          title="Rearrange questions"
+          tree={toReorderTree(questions)}
+          scheme={labelScheme}
+          tooltip={(id) => {
+            const q = indexQuestions(questions).get(id);
+            return q ? plainSnippet(q.question) : undefined;
+          }}
+          onApply={(tree) => setQuestions(fromReorderTree(tree, indexQuestions(questions)))}
+        />
 
         {questions.length === 0 ? (
           <Card className="p-10 text-center">
@@ -383,7 +577,8 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
                 onMoveDown={
                   i < questions.length - 1 ? () => moveQuestion(i, 1) : undefined
                 }
-                label={String(i + 1)}
+                label={labels.get(q.clientId) ?? String(i + 1)}
+                labels={labels}
                 depth={0}
                 testId={defaultValues?.id ?? "draft"}
               />
@@ -395,11 +590,15 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
       {/* ───── Sticky save bar ───── */}
       <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
-          <div className="text-muted-foreground text-xs">
-            {questions.length} question{questions.length === 1 ? "" : "s"} · {" "}
-            {computedPoints} points
+          <div className="space-y-0.5">
+            <div className="text-muted-foreground text-xs">
+              {questions.length} question{questions.length === 1 ? "" : "s"} · {" "}
+              {computedPoints} points
+            </div>
+            <DraftStatus draft={draft} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <SaveProgressButton draft={draft} />
             <Button
               type="button"
               variant="outline"
@@ -422,9 +621,6 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
         </div>
       </div>
 
-      {/* Preserve `sub-letters` reference so future dotted-label logic can
-          reuse it without re-declaring. */}
-      <span className="hidden" data-sub-letters={SUB_LETTERS} />
     </div>
   );
 }

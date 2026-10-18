@@ -81,6 +81,10 @@ model Course {
   submissions  Submission[]
   tests        Test[]
   students     Student[]      @relation("CourseEnrollments")
+  // enumitem-style label template per lesson nesting level, e.g.
+  // ["\arabic*", "\arabic{enumi}.\arabic*"]. Empty = the default
+  // scheme. See src/lib/enum-labels.ts.
+  lessonLabelScheme String[]   @default([])
 }
 
 model Lesson {
@@ -95,6 +99,19 @@ model Lesson {
   attachmentUrls Attachment[]
   course         Course             @relation(fields: [courseId], references: [id])
   completions    LessonCompletion[]
+
+  // Lesson groups. A lesson may sit under a parent lesson; `order` is the
+  // position among its siblings. NONE lessons are content-free headings
+  // that only group their children (mirrors QuestionType.NONE).
+  type           LessonType         @default(CONTENT)
+  parentId       String?
+  parent         Lesson?            @relation("LessonGroups", fields: [parentId], references: [id], onDelete: SetNull)
+  children       Lesson[]           @relation("LessonGroups")
+}
+
+enum LessonType {
+  CONTENT
+  NONE
 }
 
 model Attachment {
@@ -175,6 +192,13 @@ model Test {
   // weighting this assessment by its totalPoints relative to the other
   // unweighted assessments. See features/grades/lib/weighting.ts.
   weight               Float?
+  // Optional memo / worked-solutions documents for the whole test,
+  // uploaded by the tutor at authoring time. Students see them on the
+  // review page once their attempt has been graded.
+  memoFileUrls         String[]               @default([])
+  // enumitem-style label template per question nesting level. Empty =
+  // the default 1 / 1.a / 1.a.1 scheme. See src/lib/enum-labels.ts.
+  labelScheme          String[]               @default([])
   AssessmentCompletion AssessmentCompletion[]
   course               Course                 @relation(fields: [courseId], references: [id])
   questions            TestQuestion[]

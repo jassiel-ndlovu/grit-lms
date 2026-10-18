@@ -34,6 +34,14 @@ import { LessonSidebar } from "@/features/lessons/components/lesson-sidebar";
 import { LessonForm } from "@/features/lessons/components/lesson-form";
 import { LessonActions } from "@/features/lessons/components/lesson-actions";
 import { CreateLessonButton } from "@/features/lessons/components/create-lesson-button";
+import { LessonTreeTools } from "@/features/lessons/components/lesson-tree-tools";
+import {
+  buildLessonTree,
+  flattenLessonTree,
+  subtreeIds,
+  type LessonTreeNode,
+} from "@/features/lessons/lib/lesson-tree";
+import type { ReorderNode } from "@/components/tree-reorder-dialog";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -92,6 +100,27 @@ export default async function ManageLessonsPage({
     ? await getLessonDetailById(selectedLessonId)
     : null;
 
+  // Hierarchy + labels for the sidebar tools, the parent pickers and the
+  // reorder dialog.
+  const labelScheme = course.lessonLabelScheme;
+  const tree = buildLessonTree(lessons);
+  const flat = flattenLessonTree(tree, labelScheme);
+  const toReorder = (list: LessonTreeNode<(typeof lessons)[number]>[]): ReorderNode[] =>
+    list.map((l) => ({ id: l.id, children: toReorder(l.children) }));
+  const titles = Object.fromEntries(
+    flat.map((f) => [f.lesson.id, `${f.label} · ${f.lesson.title}`]),
+  );
+  const parentOptions = flat.map((f) => ({
+    id: f.lesson.id,
+    label: f.label,
+    title: f.lesson.title,
+    depth: f.depth,
+  }));
+  // A lesson can't be nested under itself or anything inside it.
+  const blocked = selectedLessonId ? subtreeIds(lessons, selectedLessonId) : new Set<string>();
+  const editParentOptions = parentOptions.filter((p) => !blocked.has(p.id));
+  const nextTopOrder = tree.length;
+
   return (
     <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-6 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
       {/* Sidebar — sticky + independently scrollable so it stays visible
@@ -114,6 +143,15 @@ export default async function ManageLessonsPage({
           lessons={lessons}
           selectedLessonId={selectedLessonId}
           mode="tutor"
+          labelScheme={labelScheme}
+          toolbar={
+            <LessonTreeTools
+              courseId={courseId}
+              labelScheme={labelScheme}
+              tree={toReorder(tree)}
+              titles={titles}
+            />
+          }
           renderActions={(lesson) => (
             <LessonActions
               lessonId={lesson.id}
@@ -125,8 +163,9 @@ export default async function ManageLessonsPage({
           footer={
             <CreateLessonButton
               courseId={courseId}
-              nextOrder={lessons.length}
-              label={lessons.length === 0 ? "Create first lesson" : "Add lesson"}
+              nextOrder={nextTopOrder}
+              parentOptions={parentOptions}
+              label={lessons.length === 0 ? "Create first lesson" : "Add lesson or group"}
             />
           }
         />
@@ -138,7 +177,7 @@ export default async function ManageLessonsPage({
           <Card className="space-y-6 p-6">
             <div>
               <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-                Edit lesson
+                {selectedLesson.type === "NONE" ? "Edit group" : "Edit lesson"}
               </h2>
               <p className="text-muted-foreground mt-1 text-sm">
                 Changes save immediately when you click &ldquo;Save changes&rdquo;.
@@ -147,7 +186,10 @@ export default async function ManageLessonsPage({
             <Separator />
             <LessonForm
               courseId={courseId}
+              parentOptions={editParentOptions}
               defaultValues={{
+                type: selectedLesson.type,
+                parentId: selectedLesson.parentId,
                 id: selectedLesson.id,
                 title: selectedLesson.title,
                 description: selectedLesson.description,

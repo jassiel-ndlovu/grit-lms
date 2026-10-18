@@ -30,6 +30,10 @@ import {
 import { LessonContent } from "@/features/lessons/components/lesson-content";
 import { LessonSidebar } from "@/features/lessons/components/lesson-sidebar";
 import { MarkCompleteButton } from "@/features/lessons/components/mark-complete-button";
+import {
+  buildLessonTree,
+  flattenLessonTree,
+} from "@/features/lessons/lib/lesson-tree";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -80,10 +84,15 @@ export default async function CourseLessonsPage({
     );
   }
 
+  // Reading order is the lesson tree, depth-first. Group headings (NONE)
+  // have nothing to read, so they're skipped for navigation and progress.
+  const flat = flattenLessonTree(buildLessonTree(lessons), course.lessonLabelScheme);
+  const readable = flat.filter((f) => f.lesson.type !== "NONE");
+
   // Resolve the selected lesson: explicit param → first lesson → null.
-  const fallbackId = lessons[0]?.id ?? null;
+  const fallbackId = readable[0]?.lesson.id ?? null;
   const selectedLessonId =
-    selectedLessonParam && lessons.some((l) => l.id === selectedLessonParam)
+    selectedLessonParam && readable.some((f) => f.lesson.id === selectedLessonParam)
       ? selectedLessonParam
       : fallbackId;
 
@@ -92,18 +101,19 @@ export default async function CourseLessonsPage({
     : null;
 
   const completedIds = new Set(completions.map((c) => c.lessonId));
-  const completedCount = completedIds.size;
-  const total = lessons.length;
+  const completedCount = readable.filter((f) => completedIds.has(f.lesson.id)).length;
+  const total = readable.length;
   const progressPct = total > 0 ? Math.round((completedCount / total) * 100) : 0;
 
   // Prev/next navigation — based on lesson order in the list.
   const selectedIndex = selectedLessonId
-    ? lessons.findIndex((l) => l.id === selectedLessonId)
+    ? readable.findIndex((f) => f.lesson.id === selectedLessonId)
     : -1;
-  const prevLessonId = selectedIndex > 0 ? lessons[selectedIndex - 1].id : null;
+  const selectedLabel = selectedIndex >= 0 ? readable[selectedIndex].label : null;
+  const prevLessonId = selectedIndex > 0 ? readable[selectedIndex - 1].lesson.id : null;
   const nextLessonId =
-    selectedIndex >= 0 && selectedIndex < lessons.length - 1
-      ? lessons[selectedIndex + 1].id
+    selectedIndex >= 0 && selectedIndex < readable.length - 1
+      ? readable[selectedIndex + 1].lesson.id
       : null;
 
   return (
@@ -146,6 +156,7 @@ export default async function CourseLessonsPage({
           lessons={lessons}
           selectedLessonId={selectedLessonId}
           mode="student"
+          labelScheme={course.lessonLabelScheme}
           completedLessonIds={completedIds}
         />
       </aside>
@@ -160,7 +171,7 @@ export default async function CourseLessonsPage({
             <div className="bg-background/95 sticky top-20 z-20 -mx-1 space-y-3 px-1 pt-2 pb-3 backdrop-blur">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">
-                  Lesson {selectedIndex + 1} of {total}
+                  Lesson {selectedLabel ?? selectedIndex + 1} · {selectedIndex + 1} of {total}
                 </Badge>
                 {selectedLesson.duration != null && (
                   <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">

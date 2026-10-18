@@ -215,6 +215,10 @@ export const CreateTestWithQuestionsSchema = z.object({
   totalPoints: z.number().int().nonnegative().default(0),
   isActive: z.boolean().default(false),
   releaseAutoMarksToStudent: z.boolean().default(false),
+  /** Whole-test memo / worked solutions, shown to students after grading. */
+  memoFileUrls: z.array(UrlSchema).max(20).default([]),
+  /** enumitem-style label template per level; [] = default scheme. */
+  labelScheme: z.array(z.string().max(120)).max(10).default([]),
   questions: z.array(CreateTestQuestionTreeSchema).default([]),
 });
 export type CreateTestWithQuestionsInput = z.infer<
@@ -237,6 +241,8 @@ export const UpdateTestWithQuestionsSchema = z.object({
   totalPoints: z.number().int().nonnegative().optional(),
   isActive: z.boolean().optional(),
   releaseAutoMarksToStudent: z.boolean().optional(),
+  memoFileUrls: z.array(UrlSchema).max(20).optional(),
+  labelScheme: z.array(z.string().max(120)).max(10).optional(),
   questions: z.array(CreateTestQuestionTreeSchema).optional(),
 });
 export type UpdateTestWithQuestionsInput = z.infer<

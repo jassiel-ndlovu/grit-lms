@@ -233,6 +233,8 @@ export const createTest = tutorActionClient
           // Cast lets us write the new column before `prisma generate`
           // picks it up in the DB client's TS types.
           ...({ releaseAutoMarksToStudent: parsedInput.releaseAutoMarksToStudent } as Record<string, unknown>),
+          memoFileUrls: parsedInput.memoFileUrls,
+          labelScheme: parsedInput.labelScheme,
         },
         select: { id: true, title: true, courseId: true, isActive: true },
       });
@@ -298,6 +300,8 @@ export const updateTest = tutorActionClient
       (data as Record<string, unknown>).releaseAutoMarksToStudent =
         parsedInput.releaseAutoMarksToStudent;
     }
+    if (parsedInput.memoFileUrls !== undefined) data.memoFileUrls = parsedInput.memoFileUrls;
+    if (parsedInput.labelScheme !== undefined) data.labelScheme = parsedInput.labelScheme;
 
     const updated = await prisma.$transaction(async (tx) => {
       const t = await tx.test.update({
