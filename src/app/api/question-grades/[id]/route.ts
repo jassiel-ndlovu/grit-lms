@@ -1,46 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+/**
+ * /api/question-grades/[id] — fully retired.
+ *
+ * Per-question grades are written by the grading Server Actions.
+ * Nothing calls it any more: no page uses the `QuestionGradeContext` methods that
+ * hit this URL. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this file with `QuestionGradeContext`.
+ */
 
-type Params = { params: Promise<{ id: string }> };
+import { gone } from "@/lib/api-guard";
 
-export async function GET(_: Request, { params }: Params) {
-  const { id } = await params;
+const replacement =
+  "Use src/features/grades/queries.ts and the grading Server Actions in src/features/assessments/actions.ts and src/features/submissions/actions.ts.";
 
-  try {
-    const grade = await prisma.questionGrade.findUnique({
-      where: { id: id },
-    });
-    if (!grade)
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json(grade);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+export function GET() {
+  return gone(replacement);
 }
 
-export async function PUT(req: Request, { params }: Params) {
-  const { id } = await params;
-
-  try {
-    const data = await req.json();
-    const updated = await prisma.questionGrade.update({
-      where: { id: id },
-      data,
-    });
-    return NextResponse.json(updated);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+export function PUT() {
+  return gone(replacement);
 }
 
-export async function DELETE(_: Request, { params }: Params) {
-  const { id } = await params;
-  
-  try {
-    await prisma.questionGrade.delete({ where: { id: id } });
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+export function DELETE() {
+  return gone(replacement);
 }

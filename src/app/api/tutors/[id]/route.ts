@@ -1,20 +1,23 @@
-import { prisma } from '@/lib/db';
-import { NextResponse } from 'next/server';
+/**
+ * /api/tutors/[id] — fully retired.
+ *
+ * Tutor accounts are managed through the user-management Server Actions.
+ * Nothing calls it any more: no page uses the `TutorContext` methods that
+ * hit this URL. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this file with `TutorContext`.
+ */
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const data = await req.json();
-  const { id } = await params;
-  
-  const updated = await prisma.tutor.update({
-    where: { id: id },
-    data,
-  });
-  return NextResponse.json(updated);
+import { gone } from "@/lib/api-guard";
+
+const replacement =
+  "Use src/features/students/queries.ts and the Server Actions in src/features/users/actions.ts (/dashboard/manage-users).";
+
+export function PUT() {
+  return gone(replacement);
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-
-  await prisma.tutor.delete({ where: { id: id } });
-  return new NextResponse('Deleted', { status: 204 });
+export function DELETE() {
+  return gone(replacement);
 }

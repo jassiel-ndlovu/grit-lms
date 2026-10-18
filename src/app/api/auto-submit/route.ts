@@ -1,6 +1,28 @@
+/**
+ * GET /api/auto-submit — every five minutes (see vercel.json), closes
+ * IN_PROGRESS test submissions whose due date or time limit has passed.
+ *
+ * Vercel sends `Authorization: Bearer $CRON_SECRET` when CRON_SECRET is
+ * set on the project; we require it in production so the endpoint can't be
+ * triggered by anyone else.
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+
 import { prisma } from "@/lib/db";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } else if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 500 });
+  }
+
   const now = new Date();
 
   // Find submissions that are still IN_PROGRESS but past their due time

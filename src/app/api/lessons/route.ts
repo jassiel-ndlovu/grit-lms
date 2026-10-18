@@ -1,48 +1,23 @@
 /**
- * /api/lessons — legacy route, partially retired.
+ * /api/lessons — fully retired.
  *
- * GET is preserved temporarily because the legacy `LessonContext` (still used
- * by a handful of student-facing pages that haven't migrated yet) reads
- * lessons through `axios.get("/api/lessons?courseId=…")`.
+ * Lessons are read through src/features/lessons/queries.ts and created by the createLesson Server Action.
+ * Nothing calls it any more: no page uses the `LessonContext` methods that
+ * hit this URL. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
  *
- * POST has been retired in favour of the typed Server Action
- * `createLesson` in `src/features/lessons/actions.ts`. This handler returns
- * 410 Gone so any stale caller fails loudly.
- *
- * TODO[chapter-3-cleanup]: drop this entire file once `LessonContext` is
- * deleted (or migrated to RSC queries) along with its remaining consumers.
+ * TODO[chapter-3-cleanup]: drop this file with `LessonContext`.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { gone } from "@/lib/api-guard";
 
-import { prisma } from "@/lib/db";
+const replacement =
+  "Use src/features/lessons/queries.ts and the Server Actions in src/features/lessons/actions.ts.";
 
-export async function GET(req: NextRequest) {
-  const courseId = req.nextUrl.searchParams.get("courseId");
-
-  if (!courseId) {
-    return NextResponse.json({ error: "Missing courseId" }, { status: 400 });
-  }
-
-  const lessons = await prisma.lesson.findMany({
-    where: { courseId },
-    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-    include: { attachmentUrls: true },
-  });
-
-  return NextResponse.json(lessons);
+export function GET() {
+  return gone(replacement);
 }
 
-/**
- * Retired — use `createLesson` Server Action.
- * @see src/features/lessons/actions.ts
- */
 export function POST() {
-  return NextResponse.json(
-    {
-      error:
-        "Gone. Use the createLesson Server Action (src/features/lessons/actions.ts).",
-    },
-    { status: 410 },
-  );
+  return gone(replacement);
 }

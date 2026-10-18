@@ -1,42 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import bcrypt from 'bcryptjs';
+/**
+ * /api/login — fully retired.
+ *
+ * Sign-in goes through NextAuth's credentials provider in src/lib/auth.ts.
+ * Nothing calls it any more. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this file.
+ */
 
-export async function POST(req: NextRequest) {
-  try {
-    const { email, password } = await req.json();
+import { gone } from "@/lib/api-guard";
 
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
-    }
+const replacement =
+  "Sign in through NextAuth (/api/auth).";
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
-    }
-
-    // For demo purposes, we return a success flag and user role.
-    // In production, you'd return a session token or JWT.
-    return NextResponse.json({
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
+export function POST() {
+  return gone(replacement);
 }

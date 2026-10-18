@@ -1,42 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+/**
+ * /api/students — fully retired.
+ *
+ * Student accounts are managed through the user-management Server Actions.
+ * Nothing calls it any more: no page uses the `StudentContext` methods that
+ * hit this URL. Every handler returns 410 Gone so a stale
+ * caller fails loudly.
+ *
+ * TODO[chapter-3-cleanup]: drop this file with `StudentContext`.
+ */
 
-export async function GET(req: NextRequest) {
-  const courseId = req.nextUrl.searchParams.get("courseId");
-  const studentIds = req.nextUrl.searchParams.get("ids");
+import { gone } from "@/lib/api-guard";
 
-  if (!courseId && !studentIds) {
-    const students = await prisma.student.findMany();
-    return NextResponse.json(students);
-  }
+const replacement =
+  "Use src/features/students/queries.ts and the Server Actions in src/features/users/actions.ts (/dashboard/manage-users).";
 
-  if (courseId) {
-    const students = await prisma.student.findMany({
-      where: {
-        courses: {
-          some: {
-            id: courseId,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(students);
-  } else if (studentIds) {
-    const idArray = studentIds.split(",");
-
-    const students = await prisma.student.findMany({
-      where: {
-        id: { in: idArray }
-      },
-    });
-
-    return NextResponse.json(students);
-  }
+export function GET() {
+  return gone(replacement);
 }
 
-export async function POST(req: Request) {
-  const data = await req.json();
-  const student = await prisma.student.create({ data });
-  return NextResponse.json(student);
+export function POST() {
+  return gone(replacement);
 }
