@@ -48,6 +48,8 @@ import { Separator } from "@/components/ui/separator";
 import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, submissionPath } from "@/lib/blob/paths";
 
+import { EmailStudentCheckbox } from "@/features/notifications/components/email-student-checkbox";
+
 import { gradeEntryWithSections } from "../actions";
 
 export interface EntryGradingFormSection {
@@ -61,6 +63,8 @@ export interface EntryGradingFormSection {
 export interface EntryGradingFormProps {
   entryId: string;
   submissionId: string;
+  /** Used in the "email the student" checkbox label. */
+  studentName?: string;
   totalPointsDefault: number;
   defaultValues: {
     score: number;
@@ -77,11 +81,13 @@ function blank(outOf: number): EntryGradingFormSection {
 export function EntryGradingForm({
   entryId,
   submissionId,
+  studentName,
   totalPointsDefault,
   defaultValues,
 }: EntryGradingFormProps) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
+  const [emailStudent, setEmailStudent] = React.useState(true);
   // Sections with a memo upload still in flight. Saving mid-upload would
   // persist the section with memoFileUrl still null and silently lose the
   // file the tutor just picked.
@@ -236,6 +242,7 @@ export function EntryGradingForm({
         outOf,
         feedback: feedback.trim().length > 0 ? feedback : null,
         sections: cleanedSections,
+        notifyByEmail: emailStudent,
       });
       if (res?.serverError) {
         toast.error(res.serverError);
@@ -499,6 +506,13 @@ export function EntryGradingForm({
       </Card>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
+        <EmailStudentCheckbox
+          checked={emailStudent}
+          onCheckedChange={setEmailStudent}
+          studentName={studentName?.split(" ")[0]}
+          disabled={pending}
+          className="mr-auto"
+        />
         <DraftStatus draft={draft} />
         <SaveProgressButton draft={draft} />
         <Button

@@ -709,7 +709,7 @@ export const gradeTestSubmission = tutorActionClient
         studentId,
         courseId: submission.test.courseId,
       },
-      { revalidate: false },
+      { revalidate: false, email: parsedInput.notifyByEmail },
     );
 
     revalidatePath(`/dashboard/tutor-tests/submissions/${submission.test.id}`);

@@ -125,6 +125,8 @@ export const GradeSubmissionEntrySchema = z.object({
   score: z.number().nonnegative(),
   outOf: z.number().positive(),
   feedback: z.string().max(5000).nullable().default(null),
+  /** Email the student that it's graded (in-app notification is always sent). */
+  notifyByEmail: z.boolean().default(true),
 });
 export type GradeSubmissionEntryInput = z.infer<
   typeof GradeSubmissionEntrySchema
@@ -161,6 +163,9 @@ export const GradeSubmissionEntryWithSectionsSchema = z.object({
   feedback: z.string().max(5000).nullable().default(null),
   /** Optional per-section breakdown; empty = mark with a single total. */
   sections: z.array(SubmissionSectionSchema).default([]),
+  /** Email the student that it's graded (in-app notification is always sent). */
+  notifyByEmail: z.boolean().default(true),
+
 });
 export type GradeSubmissionEntryWithSectionsInput = z.infer<
   typeof GradeSubmissionEntryWithSectionsSchema

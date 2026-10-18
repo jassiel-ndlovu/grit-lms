@@ -33,6 +33,8 @@ import { formatLabel, normalizeScheme, type LabelScheme } from "@/lib/enum-label
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
 
+import { EmailStudentCheckbox } from "@/features/notifications/components/email-student-checkbox";
+
 import { gradeTestSubmission } from "../actions";
 import { toFileAnswers, toFileUploadMemo } from "../lib/file-answers";
 
@@ -172,6 +174,7 @@ export function GradingForm({
     existingGrade ? String(existingGrade.score) : null,
   );
   const [pending, setPending] = React.useState(false);
+  const [emailStudent, setEmailStudent] = React.useState(true);
 
   /* ─── Local auto-save ─── */
 
@@ -272,6 +275,7 @@ export function GradingForm({
         feedback:
           overallFeedback.trim() === "" ? null : overallFeedback,
         questionGrades,
+        notifyByEmail: emailStudent,
       });
       if (result?.serverError) throw new Error(result.serverError);
       if (result?.validationErrors) throw new Error("Some scores were rejected — check each question.");
@@ -366,6 +370,12 @@ export function GradingForm({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <EmailStudentCheckbox
+              checked={emailStudent}
+              onCheckedChange={setEmailStudent}
+              studentName={studentName.split(" ")[0]}
+              disabled={pending}
+            />
             <DraftStatus draft={draft} />
             <SaveProgressButton draft={draft} />
             <Button type="button" variant="brand" onClick={onSubmit} disabled={pending}>

@@ -42,6 +42,12 @@ export interface EmitNotificationOptions {
    * revalidation for the same routes (avoid double work).
    */
   revalidate?: boolean;
+  /**
+   * Whether this notification may be emailed at all. Default true. False
+   * keeps it in-app only (and out of digests), whatever the recipient's
+   * email settings say.
+   */
+  email?: boolean;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -226,6 +232,7 @@ export async function emitNotification(
         userId: r.id,
         studentId: r.studentId,
         courseId: parsed.courseId ?? null,
+        suppressEmail: options.email === false,
       })),
       select: { id: true, userId: true },
     });
@@ -234,6 +241,7 @@ export async function emitNotification(
       const r = targets.find((t) => t.id === row.userId)!;
       const prefs = prefsByUser.get(r.id)!;
       const immediate =
+        options.email !== false &&
         prefs.emailNotifications &&
         prefs.notificationFrequency === "IMMEDIATE" &&
         r.emailVerified !== null &&

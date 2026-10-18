@@ -367,7 +367,7 @@ export const gradeEntry = tutorActionClient
         studentId,
         courseId: entry.submission.courseId,
       },
-      { revalidate: false },
+      { revalidate: false, email: parsedInput.notifyByEmail },
     );
 
     revalidatePath(`/dashboard/submissions/${entry.submission.id}`);
@@ -475,7 +475,7 @@ export const gradeEntryWithSections = tutorActionClient
         studentId,
         courseId: entry.submission.courseId,
       },
-      { revalidate: false },
+      { revalidate: false, email: parsedInput.notifyByEmail },
     );
 
     revalidatePath(`/dashboard/submissions/${entry.submission.id}`);

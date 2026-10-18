@@ -278,6 +278,8 @@ export const GradeTestSubmissionSchema = z.object({
   score: z.number().nonnegative(),
   outOf: z.number().positive(),
   feedback: z.string().max(5000).nullable().default(null),
+  /** Email the student that it's graded (in-app notification is always sent). */
+  notifyByEmail: z.boolean().default(true),
   questionGrades: z
     .array(
       z.object({

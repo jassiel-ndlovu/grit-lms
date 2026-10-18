@@ -302,7 +302,7 @@ export async function emailDigests(now: Date) {
     );
 
     const rows = await prisma.notification.findMany({
-      where: { userId: s.userId, emailedAt: null, createdAt: { gt: since } },
+      where: { userId: s.userId, emailedAt: null, suppressEmail: false, createdAt: { gt: since } },
       orderBy: { createdAt: "desc" },
       select: { id: true, title: true, message: true, link: true, type: true },
       take: 50,

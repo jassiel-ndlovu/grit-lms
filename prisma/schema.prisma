@@ -395,6 +395,9 @@ model Notification {
   userId    String?
   // When this row went out by email (immediately or in a digest).
   emailedAt DateTime?
+  // The sender chose in-app only (e.g. a tutor unticking "email the
+  // student" when grading); never emailed, not even in a digest.
+  suppressEmail Boolean @default(false)
 
   course  Course?  @relation(fields: [courseId], references: [id])
   student Student? @relation(fields: [studentId], references: [id])
