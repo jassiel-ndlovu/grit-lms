@@ -1,24 +1,29 @@
 /**
  * SettingsForm — user preferences editor. Persists to UserPreferences via
- * updateOwnPreferences. All fields are optional; the action patches only
- * what changed.
+ * updateOwnPreferences.
  *
- * Grouped into three sections that match how a user thinks about them:
- *   - Notifications: what to be told about, and how often
- *   - Appearance & locale: dark mode, timezone, preferred view
- *   - Dashboard defaults: which tab lands first, study reminders
+ * Sections, shown per role:
+ *   - Email: verification status, email notifications on/off + frequency
+ *   - Alerts: what to be told about. Students get course-content, due-date,
+ *     grade and study alerts; tutors get submission and grading alerts.
+ *     Each switch governs both the in-app notification and its email.
+ *   - Appearance & region: dark mode, language, time zone
+ *   - Default view: start page after sign-in, course layout
+ *
+ * Everything takes effect on save: the dashboard layout re-reads the
+ * preferences, so theme, zone and locale apply app-wide immediately.
  */
 
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, MailWarning } from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -28,70 +33,81 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useMounted } from "@/components/preferences-provider";
+import type { DashboardTab, Role } from "@/features/shared/enums";
+import { formatDateTime, LANGUAGES } from "@/lib/datetime";
 
-import { updateOwnPreferences } from "../actions";
+import { requestEmailVerification, updateOwnPreferences } from "../actions";
+import { startPageOptions } from "../start-page";
 
 type Frequency = "IMMEDIATE" | "DAILY" | "WEEKLY" | "NONE";
 type View = "LIST" | "GRID" | "TIMELINE";
-type Tab = "COURSES" | "NOTIFICATIONS" | "CALENDAR" | "GRADES";
 
 export interface SettingsFormValues {
   emailNotifications: boolean;
-  pushNotifications: boolean;
   notificationFrequency: Frequency;
   notifyOnCourseUpdate: boolean;
   notifyOnNewLesson: boolean;
   notifyOnNewTest: boolean;
   notifyOnDueDateReminder: boolean;
   notifyOnGrades: boolean;
-  notifyOnMessages: boolean;
+  studyReminders: boolean;
+  notifyOnSubmissions: boolean;
+  notifyOnGradingQueue: boolean;
   darkMode: boolean;
   preferredLanguage: string;
   timeZone: string | null;
   preferredView: View;
-  studyReminders: boolean;
-  defaultDashboardTab: Tab;
+  defaultDashboardTab: DashboardTab;
 }
 
 interface Props {
+  role: Role;
+  email: string;
+  emailVerified: boolean;
   defaults: SettingsFormValues;
 }
 
-const FREQUENCIES: { value: Frequency; label: string }[] = [
-  { value: "IMMEDIATE", label: "Immediately" },
+type Toggle = {
+  key: keyof SettingsFormValues;
+  title: string;
+  description: string;
+};
+
+const STUDENT_ALERTS: Toggle[] = [
+  { key: "notifyOnNewLesson", title: "New lessons", description: "When a lesson is published, updated or removed in your courses." },
+  { key: "notifyOnNewTest", title: "Tests & assignments", description: "When a test or assignment is set, changed or withdrawn." },
+  { key: "notifyOnDueDateReminder", title: "Due-date reminders", description: "A reminder the day before work you haven't handed in is due." },
+  { key: "notifyOnGrades", title: "Grades released", description: "When your tutor releases a mark." },
+  { key: "notifyOnCourseUpdate", title: "Course & schedule updates", description: "New courses, and lectures or events added to the calendar." },
+  { key: "studyReminders", title: "Study reminders", description: "A nudge when you haven't opened a lesson for a few days." },
+];
+
+const TUTOR_ALERTS: Toggle[] = [
+  { key: "notifyOnSubmissions", title: "Student submissions", description: "When a student hands in a test or assignment." },
+  { key: "notifyOnGradingQueue", title: "Grading reminders", description: "A daily summary of submitted work still waiting for a mark." },
+];
+
+const FREQUENCIES: { value: Exclude<Frequency, "NONE">; label: string }[] = [
+  { value: "IMMEDIATE", label: "As it happens" },
   { value: "DAILY", label: "Daily digest" },
   { value: "WEEKLY", label: "Weekly digest" },
-  { value: "NONE", label: "Never" },
 ];
 
 const VIEWS: { value: View; label: string }[] = [
-  { value: "LIST", label: "List" },
   { value: "GRID", label: "Grid" },
-  { value: "TIMELINE", label: "Timeline" },
+  { value: "LIST", label: "List" },
 ];
 
-const TABS: { value: Tab; label: string }[] = [
-  { value: "COURSES", label: "Courses" },
-  { value: "NOTIFICATIONS", label: "Notifications" },
-  { value: "CALENDAR", label: "Calendar" },
-  { value: "GRADES", label: "Grades" },
-];
+const AUTO_ZONE = "__auto";
 
-// A tidy short list; browsers can suggest others via their Intl API but
-// we keep the dropdown short so it stays scannable.
-const TIMEZONES = [
-  "Africa/Johannesburg",
-  "Africa/Harare",
-  "Africa/Lagos",
-  "Africa/Cairo",
-  "Europe/London",
-  "Europe/Berlin",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Asia/Dubai",
-  "Asia/Tokyo",
-  "UTC",
-];
+function allTimeZones(): string[] {
+  try {
+    return Intl.supportedValuesOf("timeZone");
+  } catch {
+    return ["Africa/Johannesburg", "UTC"];
+  }
+}
 
 function Row({
   title,
@@ -103,27 +119,56 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3">
+    <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground">{title}</p>
-        {description && (
-          <p className="text-muted-foreground text-xs">{description}</p>
-        )}
+        {description && <p className="text-muted-foreground text-xs">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
   );
 }
 
-export function SettingsForm({ defaults }: Props) {
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="p-6">
+      <div className="mb-2">
+        <h2 className="font-display text-xl leading-tight">{title}</h2>
+        <p className="text-muted-foreground text-sm">{description}</p>
+      </div>
+      <Separator className="my-4" />
+      <div className="divide-border divide-y">{children}</div>
+    </Card>
+  );
+}
+
+export function SettingsForm({ role, email, emailVerified, defaults }: Props) {
   const router = useRouter();
+  const mounted = useMounted();
   const [pending, setPending] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [saved, setSaved] = useState<SettingsFormValues>(defaults);
   const [values, setValues] = useState<SettingsFormValues>(defaults);
 
-  function patch<K extends keyof SettingsFormValues>(
-    key: K,
-    v: SettingsFormValues[K],
-  ) {
+  const dirty = useMemo(
+    () => JSON.stringify(values) !== JSON.stringify(saved),
+    [values, saved],
+  );
+
+  const alerts = role === "STUDENT" ? STUDENT_ALERTS : role === "TUTOR" ? TUTOR_ALERTS : [];
+  const zones = useMemo(allTimeZones, []);
+  const deviceZone = mounted ? Intl.DateTimeFormat().resolvedOptions().timeZone : null;
+  const effectiveZone = values.timeZone ?? deviceZone ?? undefined;
+
+  function patch<K extends keyof SettingsFormValues>(key: K, v: SettingsFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: v }));
   }
 
@@ -131,10 +176,11 @@ export function SettingsForm({ defaults }: Props) {
     setPending(true);
     try {
       const res = await updateOwnPreferences(values);
-      if (res?.serverError) {
-        toast.error(res.serverError);
+      if (res?.serverError || res?.validationErrors) {
+        toast.error(res.serverError ?? "Some settings are invalid.");
         return;
       }
+      setSaved(values);
       toast.success("Preferences saved.");
       router.refresh();
     } catch (err) {
@@ -144,150 +190,179 @@ export function SettingsForm({ defaults }: Props) {
     }
   }
 
+  async function onSendVerification() {
+    setSending(true);
+    try {
+      const res = await requestEmailVerification({});
+      if (res?.data?.ok) {
+        toast.success(`Verification email sent to ${email}.`);
+      } else {
+        toast.error(res?.data?.ok === false ? res.data.error : res?.serverError ?? "Couldn't send the email.");
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <div className="mb-2">
-          <h2 className="font-display text-xl leading-tight">Notifications</h2>
-          <p className="text-muted-foreground text-sm">
-            What we tell you about, and how often.
-          </p>
+      <Section title="Email" description="Notification emails, and how often they arrive.">
+        <div className="py-3">
+          {emailVerified ? (
+            <p className="flex items-center gap-2 text-sm">
+              <CheckCircle2 className="text-brand-terracotta size-4" />
+              <span className="text-foreground">{email}</span>
+              <Badge variant="soft">Verified</Badge>
+            </p>
+          ) : (
+            <div className="bg-brand-terracotta/[0.08] flex flex-col gap-3 rounded-md p-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="flex items-start gap-2 text-sm text-foreground">
+                <MailWarning className="text-brand-terracotta mt-0.5 size-4 shrink-0" />
+                <span>
+                  Verify <strong>{email}</strong> to receive notification emails.
+                </span>
+              </p>
+              <Button size="sm" variant="outline" onClick={onSendVerification} disabled={sending}>
+                {sending && <Loader2 className="size-4 animate-spin" />}
+                Send verification email
+              </Button>
+            </div>
+          )}
         </div>
-        <Separator className="my-4" />
-        <div className="divide-border divide-y">
-          <Row
-            title="Email notifications"
-            description="Receive notifications via email."
+        <Row title="Email notifications" description="Get your alerts by email as well as in the app.">
+          <Switch
+            checked={values.emailNotifications}
+            onCheckedChange={(v) => {
+              patch("emailNotifications", v);
+              // "Never" was a frequency once; the switch replaces it.
+              if (v && values.notificationFrequency === "NONE") patch("notificationFrequency", "IMMEDIATE");
+            }}
+            aria-label="Email notifications"
+          />
+        </Row>
+        <Row
+          title="Frequency"
+          description="Digests arrive around 07:00 in your time zone; weekly ones on Mondays."
+        >
+          <Select
+            value={values.notificationFrequency === "NONE" ? "IMMEDIATE" : values.notificationFrequency}
+            onValueChange={(v) => patch("notificationFrequency", v as Frequency)}
+            disabled={!values.emailNotifications}
           >
-            <Switch
-              checked={values.emailNotifications}
-              onCheckedChange={(v) => patch("emailNotifications", v)}
-            />
-          </Row>
-          <Row
-            title="Push notifications"
-            description="In-app notifications while you're signed in."
-          >
-            <Switch
-              checked={values.pushNotifications}
-              onCheckedChange={(v) => patch("pushNotifications", v)}
-            />
-          </Row>
-          <Row
-            title="Frequency"
-            description="How often we batch non-urgent notifications."
-          >
-            <Select
-              value={values.notificationFrequency}
-              onValueChange={(v) =>
-                patch("notificationFrequency", v as Frequency)
-              }
-            >
-              <SelectTrigger className="w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FREQUENCIES.map((f) => (
-                  <SelectItem key={f.value} value={f.value}>
-                    {f.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Row>
-          <Row title="Course updates">
-            <Switch
-              checked={values.notifyOnCourseUpdate}
-              onCheckedChange={(v) => patch("notifyOnCourseUpdate", v)}
-            />
-          </Row>
-          <Row title="New lessons">
-            <Switch
-              checked={values.notifyOnNewLesson}
-              onCheckedChange={(v) => patch("notifyOnNewLesson", v)}
-            />
-          </Row>
-          <Row title="New tests">
-            <Switch
-              checked={values.notifyOnNewTest}
-              onCheckedChange={(v) => patch("notifyOnNewTest", v)}
-            />
-          </Row>
-          <Row title="Due-date reminders">
-            <Switch
-              checked={values.notifyOnDueDateReminder}
-              onCheckedChange={(v) => patch("notifyOnDueDateReminder", v)}
-            />
-          </Row>
-          <Row title="Grade released">
-            <Switch
-              checked={values.notifyOnGrades}
-              onCheckedChange={(v) => patch("notifyOnGrades", v)}
-            />
-          </Row>
-          <Row title="Messages">
-            <Switch
-              checked={values.notifyOnMessages}
-              onCheckedChange={(v) => patch("notifyOnMessages", v)}
-            />
-          </Row>
-        </div>
-      </Card>
+            <SelectTrigger className="w-44" aria-label="Email frequency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FREQUENCIES.map((f) => (
+                <SelectItem key={f.value} value={f.value}>
+                  {f.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Row>
+      </Section>
 
-      <Card className="p-6">
-        <div className="mb-2">
-          <h2 className="font-display text-xl leading-tight">
-            Appearance &amp; locale
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            How the app looks and where you are.
+      <Section
+        title="Alerts"
+        description="What we tell you about. Turning an alert off stops it in the app and by email."
+      >
+        {alerts.length === 0 ? (
+          <p className="text-muted-foreground py-3 text-sm">
+            Alert options for your account type are on the way.
           </p>
-        </div>
-        <Separator className="my-4" />
-        <div className="divide-border divide-y">
-          <Row
-            title="Dark mode"
-            description="Ask the app for a dark colour scheme. May be overridden by your OS."
+        ) : (
+          alerts.map((a) => (
+            <Row key={a.key} title={a.title} description={a.description}>
+              <Switch
+                checked={values[a.key] as boolean}
+                onCheckedChange={(v) => patch(a.key, v as never)}
+                aria-label={a.title}
+              />
+            </Row>
+          ))
+        )}
+      </Section>
+
+      <Section title="Appearance & region" description="How the app looks, and how dates are shown.">
+        <Row title="Dark mode" description="Use a dark colour scheme across the app.">
+          <Switch
+            checked={values.darkMode}
+            onCheckedChange={(v) => patch("darkMode", v)}
+            aria-label="Dark mode"
+          />
+        </Row>
+        <Row title="Language" description="Used for dates and numbers. The interface is in English for now.">
+          <Select
+            value={LANGUAGES.some((l) => l.value === values.preferredLanguage) ? values.preferredLanguage : "en-ZA"}
+            onValueChange={(v) => patch("preferredLanguage", v)}
           >
-            <Switch
-              checked={values.darkMode}
-              onCheckedChange={(v) => patch("darkMode", v)}
-            />
-          </Row>
-          <Row title="Preferred language">
-            <Input
-              value={values.preferredLanguage}
-              onChange={(e) => patch("preferredLanguage", e.target.value)}
-              className="w-24"
-              maxLength={5}
-            />
-          </Row>
-          <Row title="Time zone">
-            <Select
-              value={values.timeZone ?? "UTC"}
-              onValueChange={(v) => patch("timeZone", v)}
-            >
-              <SelectTrigger className="w-56">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIMEZONES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Row>
-          <Row
-            title="Preferred view"
-            description="Default rendering for list-heavy pages."
+            <SelectTrigger className="w-56" aria-label="Language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGES.map((l) => (
+                <SelectItem key={l.value} value={l.value}>
+                  {l.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Row>
+        <Row
+          title="Time zone"
+          description={
+            mounted
+              ? `Times are shown in this zone. It's ${formatDateTime(new Date(), { timeZone: effectiveZone }, { hour: "2-digit", minute: "2-digit", weekday: "short" })} there now.`
+              : "Times are shown in this zone."
+          }
+        >
+          <Select
+            value={values.timeZone ?? AUTO_ZONE}
+            onValueChange={(v) => patch("timeZone", v === AUTO_ZONE ? null : v)}
           >
+            <SelectTrigger className="w-64" aria-label="Time zone">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-80">
+              <SelectItem value={AUTO_ZONE}>
+                Use this device{deviceZone ? ` (${deviceZone})` : ""}
+              </SelectItem>
+              {zones.map((z) => (
+                <SelectItem key={z} value={z}>
+                  {z.replace(/_/g, " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Row>
+      </Section>
+
+      <Section title="Default view" description="Where you land, and how lists are laid out.">
+        <Row title="Start page" description="Where you land after signing in.">
+          <Select
+            value={values.defaultDashboardTab}
+            onValueChange={(v) => patch("defaultDashboardTab", v as DashboardTab)}
+          >
+            <SelectTrigger className="w-44" aria-label="Start page">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {startPageOptions(role).map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Row>
+        {(role === "STUDENT" || role === "TUTOR") && (
+          <Row title="Course layout" description="Show course lists as a grid of cards or as rows.">
             <Select
-              value={values.preferredView}
+              value={values.preferredView === "LIST" ? "LIST" : "GRID"}
               onValueChange={(v) => patch("preferredView", v as View)}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-32" aria-label="Course layout">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -299,56 +374,17 @@ export function SettingsForm({ defaults }: Props) {
               </SelectContent>
             </Select>
           </Row>
-        </div>
-      </Card>
+        )}
+      </Section>
 
-      <Card className="p-6">
-        <div className="mb-2">
-          <h2 className="font-display text-xl leading-tight">
-            Dashboard defaults
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Where you land when you open the app.
-          </p>
-        </div>
-        <Separator className="my-4" />
-        <div className="divide-border divide-y">
-          <Row title="Default dashboard tab">
-            <Select
-              value={values.defaultDashboardTab}
-              onValueChange={(v) => patch("defaultDashboardTab", v as Tab)}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TABS.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Row>
-          <Row
-            title="Study reminders"
-            description="Prompt you to review lessons that are due for revisiting."
-          >
-            <Switch
-              checked={values.studyReminders}
-              onCheckedChange={(v) => patch("studyReminders", v)}
-            />
-          </Row>
-        </div>
-      </Card>
-
-      <div className="flex justify-end">
+      <div className="bg-background/90 sticky bottom-0 flex items-center justify-end gap-3 py-3 backdrop-blur">
+        {dirty && <span className="text-muted-foreground text-xs">Unsaved changes</span>}
         <Button
           onClick={onSave}
-          disabled={pending}
+          disabled={pending || !dirty}
           className="bg-brand-terracotta text-brand-terracotta-foreground hover:opacity-90"
         >
-          {pending && <Loader2 className="mr-2 size-4 animate-spin" />}
+          {pending && <Loader2 className="size-4 animate-spin" />}
           Save preferences
         </Button>
       </div>

@@ -262,3 +262,47 @@
   /* Warm taupe — matches muted-foreground. */
   background: oklch(0.450 0.038 75);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Dark-mode shim for legacy pages.
+   Older client pages hard-code Tailwind's light grays instead of the design
+   tokens. Under `.dark` we map the common ones onto the tokens so those
+   pages stay readable. Unlayered, so it beats the utilities layer. Remove
+   entries as pages migrate to tokens.
+   ───────────────────────────────────────────────────────────────────────── */
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-slate-50 {
+  background-color: var(--card);
+}
+.dark .bg-gray-100,
+.dark .bg-gray-200,
+.dark .bg-slate-100 {
+  background-color: var(--muted);
+}
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover {
+  background-color: var(--muted);
+}
+.dark .text-black,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  color: var(--foreground);
+}
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-gray-400 {
+  color: var(--muted-foreground);
+}
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300 {
+  border-color: var(--border);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+}

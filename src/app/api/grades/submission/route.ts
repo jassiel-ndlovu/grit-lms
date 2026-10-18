@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -40,15 +41,16 @@ export async function POST(req: NextRequest) {
       url += `/submissions/${entry?.submissionId}`;
     }
 
-    await prisma.notification.create({
-      data: {
+    await emitNotification(
+      {
         title: "Grade Released",
         message: `You received ${grade.score}/${grade.outOf} for "${grade.title}".`,
         link: url,
         type: "SUBMISSION_GRADED",
         studentId: grade.studentId,
       },
-    });
+      { revalidate: false },
+    );
 
     return NextResponse.json(grade, { status: 201 });
   } catch (error) {

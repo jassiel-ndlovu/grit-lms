@@ -10,7 +10,7 @@
 
 import { z } from "zod";
 
-export const RoleSchema = z.enum(["STUDENT", "TUTOR", "ADMIN"]);
+export const RoleSchema = z.enum(["STUDENT", "TUTOR", "ADMIN", "PARENT"]);
 export type Role = z.infer<typeof RoleSchema>;
 
 export const NotificationTypeSchema = z.enum([
@@ -29,6 +29,15 @@ export const NotificationTypeSchema = z.enum([
   "TEST_GRADED",
   "MESSAGE",
   "SYSTEM",
+  "LESSON_UPDATED",
+  "LESSON_DELETED",
+  "EVENT_CREATED",
+  "EVENT_UPDATED",
+  "EVENT_DELETED",
+  "TEST_SUBMITTED",
+  "SUBMISSION_RECEIVED",
+  "STUDY_REMINDER",
+  "GRADING_REMINDER",
 ]);
 export type NotificationType = z.infer<typeof NotificationTypeSchema>;
 

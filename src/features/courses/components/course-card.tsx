@@ -37,8 +37,8 @@ export function CourseCard({
         className,
       )}
     >
-      <Link href={href} className="block">
-        <div className="bg-muted relative aspect-video w-full overflow-hidden">
+      <Link href={href} className="block in-data-[view=list]:flex">
+        <div className="bg-muted relative aspect-video w-full overflow-hidden in-data-[view=list]:aspect-auto in-data-[view=list]:min-h-28 in-data-[view=list]:w-32 in-data-[view=list]:shrink-0 sm:in-data-[view=list]:w-48">
           {(course.imageUrl) ? (
             <Image
               src={course.imageUrl}
@@ -55,7 +55,7 @@ export function CourseCard({
           )}
         </div>
 
-        <div className="space-y-2 p-4">
+        <div className="min-w-0 flex-1 space-y-2 p-4 in-data-[view=list]:pr-12">
           <div className="space-y-1">
             <h3 className="font-display line-clamp-1 text-lg leading-tight tracking-tight text-foreground">
               {course.name}

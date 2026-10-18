@@ -4,6 +4,7 @@
  * Server Component that branches on role:
  *   - STUDENT: editorial home with progress, up-next deadlines, recent grades
  *   - TUTOR: quick-link tiles into the tutor management surfaces
+ *   - ADMIN / PARENT: placeholder landings (features/admin, features/parents)
  *
  * Replaces the legacy client /dashboard/home/* split. All data comes from
  * feature queries.
@@ -44,14 +45,12 @@ import {
 } from "@/features/submissions/queries";
 import { listGradesForStudent } from "@/features/grades/queries";
 import { listUpcomingEventsForStudent } from "@/features/events/queries";
+import { getUserPreferences } from "@/features/users/preferences";
+import { AdminDashboard } from "@/features/admin/components/admin-dashboard";
+import { ParentDashboard } from "@/features/parents/components/parent-dashboard";
+import { DEFAULT_TIME_ZONE, formatDate, greetingFor, resolveLocale } from "@/lib/datetime";
 
 export const metadata = { title: "Dashboard" };
-
-const dateFmt = new Intl.DateTimeFormat(undefined, {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-});
 
 function pct(score: number, outOf: number) {
   if (outOf <= 0) return 0;
@@ -65,6 +64,13 @@ export default async function DashboardLanding() {
   if (session.user.role === "TUTOR") {
     return <TutorDashboard />;
   }
+  const userFirstName = (session.user.name ?? "").split(" ")[0] || "there";
+  if (session.user.role === "ADMIN") {
+    return <AdminDashboard firstName={userFirstName} />;
+  }
+  if (session.user.role === "PARENT") {
+    return <ParentDashboard firstName={userFirstName} />;
+  }
 
   const student = await prisma.student.findUnique({
     where: { email: session.user.email },
@@ -77,6 +83,16 @@ export default async function DashboardLanding() {
       </div>
     );
   }
+
+  const prefs = await getUserPreferences(session.user.id);
+  // Server-rendered, so format in the user's zone explicitly — the server
+  // itself runs in UTC.
+  const dateCtx = {
+    timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE,
+    locale: resolveLocale(prefs.preferredLanguage),
+  };
+  const shortDate = (d: Date) =>
+    formatDate(d, dateCtx, { weekday: "short", month: "short", day: "numeric" });
 
   const [courses, tests, assignments, grades, events] = await Promise.all([
     listCoursesByStudentId(student.id),
@@ -162,12 +178,7 @@ export default async function DashboardLanding() {
 
   const recentGrades = grades.slice(0, 4);
   const firstName = student.fullName.split(" ")[0];
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
-  })();
+  const greeting = greetingFor(new Date(), dateCtx.timeZone);
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
@@ -253,7 +264,7 @@ export default async function DashboardLanding() {
                             {item.course} - {item.kind === "test" ? "Test" : item.kind === "assignment" ? "Assignment" : "Event"}
                           </p>
                         </div>
-                        <Badge variant="secondary" className="shrink-0 tabular-nums">{dateFmt.format(item.date)}</Badge>
+                        <Badge variant="secondary" className="shrink-0 tabular-nums">{shortDate(item.date)}</Badge>
                       </Link>
                     </li>
                   );

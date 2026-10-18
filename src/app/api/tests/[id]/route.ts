@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
 
 export async function PUT(
   req: NextRequest,
@@ -19,7 +20,7 @@ export async function PUT(
         });
 
         // Update test
-        const updatedTest = await tx.test.update({
+        await tx.test.update({
           where: { id: id },
           data: {
             title: data.title,
@@ -49,23 +50,23 @@ export async function PUT(
           },
         });
 
-        // Notification
-        if (data.isActive === true) {
-          await tx.notification.create({
-            data: {
-              title: "Test Updated",
-              message: `The test "${updatedTest.title}" has been updated.`,
-              link: `/dashboard/tests/${updatedTest.id}`,
-              type: "TEST_UPDATED",
-              courseId: updatedTest.courseId,
-            },
-          });
-        }
-
         return completeTest;
       },
       { timeout: 30000 }
     );
+
+    if (data.isActive === true && result) {
+      await emitNotification(
+        {
+          title: "Test Updated",
+          message: `The test "${result.title}" has been updated.`,
+          link: `/dashboard/tests/${result.id}`,
+          type: "TEST_UPDATED",
+          courseId: result.courseId,
+        },
+        { revalidate: false },
+      );
+    }
 
     return NextResponse.json(result);
   } catch (error) {
@@ -142,14 +143,15 @@ export async function DELETE(
       // Cascade delete will automatically handle questions and subquestions
     });
 
-    await prisma.notification.create({
-      data: {
+    await emitNotification(
+      {
         title: "Test Deleted",
         message: `The test "${test.title}" has been removed.`,
         type: "TEST_DELETED",
         courseId: test.courseId,
       },
-    });
+      { revalidate: false },
+    );
 
     return NextResponse.json({ message: "Deleted successfully" });
   } catch (error) {

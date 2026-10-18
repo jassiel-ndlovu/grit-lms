@@ -24,7 +24,7 @@ import {
   studentActionClient,
   tutorActionClient,
 } from "@/lib/safe-action";
-import { emitNotification } from "@/features/notifications/server";
+import { emitNotification, notifyHandIn } from "@/features/notifications/server";
 
 import {
   CreateSubmissionInputSchema,
@@ -128,8 +128,28 @@ export const updateSubmission = tutorActionClient
     const updated = await prisma.submission.update({
       where: { id: parsedInput.id },
       data,
-      select: { id: true, courseId: true },
+      select: { id: true, courseId: true, title: true, isActive: true },
     });
+
+    if (updated.isActive) {
+      const dueChanged =
+        parsedInput.dueDate !== undefined &&
+        parsedInput.dueDate.getTime() !== existing.dueDate.getTime();
+      await emitNotification(
+        {
+          title: dueChanged ? "Assignment Due Date Changed" : "Assignment Updated",
+          // No date in the text: recipients are in different time zones,
+          // and the assignment page shows it in each one's own.
+          message: dueChanged
+            ? `The due date for "${updated.title}" has changed.`
+            : `The assignment "${updated.title}" has been updated.`,
+          link: `/dashboard/submissions/${updated.id}`,
+          type: "SUBMISSION_UPDATED",
+          courseId: updated.courseId,
+        },
+        { revalidate: false },
+      );
+    }
 
     revalidatePath(`/dashboard/submissions/${updated.id}`);
     revalidatePath("/dashboard/submissions");
@@ -260,18 +280,14 @@ export const submitEntry = studentActionClient
       },
     });
 
-    await emitNotification(
-      {
-        title: "Assignment Submitted",
-        message: `Your submission for "${submission.title}" has been received.`,
-        link: `/dashboard/submissions/${submission.id}`,
-        type: "SUBMISSION_DUE",
-        priority: "NORMAL",
-        studentId: student.id,
-        courseId: submission.courseId,
-      },
-      { revalidate: false },
-    );
+    await notifyHandIn({
+      kind: "assignment",
+      title: submission.title,
+      courseId: submission.courseId,
+      studentId: student.id,
+      studentLink: `/dashboard/submissions/${submission.id}`,
+      tutorLink: `/dashboard/submissions/overview/${submission.id}/${student.id}`,
+    });
 
     revalidatePath(`/dashboard/submissions/${submission.id}`);
     revalidatePath(`/dashboard/courses/${submission.courseId}`);
@@ -349,6 +365,7 @@ export const gradeEntry = tutorActionClient
         type: "SUBMISSION_GRADED",
         priority: "NORMAL",
         studentId,
+        courseId: entry.submission.courseId,
       },
       { revalidate: false },
     );
@@ -456,6 +473,7 @@ export const gradeEntryWithSections = tutorActionClient
         type: "SUBMISSION_GRADED",
         priority: "NORMAL",
         studentId,
+        courseId: entry.submission.courseId,
       },
       { revalidate: false },
     );

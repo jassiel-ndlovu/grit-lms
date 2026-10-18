@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { notifyHandIn } from "@/features/notifications/server";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const id = (await params).id;
@@ -42,6 +43,11 @@ export async function PUT(
   try {
     const data = await req.json();
 
+    const before = await prisma.testSubmission.findUnique({
+      where: { id: id },
+      select: { status: true },
+    });
+
     const updated = await prisma.testSubmission.update({
       where: { id: id },
       data: {
@@ -67,6 +73,19 @@ export async function PUT(
         uploadedFiles: true,
       },
     });
+
+    // The legacy test runner finishes an attempt by flipping its status
+    // here; that's the hand-in moment.
+    if (before?.status === "IN_PROGRESS" && updated.status !== "IN_PROGRESS") {
+      await notifyHandIn({
+        kind: "test",
+        title: updated.test.title,
+        courseId: updated.test.courseId,
+        studentId: updated.studentId,
+        studentLink: `/dashboard/tests/review/${updated.testId}`,
+        tutorLink: `/dashboard/tutor-tests/submissions/${updated.testId}/${updated.studentId}`,
+      });
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

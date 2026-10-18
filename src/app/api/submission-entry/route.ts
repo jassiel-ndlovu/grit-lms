@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { notifyHandIn } from "@/features/notifications/server";
 import { getToken } from "next-auth/jwt";
 
 // GET: fetch entries (optionally filtered by submissionId or studentId)
@@ -67,15 +68,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (submission) {
-      await prisma.notification.create({
-        data: {
-          title: "Assignment Submitted",
-          message: `Your submission for "${submission.title}" has been received.`,
-          link: `/dashboard/submissions/${submission.id}`,
-          type: "SUBMISSION_DUE",
-          studentId: data.studentId,
-          courseId: submission.courseId,
-        },
+      await notifyHandIn({
+        kind: "assignment",
+        title: submission.title,
+        courseId: submission.courseId,
+        studentId: data.studentId,
+        studentLink: `/dashboard/submissions/${submission.id}`,
+        tutorLink: `/dashboard/submissions/overview/${submission.id}/${data.studentId}`,
       });
     }
 

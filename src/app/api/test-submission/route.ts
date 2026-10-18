@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { notifyHandIn } from "@/features/notifications/server";
 import { getToken } from "next-auth/jwt";
 
 export async function GET(req: NextRequest) {
@@ -159,18 +160,17 @@ export async function POST(req: NextRequest) {
       where: { id: data.testId },
     });
 
-    if (test) {
-    await prisma.notification.create({
-      data: {
-        title: "Test Submitted",
-        message: `Your test "${test.title}" has been submitted.`,
-        link: `/dashboard/tests/review/${test.id}`,
-        type: "TEST_DUE",
-        studentId: data.studentId,
+    // Only a finished attempt is a hand-in; starting one isn't.
+    if (test && submission.status !== "IN_PROGRESS") {
+      await notifyHandIn({
+        kind: "test",
+        title: test.title,
         courseId: test.courseId,
-      },
-    });
-  }
+        studentId: data.studentId,
+        studentLink: `/dashboard/tests/review/${test.id}`,
+        tutorLink: `/dashboard/tutor-tests/submissions/${test.id}/${data.studentId}`,
+      });
+    }
 
     return NextResponse.json(submission, { status: 201 });
   } catch (error) {

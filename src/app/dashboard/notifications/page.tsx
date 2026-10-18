@@ -1,5 +1,5 @@
 /**
- * /dashboard/notifications — student notifications page.
+ * /dashboard/notifications — notifications page for every role.
  *
  * Server Component shell that renders the full list. Each row is an
  * interactive Client component (NotificationListItem) so per-row
@@ -18,15 +18,15 @@ import { redirect } from "next/navigation";
 import { Bell } from "lucide-react";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 import {
-  getUnreadCountForStudent,
-  listNotificationsForStudent,
+  getNotificationViewer,
+  getUnreadCount,
+  listNotifications,
 } from "@/features/notifications/queries";
 import { MarkAllReadButton } from "@/features/notifications/components/mark-all-read-button";
 import { NotificationListItem } from "@/features/notifications/components/notification-list-item";
@@ -44,24 +44,15 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
 
   const session = await auth();
   if (!session?.user) redirect("/");
-  if (session.user.role !== "STUDENT") redirect("/dashboard");
-
-  const student = await prisma.student.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-  if (!student) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No student profile found for this account.
-      </div>
-    );
-  }
-
+  const viewer = await getNotificationViewer(session.user);
   const [items, unreadCount] = await Promise.all([
-    listNotificationsForStudent(student.id, { unreadOnly }),
-    getUnreadCountForStudent(student.id),
+    listNotifications(viewer, { unreadOnly }),
+    getUnreadCount(viewer),
   ]);
+  const subtitle =
+    session.user.role === "TUTOR"
+      ? "Student submissions, grading reminders and course activity."
+      : "Activity from your courses, tutors, and submissions.";
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
@@ -71,9 +62,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
             <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
               Notifications
             </h1>
-            <p className="text-muted-foreground mt-1.5 text-sm">
-              Activity from your courses, tutors, and submissions.
-            </p>
+            <p className="text-muted-foreground mt-1.5 text-sm">{subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={unreadCount > 0 ? "soft" : "secondary"}>

@@ -1,65 +1,35 @@
-"use client"
+/**
+ * Dashboard layout — server half.
+ *
+ * Reads the signed-in user's preferences once per request and hands the
+ * display ones (time zone, locale, theme, list view) to the client shell
+ * through PreferencesProvider. The shell itself (nav, header, legacy
+ * context providers) stays a client component in ./dashboard-shell.tsx.
+ */
 
-import { ReactNode } from 'react';
-import { MathProvider } from '@/app/components/math-provider';
-import Footer from './models/footer'
-import Header from './models/header';
-import Nav from './models/nav';
-import { StudentProvider } from '@/context/StudentContext';
-import { TutorProvider } from '@/context/TutorContext';
-import { LessonProvider } from '@/context/LessonContext';
-import { TestProvider } from '@/context/TestContext';
-import { TestSubmissionProvider } from '@/context/TestSubmissionContext';
-import { SubmissionProvider } from '@/context/SubmissionContext';
-import { SubmissionEntryProvider } from '@/context/SubmissionEntryContext';
-import { GradeProvider } from '@/context/GradeContext';
-import { QuestionGradeProvider } from '@/context/QuestionGradeContext';
-import { LessonCompletionProvider } from '@/context/LessonCompletionContext';
-import { EventProvider } from '@/context/EventContext';
+import type { ReactNode } from "react";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+import { PreferencesProvider } from "@/components/preferences-provider";
+import { getUserPreferences } from "@/features/users/preferences";
+import { auth } from "@/lib/auth";
+import { resolveLocale } from "@/lib/datetime";
+
+import DashboardShell from "./dashboard-shell";
+
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  const session = await auth();
+  const prefs = session?.user ? await getUserPreferences(session.user.id) : null;
+
   return (
-    <MathProvider>
-    <div className="h-full max-h-screen flex flex-col">
-      {/* Layout Container */}
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <Nav />
-
-        {/* Main Content */}
-        <main className="h-screen overflow-y-auto flex-1 flex flex-col bg-background">
-          <Header />
-          <div className="h-full mb-[50vh] max-h-screen bg-background">
-            <StudentProvider>
-            <TutorProvider>
-            <LessonProvider>
-            <TestProvider>
-            <TestSubmissionProvider>
-            <SubmissionProvider>
-            <SubmissionEntryProvider>
-            <GradeProvider>
-            <QuestionGradeProvider>
-            <LessonCompletionProvider>
-            <EventProvider>
-              {children}
-            </EventProvider>
-            </LessonCompletionProvider>
-            </QuestionGradeProvider>
-            </GradeProvider>
-            </SubmissionEntryProvider>
-            </SubmissionProvider>
-            </TestSubmissionProvider>
-            </TestProvider>
-            </LessonProvider>
-            </TutorProvider>
-            </StudentProvider>
-          </div>
-        </main>
-      </div>
-
-      {/* Footer */}
-      <Footer />
-    </div>
-    </MathProvider>
+    <PreferencesProvider
+      value={{
+        timeZone: prefs?.timeZone ?? null,
+        locale: resolveLocale(prefs?.preferredLanguage),
+        darkMode: prefs?.darkMode ?? false,
+        preferredView: prefs?.preferredView ?? "GRID",
+      }}
+    >
+      <DashboardShell>{children}</DashboardShell>
+    </PreferencesProvider>
   );
 }

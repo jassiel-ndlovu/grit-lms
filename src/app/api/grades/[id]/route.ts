@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
 import { $Enums } from "@/generated/prisma";
 
 type Params = { params: Promise<{ id: string }> };
@@ -43,15 +44,16 @@ export async function PUT(req: NextRequest, { params }: Params) {
       ntype = "SUBMISSION_GRADED";
     }
 
-    await prisma.notification.create({
-      data: {
+    await emitNotification(
+      {
         title: "Grade Released",
         message: `You received ${grade.score}/${grade.outOf} for "${grade.title}".`,
         link: url,
         type: ntype,
         studentId: grade.studentId,
       },
-    });
+      { revalidate: false },
+    );
 
     return NextResponse.json(grade);
   } catch (error) {

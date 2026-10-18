@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
@@ -167,21 +168,21 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Create notification if test is active
-      if (data.isActive === true) {
-        await tx.notification.create({
-          data: {
-            title: "New Test Created",
-            message: `A new test "${newTest.title}" has been published.`,
-            link: `/dashboard/tests/${newTest.id}`,
-            type: "TEST_CREATED",
-            courseId: newTest.courseId,
-          },
-        });
-      }
-
       return completeTest;
     }, { timeout: 30000 });
+
+    if (data.isActive === true && result) {
+      await emitNotification(
+        {
+          title: "New Test Created",
+          message: `A new test "${result.title}" has been published.`,
+          link: `/dashboard/tests/${result.id}`,
+          type: "TEST_CREATED",
+          courseId: result.courseId,
+        },
+        { revalidate: false },
+      );
+    }
 
     return NextResponse.json(result);
   } catch (error) {

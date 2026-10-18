@@ -7,7 +7,7 @@
  *   - createStudentUser  — creates User(role=STUDENT) + linked Student row
  *   - resetUserPassword  — overwrites a user's hashed password
  *
- * Both are gated on tutor session. Emails are lower-cased before storage
+ * Both are gated on a tutor or admin session. Emails are lower-cased before storage
  * to keep sign-in matching case-insensitive.
  */
 
@@ -16,10 +16,14 @@
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
+import { after } from "next/server";
+import { z } from "zod";
+
+import { sendVerificationEmail } from "@/features/auth/verification";
 import { prisma } from "@/lib/db";
 import {
   authActionClient,
-  tutorActionClient,
+  staffActionClient,
 } from "@/lib/safe-action";
 
 import {
@@ -41,7 +45,7 @@ function normalizeEmail(email: string): string {
  * If either row already exists for that email, the whole thing rolls back
  * and we return a friendly error.
  */
-export const createStudentUser = tutorActionClient
+export const createStudentUser = staffActionClient
   .schema(CreateStudentUserSchema)
   .action(async ({ parsedInput }) => {
     const email = normalizeEmail(parsedInput.email);
@@ -82,6 +86,14 @@ export const createStudentUser = tutorActionClient
 
     revalidatePath("/dashboard/manage-users");
 
+    // Ask the new student to confirm their address; notification emails
+    // only go to verified addresses. Best-effort, after the response.
+    after(() =>
+      sendVerificationEmail(user.id).then((r) => {
+        if (!r.ok) console.warn("[users] verification email not sent:", r.error);
+      }),
+    );
+
     return { user, student };
   });
 
@@ -89,7 +101,7 @@ export const createStudentUser = tutorActionClient
  * Reset a user's password. Tutor-only; the tutor is trusted to have
  * confirmed the user's identity (e.g. by phone/email out-of-band).
  */
-export const resetUserPassword = tutorActionClient
+export const resetUserPassword = staffActionClient
   .schema(ResetUserPasswordSchema)
   .action(async ({ parsedInput }) => {
     const hashed = await bcrypt.hash(parsedInput.newPassword, BCRYPT_ROUNDS);
@@ -185,24 +197,47 @@ export const changeOwnPassword = authActionClient
 /**
  * Upsert the signed-in user's preferences. Preferences default to Prisma
  * defaults on create; on update only supplied fields are patched.
+ *
+ * Keyed by the session's user id (not email: some legacy accounts have
+ * mixed-case emails, which a lower-cased lookup misses). Revalidates the
+ * whole dashboard layout, which reads theme / zone / locale.
  */
 export const updateOwnPreferences = authActionClient
   .schema(UpdateOwnPreferencesSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const user = await prisma.user.findUnique({
-      where: { email: ctx.session.user.email.toLowerCase() },
-      select: { id: true },
-    });
-    if (!user) throw new Error("Account not found");
+    const userId = ctx.session.user.id;
 
     await prisma.userPreferences.upsert({
-      where: { userId: user.id },
-      // On create we still write timeZone as null so the column is set;
-      // Prisma applies its own defaults for the rest.
-      create: { userId: user.id, timeZone: null, ...parsedInput },
+      where: { userId },
+      create: { userId, ...parsedInput },
       update: parsedInput,
     });
 
-    revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard", "layout");
     return { ok: true };
+  });
+
+/**
+ * (Re)send the signed-in user's verification email. Throttled to one per
+ * minute so the button can't be used to spam an inbox.
+ */
+export const requestEmailVerification = authActionClient
+  .schema(z.object({}))
+  .action(async ({ ctx }) => {
+    const recent = await prisma.emailVerificationToken.findFirst({
+      where: {
+        userId: ctx.session.user.id,
+        createdAt: { gt: new Date(Date.now() - 60_000) },
+      },
+      select: { id: true },
+    });
+    // Results, not throws: safe-action masks thrown messages, and these
+    // are worth showing.
+    if (recent) {
+      return { ok: false as const, error: "A verification email was just sent. Try again in a minute." };
+    }
+
+    const result = await sendVerificationEmail(ctx.session.user.id);
+    if (!result.ok) return { ok: false as const, error: `Couldn't send the email: ${result.error}` };
+    return { ok: true as const };
   });

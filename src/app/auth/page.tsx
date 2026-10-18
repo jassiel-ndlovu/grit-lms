@@ -74,7 +74,7 @@ export default function LoginPage() {
       }
       // Success — show the redirect state until the navigation flushes.
       setPhase("redirecting");
-      router.push("/dashboard");
+      router.push("/dashboard/start");
     } catch (err) {
       console.error(err);
       setError("Something went wrong. Please try again.");

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
+import { eventChangeNotification } from "@/features/events/notify";
 
 type Params = { 
   params: Promise<{ id: string }>
@@ -39,6 +41,7 @@ export async function PUT(
         date: body.date ? new Date(body.date) : undefined,
       },
     });
+    await emitNotification(eventChangeNotification("updated", updated), { revalidate: false });
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json(
@@ -55,7 +58,8 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    await prisma.courseEvent.delete({ where: { id: id } });
+    const deleted = await prisma.courseEvent.delete({ where: { id: id } });
+    await emitNotification(eventChangeNotification("deleted", deleted), { revalidate: false });
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

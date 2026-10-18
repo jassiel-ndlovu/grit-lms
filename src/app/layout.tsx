@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from "@/lib/branding";
+import { themeBootScript } from "@/components/preferences-provider";
 
 /**
  * Inter — body / UI sans.
@@ -60,7 +61,13 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
+      // The theme script and PreferencesProvider set `dark` / `lang` on the
+      // client, so the attributes can legitimately differ from the SSR HTML.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body className="antialiased">
         <Providers>{children}</Providers>
         <Toaster richColors closeButton position="top-right" />

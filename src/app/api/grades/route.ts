@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
 import { $Enums } from "@/generated/prisma";
 
 export async function GET(req: NextRequest) {
@@ -132,15 +133,16 @@ async function createNotificationAndRespond(grade: any) {
     ntype = "SUBMISSION_GRADED";
   }
 
-  await prisma.notification.create({
-    data: {
+  await emitNotification(
+    {
       title: "Grade Released",
       message: `You received ${grade.score}/${grade.outOf} for "${grade.title}".`,
       link: url,
       type: ntype,
       studentId: grade.studentId,
     },
-  });
+    { revalidate: false },
+  );
 
   return NextResponse.json(grade, { status: grade.id ? 200 : 201 });
 }

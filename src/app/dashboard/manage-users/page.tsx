@@ -25,7 +25,7 @@ export const metadata = { title: "Manage users" };
 export default async function ManageUsersPage() {
   const session = await auth();
   if (!session?.user) redirect("/auth");
-  if (session.user.role !== "TUTOR") redirect("/dashboard");
+  if (session.user.role !== "TUTOR" && session.user.role !== "ADMIN") redirect("/dashboard");
 
   const users = await listAllUsers();
   const studentCount = users.filter((u) => u.role === "STUDENT").length;

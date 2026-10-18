@@ -17,6 +17,7 @@ import { listCoursesByTutorId } from "@/features/courses/queries";
 import { listAllStudents } from "@/features/students/queries";
 import { CourseCard } from "@/features/courses/components/course-card";
 import { CourseGrid } from "@/features/courses/components/course-grid";
+import { getUserPreferences } from "@/features/users/preferences";
 import { CourseActions } from "@/features/courses/components/course-actions";
 import { CreateCourseButton } from "@/features/courses/components/create-course-button";
 
@@ -61,6 +62,7 @@ export default async function ManageCoursesPage() {
       </div>
 
       <CourseGrid
+        view={(await getUserPreferences(session.user.id)).preferredView}
         isEmpty={courses.length === 0}
         empty={
           <div className="border-input rounded-lg border border-dashed p-12 text-center">

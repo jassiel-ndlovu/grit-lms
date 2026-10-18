@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { emitNotification } from "@/features/notifications/server";
+import { eventChangeNotification } from "@/features/events/notify";
 
 export async function GET(req: Request) {
   try {
@@ -51,6 +53,8 @@ export async function POST(req: Request) {
         courseId: body.courseId,
       },
     });
+
+    await emitNotification(eventChangeNotification("created", event), { revalidate: false });
 
     return NextResponse.json(event);
   } catch (err) {

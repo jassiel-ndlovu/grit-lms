@@ -15,9 +15,28 @@ model User {
   password  String
   role      Role     @default(STUDENT)
   createdAt DateTime @default(now())
+  // Set once the user clicks the link in their verification email.
+  // Notification emails are only sent to verified addresses.
+  emailVerified DateTime?
 
   preferences UserPreferences?
   activities  ActivityLog[]
+  notifications           Notification[]
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+// One-time email verification links. Only a SHA-256 hash of the token is
+// stored; the raw token lives in the emailed link.
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model UserPreferences {
@@ -35,9 +54,14 @@ model UserPreferences {
   darkMode                Boolean               @default(false)
   preferredLanguage       String                @default("EN")
   timeZone                String?
-  preferredView           PreferredView         @default(LIST)
+  preferredView           PreferredView         @default(GRID)
   studyReminders          Boolean               @default(false)
   defaultDashboardTab     DashboardTab          @default(COURSES)
+  // Tutor-only alerts.
+  notifyOnSubmissions     Boolean               @default(true)
+  notifyOnGradingQueue    Boolean               @default(true)
+  // When the last DAILY/WEEKLY email digest went out.
+  lastDigestSentAt        DateTime?
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -230,7 +254,6 @@ model TestQuestion {
   subQuestions   TestQuestion[] @relation("SubQuestions")
 }
 
-
 model TestSubmission {
   id             String           @id @default(cuid())
   testId         String
@@ -366,9 +389,18 @@ model Notification {
   readAt    DateTime?
   studentId String?
   courseId  String?
+  // The recipient. Every notification emitted since per-user preferences
+  // landed has one row per recipient with userId set; older rows have it
+  // null and are matched by studentId / courseId instead.
+  userId    String?
+  // When this row went out by email (immediately or in a digest).
+  emailedAt DateTime?
 
   course  Course?  @relation(fields: [courseId], references: [id])
   student Student? @relation(fields: [studentId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model ActivityLog {
@@ -398,6 +430,17 @@ enum NotificationType {
   TEST_GRADED
   MESSAGE
   SYSTEM
+  LESSON_UPDATED
+  LESSON_DELETED
+  EVENT_CREATED
+  EVENT_UPDATED
+  EVENT_DELETED
+  // Sent to the tutor when a student hands in work, and to the student as
+  // a receipt.
+  TEST_SUBMITTED
+  SUBMISSION_RECEIVED
+  STUDY_REMINDER
+  GRADING_REMINDER
 }
 
 enum NotificationPriority {
@@ -422,6 +465,7 @@ enum Role {
   STUDENT
   TUTOR
   ADMIN
+  PARENT
 }
 
 enum QuestionType {

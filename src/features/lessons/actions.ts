@@ -132,18 +132,20 @@ export const createLesson = tutorActionClient
     // Fan out to enrolled students via the notifications feature. We pass
     // `revalidate: false` because this action already revalidates
     // /dashboard below — letting emitNotification do it again would be
-    // duplicate work.
-    await emitNotification(
-      {
-        title: "New Lesson Published",
-        message: `Lesson "${created.title}" has been published.`,
-        link: `/dashboard/courses/lessons/${created.courseId}`,
-        type: "LESSON_CREATED",
-        priority: "NORMAL",
-        courseId: created.courseId,
-      },
-      { revalidate: false },
-    );
+    // duplicate work. Group headings have nothing to read, so no alert.
+    if (!isGroup) {
+      await emitNotification(
+        {
+          title: "New Lesson Published",
+          message: `Lesson "${created.title}" has been published.`,
+          link: `/dashboard/courses/lessons/${created.courseId}`,
+          type: "LESSON_CREATED",
+          priority: "NORMAL",
+          courseId: created.courseId,
+        },
+        { revalidate: false },
+      );
+    }
 
     revalidatePath(`/dashboard/manage-courses/lessons/${created.courseId}`);
     revalidatePath(`/dashboard/courses/lessons/${created.courseId}`);
@@ -225,8 +227,27 @@ export const updateLesson = tutorActionClient
     const updated = await prisma.lesson.update({
       where: { id: parsedInput.id },
       data,
-      select: { id: true, courseId: true },
+      select: { id: true, courseId: true, title: true, type: true },
     });
+
+    // Only content edits are news; moving a lesson around the tree isn't.
+    const contentChanged =
+      parsedInput.title !== undefined ||
+      parsedInput.description !== undefined ||
+      parsedInput.videoUrl !== undefined ||
+      parsedInput.attachments !== undefined;
+    if (contentChanged && updated.type !== "NONE") {
+      await emitNotification(
+        {
+          title: "Lesson Updated",
+          message: `Lesson "${updated.title}" has been updated.`,
+          link: `/dashboard/courses/lessons/${updated.courseId}`,
+          type: "LESSON_UPDATED",
+          courseId: updated.courseId,
+        },
+        { revalidate: false },
+      );
+    }
 
     // Best-effort cleanup of orphaned attachment blobs.
     if (parsedInput.attachments !== undefined) {
@@ -290,6 +311,19 @@ export const deleteLesson = tutorActionClient
     // Best-effort cleanup of all attachment blobs.
     if (attachmentUrls.length > 0) {
       await cleanupAttachmentBlobs(attachmentUrls);
+    }
+
+    if (existing.type !== "NONE") {
+      await emitNotification(
+        {
+          title: "Lesson Removed",
+          message: `Lesson "${existing.title}" has been removed.`,
+          link: `/dashboard/courses/lessons/${courseId}`,
+          type: "LESSON_DELETED",
+          courseId,
+        },
+        { revalidate: false },
+      );
     }
 
     revalidatePath(`/dashboard/manage-courses/lessons/${courseId}`);

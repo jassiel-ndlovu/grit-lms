@@ -1,11 +1,14 @@
 /**
  * Typed Server Action clients built on next-safe-action.
  *
- * Three clients are exported:
+ * Clients exported:
  *   - actionClient        — public, no auth required
  *   - authActionClient    — requires a logged-in user (any role)
  *   - tutorActionClient   — requires role === "TUTOR"
  *   - studentActionClient — requires role === "STUDENT"
+ *   - adminActionClient   — requires role === "ADMIN"
+ *   - parentActionClient  — requires role === "PARENT"
+ *   - staffActionClient   — requires role "TUTOR" or "ADMIN"
  *
  * Each client validates input with a Zod schema, runs middleware to attach
  * session context, and returns a typed result the form/page can consume.
@@ -60,6 +63,30 @@ export const tutorActionClient = actionClient.use(async ({ next }) => {
  */
 export const studentActionClient = actionClient.use(async ({ next }) => {
   const session = await requireRole("STUDENT");
+  return next({ ctx: { session } });
+});
+
+/**
+ * Admin-only client — adds `ctx.session` with role asserted to "ADMIN".
+ */
+export const adminActionClient = actionClient.use(async ({ next }) => {
+  const session = await requireRole("ADMIN");
+  return next({ ctx: { session } });
+});
+
+/**
+ * Parent-only client — adds `ctx.session` with role asserted to "PARENT".
+ */
+export const parentActionClient = actionClient.use(async ({ next }) => {
+  const session = await requireRole("PARENT");
+  return next({ ctx: { session } });
+});
+
+/**
+ * Staff client — tutors and admins (e.g. account provisioning).
+ */
+export const staffActionClient = actionClient.use(async ({ next }) => {
+  const session = await requireRole("TUTOR", "ADMIN");
   return next({ ctx: { session } });
 });
 
