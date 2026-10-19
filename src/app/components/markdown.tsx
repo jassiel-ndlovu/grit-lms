@@ -11,7 +11,9 @@
  *   DOM changes.
  * - `\(…\)` / `\[…\]` are normalised to `$…$` / `$$…$$` before parsing.
  *   CommonMark would otherwise eat the backslash as an escape and MathJax
- *   would never see a delimiter — see lib/tex-delimiters.ts.
+ *   would never see a delimiter. The same pass escapes maths bodies so
+ *   markdown hands them to MathJax verbatim (`\\` row breaks, `_`, `*`) —
+ *   see lib/tex-delimiters.ts.
  * - Inline code = no language fence + no inner newlines. react-markdown v10
  *   dropped the `inline` prop; we infer it ourselves.
  */

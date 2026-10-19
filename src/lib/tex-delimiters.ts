@@ -13,8 +13,8 @@
  * told the paren form works, and there is content in the database using it.
  *
  * So we rewrite the delimiters in the source string *before* markdown parses
- * it, handing MathJax the dollar form that is already known to work. We do
- * not touch `$…$` / `$$…$$` themselves.
+ * it, handing MathJax the dollar form that is already known to work. The
+ * `$…$` / `$$…$$` delimiters themselves are left as they are.
  *
  * The `\[…\]` ambiguity
  * ---------------------
@@ -31,12 +31,34 @@
  *
  * `\(…\)` needs no such rule: `(` carries no meaning in markdown, so nobody
  * escapes it, and every occurrence in practice is maths.
+ *
+ * Maths bodies must reach MathJax verbatim
+ * ----------------------------------------
+ * Rewriting the delimiters is only half of it. Markdown still parses the
+ * text *inside* `$…$`: `\\` (a LaTeX row break) is an escaped backslash and
+ * comes out as one `\`, so matrices, `aligned` and `cases` collapse onto a
+ * single row; `_` and `*` pairs become emphasis; `\{` loses its backslash.
+ *
+ * So every maths body is emitted with each ASCII punctuation character
+ * backslash-escaped. CommonMark turns `\<punct>` back into the bare
+ * character, and an escaped character can't open emphasis, a link, a table
+ * cell or anything else — markdown hands the body back exactly as written.
+ *
+ * A `\$` outside maths is an author's literal dollar. Markdown would strip
+ * the backslash and leave MathJax a bare `$` to pair up, so it is emitted as
+ * `\\\$`, which markdown turns back into the `\$` MathJax treats as literal.
  */
 
+/** Offsets the delimiter rewrite must not touch, by what they are. */
+const CODE = 1;
+const MATH_DELIMITER = 2;
+const MATH_BODY = 3;
+
 /**
- * Mark every offset we must leave untouched: fenced code blocks, inline code
- * spans, and existing `$…$` / `$$…$$` maths. A flat mask rather than a list
- * of ranges, so the scan below can test any offset in constant time.
+ * Classify every offset we must leave alone: fenced code blocks, inline code
+ * spans, and existing `$…$` / `$$…$$` maths (delimiters and body marked
+ * apart, since the body gets escaped). A flat mask rather than a list of
+ * ranges, so the scan below can test any offset in constant time.
  *
  * Indented (four-space) code blocks are not detected — telling one apart
  * from a wrapped list item needs a full block parse. Fenced code is the form
@@ -44,7 +66,7 @@
  */
 function protectedMask(src: string): Uint8Array {
   const mask = new Uint8Array(src.length);
-  const mark = (start: number, end: number) => mask.fill(1, start, end);
+  const mark = (start: number, end: number) => mask.fill(CODE, start, end);
   let i = 0;
 
   while (i < src.length) {
@@ -73,12 +95,15 @@ function protectedMask(src: string): Uint8Array {
       }
     }
 
-    // Existing maths — leave the dollar forms exactly as they are.
-    if (ch === "$") {
+    // Existing maths — keep the dollar delimiters, escape the body later.
+    // An escaped `\$` is a literal dollar, both to open and to close.
+    if (ch === "$" && !isEscaped(src, i)) {
       const run = Math.min(runLength(src, i, "$"), 2);
-      const close = src.indexOf("$".repeat(run), i + run);
+      const close = findClosingDollar(src, i + run, run);
       if (close !== -1 && !hasBlankLine(src, i, close)) {
-        mark(i, close + run);
+        mask.fill(MATH_DELIMITER, i, i + run);
+        mask.fill(MATH_BODY, i + run, close);
+        mask.fill(MATH_DELIMITER, close, close + run);
         i = close + run;
         continue;
       }
@@ -121,6 +146,29 @@ function findClosingFence(
   return from + m.index + m[0].length;
 }
 
+/** True when an odd run of backslashes sits right before offset `i`. */
+function isEscaped(src: string, i: number): boolean {
+  let n = 0;
+  while (src[i - 1 - n] === "\\") n++;
+  return n % 2 === 1;
+}
+
+function findClosingDollar(src: string, from: number, run: number): number {
+  const closer = "$".repeat(run);
+  for (let j = src.indexOf(closer, from); j !== -1; j = src.indexOf(closer, j + 1)) {
+    if (!isEscaped(src, j)) return j;
+  }
+  return -1;
+}
+
+/**
+ * Backslash-escape every ASCII punctuation character, so markdown parses a
+ * maths body back to exactly these characters (see the header comment).
+ */
+function escapeMathBody(body: string): string {
+  return body.replace(/[!-/:-@[-`{-~]/g, "\\$&");
+}
+
 function hasBlankLine(src: string, start: number, end: number): boolean {
   return /\n[ \t]*\n/.test(src.slice(start, end));
 }
@@ -135,15 +183,33 @@ function isEscapedBracket(body: string): boolean {
 }
 
 export function normalizeTexDelimiters(src: string): string {
-  if (!src || (!src.includes("\\(") && !src.includes("\\["))) return src;
+  if (
+    !src ||
+    (!src.includes("$") && !src.includes("\\(") && !src.includes("\\["))
+  ) {
+    return src;
+  }
 
   const mask = protectedMask(src);
-  const isProtected = (i: number) => mask[i] === 1;
+  const isProtected = (i: number) => mask[i] !== 0;
 
   let out = "";
   let i = 0;
 
   while (i < src.length) {
+    if (mask[i] === MATH_BODY) {
+      out += escapeMathBody(src[i]);
+      i++;
+      continue;
+    }
+
+    // A literal `\$` in prose — its backslash is already in `out`.
+    if (src[i] === "$" && !isProtected(i) && isEscaped(src, i)) {
+      out += "\\\\$";
+      i++;
+      continue;
+    }
+
     const two = src.slice(i, i + 2);
     const open = two === "\\(" ? "(" : two === "\\[" ? "[" : null;
 
@@ -190,7 +256,7 @@ export function normalizeTexDelimiters(src: string): string {
     }
 
     const dollar = open === "(" ? "$" : "$$";
-    out += `${dollar}${body}${dollar}`;
+    out += `${dollar}${escapeMathBody(body)}${dollar}`;
     i = close + 2;
   }
 
