@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { MobileCollapsible } from "@/components/mobile-collapsible";
 
 import { getCourseDetailById } from "@/features/courses/queries";
 import {
@@ -117,7 +118,7 @@ export default async function CourseLessonsPage({
       : null;
 
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-6 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-6 px-4 sm:px-6 py-6 sm:py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
       {/* Sidebar — sticky at the top of the viewport (with its own overflow)
           so long lesson bodies never orphan the lesson list. The height cap
           gives the internal <ul> room to scroll while the back-button and
@@ -150,15 +151,18 @@ export default async function CourseLessonsPage({
             />
           </div>
         </div>
-        <Separator />
-        <LessonSidebar
-          courseId={courseId}
-          lessons={lessons}
-          selectedLessonId={selectedLessonId}
-          mode="student"
-          labelScheme={course.lessonLabelScheme}
-          completedLessonIds={completedIds}
-        />
+        <Separator className="hidden lg:block" />
+        {/* Collapsed on phones so the lesson itself comes first. */}
+        <MobileCollapsible label={`All lessons (${total})`}>
+          <LessonSidebar
+            courseId={courseId}
+            lessons={lessons}
+            selectedLessonId={selectedLessonId}
+            mode="student"
+            labelScheme={course.lessonLabelScheme}
+            completedLessonIds={completedIds}
+          />
+        </MobileCollapsible>
       </aside>
 
       {/* Main pane */}
@@ -167,8 +171,10 @@ export default async function CourseLessonsPage({
           <>
             {/* Sticky lesson header — badge, title, prev/next, mark-complete.
                 Stays pinned as the student reads through long lessons. The
-                backdrop keeps it legible over content that scrolls under it. */}
-            <div className="bg-background/95 sticky top-20 z-20 -mx-1 space-y-3 px-1 pt-2 pb-3 backdrop-blur">
+                backdrop keeps it legible over content that scrolls under it.
+                Desktop only: on a phone this block is a third of the screen,
+                so it scrolls away with the page instead. */}
+            <div className="bg-background/95 -mx-1 space-y-3 px-1 pt-2 pb-3 backdrop-blur lg:sticky lg:top-20 lg:z-20">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">
                   Lesson {selectedLabel ?? selectedIndex + 1} · {selectedIndex + 1} of {total}
@@ -180,7 +186,7 @@ export default async function CourseLessonsPage({
                   </span>
                 )}
               </div>
-              <h2 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+              <h2 className="font-display text-2xl leading-tight sm:text-3xl tracking-tight text-foreground">
                 {selectedLesson.title}
               </h2>
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -227,7 +233,7 @@ export default async function CourseLessonsPage({
             <LessonContent lesson={selectedLesson} />
           </>
         ) : (
-          <Card className="flex min-h-[400px] flex-col items-center justify-center gap-3 p-12 text-center">
+          <Card className="flex min-h-[400px] flex-col items-center justify-center gap-3 p-8 sm:p-12 text-center">
             <h3 className="text-base font-medium">No lessons yet</h3>
             <p className="text-muted-foreground max-w-sm text-sm">
               Your tutor hasn&apos;t published any lessons for this course yet.

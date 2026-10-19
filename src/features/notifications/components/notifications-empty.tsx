@@ -14,7 +14,7 @@ export interface NotificationsEmptyProps {
 
 export function NotificationsEmpty({ unreadOnly }: NotificationsEmptyProps) {
   return (
-    <Card className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-12 text-center">
+    <Card className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-8 sm:p-12 text-center">
       <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
         <Bell className="size-6" />
       </div>

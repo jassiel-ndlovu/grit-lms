@@ -106,7 +106,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     const grade = entry?.grade ?? null;
 
     return (
-      <div className="mx-auto max-w-3xl space-y-6 px-6 py-10">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/courses/${submission.courseId}`}>
             ← Back to course
@@ -117,7 +117,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
           <p className="text-muted-foreground text-xs">
             {submission.course.name} · with {submission.course.tutor.fullName}
           </p>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             {submission.title}
           </h1>
           <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -198,7 +198,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
           </div>
 
           {graded && grade && (
-            <div className="bg-brand-terracotta/8 border-brand-terracotta/30 flex items-center justify-between rounded-md border p-4">
+            <div className="bg-brand-terracotta/8 border-brand-terracotta/30 flex flex-wrap items-center justify-between gap-3 rounded-md border p-4">
               <div className="flex items-center gap-3">
                 <div className="bg-brand-terracotta/15 text-brand-terracotta flex size-10 items-center justify-center rounded-md">
                   <GraduationCap className="size-5" />
@@ -382,7 +382,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     const entries = await listEntriesForSubmission(submission.id);
 
     return (
-      <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/dashboard/submissions">
             ← Back to assignments
@@ -393,7 +393,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
           <p className="text-muted-foreground text-xs">
             {submission.course.name}
           </p>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             {submission.title}
           </h1>
           <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
@@ -420,7 +420,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
           </div>
           <Separator />
           {entries.length === 0 ? (
-            <div className="text-muted-foreground p-12 text-center text-sm">
+            <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">
               No submissions yet.
             </div>
           ) : (

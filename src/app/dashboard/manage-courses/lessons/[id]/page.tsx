@@ -122,7 +122,7 @@ export default async function ManageLessonsPage({
   const nextTopOrder = tree.length;
 
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-6 px-6 py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-6 px-4 sm:px-6 py-6 sm:py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
       {/* Sidebar — sticky + independently scrollable so it stays visible
           while editing long lesson bodies on the right. */}
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
@@ -219,7 +219,7 @@ function EmptyEditorState({
   totalLessons: number;
 }) {
   return (
-    <Card className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-12 text-center">
+    <Card className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-8 sm:p-12 text-center">
       <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
         <BookOpenText className="size-6" />
       </div>

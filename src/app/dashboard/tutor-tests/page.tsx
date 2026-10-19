@@ -60,10 +60,10 @@ export default async function TutorTestsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
+    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             Tests &amp; grading
           </h1>
           <p className="text-muted-foreground mt-1.5 text-sm">
@@ -83,7 +83,7 @@ export default async function TutorTestsPage() {
       </header>
 
       {rows.length === 0 ? (
-        <Card className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-12 text-center">
+        <Card className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-8 sm:p-12 text-center">
           <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
             <Target className="size-6" />
           </div>

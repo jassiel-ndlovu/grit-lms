@@ -85,9 +85,9 @@ export default async function TestRunnerPage({ params }: PageProps) {
       : {};
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background">
       <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex h-14 items-center">
             <Button asChild variant="ghost" size="sm" className="-ml-2">
               <Link href={`/dashboard/courses/${test.courseId}`}>
@@ -98,7 +98,7 @@ export default async function TestRunnerPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
         <TestRunner
           testId={test.id}
           submissionId={submission.id}

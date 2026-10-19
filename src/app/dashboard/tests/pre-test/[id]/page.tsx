@@ -89,9 +89,9 @@ export default async function PreTestPage({ params }: PageProps) {
   const topQuestionCount = test.questions.filter((q) => q.parentId === null).length;
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background">
       <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-3xl px-6">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
           <div className="flex h-14 items-center">
             <Button asChild variant="ghost" size="sm" className="-ml-2">
               <Link href={`/dashboard/courses/${test.courseId}`}>
@@ -102,12 +102,12 @@ export default async function PreTestPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl space-y-6 px-6 py-10">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
         <header className="space-y-2">
           <p className="text-muted-foreground text-xs">
             {test.course.name} - with {test.course.tutor.fullName}
           </p>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             {test.title}
           </h1>
           {test.description && (

@@ -1,8 +1,7 @@
 "use client"
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { MathProvider } from '@/app/components/math-provider';
-import Footer from './models/footer'
 import Header from './models/header';
 import Nav from './models/nav';
 import { StudentProvider } from '@/context/StudentContext';
@@ -17,19 +16,30 @@ import { QuestionGradeProvider } from '@/context/QuestionGradeContext';
 import { LessonCompletionProvider } from '@/context/LessonCompletionContext';
 import { EventProvider } from '@/context/EventContext';
 
+/*
+ * Layout notes:
+ *   - The document (window) is the only vertical scroller. `main` used to be
+ *     its own `h-screen overflow-y-auto` box, which Next's route-change
+ *     scroll reset doesn't handle: it resets `<html>` (a no-op there) and
+ *     skips scrolling when the new page's first element is already in the
+ *     viewport, so a short page kept the long page's offset.
+ *   - The sidebar is sticky beside the content on lg+, and a drawer opened
+ *     from the header below that.
+ *   - No page footer — its content lives at the foot of the nav.
+ */
 export default function DashboardShell({ children }: { children: ReactNode }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <MathProvider>
-    <div className="h-full max-h-screen flex flex-col">
-      {/* Layout Container */}
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <Nav />
+    <div className="flex min-h-screen bg-background">
+      <Nav mobileOpen={menuOpen} onMobileOpenChange={setMenuOpen} />
 
-        {/* Main Content */}
-        <main className="h-screen overflow-y-auto flex-1 flex flex-col bg-background">
-          <Header />
-          <div className="h-full mb-[50vh] max-h-screen bg-background">
+      {/* min-w-0 lets wide children (tables, code) scroll inside themselves
+          instead of widening the page past the viewport. */}
+      <main className="flex min-w-0 flex-1 flex-col bg-background">
+        <Header onOpenMenu={() => setMenuOpen(true)} />
+          <div className="flex-1 pb-12">
             <StudentProvider>
             <TutorProvider>
             <LessonProvider>
@@ -54,11 +64,7 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
             </TutorProvider>
             </StudentProvider>
           </div>
-        </main>
-      </div>
-
-      {/* Footer */}
-      <Footer />
+      </main>
     </div>
     </MathProvider>
   );

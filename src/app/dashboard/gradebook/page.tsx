@@ -37,9 +37,9 @@ export default async function GradebookIndexPage() {
   const courses = await listGradebookCoursesForTutor(tutor.id);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-6 py-10">
+    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <header>
-        <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+        <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
           Gradebook
         </h1>
         <p className="text-muted-foreground mt-1.5 text-sm">
@@ -48,7 +48,7 @@ export default async function GradebookIndexPage() {
       </header>
 
       {courses.length === 0 ? (
-        <Card className="p-12 text-center">
+        <Card className="p-8 sm:p-12 text-center">
           <BookOpen className="text-muted-foreground mx-auto size-10" />
           <h2 className="font-display mt-3 text-lg text-foreground">
             No courses yet

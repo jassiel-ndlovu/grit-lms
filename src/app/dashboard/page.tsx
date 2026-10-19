@@ -181,14 +181,14 @@ export default async function DashboardLanding() {
   const greeting = greetingFor(new Date(), dateCtx.timeZone);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
+    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground rounded-lg overflow-hidden">
-        <div className="flex flex-col gap-6 p-8 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-primary-foreground/70 text-sm">
               {greeting}, {firstName}.
             </p>
-            <h1 className="font-display mt-1 text-4xl leading-tight tracking-tight">
+            <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
               Welcome back to your studies.
             </h1>
             <p className="text-primary-foreground/70 mt-3 max-w-xl text-sm">
@@ -197,7 +197,7 @@ export default async function DashboardLanding() {
                 : `${courses.length} ${courses.length === 1 ? "course" : "courses"} in motion. ${completedLessons} ${completedLessons === 1 ? "lesson" : "lessons"} completed.`}
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-4 md:grid-cols-3 md:gap-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
             <HeroStat icon={<TrendingUp className="size-4" />} label="Progress" value={`${averageProgress}%`} />
             <HeroStat icon={<Target className="size-4" />} label="Up next" value={String(upNext.length)} />
             <HeroStat icon={<GraduationCap className="size-4" />} label="Average" value={overall != null ? `${overall}%` : "-"} />
@@ -247,14 +247,14 @@ export default async function DashboardLanding() {
           <SectionHeader title="Up next" href="/dashboard/calendar" label="View schedule" />
           <Card className="overflow-hidden p-0">
             {upNext.length === 0 ? (
-              <div className="text-muted-foreground p-12 text-center text-sm">Nothing pending. Take a deep breath.</div>
+              <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">Nothing pending. Take a deep breath.</div>
             ) : (
               <ul className="divide-border divide-y">
                 {upNext.map((item) => {
                   const Icon = item.kind === "test" ? Pencil : item.kind === "assignment" ? Hourglass : CalendarDays;
                   return (
                     <li key={`${item.kind}-${item.id}`}>
-                      <Link href={item.href} className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 transition-colors">
+                      <Link href={item.href} className="hover:bg-muted/40 flex items-center gap-3 px-4 py-3 sm:px-5 transition-colors">
                         <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
                           <Icon className="size-4" />
                         </div>
@@ -278,7 +278,7 @@ export default async function DashboardLanding() {
           <SectionHeader title="Recent grades" href="/dashboard/grades" label="All grades" />
           <Card className="overflow-hidden p-0">
             {recentGrades.length === 0 ? (
-              <div className="text-muted-foreground p-12 text-center text-sm">No grades released yet.</div>
+              <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">No grades released yet.</div>
             ) : (
               <ul className="divide-border divide-y">
                 {recentGrades.map((g) => {
@@ -286,7 +286,7 @@ export default async function DashboardLanding() {
                   const linkedTitle = g.testSubmission?.test.title ?? g.submissionEntry?.submission.title ?? g.title;
                   const href = `/dashboard/grades/${g.id}`;
                   const Row = (
-                    <div className="flex items-center gap-3 px-5 py-3">
+                    <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
                       <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
                         <GraduationCap className="size-4" />
                       </div>
@@ -295,7 +295,7 @@ export default async function DashboardLanding() {
                         <p className="text-muted-foreground truncate text-xs">{g.course.name}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <Badge variant={itemPct >= 50 ? "soft" : "secondary"} className="tabular-nums">{itemPct}%</Badge>
+                        <Badge variant={itemPct >= 50 ? "soft" : "secondary"} className="hidden tabular-nums sm:inline-flex">{itemPct}%</Badge>
                         <span className="font-display tabular-nums text-foreground text-sm">
                           {g.score}<span className="text-muted-foreground"> / {g.outOf}</span>
                         </span>
@@ -319,12 +319,12 @@ export default async function DashboardLanding() {
 
 function HeroStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="bg-primary-foreground/8 backdrop-blur-sm rounded-lg p-3 border border-primary-foreground/15">
-      <div className="text-primary-foreground/70 flex items-center gap-1.5 text-xs">
+    <div className="bg-primary-foreground/8 backdrop-blur-sm min-w-0 rounded-lg p-2.5 border border-primary-foreground/15 sm:p-3">
+      <div className="text-primary-foreground/70 flex min-w-0 items-center gap-1.5 truncate text-xs">
         {icon}
         {label}
       </div>
-      <p className="font-display mt-1 text-2xl tabular-nums">{value}</p>
+      <p className="font-display mt-1 text-xl tabular-nums sm:text-2xl">{value}</p>
     </div>
   );
 }
@@ -345,9 +345,9 @@ function SectionHeader({ title, href, label }: { title: string; href: string; la
 
 function TutorDashboard() {
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-6 py-10">
+    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <header>
-        <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">Welcome back, tutor.</h1>
+        <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">Welcome back, tutor.</h1>
         <p className="text-muted-foreground mt-1.5 text-sm">Manage your courses, schedule, and assessments from one place.</p>
       </header>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

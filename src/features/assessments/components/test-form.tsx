@@ -589,7 +589,7 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
 
       {/* ───── Sticky save bar ───── */}
       <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4">
           <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">
               {questions.length} question{questions.length === 1 ? "" : "s"} · {" "}

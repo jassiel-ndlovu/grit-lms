@@ -113,13 +113,13 @@ export default async function TestReviewPage({ params }: PageProps) {
   if (!test) notFound();
   if (!submission) {
     return (
-      <div className="mx-auto max-w-3xl px-6 py-10">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/courses/${test.courseId}`}>
             <ArrowLeft className="size-4" /> Back to course
           </Link>
         </Button>
-        <Card className="mt-6 p-12 text-center">
+        <Card className="mt-6 p-8 sm:p-12 text-center">
           <h1 className="font-display text-2xl text-foreground">
             No submission yet
           </h1>
@@ -202,7 +202,7 @@ export default async function TestReviewPage({ params }: PageProps) {
   const canSeeGrades = releaseAutoMarks || graded;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
+    <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
       <Button asChild variant="ghost" size="sm" className="-ml-2">
         <Link href={`/dashboard/courses/${test.courseId}`}>
           <ArrowLeft className="size-4" /> Back to course
@@ -215,7 +215,7 @@ export default async function TestReviewPage({ params }: PageProps) {
           {test.course.name} · with {test.course.tutor.fullName}
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             {test.title}
           </h1>
           <Badge
@@ -360,7 +360,7 @@ export default async function TestReviewPage({ params }: PageProps) {
         <Separator />
         <ol className="divide-border divide-y">
           {topQuestions.map((q, i) => (
-            <li key={q.id} className="px-5 py-5">
+            <li key={q.id} className="px-4 py-5 sm:px-5">
               <ReviewNode
                 q={q}
                 path={labels.get(q.id) ?? String(i + 1)}
@@ -487,8 +487,10 @@ function ReviewNode({
   const children = byParent.get(q.id) ?? [];
 
   return (
-    <div className={cn("space-y-3 border-l-4 pl-4", toneBorder)}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={cn("space-y-3 border-l-4 pl-3 sm:pl-4", toneBorder)}>
+      {/* On phones the status pill + score sit above the question rather
+          than beside it, so the question text keeps the full width. */}
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-muted-foreground text-xs font-medium tabular-nums">
             {isContext ? `Context ${path}` : `Question ${path} · ${q.points} ${q.points === 1 ? "point" : "points"}`}
@@ -497,7 +499,7 @@ function ReviewNode({
             <LessonMarkdown content={q.question} className="prose-sm" />
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex shrink-0 items-center gap-3 empty:hidden">
           {canSeeGrades && !isContext && (
             <span
               className={cn(

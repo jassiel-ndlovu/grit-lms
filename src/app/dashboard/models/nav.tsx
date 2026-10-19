@@ -18,6 +18,9 @@
  * Behaviour preserved:
  *   - Active-item detection by longest path prefix (handles nested routes).
  *   - Collapse / expand toggle, bottom utility items, and the sign-out tile.
+ *
+ * Small screens get the same panel as a drawer opened from the header's
+ * hamburger; the old page footer's content now sits at the panel's foot.
  */
 
 "use client";
@@ -28,8 +31,10 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Award,
   BarChart3,
@@ -43,17 +48,21 @@ import {
   HelpCircle,
   Home,
   LogOut,
+  Mail,
+  MapPin,
   PenTool,
+  Phone,
   Settings,
   User,
   UserCog,
   Wrench,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
 import { useProfile } from "@/context/ProfileContext";
 import Skeleton from "../components/skeleton";
-import { APP_SHORT_NAME } from "@/lib/branding";
+import { APP_CONTACT, APP_LEGAL_NAME, APP_SHORT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -112,6 +121,11 @@ const BOTTOM_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { icon: HelpCircle, label: "Help", link: "/dashboard/help", description: "FAQs & contact" },
 ];
 
+/** Every page in a role's nav — the header search matches these locally. */
+export function navPagesForRole(role: string | undefined): ReadonlyArray<NavItem> {
+  return [...(NAV_ITEMS_BY_ROLE[role ?? "STUDENT"] ?? STUDENT_NAV_ITEMS), ...BOTTOM_NAV_ITEMS];
+}
+
 /**
  * Resolve the active nav item from the current pathname using a
  * longest-prefix match across both lists. Lifted out as a pure helper so
@@ -140,12 +154,87 @@ function findActiveLabel(
   return best?.label ?? null;
 }
 
-export default function Nav() {
+interface NavProps {
+  /** Mobile drawer state — owned by the shell so the header can open it. */
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
+}
+
+/**
+ * Two renderings of one panel:
+ *   - lg and up: a sticky, full-height sidebar beside the content.
+ *   - below lg: nothing in the flow at all. The header's hamburger opens the
+ *     same panel as a left-hand drawer over the page, so content keeps the
+ *     full width of a phone.
+ */
+export default function Nav({ mobileOpen, onMobileOpenChange }: NavProps) {
+  const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Close the drawer once the route actually changes, so it doesn't vanish
+  // before the next page has started loading.
+  useEffect(() => {
+    onMobileOpenChange(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  return (
+    <>
+      <nav
+        aria-label="Main"
+        className={cn(
+          "sticky top-0 z-30 hidden h-screen shrink-0 flex-col lg:flex",
+          "border-r border-border bg-sidebar text-sidebar-foreground",
+          "transition-[width] duration-200 ease-out",
+          isCollapsed ? "w-20" : "w-72",
+        )}
+      >
+        <NavPanel
+          collapsed={isCollapsed}
+          onToggleCollapsed={() => setIsCollapsed((c) => !c)}
+        />
+      </nav>
+
+      <DialogPrimitive.Root open={mobileOpen} onOpenChange={onMobileOpenChange}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/40 lg:hidden" />
+          <DialogPrimitive.Content
+            aria-describedby={undefined}
+            className={cn(
+              "fixed inset-y-0 left-0 z-50 flex w-[min(20rem,85vw)] flex-col lg:hidden",
+              "border-r border-border bg-sidebar text-sidebar-foreground shadow-xl",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left duration-200",
+            )}
+          >
+            <DialogPrimitive.Title className="sr-only">Menu</DialogPrimitive.Title>
+            <NavPanel
+              collapsed={false}
+              onClose={() => onMobileOpenChange(false)}
+            />
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/* NavPanel                                                                   */
+/* ------------------------------------------------------------------------- */
+
+interface NavPanelProps {
+  collapsed: boolean;
+  /** Desktop: collapse/expand toggle. */
+  onToggleCollapsed?: () => void;
+  /** Mobile drawer: close button. */
+  onClose?: () => void;
+}
+
+function NavPanel({ collapsed, onToggleCollapsed, onClose }: NavPanelProps) {
   const { session, profile } = useProfile();
   const pathname = usePathname();
   const router = useRouter();
-
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = useMemo(
     () => NAV_ITEMS_BY_ROLE[session?.user.role ?? "STUDENT"] ?? STUDENT_NAV_ITEMS,
@@ -167,18 +256,16 @@ export default function Nav() {
     recomputeActive();
   }, [recomputeActive]);
 
+  const go = (item: NavItem) => {
+    setActiveLabel(item.label);
+    router.push(item.link);
+  };
+
   return (
-    <nav
-      className={cn(
-        "sticky top-0 z-30 flex h-screen flex-col overflow-y-auto",
-        "border-r border-border bg-sidebar text-sidebar-foreground",
-        "transition-[width] duration-200 ease-out",
-        isCollapsed ? "w-20" : "w-72",
-      )}
-    >
-      {/* Wordmark + collapse */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-5">
-        {!isCollapsed && (
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Wordmark + collapse / close */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-4">
+        {!collapsed && (
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <GraduationCap className="h-5 w-5" />
@@ -196,104 +283,172 @@ export default function Nav() {
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={() => setIsCollapsed((c) => !c)}
-          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggleCollapsed}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
+        )}
       </div>
 
-      {/* Primary nav */}
-      <div className="flex-1 overflow-y-auto px-3 py-4">
-        <ul className="flex flex-col gap-1">
-          {navItems.map((item) => (
-            <NavRow
-              key={item.label}
-              item={item}
-              active={activeLabel === item.label}
-              collapsed={isCollapsed}
-              onClick={() => {
-                setActiveLabel(item.label);
-                router.push(item.link);
-              }}
-            />
-          ))}
-        </ul>
-      </div>
+      {/* Everything below the wordmark scrolls as one column, so the footer
+          is reachable on short screens instead of being squeezed out. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {/* Primary nav */}
+        <div className="px-3 py-4">
+          <ul className="flex flex-col gap-1">
+            {navItems.map((item) => (
+              <NavRow
+                key={item.label}
+                item={item}
+                active={activeLabel === item.label}
+                collapsed={collapsed}
+                onClick={() => go(item)}
+              />
+            ))}
+          </ul>
+        </div>
 
-      {/* Utility nav + sign out */}
-      <div className="mt-auto border-t border-border px-3 py-3">
-        <ul className="flex flex-col gap-1">
-          {BOTTOM_NAV_ITEMS.map((item) => (
-            <NavRow
-              key={item.label}
-              item={item}
-              active={activeLabel === item.label}
-              collapsed={isCollapsed}
-              onClick={() => {
-                setActiveLabel(item.label);
-                router.push(item.link);
-              }}
-            />
-          ))}
-        </ul>
+        {/* Utility nav + sign out */}
+        <div className="mt-auto border-t border-border px-3 py-3">
+          <ul className="flex flex-col gap-1">
+            {BOTTOM_NAV_ITEMS.map((item) => (
+              <NavRow
+                key={item.label}
+                item={item}
+                active={activeLabel === item.label}
+                collapsed={collapsed}
+                onClick={() => go(item)}
+              />
+            ))}
+          </ul>
 
-        <div className="mt-3 border-t border-border pt-3">
-          {profile ? (
-            <button
-              type="button"
-              onClick={() => signOut()}
-              className={cn(
-                "group flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors",
-                "hover:bg-muted",
-                isCollapsed && "justify-center",
-              )}
-              aria-label="Sign out"
-            >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground text-sm font-medium">
-                {profile.fullName?.charAt(0).toUpperCase() ?? "U"}
-              </div>
-              {!isCollapsed && (
-                <>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {profile.fullName}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {profile.email}
-                    </p>
-                  </div>
-                  <LogOut className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-destructive" />
-                </>
-              )}
-            </button>
-          ) : (
-            <div
-              className={cn(
-                "flex items-center gap-3 p-2",
-                isCollapsed && "justify-center",
-              )}
-            >
-              <Skeleton className="h-9 w-9 rounded-md" />
-              {!isCollapsed && (
-                <div className="flex-1">
-                  <Skeleton className="mb-1 h-3 w-24" />
-                  <Skeleton className="h-3 w-32" />
+          <div className="mt-3 border-t border-border pt-3">
+            {profile ? (
+              <button
+                type="button"
+                onClick={() => signOut()}
+                className={cn(
+                  "group flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors",
+                  "hover:bg-muted",
+                  collapsed && "justify-center",
+                )}
+                aria-label="Sign out"
+                title={collapsed ? "Sign out" : undefined}
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground text-sm font-medium">
+                  {profile.fullName?.charAt(0).toUpperCase() ?? "U"}
                 </div>
-              )}
-            </div>
-          )}
+                {!collapsed && (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {profile.fullName}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {profile.email}
+                      </p>
+                    </div>
+                    <LogOut className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-destructive" />
+                  </>
+                )}
+              </button>
+            ) : (
+              <div
+                className={cn(
+                  "flex items-center gap-3 p-2",
+                  collapsed && "justify-center",
+                )}
+              >
+                <Skeleton className="h-9 w-9 rounded-md" />
+                {!collapsed && (
+                  <div className="flex-1">
+                    <Skeleton className="mb-1 h-3 w-24" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* What used to be the sticky page footer. */}
+          {!collapsed && <NavFooter />}
         </div>
       </div>
-    </nav>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/* NavFooter                                                                  */
+/* ------------------------------------------------------------------------- */
+
+const FOOTER_LINKS = [
+  { href: "/privacy-policy", label: "Privacy" },
+  { href: "/terms-of-service", label: "Terms" },
+] as const;
+
+/**
+ * Contact, legal links and copyright. These lived in a page footer below
+ * the content; folding them into the sidebar keeps them one tap away
+ * without a footer that appears every time you over-scroll.
+ */
+function NavFooter() {
+  const year = new Date().getFullYear();
+  return (
+    <footer className="mt-3 space-y-2 border-t border-border px-2 pt-3 text-xs text-muted-foreground">
+      <ul className="space-y-1.5">
+        <li className="flex min-w-0 items-center gap-1.5">
+          <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <a
+            href={`mailto:${APP_CONTACT.email}`}
+            className="truncate transition-colors hover:text-foreground"
+          >
+            {APP_CONTACT.email}
+          </a>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>{APP_CONTACT.phone}</span>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>{APP_CONTACT.location}</span>
+        </li>
+      </ul>
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {FOOTER_LINKS.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="transition-colors hover:text-foreground"
+          >
+            {link.label}
+          </Link>
+        ))}
+        <span className="text-muted-foreground/70">
+          &copy; {year} {APP_LEGAL_NAME}
+        </span>
+      </p>
+    </footer>
   );
 }
 

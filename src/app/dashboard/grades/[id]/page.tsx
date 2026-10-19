@@ -88,10 +88,10 @@ export default async function GradeDetailPage({ params }: PageProps) {
   const isTest = grade.testSubmission !== null;
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background">
       {/* ───── Header bar ───── */}
       <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-4xl px-6">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <div className="flex h-14 items-center">
             <Button asChild variant="ghost" size="sm" className="-ml-2">
               <Link href="/dashboard/grades">
@@ -102,7 +102,7 @@ export default async function GradeDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
         {/* ───── Hero ───── */}
         <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -114,7 +114,7 @@ export default async function GradeDetailPage({ params }: PageProps) {
               {isTest ? "Test" : "Assignment"}
             </Badge>
           </div>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             {grade.title}
           </h1>
           <p className="text-muted-foreground text-xs">

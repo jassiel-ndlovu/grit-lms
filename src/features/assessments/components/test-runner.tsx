@@ -38,7 +38,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Circle, Eye, Loader2, Save, Wifi, WifiOff } from "lucide-react";
+import { AlertTriangle, Eye, Loader2, Save, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -361,7 +361,7 @@ export function TestRunner({
 
   if (questions.length === 0) {
     return (
-      <Card className="p-12 text-center">
+      <Card className="p-8 sm:p-12 text-center">
         <h2 className="font-display text-xl text-foreground">No questions yet</h2>
         <p className="text-muted-foreground mt-2 text-sm">
           This test doesn&apos;t have any questions published. Check back later.
@@ -403,20 +403,21 @@ export function TestRunner({
             </p>
           </div>
         )}
-        {/* Sticks BELOW the dashboard header (which itself is sticky at
-            top-0, z-40). top-20 clears the header's ~5rem footprint; z-30
-            keeps us above the question body but below the header. */}
-        <div className="bg-background/90 sticky top-20 z-30 flex flex-wrap items-center justify-between gap-3 py-2 backdrop-blur">
-          <div>
+        {/* Sticks BELOW the dashboard header (sticky at top-0, z-40, and
+            h-14 / lg:h-20 tall); z-30 keeps us above the question body but
+            below the header. On phones it stays one short row so it
+            doesn't eat the screen. */}
+        <div className="bg-background/90 sticky top-14 z-30 flex items-center justify-between gap-2 py-2 backdrop-blur sm:flex-wrap sm:gap-3 lg:top-20">
+          <div className="min-w-0">
             <p className="text-muted-foreground text-xs">
               Question {currentIdx + 1} of {questions.length}
             </p>
-            <h1 className="font-display mt-1 text-xl leading-tight tracking-tight text-foreground">
+            <h1 className="font-display mt-0.5 truncate text-base leading-tight tracking-tight text-foreground sm:mt-1 sm:text-xl">
               {title}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             {!preview && (
               <span
                 className={cn(
@@ -426,7 +427,7 @@ export function TestRunner({
                 title={online ? "Online" : "Offline - drafts will retry on reconnect"}
               >
                 {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
-                {online ? "Online" : "Offline"}
+                <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
               </span>
             )}
             {preview && dirty && (
@@ -434,7 +435,7 @@ export function TestRunner({
             )}
             {saving ? (
               <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                <Save className="size-3" /> Saving
+                <Save className="size-3" /> <span className="hidden sm:inline">Saving</span>
               </span>
             ) : saveError ? (
               <span
@@ -474,7 +475,7 @@ export function TestRunner({
                 title="Save progress"
               >
                 <Save className="size-4" />
-                Save
+                <span className="sr-only sm:not-sr-only">Save</span>
               </Button>
             )}
             <Button
@@ -564,9 +565,15 @@ export function TestRunner({
               {totalAnswered}/{totalAnswerable}
             </span>
           </div>
-          <ul className="mt-3 space-y-1 overflow-y-auto pr-1">
+          {/* Labels only ("1", "1.a") — the question text lives in the
+              main pane. Each top-level question is one row: its own chip,
+              then a chip per answerable part, so progress inside a long
+              multi-part question is visible at a glance. */}
+          <ul className="mt-3 space-y-1.5 overflow-y-auto pr-1">
             {questions.map((q, i) => {
               const active = i === currentIdx;
+              const parts: RunnerQuestion[] = [];
+              for (const child of q.subQuestions) forEachAnswerable(child, (n) => parts.push(n));
               // A top-level row is "complete" when every answerable node in
               // its sub-tree has an answer.
               let groupTotal = 0;
@@ -576,47 +583,46 @@ export function TestRunner({
                 if (isAnswered(answers[node.id])) groupDone += 1;
               });
               const allDone = groupTotal > 0 && groupDone === groupTotal;
+              const label = labels.get(q.id) ?? String(i + 1);
+              const goTo = async (targetId?: string) => {
+                await saveNow();
+                setCurrentIdx(i);
+                if (targetId) {
+                  // Wait for the new question to render before scrolling.
+                  requestAnimationFrame(() =>
+                    document
+                      .getElementById(questionAnchor(targetId))
+                      ?.scrollIntoView({ block: "start", behavior: "smooth" }),
+                  );
+                }
+              };
               return (
-                <li key={q.id}>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await saveNow();
-                      setCurrentIdx(i);
-                    }}
+                <li key={q.id} className="flex flex-wrap items-center gap-1">
+                  <LabelChip
+                    label={label}
+                    active={active}
+                    done={allDone}
+                    partial={!allDone && groupDone > 0}
                     disabled={submitting}
-                    className={cn(
-                      "flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-xs transition-colors",
-                      active
-                        ? "bg-brand-terracotta/10 text-foreground ring-1 ring-brand-terracotta/40"
-                        : allDone
-                          ? "text-foreground hover:bg-muted/40"
-                          : "text-muted-foreground hover:bg-muted/40",
-                    )}
-                    aria-label={`Go to question ${labels.get(q.id) ?? i + 1}${allDone ? " (complete)" : ""}`}
-                  >
-                    {allDone ? (
-                      <CheckCircle2
-                        className={cn(
-                          "mt-0.5 size-3.5 shrink-0",
-                          active ? "text-brand-terracotta" : "text-brand-terracotta/70",
-                        )}
+                    onClick={() => goTo()}
+                    aria-label={`Go to question ${label}${allDone ? " (complete)" : ""}`}
+                  />
+                  {parts.map((part) => {
+                    const partLabel = labels.get(part.id) ?? "";
+                    const done = isAnswered(answers[part.id]);
+                    return (
+                      <LabelChip
+                        key={part.id}
+                        small
+                        label={partLabel}
+                        active={false}
+                        done={done}
+                        disabled={submitting}
+                        onClick={() => goTo(part.id)}
+                        aria-label={`Go to question ${partLabel}${done ? " (answered)" : ""}`}
                       />
-                    ) : (
-                      <Circle className="mt-0.5 size-3.5 shrink-0 opacity-50" />
-                    )}
-                    <span className="tabular-nums min-w-5 shrink-0 font-medium">
-                      {labels.get(q.id) ?? i + 1}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="line-clamp-2">{q.question}</span>
-                      {q.subQuestions.length > 0 && (
-                        <span className="text-muted-foreground/80 mt-0.5 block text-[11px] tabular-nums">
-                          {groupDone}/{groupTotal} parts
-                        </span>
-                      )}
-                    </span>
-                  </button>
+                    );
+                  })}
                 </li>
               );
             })}
@@ -677,7 +683,14 @@ function QuestionView({
   const hasChildren = question.subQuestions.length > 0;
 
   return (
-    <Card className={cn("space-y-5 p-6", question.parentId && "border-brand-terracotta/30")}>
+    <Card
+      id={questionAnchor(question.id)}
+      // scroll-mt clears the sticky header + the runner's sticky ribbon.
+      className={cn(
+        "scroll-mt-36 space-y-5 p-4 sm:p-6 lg:scroll-mt-44",
+        question.parentId && "border-brand-terracotta/30",
+      )}
+    >
       <div className="space-y-2">
         <p
           className={cn(
@@ -727,6 +740,50 @@ function QuestionView({
         </div>
       )}
     </Card>
+  );
+}
+
+/** DOM id of a question card, for jumping to a part from the side panel. */
+function questionAnchor(questionId: string): string {
+  return `question-${questionId}`;
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/* LabelChip                                                                 */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+function LabelChip({
+  label,
+  active,
+  done,
+  partial,
+  small,
+  ...rest
+}: {
+  label: string;
+  active: boolean;
+  done: boolean;
+  partial?: boolean;
+  small?: boolean;
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children">) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "inline-flex items-center justify-center rounded-md border font-medium tabular-nums transition-colors disabled:opacity-60",
+        small ? "h-7 min-w-9 px-1.5 text-[11px]" : "h-8 min-w-10 px-2 text-xs",
+        active
+          ? "border-brand-terracotta bg-brand-terracotta text-brand-terracotta-foreground"
+          : done
+            ? "border-brand-terracotta/40 bg-brand-terracotta/10 text-foreground hover:bg-brand-terracotta/20"
+            : partial
+              ? "border-brand-terracotta/40 border-dashed text-foreground hover:bg-muted/60"
+              : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+      )}
+      {...rest}
+    >
+      {label}
+    </button>
   );
 }
 
