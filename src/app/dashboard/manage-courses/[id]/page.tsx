@@ -66,9 +66,9 @@ export default async function ManageCourseDetailPage({ params }: PageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-6 py-10">
+    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <div>
-        <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+        <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
           {course.name}
         </h1>
         <p className="text-muted-foreground mt-1.5 text-sm">

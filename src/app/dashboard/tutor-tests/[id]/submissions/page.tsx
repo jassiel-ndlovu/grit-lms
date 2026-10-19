@@ -85,9 +85,9 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
   const inProgress = submissions.filter((s) => s.status === "IN_PROGRESS").length;
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background">
       <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="flex h-14 items-center">
             <Button asChild variant="ghost" size="sm" className="-ml-2">
               <Link href="/dashboard/tutor-tests">
@@ -98,10 +98,10 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
+      <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
         <header className="space-y-2">
           <p className="text-muted-foreground text-xs">{test.course.name}</p>
-          <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             {test.title}
           </h1>
           <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-sm">
@@ -128,7 +128,7 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
           </div>
           <Separator />
           {submissions.length === 0 ? (
-            <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 p-12 text-center text-sm">
+            <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 p-8 sm:p-12 text-center text-sm">
               <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-12 items-center justify-center rounded-full">
                 <Inbox className="size-5" />
               </div>

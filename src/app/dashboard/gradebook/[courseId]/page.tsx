@@ -101,7 +101,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
   const maxBand = Math.max(1, ...stats.distribution);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-6 py-10">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/dashboard/gradebook">← All courses</Link>
@@ -205,7 +205,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
         <Separator />
 
         {book.students.length === 0 ? (
-          <div className="text-muted-foreground p-12 text-center text-sm">
+          <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">
             Nobody is enrolled in this course yet.
           </div>
         ) : (

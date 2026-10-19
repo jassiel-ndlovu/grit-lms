@@ -4,13 +4,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 /** Loading state for the assignment create/edit page — mirrors its layout. */
 export default function SubmissionFormSkeleton() {
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background">
       <div className="bg-card border-b border-border">
-        <div className="mx-auto flex h-14 max-w-5xl items-center px-6">
+        <div className="mx-auto flex h-14 max-w-5xl items-center px-4 sm:px-6">
           <Skeleton className="h-5 w-36" />
         </div>
       </div>
-      <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
+      <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
         <div className="space-y-2">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-80" />

@@ -1,5 +1,8 @@
 /**
- * Dashboard footer — Inkwell identity (Chapter 5).
+ * Site footer for the public pages (privacy, terms, support, …).
+ *
+ * The dashboard no longer renders it: its contact and legal links sit at
+ * the foot of the nav instead (see ./nav.tsx).
  *
  * The legacy footer was a four-column dark-mode marketing block. For a
  * logged-in dashboard we want something quieter: a single-row strip with
@@ -43,7 +46,7 @@ export default function DashboardFooter() {
         <ArrowUp className="h-4 w-4" />
       </button>
 
-      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 sm:px-6 py-6 md:flex-row md:items-center md:justify-between">
         {/* Wordmark + tagline. */}
         <div className="flex items-baseline gap-3">
           <p className="font-display text-lg leading-none tracking-tight text-foreground">

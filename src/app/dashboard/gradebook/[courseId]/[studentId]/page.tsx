@@ -92,7 +92,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
   const student = book.students.find((s) => s.id === studentId);
   if (!student) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 px-6 py-10">
+      <div className="mx-auto max-w-3xl space-y-4 px-4 sm:px-6 py-6 sm:py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/gradebook/${courseId}`}>← Back to class</Link>
         </Button>
@@ -122,7 +122,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
       : null;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
+    <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/gradebook/${courseId}`}>← Back to class</Link>
@@ -217,7 +217,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
         <Separator />
 
         {mark.rows.length === 0 ? (
-          <div className="text-muted-foreground p-12 text-center text-sm">
+          <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">
             This course has no assessments yet.
           </div>
         ) : (

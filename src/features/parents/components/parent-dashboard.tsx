@@ -21,11 +21,11 @@ const COMING_SOON = [
 
 export function ParentDashboard({ firstName }: { firstName: string }) {
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-6 py-10">
+    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
         <div className="p-8">
           <p className="text-primary-foreground/70 text-sm">Welcome, {firstName}.</p>
-          <h1 className="font-display mt-1 text-4xl leading-tight tracking-tight">
+          <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
             Follow your learners&apos; progress.
           </h1>
           <p className="text-primary-foreground/70 mt-3 max-w-xl text-sm">

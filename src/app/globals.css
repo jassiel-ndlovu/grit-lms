@@ -233,6 +233,46 @@
    mjx-container markup and never produced a .katex element to style.
    ───────────────────────────────────────────────────────────────────────── */
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   MathJax
+   ───────────────────────────────────────────────────────────────────────── */
+
+/*
+ * MathJax keeps an invisible MathML copy of every formula for screen
+ * readers: an absolutely positioned <mjx-assistive-mml>, hidden with
+ * clip: rect(1px…). Clipping hides the paint but not the box, and an
+ * absolute box still counts toward its scroll container's scrollable
+ * overflow, so wherever the copy is taller or wider than the visible
+ * formula it adds scroll space nobody can see. Shrink the box itself to
+ * 1px (the usual sr-only pattern). Screen readers read it all the same.
+ * `body` lifts the specificity over MathJax's own !important rules.
+ */
+body mjx-container[jax] > mjx-assistive-mml {
+  width: 1px !important;
+  height: 1px !important;
+}
+
+/*
+ * Tailwind's preflight makes every <svg> display: block, which would put
+ * each inline formula on a line of its own. MathJax positions the SVG with
+ * an inline vertical-align, so it needs to stay inline.
+ */
+mjx-container[jax="SVG"] > svg {
+  display: inline;
+}
+
+/*
+ * Display maths wider than its column (long equations, matrices on a
+ * phone) scrolls sideways inside itself instead of being clipped by a card
+ * or widening the page.
+ */
+mjx-container[jax][display="true"] {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}
+
 @keyframes progress {
   0% { width: 0%; }
   100% { width: 100%; }

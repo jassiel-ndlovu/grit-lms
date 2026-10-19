@@ -95,7 +95,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
   if (!submission) notFound();
   if (!entry) {
     return (
-      <div className="mx-auto max-w-4xl space-y-4 px-6 py-10">
+      <div className="mx-auto max-w-4xl space-y-4 px-4 sm:px-6 py-6 sm:py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/submissions/${submissionId}`}>
             ← Back to assignment
@@ -135,7 +135,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
   const defaultFeedback = grade?.finalComments ?? entry.feedback ?? "";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-6 py-10">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/submissions/${submissionId}`}>
