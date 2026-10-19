@@ -3,13 +3,14 @@
  *
  * Layout:
  *   - Left: page title (Fraunces display) + warm muted greeting / role chip.
- *   - Center: search input (token-driven, focus ring branded terracotta).
+ *   - Center: global search (inline on md+, an icon + full-screen sheet below).
+ *   - Small screens: hamburger opens the nav drawer; title shrinks to one line.
  *   - Right: help link, NotificationBell, profile dropdown.
  */
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -18,14 +19,14 @@ import {
   HelpCircle,
   LogOut,
   Menu,
-  Search,
   Settings,
   User,
-  X,
 } from "lucide-react";
 
 import { useProfile } from "@/context/ProfileContext";
 import Skeleton from "../components/skeleton";
+import { GlobalSearch } from "@/features/search/components/global-search";
+import { navPagesForRole } from "./nav";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { useDateContext } from "@/components/preferences-provider";
 import { greetingFor } from "@/lib/datetime";
@@ -63,28 +64,43 @@ function getPageTitle(pathname: string) {
   return PAGE_TITLES[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
 }
 
-export default function DashboardHeader() {
+interface DashboardHeaderProps {
+  /** Opens the nav drawer (small screens only — the button hides at lg). */
+  onOpenMenu: () => void;
+}
+
+export default function DashboardHeader({ onOpenMenu }: DashboardHeaderProps) {
   const { profile, session } = useProfile();
   const pathname = usePathname();
   const router = useRouter();
 
-  const [searchQuery, setSearchQuery] = useState("");
-
   const dateCtx = useDateContext();
   const showNotificationBell = Boolean(session?.user);
   const firstName = profile?.fullName?.split(" ")[0];
+  const searchPages = useMemo(
+    () => navPagesForRole(session?.user.role),
+    [session?.user.role],
+  );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-card/85 backdrop-blur-md">
-      <div className="flex items-center justify-between gap-4 px-6 py-4">
-        <div className="flex min-w-0 items-center gap-4">
+    // Fixed height (h-14 / lg:h-20) so sticky bars further down the page
+    // can sit flush beneath it with `top-14 lg:top-20`.
+    <header className="sticky top-0 z-40 h-14 w-full border-b border-border bg-card/85 backdrop-blur-md lg:h-20">
+      <div className="flex h-full items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <button
             type="button"
+            onClick={onOpenMenu}
             className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </button>
+
+          {/* Compact title on small screens. */}
+          <h1 className="truncate font-display text-lg leading-tight tracking-tight text-foreground lg:hidden">
+            {getPageTitle(pathname)}
+          </h1>
 
           <div className="hidden min-w-0 lg:block">
             <div className="flex items-center gap-3">
@@ -108,30 +124,11 @@ export default function DashboardHeader() {
           </div>
         </div>
 
-        <div className="hidden flex-1 justify-center md:flex">
-          <div className="relative w-full max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search courses, lessons, submissions…"
-              className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground/80 transition-shadow focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+        <div className="flex flex-1 justify-end md:justify-center">
+          <GlobalSearch pages={searchPages} />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <button
             type="button"
             onClick={() => router.push("/dashboard/help")}
@@ -160,7 +157,7 @@ function ProfileMenu({ profile, email }: ProfileMenuProps) {
   const router = useRouter();
 
   if (!profile) {
-    return <Skeleton className="h-10 w-32 rounded-md" />;
+    return <Skeleton className="h-10 w-12 rounded-md sm:w-32" />;
   }
 
   const initial = profile.fullName?.charAt(0).toUpperCase() ?? "U";

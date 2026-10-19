@@ -146,10 +146,10 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
   const upcomingEvents = events.filter((e) => e.date.getTime() >= Date.now()).slice(0, 4);
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background">
       {/* ───── Header bar ───── */}
       <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex h-14 items-center">
             <Button asChild variant="ghost" size="sm" className="-ml-2">
               <Link href="/dashboard/courses">
@@ -162,7 +162,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
 
       {/* ───── Hero ───── */}
       <div className="bg-primary text-primary-foreground border-b-2 border-brand-terracotta">
-        <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
           <div className="flex flex-col gap-8 md:flex-row md:items-center">
             {course.imageUrl && (
               <div className="hidden w-60 shrink-0 md:block">
@@ -179,7 +179,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
             <div className="flex-1 space-y-4">
               <div>
                 <p className="text-primary-foreground/70 text-sm">with {course.tutor.fullName}</p>
-                <h1 className="font-display mt-1 text-4xl leading-tight tracking-tight">
+                <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
                   {course.name}
                 </h1>
                 {course.description && (
@@ -210,9 +210,11 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
               </div>
 
               {nextLesson && (
-                <Button asChild variant="brand" className="mt-2">
+                <Button asChild variant="brand" className="mt-2 max-w-full">
                   <Link href={`/dashboard/courses/lessons/${courseId}?lesson=${nextLesson.id}`}>
-                    Continue with {nextLesson.title}
+                    {/* Long lesson titles truncate instead of pushing the
+                        button past the edge of a phone screen. */}
+                    <span className="truncate">Continue with {nextLesson.title}</span>
                     <ArrowRight className="size-4" />
                   </Link>
                 </Button>
@@ -223,7 +225,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
       </div>
 
       {/* ───── Body ───── */}
-      <div className="mx-auto max-w-6xl space-y-10 px-6 py-10">
+      <div className="mx-auto max-w-6xl space-y-8 sm:space-y-10 px-4 sm:px-6 py-6 sm:py-10">
         {/* Lessons preview */}
         <section className="space-y-4">
           <SectionHeader
@@ -232,7 +234,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
             label="Open lessons"
           />
           {lessons.length === 0 ? (
-            <Card className="text-muted-foreground p-12 text-center text-sm">
+            <Card className="text-muted-foreground p-8 sm:p-12 text-center text-sm">
               No lessons published yet.
             </Card>
           ) : (

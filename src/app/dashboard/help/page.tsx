@@ -163,12 +163,12 @@ export default async function HelpPage() {
   const mailtoHref = `mailto:${APP_CONTACT.email}?subject=${mailSubject}&body=${mailBody}`;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-6 py-10">
+    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-8 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
           <div className="max-w-xl">
             <p className="text-primary-foreground/70 text-sm">Support</p>
-            <h1 className="font-display mt-1 text-3xl leading-tight tracking-tight">
+            <h1 className="font-display mt-1 text-2xl sm:text-3xl leading-tight tracking-tight">
               How can we help?
             </h1>
             <p className="text-primary-foreground/70 mt-3 text-sm">

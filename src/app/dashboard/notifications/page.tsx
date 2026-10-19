@@ -55,11 +55,11 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
       : "Activity from your courses, tutors, and submissions.";
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-6 space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="font-display text-3xl leading-tight tracking-tight text-foreground">
+            <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
               Notifications
             </h1>
             <p className="text-muted-foreground mt-1.5 text-sm">{subtitle}</p>

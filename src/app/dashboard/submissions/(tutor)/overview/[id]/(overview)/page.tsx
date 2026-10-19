@@ -216,7 +216,7 @@ export default function SubmissionDetailTutor() {
           </div>
 
           {entries.length === 0 ? (
-            <div className="p-12 text-center">
+            <div className="p-8 sm:p-12 text-center">
               <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No submissions yet</h3>
               <p className="text-gray-500 text-sm">Students haven&apos;t submitted their work yet.</p>
