@@ -22,7 +22,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpDown, Loader2, Plus } from "lucide-react";
+import { ArrowUpDown, Loader2, PlayCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -209,7 +209,7 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
     normalizeScheme(defaultValues?.labelScheme),
   );
   const [reorderOpen, setReorderOpen] = React.useState(false);
-  const [pending, setPending] = React.useState<"draft" | "publish" | null>(null);
+  const [pending, setPending] = React.useState<"draft" | "publish" | "preview" | null>(null);
 
   const computedPoints = sumPoints(questions);
   const labels = React.useMemo(
@@ -291,7 +291,14 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
 
   /* ─── Save ─── */
 
-  async function save(publish: boolean) {
+  /**
+   * "draft" / "publish" save and go back to the tests list. "preview"
+   * saves as a draft-style checkpoint and opens the student preview — it
+   * keeps the test's current published state (so previewing a live test
+   * never unpublishes it) and skips the "Test updated" notification.
+   */
+  async function save(mode: "draft" | "publish" | "preview") {
+    const publish = mode === "publish";
     if (!title.trim()) {
       toast.error("Title is required");
       return;
@@ -304,7 +311,7 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
       toast.error("Due date and time are required");
       return;
     }
-    setPending(publish ? "publish" : "draft");
+    setPending(mode);
     try {
       const dueDate = new Date(`${dateStr}T${timeStr}`);
       const payload = {
@@ -314,7 +321,7 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
         dueDate,
         timeLimit: timeLimit.trim() === "" ? null : Number(timeLimit),
         totalPoints: computedPoints,
-        isActive: publish,
+        isActive: mode === "preview" ? isActive : publish,
         releaseAutoMarksToStudent: releaseAutoMarks,
         preTestInstructions:
           instructions.trim() === "" ? null : instructions,
@@ -326,23 +333,31 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
         questions: toServerTree(questions) as any,
       };
 
+      let savedId: string | undefined;
       if (isEdit && defaultValues?.id) {
         const result = await updateTest({
           id: defaultValues.id,
           ...payload,
+          notifyStudents: mode !== "preview",
         });
         if (result?.serverError) throw new Error(result.serverError);
         if (result?.validationErrors) throw new Error("Some fields were rejected — check every question has text.");
-        toast.success(publish ? "Test published" : "Draft saved");
+        savedId = result?.data?.id ?? defaultValues.id;
       } else {
         const result = await createTest(payload);
         if (result?.serverError) throw new Error(result.serverError);
         if (result?.validationErrors) throw new Error("Some fields were rejected — check every question has text.");
-        toast.success(publish ? "Test published" : "Draft saved");
+        savedId = result?.data?.id;
       }
+      toast.success(publish ? "Test published" : "Draft saved");
       // The server has it now; the local safety copy has done its job.
       draft.clear();
-      router.push("/dashboard/tutor-tests");
+      if (mode === "preview") {
+        if (!savedId) throw new Error("Saved, but couldn't open the preview — open it from the tests list.");
+        router.push(`/dashboard/tutor-tests/${savedId}/preview`);
+      } else {
+        router.push("/dashboard/tutor-tests");
+      }
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
@@ -602,7 +617,25 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => save(false)}
+              onClick={() => save("preview")}
+              disabled={pending !== null}
+              title={
+                isActive
+                  ? "Save your changes (students aren't notified) and open the student preview"
+                  : "Save as a draft and open the student preview"
+              }
+            >
+              {pending === "preview" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <PlayCircle className="size-4" />
+              )}
+              Preview as student
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => save("draft")}
               disabled={pending !== null}
             >
               {pending === "draft" && <Loader2 className="size-4 animate-spin" />}
@@ -611,7 +644,7 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
             <Button
               type="button"
               variant="brand"
-              onClick={() => save(true)}
+              onClick={() => save("publish")}
               disabled={pending !== null}
             >
               {pending === "publish" && <Loader2 className="size-4 animate-spin" />}

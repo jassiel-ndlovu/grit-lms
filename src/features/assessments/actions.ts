@@ -324,7 +324,9 @@ export const updateTest = tutorActionClient
       return t;
     });
 
-    if (updated.isActive) {
+    // `notifyStudents: false` is the tutor saving on the way to the student
+    // preview — a checkpoint, not an announcement.
+    if (updated.isActive && parsedInput.notifyStudents !== false) {
       await emitNotification(
         {
           title: "Test Updated",

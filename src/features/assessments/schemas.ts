@@ -244,6 +244,8 @@ export const UpdateTestWithQuestionsSchema = z.object({
   memoFileUrls: z.array(UrlSchema).max(20).optional(),
   labelScheme: z.array(z.string().max(120)).max(10).optional(),
   questions: z.array(CreateTestQuestionTreeSchema).optional(),
+  /** false = save without the TEST_UPDATED fan-out. Default true. */
+  notifyStudents: z.boolean().optional(),
 });
 export type UpdateTestWithQuestionsInput = z.infer<
   typeof UpdateTestWithQuestionsSchema

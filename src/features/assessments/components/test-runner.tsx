@@ -507,6 +507,9 @@ export function TestRunner({
           onAnswer={updateAnswer}
           disabled={submitting || timeRemaining === 0}
           testId={testId}
+          // Each attempt gets its own choice order. Preview has no attempt,
+          // so it uses a fixed seed and the tutor still sees shuffled choices.
+          shuffleSeed={submissionId ?? `preview:${testId}`}
         />
 
         <div className="flex items-center justify-between gap-3">
@@ -668,6 +671,7 @@ function QuestionView({
   onAnswer,
   disabled,
   testId,
+  shuffleSeed,
 }: {
   question: RunnerQuestion;
   /** Display path (e.g. "1", "1.a") used as a small caption above the input. */
@@ -678,6 +682,8 @@ function QuestionView({
   onAnswer: (questionId: string, next: unknown) => void;
   disabled?: boolean;
   testId: string;
+  /** Per-attempt seed for choice order (see lib/shuffle.ts). */
+  shuffleSeed: string;
 }) {
   const isContext = (question.type as string) === "NONE";
   const hasChildren = question.subQuestions.length > 0;
@@ -707,6 +713,7 @@ function QuestionView({
 
       {!isContext && (
         <QuestionRenderer
+          shuffleSeed={shuffleSeed}
           question={question}
           value={answers[question.id]}
           onChange={(v) => onAnswer(question.id, v)}
@@ -734,6 +741,7 @@ function QuestionView({
                 onAnswer={onAnswer}
                 disabled={disabled}
                 testId={testId}
+                shuffleSeed={shuffleSeed}
               />
             );
           })}
