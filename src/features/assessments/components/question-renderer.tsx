@@ -9,6 +9,11 @@
  *
  * Answer shapes vary by type, so `value` is unknown here and the runner
  * uses the matching schema entry to coerce.
+ *
+ * Choice order is shuffled per attempt (`shuffleSeed`, see lib/shuffle.ts):
+ * multiple choice, multi-select, both matching columns and the starting
+ * order of a reorder question. Answers are stored by text, so the order a
+ * student saw never affects marking.
  */
 
 import * as React from "react";
@@ -23,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, testAnswerPath } from "@/lib/blob/paths";
 import { toFileAnswers, type TestFileAnswer } from "../lib/file-answers";
+import { choiceSeed, seededShuffle, shuffleAwayFromOriginal } from "../lib/shuffle";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
 
@@ -61,6 +67,21 @@ export interface QuestionRendererProps {
   disabled?: boolean;
   /** Test id used to scope file-upload paths. */
   testId: string;
+  /**
+   * Per-attempt seed for choice shuffling (the TestSubmission id). Omit to
+   * show choices in authored order.
+   */
+  shuffleSeed?: string;
+}
+
+/** Choices in this attempt's order; authored order when there's no seed. */
+function useShuffled<T>(items: readonly T[], seed: string | undefined, questionId: string, salt = ""): T[] {
+  const key = JSON.stringify(items);
+  return React.useMemo(
+    () => (seed ? seededShuffle(items, choiceSeed(seed, questionId) + salt) : items.slice()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key, seed, questionId, salt],
+  );
 }
 
 export function QuestionRenderer(props: QuestionRendererProps) {
@@ -96,35 +117,14 @@ export function QuestionRenderer(props: QuestionRendererProps) {
 }
 
 
-/**
- * Deterministic Fisher-Yates shuffle seeded by an arbitrary string.
- * Stable for a given (input, seed) pair so list order doesn't change on
- * re-render, but different per question so the answer isn't aligned.
- */
-function seededShuffle<T>(arr: readonly T[], seed: string): T[] {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  const out = arr.slice();
-  for (let i = out.length - 1; i > 0; i--) {
-    h = Math.imul(h ^ (h >>> 16), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    h ^= h >>> 16;
-    const j = Math.abs(h) % (i + 1);
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
 /* ─── MULTIPLE_CHOICE ─────────────────────────────────────────────────── */
 
-function MultipleChoice({ question, value, onChange, disabled }: QuestionRendererProps) {
+function MultipleChoice({ question, value, onChange, disabled, shuffleSeed }: QuestionRendererProps) {
   const selected = typeof value === "string" ? value : "";
+  const options = useShuffled(question.options, shuffleSeed, question.id);
   return (
     <div className="space-y-2">
-      {question.options.map((opt) => {
+      {options.map((opt) => {
         const active = selected === opt;
         return (
           <button
@@ -242,8 +242,9 @@ function LongText({ question, value, onChange, disabled }: QuestionRendererProps
 
 /* ─── MULTI_SELECT ───────────────────────────────────────────────────── */
 
-function MultiSelect({ question, value, onChange, disabled }: QuestionRendererProps) {
+function MultiSelect({ question, value, onChange, disabled, shuffleSeed }: QuestionRendererProps) {
   const selected = Array.isArray(value) ? (value as string[]) : [];
+  const options = useShuffled(question.options, shuffleSeed, question.id);
   function toggle(opt: string) {
     if (selected.includes(opt)) {
       onChange(selected.filter((s) => s !== opt));
@@ -253,7 +254,7 @@ function MultiSelect({ question, value, onChange, disabled }: QuestionRendererPr
   }
   return (
     <div className="space-y-2">
-      {question.options.map((opt) => {
+      {options.map((opt) => {
         const active = selected.includes(opt);
         return (
           <button
@@ -321,10 +322,17 @@ function FillInTheBlank({ question, value, onChange, disabled }: QuestionRendere
 
 /* ─── REORDER ────────────────────────────────────────────────────────── */
 
-function Reorder({ question, value, onChange, disabled }: QuestionRendererProps) {
-  const order = Array.isArray(value) && value.length > 0
-    ? (value as string[])
-    : [...question.reorderItems];
+function Reorder({ question, value, onChange, disabled, shuffleSeed }: QuestionRendererProps) {
+  // reorderItems is stored in the CORRECT order, so an unanswered question
+  // must start scrambled or it shows the student the answer.
+  const start = React.useMemo(
+    () =>
+      shuffleSeed
+        ? shuffleAwayFromOriginal(question.reorderItems, choiceSeed(shuffleSeed, question.id))
+        : [...question.reorderItems],
+    [question.reorderItems, question.id, shuffleSeed],
+  );
+  const order = Array.isArray(value) && value.length > 0 ? (value as string[]) : start;
 
   function move(idx: number, dir: -1 | 1) {
     const next = [...order];
@@ -359,14 +367,17 @@ function Reorder({ question, value, onChange, disabled }: QuestionRendererProps)
 
 /* ─── MATCHING ───────────────────────────────────────────────────────── */
 
-function Matching({ question, value, onChange, disabled }: QuestionRendererProps) {
+function Matching({ question, value, onChange, disabled, shuffleSeed }: QuestionRendererProps) {
   const pairs = (question.matchPairs ?? []) as Array<{ left: string; right: string }>;
-  const leftItems = pairs.map((p) => p.left);
-  // Shuffle the right column so options aren't aligned with their matches.
-  // Seed by question id so the order is stable across this question's renders.
-  const rightOptions = seededShuffle(
+  // Both columns are shuffled per attempt. The right column is always
+  // shuffled (falling back to the question id) so options never line up
+  // with their matches, even in an unseeded render.
+  const leftItems = useShuffled(pairs.map((p) => p.left), shuffleSeed, question.id, ":left");
+  const rightOptions = useShuffled(
     Array.from(new Set(pairs.map((p) => p.right))),
+    shuffleSeed ?? question.id,
     question.id,
+    ":right",
   );
 
   const current = Array.isArray(value) ? (value as Array<{ left: string; right: string }>) : [];
