@@ -174,7 +174,10 @@ export default async function ManageLessonsPage({
       {/* Main pane */}
       <main className="min-w-0">
         {selectedLesson ? (
-          <Card className="space-y-6 p-6">
+          // Keyed by lesson id: LessonForm (react-hook-form) only reads its
+          // defaultValues on mount, so switching ?lesson= without a remount
+          // left the previous lesson's content in the editor.
+          <Card key={selectedLesson.id} className="space-y-6 p-6">
             <div>
               <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
                 {selectedLesson.type === "NONE" ? "Edit group" : "Edit lesson"}

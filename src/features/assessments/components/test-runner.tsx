@@ -44,6 +44,16 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
 
@@ -151,12 +161,18 @@ export function TestRunner({
   // Preview-only: the tutor has changed an answer since the last explicit
   // save. Used to warn before navigating away, since nothing autosaves.
   const [dirty, setDirty] = React.useState(false);
-  const [now, setNow] = React.useState(() => Date.now());
-  // The countdown can't render until we're on the client: the server would
-  // stamp one value into the HTML and hydration would compute another a
-  // second later, which React reports as a hydration mismatch.
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  // Manual submit asks first; only the timer submits without confirming.
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  // The clock lives in <Countdown>, not here. Holding `now` in this
+  // component re-rendered the entire question tree every second, which on
+  // maths-heavy tests made typing lag further and further behind.
+  const deadline =
+    timeLimit == null || preview ? null : startedAt.getTime() + timeLimit * 60_000;
+  const [expired, setExpired] = React.useState(
+    () => deadline != null && Date.now() >= deadline,
+  );
+  const onExpire = React.useCallback(() => setExpired(true), []);
 
   const answersRef = React.useRef(answers);
   answersRef.current = answers;
@@ -178,19 +194,6 @@ export function TestRunner({
       window.removeEventListener("offline", down);
     };
   }, []);
-
-  /* ───── Timer tick (1s) ───── */
-  React.useEffect(() => {
-    if (timeLimit == null || preview) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [timeLimit, preview]);
-
-  const timeRemaining = React.useMemo(() => {
-    if (timeLimit == null || preview) return null;
-    const elapsedSec = Math.floor((now - startedAt.getTime()) / 1000);
-    return Math.max(0, timeLimit * 60 - elapsedSec);
-  }, [now, startedAt, timeLimit, preview]);
 
   /* ───── Draft persistence ─────
       Single writer used by the debounce, the nav flush, and the explicit
@@ -349,15 +352,25 @@ export function TestRunner({
     // The countdown runs in preview so the tutor can see it, but it must
     // never fire - there is no attempt to submit and no student waiting.
     if (preview) return;
-    if (timeRemaining === 0 && !submitting) {
+    if (expired && !submitting) {
       void onSubmit(true);
     }
-  }, [timeRemaining, submitting, onSubmit, preview]);
+  }, [expired, submitting, onSubmit, preview]);
 
-  function updateAnswer(questionId: string, next: unknown) {
-    setAnswers((prev) => ({ ...prev, [questionId]: next }));
-    if (preview) setDirty(true);
-  }
+  /** Submit buttons route through here: students confirm, preview saves. */
+  const requestSubmit = React.useCallback(() => {
+    if (submitting) return;
+    if (preview) void onSubmit(false);
+    else setConfirmOpen(true);
+  }, [submitting, preview, onSubmit]);
+
+  const updateAnswer = React.useCallback(
+    (questionId: string, next: unknown) => {
+      setAnswers((prev) => ({ ...prev, [questionId]: next }));
+      if (preview) setDirty(true);
+    },
+    [preview],
+  );
 
   if (questions.length === 0) {
     return (
@@ -382,9 +395,6 @@ export function TestRunner({
       if (isAnswered(answers[node.id])) totalAnswered += 1;
     });
   }
-
-  const lowOnTime =
-    timeRemaining != null && timeRemaining <= 60 && timeRemaining > 0;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -454,13 +464,8 @@ export function TestRunner({
                 {formatTime(timeLimit * 60)} limit
               </Badge>
             )}
-            {mounted && timeRemaining != null && (
-              <Badge
-                variant={lowOnTime ? "destructive" : "soft"}
-                className="tabular-nums"
-              >
-                {formatTime(timeRemaining)}
-              </Badge>
+            {deadline != null && (
+              <Countdown deadline={deadline} onExpire={onExpire} />
             )}
             {/* Ribbon-level Save + Submit. Save flushes the debounce so the
                 student can force a checkpoint before stepping away; Submit
@@ -482,7 +487,7 @@ export function TestRunner({
               type="button"
               variant="brand"
               size="sm"
-              onClick={() => onSubmit(false)}
+              onClick={requestSubmit}
               disabled={submitting}
               title={preview ? "Save these answers as the answer key" : "Submit test"}
             >
@@ -505,7 +510,7 @@ export function TestRunner({
           labels={labels}
           answers={answers}
           onAnswer={updateAnswer}
-          disabled={submitting || timeRemaining === 0}
+          disabled={submitting || expired}
           testId={testId}
           // Each attempt gets its own choice order. Preview has no attempt,
           // so it uses a fixed seed and the tutor still sees shuffled choices.
@@ -542,7 +547,7 @@ export function TestRunner({
             <Button
               type="button"
               variant="brand"
-              onClick={() => onSubmit(false)}
+              onClick={requestSubmit}
               disabled={submitting}
             >
               {submitting && <Loader2 className="size-4 animate-spin" />}
@@ -650,7 +655,72 @@ export function TestRunner({
           )}
         </Card>
       </aside>
+
+      {!preview && (
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Submit this test?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {totalAnswered < totalAnswerable
+                  ? `You've answered ${totalAnswered} of ${totalAnswerable} questions. `
+                  : "You've answered every question. "}
+                {"Once submitted you can't change your answers."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep working</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  setConfirmOpen(false);
+                  void onSubmit(false);
+                }}
+              >
+                Submit test
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
+/* Countdown                                                                 */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Owns the 1s tick so only this badge re-renders each second. Renders
+ * nothing until mounted: the server would stamp one value into the HTML and
+ * hydration would compute another, which React reports as a mismatch.
+ */
+function Countdown({
+  deadline,
+  onExpire,
+}: {
+  deadline: number;
+  onExpire: () => void;
+}) {
+  const [now, setNow] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const remaining =
+    now == null ? null : Math.max(0, Math.ceil((deadline - now) / 1000));
+  React.useEffect(() => {
+    if (remaining === 0) onExpire();
+  }, [remaining, onExpire]);
+
+  if (remaining == null) return null;
+  const low = remaining <= 60 && remaining > 0;
+  return (
+    <Badge variant={low ? "destructive" : "soft"} className="tabular-nums">
+      {formatTime(remaining)}
+    </Badge>
   );
 }
 
