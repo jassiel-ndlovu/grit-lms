@@ -18,7 +18,7 @@
  * Behaviour:
  *   - Owns answer state per questionId. Persists periodically via
  *     saveTestAnswersDraft (debounced ~3s) so refresh doesn't lose work.
- *   - Computes timeRemaining from `startedAt + timeLimit*60s`. Auto-submits
+ *   - Counts down to the earlier of `startedAt + timeLimit` and the due date. Auto-submits
  *     at zero (no user confirmation - legacy semantic).
  *   - Online/offline indicator next to the timer.
  *   - Sidebar lists top-level questions with a "X parts" subtitle when a
@@ -64,6 +64,7 @@ import {
 } from "../actions";
 import { QuestionRenderer, type RendererQuestion } from "./question-renderer";
 import { labelTree, normalizeScheme } from "@/lib/enum-labels";
+import { attemptDeadline } from "../lib/attempt-deadline";
 
 /**
  * Question shape consumed by the runner. Top-level questions carry an
@@ -93,6 +94,9 @@ export interface TestRunnerProps {
   timeLimit: number | null;
   /** When the submission was created - anchors the countdown. */
   startedAt: Date;
+  /** The test's due date. The attempt closes at the earlier of this and
+   *  startedAt + timeLimit (see lib/attempt-deadline.ts). */
+  dueDate?: Date | null;
   /** Defaults to "student". See the mode notes at the top of this file. */
   mode?: RunnerMode;
   /** The test's question numbering (Test.labelScheme); empty = default. */
@@ -108,10 +112,15 @@ const SAVE_MAX_WAIT_MS = 15000;
 
 function formatTime(seconds: number): string {
   if (seconds < 0) seconds = 0;
-  const m = Math.floor(seconds / 60);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  const ss = s.toString().padStart(2, "0");
+  return h > 0 ? `${h}:${m.toString().padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
+
+/** Untimed tests only show the clock once the due date is this close. */
+const SHOW_DUE_CLOCK_WITHIN_S = 3 * 3600;
 
 function isAnswered(value: unknown): boolean {
   if (value == null) return false;
@@ -139,6 +148,7 @@ export function TestRunner({
   initialAnswers,
   timeLimit,
   startedAt,
+  dueDate,
   mode = "student",
   labelScheme,
 }: TestRunnerProps) {
@@ -167,8 +177,13 @@ export function TestRunner({
   // The clock lives in <Countdown>, not here. Holding `now` in this
   // component re-rendered the entire question tree every second, which on
   // maths-heavy tests made typing lag further and further behind.
-  const deadline =
-    timeLimit == null || preview ? null : startedAt.getTime() + timeLimit * 60_000;
+  // The attempt ends at the earlier of the time limit and the due date -
+  // the same rule the auto-submit cron uses, so the clock can't show time
+  // the server won't honour.
+  const end = preview
+    ? null
+    : attemptDeadline({ startedAt, timeLimit, dueDate: dueDate ?? null });
+  const deadline = end?.at ?? null;
   const [expired, setExpired] = React.useState(
     () => deadline != null && Date.now() >= deadline,
   );
@@ -465,7 +480,12 @@ export function TestRunner({
               </Badge>
             )}
             {deadline != null && (
-              <Countdown deadline={deadline} onExpire={onExpire} />
+              <Countdown
+                deadline={deadline}
+                onExpire={onExpire}
+                alwaysShow={timeLimit != null}
+                cutShort={end?.cutShort ?? false}
+              />
             )}
             {/* Ribbon-level Save + Submit. Save flushes the debounce so the
                 student can force a checkpoint before stepping away; Submit
@@ -698,9 +718,15 @@ export function TestRunner({
 function Countdown({
   deadline,
   onExpire,
+  alwaysShow,
+  cutShort,
 }: {
   deadline: number;
   onExpire: () => void;
+  /** Timed tests always show the clock; untimed ones only near the due date. */
+  alwaysShow: boolean;
+  /** The due date ends this attempt before its time limit would. */
+  cutShort: boolean;
 }) {
   const [now, setNow] = React.useState<number | null>(null);
   React.useEffect(() => {
@@ -716,10 +742,22 @@ function Countdown({
   }, [remaining, onExpire]);
 
   if (remaining == null) return null;
+  if (!alwaysShow && remaining > SHOW_DUE_CLOCK_WITHIN_S) return null;
   const low = remaining <= 60 && remaining > 0;
   return (
-    <Badge variant={low ? "destructive" : "soft"} className="tabular-nums">
+    <Badge
+      variant={low ? "destructive" : "soft"}
+      className="tabular-nums"
+      title={
+        cutShort || !alwaysShow
+          ? "The test closes at its due time, so this is less than the full time limit."
+          : "Time left"
+      }
+    >
       {formatTime(remaining)}
+      {(cutShort || !alwaysShow) && (
+        <span className="ml-1 font-normal opacity-75">until due</span>
+      )}
     </Badge>
   );
 }
