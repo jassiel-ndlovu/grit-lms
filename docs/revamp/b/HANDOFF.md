@@ -3,6 +3,35 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: design tokens, `revamp/b-design-tokens`
+Done:
+- The owner asked to start building after B1 (2026-11-16), so B2 and B3
+  run as part of the build: each Phase 0 PR carries its own design notes.
+- Revamp tokens in `src/app/revamp-tokens.css`: Notion-like palette with
+  the owner-approved contrast fixes, light and dark, Geist and Geist Mono,
+  14 px body, Geist 600 headings (Fraunces gone). Active under
+  `data-ui="revamp"`, which the root layout sets when `REVAMP_UI=1`.
+  Without the flag production is unchanged, except that `font-mono` now
+  really uses JetBrains Mono (its variable referenced itself before).
+- New `success`, `warning` and `link` colour utilities.
+- `/design-system` preview page (development, or with the flag).
+- Illustration set in PR #41 (`revamp/b-illustrations`, subagent): 14
+  Open Peeps scenes for empty states and onboarding, 32 avatar busts picked
+  by a hash of the user id, 4 Transhumans spot images. Theme-aware inline
+  SVG, one module each, 68% smaller after SVGO. Preview at
+  `/design-system/illustrations`. Dark mode inverts the figures (light
+  lines, dark fills); one variable (`--illustration-surface`) changes it.
+
+Next:
+- Component library (button, input, table, property row, sidebar, command
+  palette, empty state), then the new app shell and `contracts/navigation.md`.
+
+Blocked on the other agent (A):
+- Set `REVAMP_UI=1` on staging when the shell lands (env vars are A's).
+
+Questions for the owner:
+- None.
+
 ## 2026-11-16 B1 Research, `revamp/b-research` (and fixes on `revamp/b-fixes`)
 Done:
 - Thirteen research files in `docs/revamp/b/research/` and `SUMMARY.md`

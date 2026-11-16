@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./revamp-tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -23,6 +24,32 @@
 
 :root {
   --radius: 0.625rem;
+
+  /* Font stacks, swapped by the revamp tokens (revamp-tokens.css). */
+  --app-font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --app-font-display: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
+    serif;
+  --app-font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular,
+    Menlo, Monaco, Consolas, monospace;
+  /*
+   * Inter's stylistic alternates push it closer to SF Pro:
+   *   cv11 — single-storey "a"
+   *   ss01 — open digits (no closed loops in 4, 6, 9)
+   *   ss03 — simplified ampersand
+   */
+  --app-font-features: "cv11", "ss01", "ss03";
+
+  /* Status and link colours (new with the revamp; Inkwell equivalents). */
+  --success: oklch(0.539 0.062 137);
+  --success-foreground: oklch(0.945 0.024 84);
+  --warning: oklch(0.520 0.110 67);
+  --warning-foreground: oklch(0.945 0.024 84);
+  --link: oklch(0.247 0.041 257);
+
+  --scrollbar-track: oklch(0.940 0.018 86);
+  --scrollbar-thumb: oklch(0.880 0.022 82);
+  --scrollbar-thumb-hover: oklch(0.450 0.038 75);
 
   /* Page surface — parchment. */
   --background: oklch(0.965 0.013 86);
@@ -143,6 +170,10 @@
   --sidebar-accent-foreground: oklch(0.945 0.024 84);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.640 0.130 42);
+
+  --success: oklch(0.620 0.070 137);
+  --warning: oklch(0.700 0.130 67);
+  --link: oklch(0.945 0.024 84);
 }
 
 @theme inline {
@@ -165,6 +196,11 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-link: var(--link);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -186,14 +222,12 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
-    serif;
-  --font-serif: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
-    serif;
-  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, monospace;
+  /* Indirect through --app-font-* so the revamp tokens can swap them. The
+     old --font-mono was defined in terms of itself and never applied. */
+  --font-sans: var(--app-font-sans);
+  --font-display: var(--app-font-display);
+  --font-serif: var(--app-font-display);
+  --font-mono: var(--app-font-mono);
 
   /* Brand colour utilities — generated as bg-brand-terracotta etc. */
   --color-brand-terracotta: var(--brand-terracotta);
@@ -212,14 +246,8 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-    /*
-     * Inter's stylistic alternates push it closer to SF Pro:
-     *   cv11 — single-storey "a"
-     *   ss01 — open digits (no closed loops in 4, 6, 9)
-     *   ss03 — simplified ampersand
-     */
-    font-feature-settings: "cv11", "ss01", "ss03";
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: var(--app-font-features);
   }
 }
 
@@ -287,20 +315,17 @@ mjx-container[jax][display="true"] {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  /* Cream — matches Inkwell muted surface. */
-  background: oklch(0.940 0.018 86);
+  background: var(--scrollbar-track);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  /* Warm sand — matches Inkwell border token. */
-  background: oklch(0.880 0.022 82);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  /* Warm taupe — matches muted-foreground. */
-  background: oklch(0.450 0.038 75);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
