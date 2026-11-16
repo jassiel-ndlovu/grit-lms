@@ -28,20 +28,21 @@ Questions for the owner:
 ## 2026-11-16 Owner decisions on research, `revamp/a-owner-decisions`
 
 Done:
-- Recorded the owner's answers in `research/SUMMARY.md` ("Owner decisions"): tiers Core R99, Plus R139, Pro R179 per student per course; Vercel Hobby and Neon until 2027; Paystack as an education marketplace; parent payments aggregated per parent; PII redacted before any LLM call; Blob audit and a Preview Neon branch approved; Wolfram quote drafted. Owner confirmed Core < Plus < Pro and put `graphing` and `math-input` on Plus.
-- Ran the scheduled-jobs workflow by hand with the owner's permission: both routes returned 200 (auto-submit checked 0, notifications ok), so `CRON_SECRET` matches on GitHub and Vercel.
-- The owner connected `grit-lms-blob` to the project (vars prefixed `VERCEL_BLOB_`). The app still reads `BLOB_READ_WRITE_TOKEN`.
+- Seven design docs and an index in `docs/revamp/a/design/`: tenancy and roles, identity, billing, payments, messaging and email, deployment, legacy replacement.
+- Contracts `viewer.md`, `services.md` and `billing.md` drafted in PR #43.
+- Owner decisions applied: 30-day billing periods from each payment; a raised tier holds for 30 days; Pro includes 30 AI marks per student per period; day pass later; tutors create students directly in v1 (guardian invites and consent capture later); data deleted 2 months after the last payment.
+- Found a live data leak: `GET /api/activity` and `GET /api/notifications` return any user's rows. Fix proposed as Batch 0 in design 07.
 
 Next:
-- A2 system design, starting with `contracts/viewer.md` (no `mode` field) and `contracts/services.md` (`graphing` and `math-input` on Plus, no `automarker` in v1).
-- Preview on a fake-data Neon branch; the read-only Blob audit (store now connected).
+- Owner review of the designs; A4 write-up with diagrams; Batch 0 security fix if approved.
 
 Blocked on the other agent:
-- For B: AI marking must send only redacted text (no names or IDs). The redaction step sits in A's design; B's marking queue calls it.
-- For B: the owner moved `graphing` and `math-input` to **Plus** (revision 3 had all graphing on Pro).
+- For B: build against PR #43. `getViewer()` has no `mode`. Course settings use `getCourseServices`, `previewServiceChange` and `setCourseServices` from `billing.md`. Show `period.renewsAt`, never "this month".
+- For B: email rendering waits on `contracts/editor.md` (node and mark list).
+- For B: confirm whether `deleteEntry` stays on the assignments overview, and who edits `src/app/providers.tsx` (design 07).
 
 Questions for the owner:
-- None. Answered: Paystack as a sole proprietor, domain `nexa-lms.co.za`, first payment February 2027 (so Vercel Pro and RDS go live by January 2027).
+- See `design/README.md`, "Owner questions" (renewal date rule, late payments, the security fix, backups, uptime checker, 2FA timing, Resend Pro).
 
 ## 2026-11-16 Cron fix, `revamp/a-cron-scheduler`
 

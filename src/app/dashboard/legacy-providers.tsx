@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { MathProvider } from "@/app/components/math-provider";
+import { MathProvider, type MathJaxVersion } from "@/app/components/math-provider";
 import { EventProvider } from "@/context/EventContext";
 import { GradeProvider } from "@/context/GradeContext";
 import { LessonCompletionProvider } from "@/context/LessonCompletionContext";
@@ -21,9 +21,9 @@ import { TutorProvider } from "@/context/TutorContext";
  * existing page keeps working inside the new frame. They go away page by
  * page as pages move to server data.
  */
-export function LegacyProviders({ children }: { children: ReactNode }) {
+export function LegacyProviders({ children, mathjax = 3 }: { children: ReactNode; mathjax?: MathJaxVersion }) {
   return (
-    <MathProvider>
+    <MathProvider version={mathjax}>
       <StudentProvider>
         <TutorProvider>
           <LessonProvider>
