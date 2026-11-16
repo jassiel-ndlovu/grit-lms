@@ -1,0 +1,67 @@
+// messaging.prisma — owned by Agent A (docs/revamp/AGENTS.md, section 2).
+// Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+
+model Notification {
+  id            String               @id @default(cuid())
+  title         String
+  message       String
+  link          String?
+  type          NotificationType
+  priority      NotificationPriority @default(NORMAL)
+  isRead        Boolean              @default(false)
+  createdAt     DateTime             @default(now())
+  readAt        DateTime?
+  studentId     String?
+  courseId      String?
+  // The recipient. Every notification emitted since per-user preferences
+  // landed has one row per recipient with userId set; older rows have it
+  // null and are matched by studentId / courseId instead.
+  userId        String?
+  // When this row went out by email (immediately or in a digest).
+  emailedAt     DateTime?
+  // The sender chose in-app only (e.g. a tutor unticking "email the
+  // student" when grading); never emailed, not even in a digest.
+  suppressEmail Boolean              @default(false)
+
+  course  Course?  @relation(fields: [courseId], references: [id])
+  student Student? @relation(fields: [studentId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+enum NotificationType {
+  COURSE_UPDATE
+  LESSON_CREATED
+  TEST_CREATED
+  TEST_DELETED
+  TEST_UPDATED
+  QUIZ_CREATED
+  SUBMISSION_CREATED
+  SUBMISSION_DUE
+  SUBMISSION_UPDATED
+  SUBMISSION_DELETED
+  SUBMISSION_GRADED
+  TEST_DUE
+  TEST_GRADED
+  MESSAGE
+  SYSTEM
+  LESSON_UPDATED
+  LESSON_DELETED
+  EVENT_CREATED
+  EVENT_UPDATED
+  EVENT_DELETED
+  // Sent to the tutor when a student hands in work, and to the student as
+  // a receipt.
+  TEST_SUBMITTED
+  SUBMISSION_RECEIVED
+  STUDY_REMINDER
+  GRADING_REMINDER
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}

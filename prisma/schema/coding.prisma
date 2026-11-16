@@ -1,0 +1,5 @@
+// coding.prisma — owned by Agent B (docs/revamp/AGENTS.md, section 2).
+// Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+
+// Coding automarker models (CodingTask, TestCase, CodeSubmission, CodeRun).
+// Parked by the owner (plan revision 3); nothing here in v1.

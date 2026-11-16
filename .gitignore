@@ -51,3 +51,9 @@ audit.json
 # IDE
 .vscode
 .vercel
+
+# ops reports and backups (personal data, never commit)
+/.blob-audit/
+/.db-backup/
+*.dump
+*.dump.age

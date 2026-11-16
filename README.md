@@ -115,9 +115,9 @@ npm install     # runs `prisma generate` in postinstall
 # 2. Create .env.local (see next section)
 cp .env.example .env.local   # if you have one, otherwise create from scratch
 
-# 3. Push the schema to your database
-npx prisma migrate dev --name init
-# (or `npx prisma db push` if you're not versioning migrations yet)
+# 3. Create the schema in your own database (never the shared one)
+#    Needs DATABASE_URL and DIRECT_URL (direct, non-pooled) in .env
+npx prisma migrate deploy
 
 # 4. Seed at least one tutor account so you can log in
 # There's a seed route at src/app/api/seed-users/route.ts that provisions
@@ -219,7 +219,16 @@ src/
 ├── context/                      # Legacy client contexts (being phased out)
 └── components/ui/                # shadcn primitives
 prisma/
-└── schema.prisma                 # Data model — source of truth
+├── schema/                       # Data model, one file per area (Prisma multi-file schema)
+│   ├── core.prisma               #   users, profiles, activity (Agent A)
+│   ├── messaging.prisma          #   notifications (Agent A)
+│   ├── tenancy.prisma, billing.prisma  # Agent A, filled in Phases 1-2
+│   ├── learning.prisma           #   courses, lessons, files (Agent B)
+│   ├── assessments.prisma        #   tests, submissions, grades (Agent B)
+│   ├── calendar.prisma           #   events (Agent B)
+│   ├── coding.prisma             #   parked (Agent B)
+│   └── migrations/               #   0_baseline + every migration since
+└── migrations-archive/           # Pre-2026-11 migrations, kept for history, never applied
 ```
 
 ---
@@ -360,11 +369,11 @@ npm run lint     # next lint (eslint)
 npx tsx scripts/check-branding.ts   # fails if the old product name is back in platform files
 ```
 
-Prisma workflow:
+Prisma workflow (Prisma 6, schema folder `prisma/schema/`, configured in `package.json`). `prisma db push` is retired: every change is a reviewed migration.
 
 ```bash
 npx prisma generate              # regenerate the client after schema edits
-npx prisma migrate dev --name x  # create + apply a migration in dev
+npx prisma migrate dev --name x  # create + apply a migration (dev branch only)
 npx prisma migrate deploy        # apply pending migrations in CI/prod
 npx prisma studio                # inspect the DB in a browser UI
 ```
@@ -412,7 +421,7 @@ jump). If a student clicks Submit before typing anywhere, the last-typed
 answer is still captured because Submit reads from the same in-memory ref.
 
 **Prisma client doesn't know a new enum value**
-Run `npx prisma generate` after any `schema.prisma` edit. If the enum
+Run `npx prisma generate` after any edit under `prisma/schema/`. If the enum
 addition also changes the database column, follow up with
 `npx prisma migrate dev --name your_change`.
 
