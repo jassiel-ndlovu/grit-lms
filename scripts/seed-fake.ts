@@ -132,7 +132,7 @@ async function seed(prisma: PrismaClient, password: string) {
         await prisma.lesson.create({
           data: {
             title: `Test Lesson ${l}`,
-            description: `<p>Fake lesson ${l} for ${spec.subject}. Inline maths: \\(x^2 + ${l}x = 0\\).</p>`,
+            description: `Fake lesson ${l} for ${spec.subject}. Inline maths: \\(x^2 + ${l}x = 0\\).`,
             order: l - 1,
             courseId: course.id,
             parentId: heading.id,
@@ -156,9 +156,9 @@ async function seed(prisma: PrismaClient, password: string) {
         releaseAutoMarksToStudent: true,
         questions: {
           create: [
-            { order: 0, question: "<p>What is 2 + 2?</p>", type: "MULTIPLE_CHOICE", points: 2, options: ["3", "4", "5"], answer: "4", reorderItems: [] },
-            { order: 1, question: "<p>The sky is green.</p>", type: "TRUE_FALSE", points: 2, options: [], answer: "false", reorderItems: [] },
-            { order: 2, question: "<p>Solve \\(2x = 10\\).</p>", type: "NUMERIC", points: 2, options: [], answer: "5", reorderItems: [] },
+            { order: 0, question: "What is 2 + 2?", type: "MULTIPLE_CHOICE", points: 2, options: ["3", "4", "5"], answer: "4", reorderItems: [] },
+            { order: 1, question: "The sky is green.", type: "TRUE_FALSE", points: 2, options: [], answer: "false", reorderItems: [] },
+            { order: 2, question: "Solve \\(2x = 10\\).", type: "NUMERIC", points: 2, options: [], answer: "5", reorderItems: [] },
           ],
         },
       },
@@ -205,7 +205,7 @@ async function seed(prisma: PrismaClient, password: string) {
         dueDate: at(3),
         createdAt: at(-5),
         fileType: "pdf",
-        description: "<p>Fake assignment for preview deployments.</p>",
+        description: "Fake assignment for preview deployments.",
         descriptionFiles: [],
         totalPoints: 10,
       },
