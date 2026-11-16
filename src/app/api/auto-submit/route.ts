@@ -1,11 +1,12 @@
 /**
- * GET /api/auto-submit — every five minutes (see vercel.json), closes
+ * GET /api/auto-submit — every five minutes (see
+ * .github/workflows/scheduled-jobs.yml), closes
  * IN_PROGRESS test submissions whose due date or time limit has passed
  * (whichever comes first, plus a short grace period).
  *
- * Vercel sends `Authorization: Bearer $CRON_SECRET` when CRON_SECRET is
- * set on the project; we require it in production so the endpoint can't be
- * triggered by anyone else.
+ * The scheduler sends `Authorization: Bearer $CRON_SECRET` (the same value
+ * is set on the Vercel project and in the GitHub repo secrets); we require
+ * it in production so no one else can trigger the endpoint.
  */
 
 import { NextRequest, NextResponse } from "next/server";
