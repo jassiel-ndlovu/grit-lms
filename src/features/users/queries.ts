@@ -4,44 +4,6 @@
  */
 
 import { prisma } from "@/lib/db";
-import type { Persona, Viewer } from "@/lib/viewer-core";
-
-/**
- * What the dashboard shell shows about the signed-in user (header, nav,
- * account menu). Built from the viewer, which already loaded the name,
- * email and avatar, so it costs no extra query.
- *
- * Replaces `ProfileContext` and `/api/profile` for the shell (design 07,
- * Batch 2). The pages pass these fields down as props.
- */
-export interface OwnProfile {
-  name: string;
-  email: string;
-  avatarUrl: string | null;
-  persona: Persona;
-  /** Plain-language label for the account menu. */
-  roleLabel: string;
-}
-
-const ROLE_LABEL: Record<Persona, string> = {
-  staff: "Tutor",
-  learner: "Student",
-  guardian: "Parent or guardian",
-  admin: "Nexa admin",
-  none: "Account",
-};
-
-export function getOwnProfile(viewer: Viewer): OwnProfile {
-  const staffRole = viewer.membership?.role;
-  return {
-    name: viewer.user.name,
-    email: viewer.user.email,
-    avatarUrl: viewer.user.imageUrl,
-    persona: viewer.persona,
-    roleLabel:
-      staffRole === "OWNER" ? "Owner" : staffRole === "ADMIN" ? "Admin" : ROLE_LABEL[viewer.persona],
-  };
-}
 
 export interface ManagedUserRow {
   id: string;
