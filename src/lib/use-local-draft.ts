@@ -25,7 +25,14 @@
 
 import * as React from "react";
 
-const PREFIX = "grit-lms:draft:";
+const PREFIX = "nexa:draft:";
+/**
+ * The key prefix before the Nexa rename. A draft saved under it is moved
+ * to PREFIX the first time it is read, so unsaved work survives the
+ * rename. Remove this fallback once old drafts can no longer exist
+ * (a few months after the rename shipped).
+ */
+const LEGACY_PREFIX = "grit-lms:draft:";
 const VERSION = 1;
 
 interface Stored<T> {
@@ -62,7 +69,22 @@ export interface LocalDraft<T> {
   discardPending: () => void;
 }
 
+/** Move a pre-rename draft to the current key, once. Never overwrites. */
+function adoptLegacy(key: string): void {
+  try {
+    const old = window.localStorage.getItem(LEGACY_PREFIX + key);
+    if (old === null) return;
+    if (window.localStorage.getItem(PREFIX + key) === null) {
+      window.localStorage.setItem(PREFIX + key, old);
+    }
+    window.localStorage.removeItem(LEGACY_PREFIX + key);
+  } catch {
+    // Storage blocked or full: leave the old draft where it is.
+  }
+}
+
 function read<T>(key: string): Stored<T> | null {
+  adoptLegacy(key);
   try {
     const raw = window.localStorage.getItem(PREFIX + key);
     if (!raw) return null;
