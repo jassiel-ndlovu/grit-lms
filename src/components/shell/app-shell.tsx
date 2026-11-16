@@ -15,6 +15,7 @@
  */
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -44,10 +45,13 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   settings: Settings, help: HelpCircle, inbox: Inbox,
 };
 
+/** What the shells show of the viewer. Built once in the dashboard layout. */
 export interface ShellUser {
   name: string;
   email: string;
+  /** Legacy role (STUDENT, TUTOR, ADMIN, PARENT) until nav goes by persona. */
   role: string;
+  imageUrl?: string | null;
 }
 
 interface AppShellProps {
@@ -113,9 +117,13 @@ function AccountMenu({ user }: { user: ShellUser }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left outline-none focus-visible:ring-2">
-        <span aria-hidden className="bg-primary text-primary-foreground grid size-6 shrink-0 place-items-center rounded text-[0.6875rem] font-semibold">
-          {initials || "?"}
-        </span>
+        {user.imageUrl ? (
+          <Image src={user.imageUrl} alt="" width={24} height={24} className="size-6 shrink-0 rounded object-cover" />
+        ) : (
+          <span aria-hidden className="bg-primary text-primary-foreground grid size-6 shrink-0 place-items-center rounded text-[0.6875rem] font-semibold">
+            {initials || "?"}
+          </span>
+        )}
         <span className="min-w-0 flex-1 truncate font-medium">{user.name}</span>
         <ChevronsUpDown className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
       </DropdownMenuTrigger>
