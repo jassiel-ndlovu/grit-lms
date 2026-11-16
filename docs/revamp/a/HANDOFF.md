@@ -3,6 +3,22 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Owner decisions on research, `revamp/a-owner-decisions`
+
+Done:
+- Recorded the owner's answers in `research/SUMMARY.md` ("Owner decisions"): tiers Core R99, Plus R139, Pro R179 per student per course; Vercel Hobby and Neon until 2027; Paystack as an education marketplace; parent payments aggregated per parent; PII redacted before any LLM call; Blob audit and a Preview Neon branch approved; Wolfram quote drafted.
+
+Next:
+- A2 system design, starting with `contracts/viewer.md` (no `mode` field) and `contracts/services.md` (`graphing` on Pro, no `automarker` in v1).
+- Preview on a fake-data Neon branch; the Blob audit once the store is connected.
+
+Blocked on the other agent:
+- For B: AI marking must send only redacted text (no names or IDs). The redaction step sits in A's design; B's marking queue calls it.
+- For B: `math-input` tier is open (owner asked). Revision 3 only names graphing.
+
+Questions for the owner:
+- Tier order, `math-input` tier, Paystack account type, domain, and the month of the first payment. See `research/SUMMARY.md`.
+
 ## 2026-11-16 Cron fix, `revamp/a-cron-scheduler`
 
 Done:
