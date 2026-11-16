@@ -1,6 +1,6 @@
-# Preview environment: fake-data database
+# Preview environment: fake-data database and separate Blob store
 
-**Answer first.** As of 2026-11-16, Vercel Preview deployments use the Neon branch `preview`, which holds fake data only. Production's `DATABASE_URL` did not change. Preview **still uses production's Blob token**. The fix is a separate store `nexa-preview-blob`, which needs the owner's go-ahead (section 4).
+**Answer first.** As of 2026-11-16, Vercel Preview deployments use the Neon branch `preview`, which holds fake data only, and the Blob store `nexa-preview-blob`. Production's `DATABASE_URL` and Blob variables did not change. Preview and Development no longer hold any credential for production's database or files (section 4).
 
 Phase 0 item from [design/06-deployment.md](../design/06-deployment.md) §3.1 to §3.3 and §7. Checked 2026-11-16.
 
@@ -65,18 +65,32 @@ The script refuses to run when:
 
 ## 3. Things noticed, not changed
 
-- Since a few hours before this session (2026-11-16), the project also has `VERCEL_BLOB_READ_WRITE_TOKEN`, `VERCEL_BLOB_STORE_ID` and `VERCEL_BLOB_WEBHOOK_PUBLIC_KEY` (Config type) on **Development, Preview and Production**. They were added when `grit-lms-blob` was connected to the project. The app code does not read them by name; `@vercel/blob` reads `BLOB_READ_WRITE_TOKEN`. Whether the SDK version we use also falls back to `VERCEL_BLOB_READ_WRITE_TOKEN` is **Unverified**. Either way, Preview and Development can reach the production store today.
 - `package-lock.json` is out of sync with `package.json` (`picomatch`), so `npm ci` fails. This session used `npm install --no-save --package-lock=false`. The Prisma 6 upgrade session owns `package.json` and should regenerate the lockfile.
 
-## 4. Open question for the owner: the Blob store
+## 4. Blob store for Preview and Development
 
-Preview deployments still write uploads to `grit-lms-blob` (production, 888.7 MB of 1 GB) with a token that can also **delete** production files.
+Approved by the owner on 2026-11-16 (design 06 §3.3, option A). Before this, Preview wrote uploads to `grit-lms-blob` (production, 888.7 MB of 1 GB) with a token that could also delete production files. Development also had production's `VERCEL_BLOB_*` variables, which were added when `grit-lms-blob` was connected to the project.
 
-**Recommendation:** design 06 §3.3, option A.
+| Store | Id | Region | Access | Connected to |
+| --- | --- | --- | --- | --- |
+| `grit-lms-blob` | `store_sFzz4mGMYKoxYMSL` | cpt1 | public | Production only |
+| `nexa-preview-blob` | `store_AqkR80w3vgz0PTMf` | cpt1 | public (the app uploads with `access: "public"`) | Preview and Development |
 
-1. Create a Blob store `nexa-preview-blob` (free on Hobby). Account-wide Hobby limits may apply across both stores (**Guess**), so preview uploads would still count toward the same 1 GB.
-2. Connect it to **Preview and Development only**.
-3. Remove Preview and Development from production's Blob variables, so only Production keeps them: `BLOB_READ_WRITE_TOKEN` (`vercel env remove BLOB_READ_WRITE_TOKEN --environment preview --project grit-lms`) and the three `VERCEL_BLOB_*` variables.
-4. Cap preview uploads at 5 MB in `issueUploadToken` (design 06 §3.3).
+What was done:
 
-Agent A will not create the store or change the Blob variables until the owner says yes.
+1. Removed Preview and Development from production's Blob variables with `vercel env remove <name> --environment <env>`, which removes one target and leaves the rest of the record: `BLOB_READ_WRITE_TOKEN` (Preview; it never had Development), `VERCEL_BLOB_READ_WRITE_TOKEN`, `VERCEL_BLOB_STORE_ID` and `VERCEL_BLOB_WEBHOOK_PUBLIC_KEY`. All four now apply to Production only, and their values are unchanged.
+2. Created the new store and connected it in one step: `vercel blob create-store nexa-preview-blob --access public --region cpt1 --yes --environment preview --environment development`. This added a `BLOB_READ_WRITE_TOKEN` (Config type) for Preview and Development.
+3. Checked that the Preview token carries the preview store's id, without printing the token.
+
+| Variable | Development | Preview | Production |
+| --- | --- | --- | --- |
+| `BLOB_READ_WRITE_TOKEN` | `nexa-preview-blob` | `nexa-preview-blob` | `grit-lms-blob` (record unchanged, 199 days old) |
+| `VERCEL_BLOB_*` (3) | none | none | `grit-lms-blob` |
+
+Limits: account-wide Hobby Blob limits may apply across both stores (**Guess**), so preview uploads may still count toward the same 1 GB.
+
+Still to do:
+
+- Cap preview uploads at 5 MB in `issueUploadToken` when `VERCEL_ENV !== "production"` (design 06 §3.3). This is a code change for a later PR.
+- `vercel env pull` on a laptop now gives the preview store's token, so local work no longer writes to production. Old local `.env` files may still hold production's token; delete them.
+- Emptying the preview store monthly (`scripts/blob-wipe-preview.ts`, design 06 §3.3) still needs an owner decision on a standing yes (design 06 open question 1).

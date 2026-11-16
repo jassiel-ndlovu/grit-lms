@@ -3,7 +3,7 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
-## 2026-11-16 Phase 0: Preview on fake data, `revamp/a-preview-env`
+## 2026-11-16 Phase 0: Preview on fake data and its own Blob store, `revamp/a-preview-env`
 
 Done:
 - Neon branch `preview` created from `production` as **schema-only** (`init_source: parent-schema`, no rows copied). Production was not written to; its size is unchanged.
@@ -11,17 +11,19 @@ Done:
 - `scripts/seed-fake.ts` (with `scripts/check-seed-fake-guard.ts`): 1 tutor, 8 "Test Student N" users, 2 courses, lessons, tests and submissions, all `@example.test`. It refuses production's host always, and any other host unless it is the preview endpoint or `SEED_FAKE_ALLOW=1`.
 - `prisma db push` and the seed ran against the preview branch only.
 - Vercel: `DATABASE_URL` for Preview now points at the pooled preview branch. Production's record is unchanged.
-- `ops/preview-environment.md`: setup, reseeding, and the Blob question.
+- Blob (owner approved): created `nexa-preview-blob` (cpt1, public) and connected it to Preview and Development. Production's four Blob variables now apply to Production only, with their values unchanged.
+- `ops/preview-environment.md`: setup, reseeding, and the Blob store.
 
 Next:
-- Once the owner says yes: create Blob store `nexa-preview-blob` for Preview and Development, and take production's Blob variables off Preview and Development.
+- 5 MB cap on preview uploads in `issueUploadToken` (design 06 §3.3).
 - After the Prisma 6 and schema-split PR merges, push the new schema to the preview branch (see the ops doc).
 
 Blocked on the other agent:
 - None.
 
 Questions for the owner:
-- May Agent A create `nexa-preview-blob` and remove production's Blob token from Preview and Development? (ops doc section 4)
+- May the preview Blob store be emptied monthly without a fresh approval each time? (design 06, open question 1)
+- Delete any old local `.env` files that still hold production's Blob token.
 - Store the seeded users' password in your password manager, or reseed with your own. Optionally reset `neondb_owner`'s password on the `preview` branch.
 - `package-lock.json` is out of sync (`npm ci` fails). This is for the session that owns `package.json`.
 
