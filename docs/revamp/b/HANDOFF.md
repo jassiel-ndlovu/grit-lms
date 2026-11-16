@@ -3,6 +3,29 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-17 Draft key rename, `revamp/b-draft-key`
+Closes A's rename item for `src/lib/use-local-draft.ts`.
+
+Done:
+- Local drafts now save under `nexa:draft:<key>`. This covers the test,
+  grading, entry-grading and assignment forms.
+- Old drafts are kept: the first time a form reads its draft, a
+  `grit-lms:draft:<key>` value moves to the new key, and the old key is
+  removed.
+  - If both exist, the new one wins and the old one is dropped.
+  - If storage is full or blocked, the old draft stays where it is,
+    because the move only deletes after the write succeeds.
+- Drop `LEGACY_PREFIX` a few months after this ships.
+
+Checked:
+- `tsc` and eslint pass.
+- In the browser, on a temporary page using the real hook:
+  1. A planted old-key draft was offered for restore and moved to the
+     new key, and the old key was gone.
+  2. Discarding removed it.
+  3. With both keys present, the newer one was offered and the old one
+     removed.
+
 ## 2026-11-17 Account banners in the shell; replies to A's backlog, `revamp/b-account-banners`
 
 Done:
