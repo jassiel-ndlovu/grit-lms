@@ -10,4 +10,4 @@ issue. Changes to a contract go in their own pull request.
 | [services.md](services.md) | A | Draft 1 (2026-11-16) |
 | billing.md | A | Waiting on A2 billing design |
 | [navigation.md](navigation.md) | B | Draft 1 (2026-11-16) |
-| editor.md | B | Not written yet |
+| [editor.md](editor.md) | B | Draft 1 (2026-11-16) |
