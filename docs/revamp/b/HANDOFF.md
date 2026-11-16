@@ -18,8 +18,23 @@ runbook (`a/ops/prisma-baseline.md`):
 - `migrate status` now says up to date, and `migrate diff` finds no
   difference.
 
-**For A:** the baseline in your runbook is done; production now takes
-`migrate deploy`. `.env` has no `DIRECT_URL`, so I derived it in memory
+**Preview database (applied 2026-11-17).** Preview runs on its own Neon
+branch, where every table belongs to the `nexa_preview` role. That
+branch already had `0_baseline` and `1_prisma6_m2m_pk`, so it only took
+`2_lesson_description_json`. Until that ran, the tutor course pages on
+Preview failed with P2022 (`Lesson.descriptionJson` missing).
+- The first try, as `neondb_owner`, failed with "must be owner of table
+  Lesson". Postgres rolled it back. I cleared the failed record with
+  `migrate resolve --rolled-back`, then deployed as `nexa_preview`.
+- Both databases now report up to date, and `migrate diff` finds no
+  difference on either.
+
+**For A:**
+- The baseline in your runbook is done; production now takes
+  `migrate deploy`.
+- Nothing applies migrations to the Preview branch yet. Every PR with a
+  migration needs `migrate deploy` run there by hand, as `nexa_preview`.
+  It could become a step in the deploy workflow. `.env` has no `DIRECT_URL`, so I derived it in memory
 from the pooled URL (dropping `-pooler`) and wrote nothing to disk.
 
 Done:
