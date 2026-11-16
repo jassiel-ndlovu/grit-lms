@@ -10,7 +10,8 @@
  * Today's UI: the legacy client shell in ./dashboard-shell.tsx.
  * REVAMP_UI=1: the revamp AppShell (components/shell) with the same legacy
  * context providers, so existing pages keep working inside it, and
- * MathJax 4 instead of 3.
+ * MathJax 4 instead of 3. Account-wide notices (A's AccountBanners: email
+ * verification, impersonation, billing) go in AppShell's banner slot.
  */
 
 import type { ReactNode } from "react";
@@ -19,6 +20,7 @@ import { PreferencesProvider } from "@/components/preferences-provider";
 import { AppShell, type ShellUser } from "@/components/shell/app-shell";
 import { navSectionsFor } from "@/components/shell/nav-config";
 import { getUserPreferences } from "@/features/users/preferences";
+import { AccountBanners } from "@/features/workspaces/components/account-banners";
 import { auth } from "@/lib/auth";
 import { resolveLocale } from "@/lib/datetime";
 import { getViewer } from "@/lib/viewer";
@@ -50,6 +52,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       <AppShell
         user={user ?? { name: "", email: "", role }}
         sections={navSectionsFor(viewer)}
+        banner={viewer ? <AccountBanners viewer={viewer} /> : null}
       >
         {children}
       </AppShell>
