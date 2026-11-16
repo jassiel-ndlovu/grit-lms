@@ -1,0 +1,50 @@
+// calendar.prisma — owned by Agent B (docs/revamp/AGENTS.md, section 2).
+// Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+
+model CourseEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  type        EventType
+  date        DateTime
+  location    String?
+  duration    Int?
+  link        String?
+  createdAt   DateTime  @default(now())
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id])
+
+  // Recurrence. `date` is the first occurrence; the rest are derived at
+  // read time by expandOccurrences() rather than being materialised as
+  // rows, so editing the series edits one record.
+  //   repeatFrequency = NONE  -> a one-off event, every field below ignored
+  //   repeatInterval  = every N days/weeks/months/years
+  //   repeatWeekdays  = WEEKLY only; 0=Sunday .. 6=Saturday. Empty means
+  //                     "same weekday as `date`".
+  //   repeatUntil / repeatCount = the two ways a series can end. Both null
+  //                     means open-ended and the caller's window bounds it.
+  repeatFrequency RepeatFrequency @default(NONE)
+  repeatInterval  Int             @default(1)
+  repeatWeekdays  Int[]           @default([])
+  repeatUntil     DateTime?
+  repeatCount     Int?
+}
+
+enum RepeatFrequency {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum EventType {
+  LECTURE
+  TEST
+  REMINDER
+  SUBMISSION
+  LIVE
+  EXAM
+  MEETING
+  HOLIDAY
+}

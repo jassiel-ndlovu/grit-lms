@@ -1,0 +1,146 @@
+// core.prisma — owned by Agent A (docs/revamp/AGENTS.md, section 2).
+// Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection, used by the app.
+  url       = env("DATABASE_URL")
+  // Direct (non-pooled) connection, used only by prisma migrate.
+  // See docs/revamp/a/design/06-deployment.md.
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(STUDENT)
+  createdAt     DateTime  @default(now())
+  // Set once the user clicks the link in their verification email.
+  // Notification emails are only sent to verified addresses.
+  emailVerified DateTime?
+
+  preferences             UserPreferences?
+  activities              ActivityLog[]
+  notifications           Notification[]
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+// One-time email verification links. Only a SHA-256 hash of the token is
+// stored; the raw token lives in the emailed link.
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserPreferences {
+  id                      String                @id @default(cuid())
+  userId                  String                @unique
+  emailNotifications      Boolean               @default(true)
+  pushNotifications       Boolean               @default(true)
+  notificationFrequency   NotificationFrequency @default(IMMEDIATE)
+  notifyOnCourseUpdate    Boolean               @default(true)
+  notifyOnNewLesson       Boolean               @default(true)
+  notifyOnNewTest         Boolean               @default(true)
+  notifyOnDueDateReminder Boolean               @default(true)
+  notifyOnGrades          Boolean               @default(true)
+  notifyOnMessages        Boolean               @default(true)
+  darkMode                Boolean               @default(false)
+  preferredLanguage       String                @default("EN")
+  timeZone                String?
+  preferredView           PreferredView         @default(GRID)
+  studyReminders          Boolean               @default(false)
+  defaultDashboardTab     DashboardTab          @default(COURSES)
+  // Tutor-only alerts.
+  notifyOnSubmissions     Boolean               @default(true)
+  notifyOnGradingQueue    Boolean               @default(true)
+  // When the last DAILY/WEEKLY email digest went out.
+  lastDigestSentAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Tutor {
+  id              String   @id @default(cuid())
+  fullName        String
+  email           String   @unique
+  profileImageUrl String?
+  bio             String?
+  courses         Course[]
+}
+
+model Student {
+  id                    String                 @id @default(cuid())
+  fullName              String
+  email                 String                 @unique
+  imageUrl              String?
+  assessmentCompletions AssessmentCompletion[]
+  Grade                 Grade[]
+  lessonCompletions     LessonCompletion[]
+  Notification          Notification[]
+  submissionEntries     SubmissionEntry[]
+  TestSubmission        TestSubmission[]
+  courses               Course[]               @relation("CourseEnrollments")
+}
+
+model ActivityLog {
+  id        String       @id @default(cuid())
+  userId    String
+  action    ActivityType
+  targetId  String?
+  meta      Json?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  STUDENT
+  TUTOR
+  ADMIN
+  PARENT
+}
+
+enum ActivityType {
+  LESSON_COMPLETED
+  TEST_COMPLETED
+  ASSIGNMENT_SUBMITTED
+  GRADE_RECEIVED
+  MESSAGE_SENT
+  MESSAGE_RECEIVED
+  LOGIN
+  LOGOUT
+}
+
+enum NotificationFrequency {
+  IMMEDIATE
+  DAILY
+  WEEKLY
+  NONE
+}
+
+enum PreferredView {
+  LIST
+  GRID
+  TIMELINE
+}
+
+enum DashboardTab {
+  COURSES
+  NOTIFICATIONS
+  CALENDAR
+  GRADES
+}

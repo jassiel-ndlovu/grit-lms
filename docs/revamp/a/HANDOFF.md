@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: Prisma 6 and the schema split, `revamp/a-prisma6-schema-split`
+
+Done:
+- Prisma 5.22 to 6.19.3 (the last 6.x; Prisma 7 later, with `prisma.config.ts`). No code changes were needed; `tsc` is clean.
+- `prisma/schema.prisma` split into `prisma/schema/*.prisma`, one file per owner (AGENTS.md section 2). An offline diff shows the split is identical to the old file.
+- `directUrl = env("DIRECT_URL")` added for migrations.
+- Old migrations moved to `prisma/migrations-archive/`. New `prisma/schema/migrations/0_baseline` (today's live schema) and `1_prisma6_m2m_pk` (Prisma 6's primary key on `_CourseEnrollments`). Both were checked on a throwaway schema-only Neon branch, now deleted.
+- `docs/revamp/a/ops/prisma-baseline.md`: the steps for production, which need the owner.
+- `scripts/check-schema-split.ts`.
+
+Next:
+- Owner runs the baseline runbook. Then `getViewer()` (P0.2).
+
+Blocked on the other agent:
+- For B: your schema files are now `prisma/schema/learning.prisma`, `assessments.prisma`, `calendar.prisma` and `coding.prisma`. Schema changes are migrations from now on: `npx prisma migrate dev --name <change>` against the Neon `dev` branch, never `db push`. Rebase open PRs that touch `prisma/schema.prisma`.
+- For B: the comment in `src/features/shared/enums.ts` still points at `prisma/schema.prisma` (shared folder, left alone).
+
+Questions for the owner:
+- Run `docs/revamp/a/ops/prisma-baseline.md` against production when convenient: one metadata row, then two statements on `_CourseEnrollments`.
+
 ## 2026-11-16 Phase 0: Grit to Nexa rename, `revamp/a-rename-nexa`
 
 Done:
