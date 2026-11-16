@@ -9,6 +9,29 @@ fact was checked, and its own open questions. This page pulls out the
 recommendations, the places where research changes the plan, the code issues
 found on the way, and the decisions only the owner can make.
 
+## Owner decisions, 2026-11-16
+
+The owner answered the questions below the same day. Where a decision
+differs from a pick in the table, the decision wins.
+
+| # | Topic | Decision | Effect on B's plan |
+| --- | --- | --- | --- |
+| 1 | Stored format | **Tiptap JSON is the source of truth**, markdown derived. Tiptap Cloud (collaboration) is a later decision | Pick stands |
+| 2 | Math engine | **MathJax 4 everywhere.** Audit approved and run: every stored formula renders ([13](13-math-audit.md)) | Pick stands; no content migration |
+| 3 | Coding automarker | **Parked, Judge0 included**, because of cost. To be reviewed later together with a sandbox option | Drop coding from B2 and v1. Keep the `Runner` interface idea in file 08 for later |
+| 4 | AI marking | **Proceed with design on Bedrock** | Design in B2. Shipping still waits for A's POPIA view (s72, s57) |
+| 5 | Fonts and colours | **Fraunces goes.** The darker tokens are accepted (`#6F6E69`, `#2563EB`, `#8A6116`, `#C53030`, `#8F8F8B` input outline) | B3 uses Geist only and these tokens |
+| 6 | Modes | **No Simple and Technical modes.** One UI: technically capable, with a natural, friendly UX and a Notion-like look | Drop `uiMode`, `data-mode` and the `technical:` variant. File 04's density and progressive-disclosure ideas apply to the one UI |
+| 7 | Timed tests | **Tutors and organisations grant extra time, and Pro lockdown tests honour it** | Per-student time accommodation in B2's test model |
+| 8 | Test runner and copies | **One question (with its subquestions) per screen** by default. **Copied tests bring everything**, memos included | Runner design changes (file 06 suggested one continuous list); the number strip stays as the navigator |
+| 9 | Graphing tier | **All graphing is Pro and above**, lesson graphs and graph answers | Service gating via A's `hasService` |
+| 10 | Video links | **Set in settings; Google Meet is the default** (easy, free) | Meet first. Auto-created Meet links need a Google OAuth app (A's infrastructure) |
+| 11 | Leaderboards | **Everyone enrolled in the course appears** | No opt-out in v1 |
+| 12 | Dependencies | **Approved:** Tiptap, MathLive, Mafs, `@radix-ui/react-toolbar`, rrule-temporal | Add them in the PRs that use them |
+| 13 | Illustrations | General-purpose packs; **B picks what fits** | Open Peeps in the app; Medical Icons not used unless a health-related screen appears; Transhumans small only |
+
+The three code issues below were fixed on `revamp/b-fixes` the same day.
+
 ## Recommendations at a glance
 
 | # | Topic | Pick | Fallback | File |
@@ -19,14 +42,15 @@ found on the way, and the decisions only the owner can make.
 | 2 | Math input | **MathLive** (MIT), client-only, loaded only where a Plus service is on | Plain LaTeX box with live preview (the free tier anyway) | [02](02-math-input-rendering.md) |
 | 2 | Solving and answer checking | **Cortex Compute Engine on the server**; an LLM only turns free text into a problem the engine solves. **Not Wolfram\|Alpha** (no caching allowed, branding rules, commercial prices not published) | nerdamer-prime for polynomials | [02](02-math-input-rendering.md) |
 | 3 | Graphing, lessons and answers | **Mafs** (MIT, React, about 95 KB gzip), driven by our own JSON graph spec, answers marked on the server | JSXGraph. Not GeoGebra (paid commercial licence) or Desmos (terms unknown) | [03](03-graphing.md) |
-| 4 | Simple and Technical modes | **One per-user `uiMode`** (default Simple), set as `data-mode` on the server; density from CSS variables and a Tailwind `technical:` variant; one config panel component with basic and advanced fields. **A mode never removes a feature** | Ship the density switch alone first | [04](04-dual-mode-ux.md) |
+| 4 | ~~Simple and Technical modes~~ (dropped, decision 6) | **One per-user `uiMode`** (default Simple), set as `data-mode` on the server; density from CSS variables and a Tailwind `technical:` variant; one config panel component with basic and advanced fields. **A mode never removes a feature** | Ship the density switch alone first | [04](04-dual-mode-ux.md) |
 | 5 | Navigation | **Azure-style**: header (breadcrumb with switcher, status chip, help, one main action) plus a ribbon (view links left, an ARIA toolbar right, overflow into "More"); today's ⌘K search grows into a command palette. Per-screen table for all nine screens | — | [05](05-navigation.md) |
-| 6 | Test designer and runner | **One continuous list** with a sticky number strip (empty, partial, done, error, flagged); server-side drafts; a `Test.version` check on save; inline validation. **No virtualisation yet** | TanStack Virtual with dnd-kit when the question bank needs it | [06](06-test-designer.md) |
+| 6 | Test designer and runner (runner: one question per screen, decision 8) | **One continuous list** with a sticky number strip (empty, partial, done, error, flagged); server-side drafts; a `Test.version` check on save; inline validation. **No virtualisation yet** | TanStack Virtual with dnd-kit when the question bank needs it | [06](06-test-designer.md) |
 | 7 | Reusable content | **Copy with provenance** (`sourceId`, `sourceVersion`, `copiedAt`) and an "update available" prompt that opens a draft. Copies land as drafts, dates cleared, blobs duplicated. No live linking | Version-pinned bank items later (Plus) | [07](07-reusable-content.md) |
-| 8 | Coding automarker | **Self-hosted Judge0 CE 1.13.1** on its own VM, every language through the multi-file runner (id 89) with our own scripts, HMAC-tokened callbacks, a stuck-run poller and our own output checker, all behind a `Runner` interface | Piston, or a thin worker over isolate 2.x | [08](08-coding-automarker.md) |
+| 8 | Coding automarker (parked, decision 3) | **Self-hosted Judge0 CE 1.13.1** on its own VM, every language through the multi-file runner (id 89) with our own scripts, HMAC-tokened callbacks, a stuck-run poller and our own output checker, all behind a `Runner` interface | Piston, or a thin worker over isolate 2.x | [08](08-coding-automarker.md) |
 | 9 | AI-assisted marking | **Claude Haiku 5.5 on Bedrock** for first pass, escalate hard cases to Sonnet 5.5; queued structured-output jobs; the tutor accepts or edits every mark; an audit table | Azure OpenAI in South Africa North | [09](09-ai-assisted-marking.md) |
 | 10 | Calendar and attendance | **Keep our own grid** (`calendar-view.tsx`), extend with date-fns and shadcn; store an **RRULE string + time zone + exceptions table**, expand with rrule-temporal. v1: pasted meeting links, per-user ICS feed, P/L/A/E attendance per occurrence, optional check-in code | FullCalendar v7 (MIT) if drag-to-reschedule is needed | [10](10-calendar-attendance.md) |
 | 11 | Fonts and accessibility | **Geist and Geist Mono** via `next/font/google` (`latin` + `latin-ext`). Several colour tokens fail WCAG AA and need darker values (below) | Inter | [11](11-fonts-accessibility.md) |
+| 13 | Stored maths audit | MathJax 4 renders all 5,605 stored formulas; KaTeX would too today | — | [13](13-math-audit.md) |
 | 12 | Illustrations | **Open Peeps SVGs** in the app (optimised, strokes set to `currentColor`); Transhumans only at small size; Zanzi on marketing pages only | — | [12](12-illustrations.md) |
 
 ### How the editor, math and graph picks fit together
@@ -91,14 +115,14 @@ graphs in one document.
 
 ## Code issues found during research
 
-Checked against the code in this session unless marked otherwise. None are
-fixed here; research sessions only write docs.
+Checked against the code in this session unless marked otherwise. The
+first three were fixed on `revamp/b-fixes` after the owner asked for them.
 
 | Issue | Where | Impact | Status |
 | --- | --- | --- | --- |
-| NUMERIC answers compared with `===`: `0.5` vs `1/2` fails, no tolerance | `src/features/assessments/lib/auto-grade.ts:116` | Wrong marks on numeric questions | Verified |
-| Saving a test deletes every question missing from the payload, with its grades and uploads; there is no version check, so a stale tab can wipe questions | `src/features/assessments/actions.ts:200` | Data loss risk | Verified (the sweep is deliberate; the missing version check is the gap) |
-| Weekly recurrence uses the server's local weekday (`getDay()`); Vercel runs in UTC, so events starting 00:00 to 01:59 SAST can land on the wrong day | `src/features/events/lib/recurrence.ts:79` | Rare wrong-day events | Verified by reading; not reproduced |
+| NUMERIC answers compared with `===`: `0.5` vs `1/2` fails, no tolerance | `src/features/assessments/lib/auto-grade.ts:116` | Wrong marks on numeric questions (also `0,5`, the decimal comma the runner allows) | **Fixed** on `revamp/b-fixes` |
+| Saving a test deletes every question missing from the payload, with its grades and uploads; there is no version check, so a stale tab can wipe questions | `src/features/assessments/actions.ts:200` | Data loss risk | **Fixed** on `revamp/b-fixes` with a fingerprint check (no schema change); `Test.version` can replace it |
+| Weekly recurrence uses the server's local weekday (`getDay()`); Vercel runs in UTC, so events starting 00:00 to 01:59 SAST can land on the wrong day | `src/features/events/lib/recurrence.ts:79` | Rare wrong-day events | Reproduced under `TZ=UTC`; **fixed** on `revamp/b-fixes` |
 | Lesson delete removes its blobs; any future copy sharing those URLs would break. `deleteTest` leaks blobs | `src/features/lessons/actions.ts:276`; assessments actions | Blocks naive copy-on-reuse | Lesson part verified; test leak reported by research |
 | Old reorder question is drag-only (fails WCAG 2.5.7 and 2.1.1); new one's ↑/↓ buttons lack `aria-label` | `src/app/dashboard/tests/components/question-input.tsx`, `question-renderer.tsx` | Accessibility | Reported by research |
 | Timed tests auto-submit with no way to grant extra time (WCAG 2.2.1) | Test runner | Accessibility, and a likely accommodation request | Reported by research |
@@ -116,8 +140,9 @@ owner's approval**. They belong in B2's design, in the `learning`,
 - `Test.version`; provenance fields (`sourceId`, `sourceVersion`, `copiedAt`) on copyable content.
 - Per-question rubric; an `AiMarkSuggestion` table.
 - `CourseEvent.rrule` and `timeZone`; a `CourseEventException` table; an attendance table.
-- `UserPreferences.uiMode`.
-- Coding tables from the plan (`CodingTask`, `TestCase`, `CodeSubmission`, `CodeRun`).
+- ~~`UserPreferences.uiMode`~~ (modes dropped).
+- ~~Coding tables~~ (automarker parked).
+- Per-student extra time on timed tests (decision 7).
 
 ## Inputs for Agent A
 
@@ -135,23 +160,10 @@ infrastructure; these are leads, not decisions.
 
 ## Questions for the owner
 
-Ordered by what blocks B2 and B3 most.
-
-1. **Stored format:** accept Tiptap JSON as the source of truth with markdown derived? (If markdown must stay canonical, the pick becomes Plate.)
-2. **Math engine:** accept MathJax 4 everywhere, including a custom editor node, and plain-text graph labels in v1? And may B run a read-only audit of stored TeX against KaTeX on the shared database?
-3. **Delphi scope:** is console-only Delphi automarking still worth building for v1, knowing school Delphi is mostly GUI? And: FPC 3.2.x in a custom image, Java 17 or 21, is Judge0's GPL-3.0 acceptable?
-4. **AI marking and POPIA:** proceed with design on Bedrock global routing, pending Agent A's legal view on s72 and s57?
-5. **Colour tokens:** accept the darker muted grey and accent (`#6F6E69`, `#2563EB`), or keep terracotta `#C2410C`? Does Fraunces go entirely?
-6. **Modes:** can students and parents see the Simple/Technical toggle, or is it tutors only?
-7. **Timed tests:** who grants extra time, and do Pro lockdown tests honour it?
-8. **Test runner:** continuous scroll or one question per screen by default? Do copied tests bring memos by default?
-9. **Graphing tier:** lesson graphs free and only the graph answer type on Plus?
-10. **Video tools:** which do your tutors actually use (Meet, Teams, Zoom)? This decides which auto-link integration comes first, after v1.
-11. **Leaderboards:** may minors appear on judge-mode rankings, and to whom?
-12. **New dependencies:** OK to add Tiptap, MathLive, Mafs, `@radix-ui/react-toolbar` and rrule-temporal in B's pull requests (root config is A's; small additions need A's approval)?
-13. **Illustrations:** is the Medical Icons sheet meant for Nexa? Are there larger originals of Transhumans for the landing hero?
+All thirteen were answered on 2026-11-16; see "Owner decisions" at the top.
+The original questions are in this file's git history.
 
 ## What the design sessions take from here
 
-- **B2 System design:** content model and editor contract (`contracts/editor.md`) from the format, math and graph decisions; test designer with `Test.version`; copy-with-provenance; calendar on RRULE with exceptions; `Runner` interface and Judge0 pipeline; AI marking queue; frontend shell with `data-mode` and the header/ribbon slots (`contracts/navigation.md`).
-- **B3 UI/UX:** corrected colour tokens and Geist type scale; the header and ribbon table in file 05 as the starting point for mockups; number-strip states from file 06; illustration rules from file 12.
+- **B2 System design:** content model and editor contract (`contracts/editor.md`) on Tiptap JSON and MathJax 4; test designer with `Test.version` and per-student extra time; one-question-per-screen runner; copy-with-provenance that brings everything; calendar on RRULE with exceptions and a meeting-link setting (Meet default); AI marking queue on Bedrock; frontend shell with the header/ribbon slots (`contracts/navigation.md`). No modes, no coding automarker.
+- **B3 UI/UX:** one Notion-like UI; corrected colour tokens and Geist type scale (no Fraunces); the header and ribbon table in file 05 as the starting point for mockups; number-strip states from file 06; illustration rules from file 12.
