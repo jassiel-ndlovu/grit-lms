@@ -184,6 +184,7 @@ How a job is written, so the caller can change without code changes:
 | Notifications and digests | `/api/cron/notifications` | Hourly | A |
 | Billing daily (metering, trial ends, dunning) | `/api/cron/billing-daily` ([03-billing.md](03-billing.md)) | `0 23 * * *` | A |
 | `JobRun` prune (older than 30 days) | `/api/cron/housekeeping` | Daily | A |
+| Retention deletes (section 6.1) | `/api/cron/retention` | Daily | A |
 
 Every job must be idempotent: QStash delivers at least once and GitHub can double-run. Auto-submit already is (it updates only `IN_PROGRESS` rows). `JobRun` lives in `prisma/schema/core.prisma` (A). `src/lib/jobs/**` is not in the AGENTS.md map; A claims it as infrastructure and notes this in HANDOFF.md.
 
@@ -198,6 +199,18 @@ Every job must be idempotent: QStash delivers at least once and GitHub can doubl
 | Record | `docs/revamp/a/ops/restore-log.md`: date, target time, minutes to restore (RTO), data lost (RPO) | Same |
 
 Targets: RPO 5 minutes and RTO 2 hours in Stage 2 (**Guess**; confirm after the first drill). Every backup workflow reads production, so it needs the owner's go-ahead before it is turned on.
+
+### 6.1 Data retention and how it meets backups
+
+Owner decision (16 November 2026): a workspace's data is kept until **2 months after its last payment**, then deleted. Financial records (invoices, payments, refunds, payouts, usage records) are kept, as set in [02-identity.md](02-identity.md) and [03-billing.md](03-billing.md).
+
+| Piece | Design |
+| --- | --- |
+| Clock | `Workspace.retentionDeleteAfter` = last successful payment + 2 months, recomputed by the billing daily job ([03-billing.md](03-billing.md)). A workspace that never paid uses the trial end date instead (**Decision taken here**; alternative: the creation date) |
+| Warning | Emails to the owner at 30 and 7 days before the date (through the notifications job) |
+| Deletion | `/api/cron/retention` (daily, A, `src/features/workspaces/retention.ts`): deletes tenant rows and the workspace's Blob files by exact URL from the database, keeps financial rows with personal fields reduced to name and invoice details, writes one `AuditLog` row with counts only. Dry-run mode lists what it would delete; the first real runs need the owner's approval |
+| Backups | Deleted rows stay in RDS PITR for up to 14 days and in logical dumps for up to 30 days, then age out. Backups are never edited. A restore from backup re-runs the retention job before the database goes live, so deleted workspaces do not come back |
+| Preview and staging | Fake data only, so no retention work |
 
 ## 7. Secrets and environment variables
 

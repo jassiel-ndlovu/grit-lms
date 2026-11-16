@@ -1,8 +1,10 @@
 # Identity: sign-up, invites, sign-in and accounts
 
-**Answer first.** Move from NextAuth v4 to **Better Auth** before any new sign-in feature is built. Auth.js v5 is still a beta, and both NextAuth packages have had security-only maintenance since the Better Auth team took them over. Sessions move from JWT to **database sessions**, so we can revoke them and impersonate users safely. Tutors and owners sign in with a password. TOTP 2FA is **required for every workspace `OWNER` and every `NEXA_ADMIN`**, and optional for other staff. Parents and learners sign in with single-use 15-minute magic links. Nobody self-registers as a learner or parent: they arrive through an invite or a guardian claim code. A minor's account is activated only once a guardian has recorded versioned consent. Profiles are keyed by `userId`, which makes email change, export and deletion safe.
+**Answer first.** Move from NextAuth v4 to **Better Auth** before any new sign-in feature is built. Auth.js v5 is still a beta, and both NextAuth packages have had security-only maintenance since the Better Auth team took them over. Sessions move from JWT to **database sessions**, so we can revoke them and impersonate users safely. Tutors and owners sign in with a password. TOTP 2FA is **required for every workspace `OWNER` and every `NEXA_ADMIN`**, and optional for other staff.
 
-Status: draft for A2, 2026-11-16. Builds on [01-tenancy-roles.md](01-tenancy-roles.md) (Workspace, Membership, Learner, Guardianship, AuditLog). Owner decisions in [research/SUMMARY.md](../research/SUMMARY.md) apply.
+In v1, tutors create and onboard their own students directly. The tutor enters a name, an optional email and a username, and hands the student a one-time sign-in code. The tutor arranges guardians, email and parental consent offline, and is responsible for that consent. Guardian accounts, claim codes, consent records and magic links stay in the design, marked **later (post-v1)**. They are built as new tables, so adding them needs no change to v1 data. Profiles are keyed by `userId`, which makes email change, export and deletion safe. Data is kept until 2 months after a workspace's last payment, then deleted. Financial records are kept as tax law requires.
+
+Status: draft for A2, 2026-11-16, revised the same day with the owner's answers (v1 onboarding, retention). Builds on [01-tenancy-roles.md](01-tenancy-roles.md) (Workspace, Membership, Learner, Guardianship, AuditLog). Owner decisions in [research/SUMMARY.md](../research/SUMMARY.md) apply.
 
 ## 1. Today
 
@@ -30,7 +32,8 @@ Footprint: 17 files import `next-auth`, 7 use `useSession`, `signIn` or `signOut
 
 Plugins we use, each checked 2026-11-16:
 
-- `magicLink`: single use ("consumed on the first verification attempt"), default 5 minutes, `expiresIn` configurable ([docs](https://www.better-auth.com/docs/plugins/magic-link)).
+- `username`: lets tutor-created students sign in without an email (v1).
+- `magicLink` (later, post-v1): single use ("consumed on the first verification attempt"), default 5 minutes, `expiresIn` configurable ([docs](https://www.better-auth.com/docs/plugins/magic-link)).
 - `twoFactor`: TOTP, single-use backup codes, a 30-day trusted device, and enrolment needs the password ([docs](https://www.better-auth.com/docs/plugins/2fa)).
 - `admin`: impersonation with `impersonationSessionDuration` (default 1 hour), `revokeUserSessions`, and `banUser`, which also revokes sessions ([docs](https://www.better-auth.com/docs/plugins/admin)).
 - Built-in rate limiting with `storage: "database"`. The default memory store does not suit serverless, and limiting is off in development unless enabled ([docs](https://www.better-auth.com/docs/concepts/rate-limit)).
@@ -81,7 +84,7 @@ Only workspace creators sign up on their own. Two entry points on `/auth/sign-up
 | 1. Business name | Practice name, slug, time zone | Business name, slug, time zone, optional logo | `Workspace` (trial starts: `billingState = TRIAL`, `trialEndsAt` = now + 14 days, owned by 03), `Membership` `OWNER` |
 | 2. Subjects | Subjects they teach (pick from a list or type) | Subjects the business offers | `Workspace.subjects String[]` (**Decision taken here**: a tag list that pre-fills course names. Alternative: a `Subject` table, later if reporting needs it) |
 | 3. First course | Name, subject, grade; the owner becomes `CourseStaff` `LEAD` | Name and subject, then either "I'll invite the tutor" (a staff invite) or leave it unassigned | `Course` (B's model, through B's `createCourse` action) |
-| 4. Invite | Learners (email, adult or minor, guardian email if minor) | Tutors and admins first, then learners (optional) | `Invite` rows (§5) |
+| 4. Add students | Create student accounts (§5.1) | Invite tutors and admins first (§5), then optionally create students | `User` + `Learner` + `Enrollment`; staff `Invite` rows |
 | 5. Connect payouts | Paystack subaccount (04-payments) | Same, by the owner | **Skippable.** "Do this later" sets a dashboard task. Parent invoices cannot be sent until payouts are connected |
 
 `Workspace.onboardingCompletedAt` is set after step 5 or after "skip". Until then `/dashboard` redirects to the next unfinished step. TOTP enrolment (§7) is prompted after step 5 and enforced before payouts or by day 14.
@@ -98,7 +101,7 @@ flowchart TD
   F2 --> F3[Step 3: first course]
   F3 --> V{Email verified?}
   V -- no --> E2[Wait screen: resend link] --> V
-  V -- yes --> F4[Step 4: invite tutors and/or learners]
+  V -- yes --> F4[Step 4: invite tutors and/or create students]
   F4 --> F5{Step 5: connect payouts?}
   F5 -- connect --> P[Paystack subaccount, 04-payments]
   F5 -- later --> T[Dashboard task: connect payouts]
@@ -128,66 +131,78 @@ flowchart TD
 | `acceptedAt`, `acceptedByUserId` | | Set once; the token is dead after that |
 | `revokedAt` | datetime? | |
 
-There is one pending invite per (`workspaceId`, `email`, `kind`), enforced by a partial unique index where `acceptedAt` and `revokedAt` are null. Code lives in `src/features/auth/invites.ts` (`createInvites`, `acceptInvite`, `revokeInvite`), and the page is `src/app/auth/invite/[token]/page.tsx`. Permissions follow 01: `members.invite` for staff, `learners.invite` for learners, `guardians.link` for guardians.
+There is one pending invite per (`workspaceId`, `email`, `kind`), enforced by a partial unique index where `acceptedAt` and `revokedAt` are null. Code lives in `src/features/auth/invites.ts` (`createInvites`, `acceptInvite`, `revokeInvite`), and the page is `src/app/auth/invite/[token]/page.tsx`. In v1 only `kind = STAFF` is used. `LEARNER` and `GUARDIAN` invites, and the fields `isMinor`, `learnerInviteId` and `learnerId`, are **later (post-v1)**. They are created now so the later flows need no migration. Permission: `members.invite` (01).
 
-**Flows.**
-
-- **Staff.** On acceptance, a new user sets a password, or an existing user signs in. This creates a `Membership` `ACTIVE` plus `CourseStaff` rows, and prompts for 2FA.
-- **Adult learner.** On acceptance, the user signs in by magic link (or sets an optional password). This creates `Learner` (`isMinor = false`) and an `Enrollment` per course.
-- **Minor learner.** The inviter must give a guardian email. The **guardian** invite goes out first, and no child `User` exists yet. Once the guardian accepts and consents (§9), the learner invite is released to the child's email. If the child has no email, the guardian can "set up my child's sign-in" (**Open question**). The `Learner` is created only after consent.
-- **Guardian for an existing learner.** On acceptance, this creates a `Guardianship` `ACTIVE` with consent.
+**Staff invite (v1).** On acceptance, a new user sets a password, or an existing user signs in. This creates a `Membership` `ACTIVE` plus `CourseStaff` rows, and prompts for 2FA.
 
 ```mermaid
 sequenceDiagram
-  actor T as Tutor
+  actor O as Owner or admin
   participant N as Nexa (invites.ts)
   participant Q as Email queue (05)
-  actor G as Guardian
-  actor C as Child
-  T->>N: createInvites(learner minor, guardianEmail, courseIds)
-  N->>N: Invite LEARNER (held), Invite GUARDIAN (learnerInviteId)
-  N->>Q: enqueue invite-guardian (idempotency key invite:id)
-  Q-->>G: Email with /auth/invite/{token}
-  G->>N: Open link (GET shows page, no state change)
-  alt Guardian has an account
-    N-->>G: Sign in (magic link or password)
-  else New guardian
-    N-->>G: Name, then magic link sign-in
+  actor S as Invited tutor
+  O->>N: createInvites(STAFF, email, role TUTOR, courseIds)
+  N->>N: Invite row (tokenHash, expiresAt +7d), AuditLog members.invite
+  N->>Q: enqueue invite-staff (idempotency key invite:id)
+  Q-->>S: Email with /auth/invite/{token}
+  S->>N: Open link (GET shows page, no state change)
+  N->>N: Check hash, not expired, not accepted or revoked
+  alt Has an account with this email
+    S->>N: Sign in (password, TOTP if enrolled)
+  else New user
+    S->>N: Name and password, then verify email
   end
-  G->>N: Confirm relationship and accept consent v2027-01 (scopes)
-  N->>N: tx: User(child) + Learner(isMinor) + Enrollments + Guardianship ACTIVE + ConsentRecord, Invite.acceptedAt
-  N->>N: AuditLog guardian.consent
-  N->>Q: release learner invite to child's email
-  Q-->>C: Email with /auth/invite/{token}
-  C->>N: Accept, sign in by magic link
-  N-->>T: Notification: learner joined
+  S->>N: Accept (POST)
+  N->>N: tx: Membership ACTIVE + CourseStaff rows + Invite.acceptedAt
+  N-->>S: Prompt 2FA enrolment, then dashboard
+  N-->>O: Notification: tutor joined
 ```
 
-### Guardian claim code
+### 5.1 Tutor-created students (v1)
 
-Today's learners have no guardians (01 §8 step 5). A tutor with `guardians.link` makes a code for one learner, shown once, for example `NEXA-7KQ4-M2XD` (8 Crockford base32 characters). The tutor gives it to the parent outside the app.
+Tutors create and onboard their own students. No invite, guardian or consent step is needed in v1. The tutor arranges email, guardians and parental consent offline.
 
-| `GuardianClaimCode` field | Notes |
+| Input | Notes |
 | --- | --- |
-| `id`, `workspaceId`, `learnerId`, `createdById` | |
-| `codeHash` (unique) | SHA-256 of the normalised code |
-| `expiresAt` | 14 days |
-| `usedAt`, `usedByUserId` | Single use |
-| `failedAttempts` | |
+| Full name | Required |
+| Email | Optional. When given it must be unique. It is not emailed until it is verified, and verification only starts when the student asks for it in settings |
+| Username | Required, unique across Nexa, suggested from the name (for example `thandi.m4`). Better Auth `username` plugin |
+| Minor | A tick box, default on. Sets `Learner.isMinor` |
+| Courses | Creates `Enrollment` rows |
 
-The parent opens `/auth/claim`, enters the code and their email, and signs in by magic link. They then confirm the child's first name (shown masked, for example "T\*\*\*\*"), and consent. This creates the `Guardianship` `ACTIVE`. If the learner already has an active guardian, the new link is `PENDING` until the tutor approves it. Rate limits: 5 code attempts per IP per hour, and 10 per code across all IPs before the code is voided. Code lives in `src/features/auth/claim-codes.ts`.
+- `createStudentAccount` in `src/features/students/actions.ts` (permission `learners.invite`) writes `User`, `Learner` and `Enrollment`s in one transaction. It returns a **one-time sign-in code**: 10 characters, for example `KQ4M-2XD7-PA`, shown once. The tutor hands it over, on paper or by message.
+- The code is the initial password, stored as a normal scrypt hash. `User.mustChangePassword = true` forces a new password at first sign-in. The code expires after 14 days unused (`User.initialCodeExpiresAt`).
+- Sign-in is by **username or email** plus password.
+- A tutor with `learners.invite` on the learner can issue a new sign-in code (a reset). This revokes the student's sessions and writes `AuditLog` `learner.code_reset`. Limit: 10 resets per tutor per hour.
+- A student without an email gets a placeholder. Better Auth requires an email, so `User.email` is set to `<userId>@students.nexa-lms.invalid` with `User.emailIsPlaceholder = true`. Nothing is ever sent to it (05 §3), and it is replaced when the student adds a real address (§8 email change). **Decision taken here**; the alternative is to make `User.email` nullable, which fights the library.
+- **Consent in v1:** the tutor is responsible for getting parental consent for a minor. The tutor terms say so, and the create screen shows a required tick: "I have the consent of this student's parent or guardian". The tick is stored as `Learner.consentAttestedById` and `consentAttestedAt`, plus an `AuditLog` row. It does **not** block the `Learner` row. Whether a tutor attestation is enough under POPIA s35 is an open question for the lawyer.
 
-## 6. Magic links
+### 5.2 Later (post-v1): learner and guardian invites, claim codes
+
+These are kept here so the data model is ready. The owner will revisit them.
+
+- **Adult learner invite:** accepting by magic link creates `Learner` and `Enrollment`s.
+- **Guardian invite or claim code:** the guardian signs in by magic link and confirms the child. This creates `Guardianship` `ACTIVE` and a `ConsentRecord` (§9).
+  - A tutor makes a single-use `GuardianClaimCode` for one learner: `id`, `workspaceId`, `learnerId`, `createdById`, `codeHash` (unique), `expiresAt` (14 days), `usedAt`, `usedByUserId`, `failedAttempts`. The code looks like `NEXA-7KQ4-M2XD`.
+  - The parent enters it at `/auth/claim` (5 attempts per IP per hour; the code is void after 10 failures).
+  - A second guardian stays `PENDING` until the tutor approves.
+  - Code lives in `src/features/auth/claim-codes.ts`.
+- **Consent-first minors:** a minor invited without the tutor attestation waits for guardian consent before the `Learner` is activated.
+
+All of these add tables or rows (`GuardianClaimCode`, `ConsentText`, `ConsentRecord`, `Invite` of new kinds). None changes a v1 column. Tutor-created learners keep working, and a guardian can later claim them.
+
+## 6. Magic links (later, post-v1)
+
+Not in v1: learners sign in with a username and password (§5.1). Kept for guardians and young learners later.
 
 | Rule | Value |
 | --- | --- |
 | Who may use them | Users with **no** staff membership and not `NEXA_ADMIN`. For anyone else, `sendMagicLink` sends a "use your password" email instead (same response on screen) |
 | Expiry | 15 minutes (`expiresIn: 900`) |
 | Single use | Yes. Better Auth consumes the token on verification |
-| Link scanners | The link opens `/auth/magic?token=…`, a page with a "Sign in" button that POSTs. Mail scanners that prefetch GETs (Outlook Safe Links) cannot burn the token. **Decision taken here**; the alternative is to accept that some links break |
-| Rate limits | 3 per email per 15 minutes, 10 per IP per hour, through the `RateLimit` table |
+| Link scanners | The link opens `/auth/magic?token=…`, a page with a "Sign in" button that POSTs, so mail scanners that prefetch GETs cannot burn the token |
+| Rate limits | 3 per email per 15 minutes, 10 per IP per hour |
 | Response | Always "If an account exists, we've sent a link" |
-| Email | The `magic-link` template, transactional ([05](05-messaging-email.md)) |
 
 ## 7. Passwords and 2FA
 
@@ -196,11 +211,12 @@ The parent opens `/auth/claim`, enters the code and their email, and signs in by
 | `NEXA_ADMIN` | Required | **Required** before `/admin` loads. No trusted device |
 | Workspace `OWNER` (solo or organisation) | Required | **Required** before `payouts.connect` or `billing.manage` writes, and for all access from trial day 14 |
 | `ADMIN`, `TUTOR` | Required | Optional, prompted after the first invite is accepted. An owner can make it required for their workspace (`Workspace.require2fa`) |
-| Learner, guardian | Optional (magic link by default) | Not offered in v1 |
+| Learner | Required in v1: a tutor-issued sign-in code, then their own password (§5.1) | Not offered in v1 |
+| Guardian (later, post-v1) | Optional (magic link by default) | Not offered |
 
 **Decision taken here:** 2FA is required for every owner, solo owners included, because a solo owner controls payouts too. The alternative is to require it only for organisation owners. Recovery uses 10 single-use backup codes. If they are lost, a Nexa admin resets 2FA after checking identity by email and phone, writes an `AuditLog` row, and revokes all sessions.
 
-**Password reset** (replaces the stub at `src/app/forgot-password`): `requestPasswordReset` sends a link that lasts 30 minutes and is single use. On success all sessions are revoked, a "your password changed" notice goes out, and the screen always shows the same response.
+**Password reset** (replaces the stub at `src/app/forgot-password`): `requestPasswordReset` sends a link that lasts 30 minutes and is single use. On success all sessions are revoked, a "your password changed" notice goes out, and the screen always shows the same response. A student without a verified email cannot reset by email; their tutor issues a new sign-in code (§5.1).
 
 ## 8. Profiles, email change, export and deletion
 
@@ -214,49 +230,72 @@ The parent opens `/auth/claim`, enters the code and their email, and signs in by
 
 **Email change** (`src/features/auth/email-change.ts`):
 
-1. The user re-authenticates: password + TOTP for staff, a fresh magic link for passwordless users.
+1. The user re-authenticates with password, plus TOTP if enrolled. A student adding a first real email in place of a placeholder follows the same steps, without the old-address notice.
 2. A confirm link goes to the **new** address and lasts 1 hour. A notice goes to the **old** address with "This wasn't me", which works for 7 days, revokes all sessions and restores the old email.
 3. On confirm: `User.email` is updated, `emailVerifiedAt` is set to now, other sessions are revoked, and an `AuditLog` row `user.email_changed` is written. The new address must not belong to another user.
 
-**POPIA data export** (`src/features/users/export.ts`): any user, and a guardian for each linked child, can request an export once per 24 hours. A queued job writes a ZIP of JSON files into a private Blob path:
+**Retention rule (owner decision, 2026-11-16).** Workspace data is kept until **2 months after the workspace's last successful payment**, then deleted. Financial records (invoices, payments, refunds, payouts) are kept for as long as tax law requires; the period is a question for the accountant. A job `purgeLapsedWorkspaces` in `src/features/workspaces/retention.ts` runs nightly:
+
+| Case | Deletion date |
+| --- | --- |
+| Paying workspace that stops paying | Last successful payment + 2 months |
+| Trial that never paid | `trialEndsAt` + 2 months (**Decision taken here**; the alternative is to keep it until the owner deletes it) |
+| `COMPED` workspace (including the migrated one) | Never automatically; only on owner request |
+
+- **Warnings:** the owner gets email warnings at 30 days and at 7 days before deletion, and the deletion date shows in billing.
+- **What is deleted:** courses, learner work, grades, messages, notifications, email logs (05 §9), and Blob files.
+- **Users:** a user with no remaining membership, learner row or guardianship is then anonymised as below.
+- **Approval:** the first production run needs the owner's approval of the list (AGENTS.md §4).
+
+**POPIA data export** (`src/features/users/export.ts`): any user can request an export once per 24 hours, as can a tutor for a learner they teach (in v1 the tutor passes it to the parent offline). A queued job writes a ZIP of JSON files into a private Blob path:
 
 - profile, memberships, learner rows, enrolments
 - submissions, grades, messages they wrote, notifications
-- consent records, invoices and payments
+- consent attestations, invoices and payments
 
-The `data-export-ready` email carries a signed link that expires in 7 days, and the file is deleted after 7 days.
+The export is available until the workspace's retention date. The link is signed, expires in 7 days, and the file is deleted after 7 days.
 
 **Account deletion** (`src/features/users/deletion.ts`):
 
 | Rule | Detail |
 | --- | --- |
-| Blockers | The sole `OWNER` of a workspace must transfer ownership or close the workspace first |
-| Grace | `User.deletedAt` is set, sessions are revoked, and sign-in is blocked. The user can cancel by email link for 14 days |
-| After grace | A job anonymises the user: name becomes "Former user", email becomes `deleted+<id>@invalid`, and the password, 2FA, sessions and preferences are deleted. Messages they wrote stay, attributed to "Former user". Submissions and grades are deleted unless the workspace must keep them; the learner's guardian or the tutor exports first |
-| Kept | Invoices and payment rows are kept 5 years for tax (**Open question** for the lawyer on the exact period), with the name only. `AuditLog` and `ConsentRecord` are kept |
-| Minors | A guardian can delete the child's account. A minor cannot delete their own account without a guardian |
+| Blockers | The sole `OWNER` of a workspace must transfer ownership or close the workspace first. Closing starts the retention clock from the last payment |
+| Grace | `User.deletedAt` is set, sessions are revoked, and sign-in is blocked. The user can cancel for 14 days |
+| After grace | Anonymise: name becomes "Former user", email becomes `deleted+<id>@invalid`, and password, 2FA, sessions and preferences are deleted. Messages they wrote stay as "Former user" until the workspace's retention date. Learner work and grades are deleted at once unless the tutor exported them first |
+| Kept | Financial records, with the name only, for the period tax law requires (accountant question). `AuditLog` rows about money are kept with them |
+| Minors (v1) | The tutor deletes a student's account on the parent's request. Later (post-v1) a guardian can do it directly |
 
-## 9. Minors and guardian consent
+## 9. Minors and consent
 
-- `Learner.isMinor` comes from `User.dateOfBirth` when known, otherwise from the inviter's tick. A minor learner can only be created through §5: a tutor or guardian invite, with consent first. `paymentVisible` stays false (01 §6).
-- `ConsentText`: `id`, `version` (for example `2027-01`), `locale`, `body` (markdown), `scopes` (`CORE`, `CROSS_BORDER`, `AI_MARKING`, `MARKETING`), `publishedAt`. Texts are never edited; a change is a new version.
-- `ConsentRecord`, append-only: `id`, `guardianshipId`, `guardianUserId`, `studentUserId`, `consentTextId`, `scopes` granted, `action` (`GRANT`, `WITHDRAW`), `ip`, `userAgent`, `method` (`INVITE`, `CLAIM_CODE`), `at`. Each record mirrors the latest grant into `Guardianship.consentAt`, `consentVersion` and `consentEvidence` (01).
-- `CORE` and `CROSS_BORDER` are required to activate the learner. The `AI_MARKING` scope is checked by B's AI marking queue through `hasConsent(learnerId, "AI_MARKING")` in `src/features/parents/consent.ts`. `MARKETING` defaults to off.
-- When a new consent version raises the scopes, guardians re-consent at next sign-in. Withdrawing `CORE` archives the learner and starts deletion (§8).
-- At 18: a nightly job flips `isMinor` from `dateOfBirth` and asks the learner to give their own consent.
-- **Migrated learners** (all `isMinor = true`, no guardian) need claim codes. See the open questions.
+**v1: the tutor is responsible.**
+
+- `Learner.isMinor` comes from the tutor's tick, or from `User.dateOfBirth` when known.
+- The tutor attests that they have parental consent (§5.1). The attestation is recorded but blocks nothing.
+- The tutor terms place the duty to obtain and keep parental consent on the tutor (**Open question** for the lawyer: is this enough under POPIA s35, and what must the terms say?).
+- Today's migrated learners (01 §8: `isMinor = true`) are covered by the owner, who is their tutor, attesting once at migration.
+- `paymentVisible` stays false for minors (01 §6).
+- Nexa's own safeguards still apply in v1. Student personal information is redacted before any LLM call (owner decision), and no student data appears in email subject lines (05 §4).
+
+**Later (post-v1): guardian consent captured in Nexa.**
+
+- `ConsentText`: `id`, `version` (for example `2027-01`), `locale`, `body`, `scopes` (`CORE`, `CROSS_BORDER`, `AI_MARKING`, `MARKETING`), `publishedAt`. A text is never edited; a change is a new version.
+- `ConsentRecord`, append-only: `id`, `guardianshipId`, `guardianUserId`, `studentUserId`, `consentTextId`, `scopes`, `action` (`GRANT`, `WITHDRAW`), `ip`, `userAgent`, `method` (`INVITE`, `CLAIM_CODE`, `TUTOR_ATTESTED`), `at`. The latest grant is mirrored into `Guardianship.consentAt`, `consentVersion` and `consentEvidence` (01).
+- When this ships, v1 attestations are copied in as `ConsentRecord` rows with `method = TUTOR_ATTESTED`, and guardians who claim a child confirm consent in-app.
+- `hasConsent(learnerId, scope)` lives in `src/features/parents/consent.ts`. In v1 it returns `true` when the tutor attestation exists, so B's AI marking can call it from day one.
+- At 18: a nightly job flips `isMinor` from `dateOfBirth`.
 
 ## 10. Rate limiting and lockout
 
 | Endpoint | Limit (key) |
 | --- | --- |
-| Password sign-in | 5 per 15 minutes per IP + email |
+| Password sign-in (email or username) | 5 per 15 minutes per IP + identifier |
 | 2FA verify | 5 per 10 minutes per session |
-| Magic link | 3 per 15 minutes per email, 10 per hour per IP |
+| Magic link (later) | 3 per 15 minutes per email, 10 per hour per IP |
 | Password reset request | 3 per hour per email |
 | Sign-up | 5 per hour per IP |
 | Invite create | 200 per day per workspace (Resend Free also caps at 100 a day, see 05) |
-| Claim code | 5 per hour per IP |
+| Claim code (later) | 5 per hour per IP |
+| Student sign-in code reset | 10 per hour per tutor |
 
 - **Store:** Better Auth `rateLimit` with `storage: "database"`, `enabled: true` in every environment. Move to Redis-backed secondary storage only if the table gets hot.
 - **Lockout:** 10 failed passwords on one account in 30 minutes set `User.lockedUntil` to now + 30 minutes. The owner of the address gets an email with a reset link. The counter resets on success. Code lives in `src/features/auth/lockout.ts`, registered as a Better Auth `hooks.before` on `/sign-in/email`.
@@ -268,26 +307,30 @@ The `data-export-ready` email carries a signed link that expires in 7 days, and 
 | Path | Contents |
 | --- | --- |
 | `src/lib/auth.ts` | `betterAuth({...})` config, `getSession()`, `AuthError` |
-| `src/lib/auth-client.ts` | `createAuthClient` with the `magicLinkClient`, `twoFactorClient` and `adminClient` plugins |
+| `src/lib/auth-client.ts` | `createAuthClient` with the `usernameClient`, `twoFactorClient` and `adminClient` plugins (`magicLinkClient` later) |
 | `src/lib/viewer.ts` | `getViewer()` (contract `viewer.md`) built on the session |
 | `src/lib/safe-action.ts` | `viewerActionClient`, `requirePermission` |
 | `src/app/api/auth/[...all]/route.ts` | Better Auth handler |
-| `src/features/auth/` | `invites.ts`, `claim-codes.ts`, `lockout.ts`, `email-change.ts`, `onboarding.ts`, `schemas.ts`, `actions.ts` |
+| `src/features/students/actions.ts` | `createStudentAccount`, `resetStudentSignInCode` (v1) |
+| `src/features/workspaces/retention.ts` | `purgeLapsedWorkspaces` |
+| `src/features/auth/` | `invites.ts`, `claim-codes.ts` (later), `lockout.ts`, `email-change.ts`, `onboarding.ts`, `schemas.ts`, `actions.ts` |
 | `src/features/parents/consent.ts` | Consent records and `hasConsent` |
 | `src/features/users/` | `export.ts`, `deletion.ts` |
-| `src/app/auth/**` | `sign-in`, `sign-up`, `magic`, `invite/[token]`, `claim`, `two-factor`, `reset-password`, `onboarding/[step]` (A owns the routes; built from B's components) |
+| `src/app/auth/**` | `sign-in`, `sign-up`, `invite/[token]`, `two-factor`, `set-password` (first sign-in), `magic` and `claim` (later), `reset-password`, `onboarding/[step]` (A owns the routes; built from B's components) |
 | `src/app/verify-email`, `src/app/forgot-password` | Kept as redirects to the new `/auth/*` pages |
 
 ## Issues with 01
 
 - `Membership.status = INVITED` needs a `userId`, which an invitee may not have yet. Proposal: pending invites live in `Invite`, and a `Membership` is created `ACTIVE` on acceptance. `INVITED` is then unused and can be dropped.
-- `Learner` should not exist before consent for a minor. This doc creates it on consent, so 01 needs no `PENDING_CONSENT` status. Migrated minors are the exception (see the open questions).
-- 01 keeps consent on `Guardianship` only. This doc adds an append-only `ConsentRecord` for per-scope history and withdrawals, and treats the `Guardianship` fields as a cache of the latest grant. This adds to 01 and does not contradict it.
-- `User.emailVerified` changes from a timestamp to a boolean plus `emailVerifiedAt` (Better Auth's shape).
+- 01 §6 says a minor "can only be invited with a guardian or by a tutor". v1 uses the tutor path only (§5.1), which fits.
+- `Learner` gains `consentAttestedById` and `consentAttestedAt` (v1). The later `ConsentRecord` adds to 01's `Guardianship` consent fields and does not replace them.
+- `User` gains `username` (unique), `emailIsPlaceholder`, `mustChangePassword` and `initialCodeExpiresAt`. `emailVerified` changes from a timestamp to a boolean plus `emailVerifiedAt` (Better Auth's shape).
 
 ## Open questions
 
-1. **Migrated learners:** today's learners are minors with no recorded guardian consent. Do we give tutors 30 days after launch to send claim codes, keeping access meanwhile? Or do we pause processing until consent is given? This is a POPIA s35 question for the lawyer.
-2. **Young children without an email:** may a guardian manage a child's sign-in (for example a guardian-issued magic link to the guardian's inbox, with a switch to the child)? Or is a child email always required?
-3. **Retention:** how long must invoices and learner work be kept after an account is deleted (tax 5 years? school records?).
-4. Is a 14-day trial grace before owner 2FA is enforced acceptable, or must it be enforced at sign-up?
+1. **Lawyer:** in v1 the tutor is responsible for parental consent for minors. Is a tutor attestation plus a clause in the tutor terms enough under POPIA s35, and what must the clause say?
+2. **Accountant:** how long must invoices, payments and payouts be kept (Tax Administration Act; 5 years is assumed until confirmed)?
+3. **Later (owner deferred):** guardian accounts, in-app consent capture, claim codes and magic links. When do they enter the plan?
+4. **Later (owner deferred):** sign-in for children without an email beyond tutor-issued codes, for example a guardian-managed sign-in.
+5. **Later (owner deferred):** safeguarding rules for staff–minor messaging (05 §2).
+6. Is a 14-day trial grace before owner 2FA is enforced acceptable, or must it be enforced at sign-up?

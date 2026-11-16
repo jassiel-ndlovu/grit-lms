@@ -1,6 +1,6 @@
 # Payments: provider, workspace billing and parent fees
 
-**Answer first.** All money moves through one `PaymentProvider` interface, implemented for Paystack first and Payfast as the fallback, so a switch touches one folder. For Gate 1 (workspace pays Nexa) the owner's card is authorised at the end of the trial, and each month Nexa charges that authorisation for the `PlatformInvoice` total, with no split. For Gate 2 (parents and adult students pay tutors) each payee has a `PayoutAccount` that is a Paystack subaccount, and one parent checkout can pay many invoices across children and tutors in **one** Paystack transaction with a multi-split: one share per payee, Nexa keeps 2%, and the card fee is borne by the payees in proportion. Webhooks are the source of truth: signatures are verified, every event is stored once in `PaymentEvent`, and the redirect is never trusted. Nexa never holds tutor money: the provider's escrow is not used and tutor shares settle straight to the tutor's bank.
+**Answer first.** All money moves through one `PaymentProvider` interface, implemented for Paystack first and Payfast as the fallback, so a switch touches one folder. For Gate 1 (workspace pays Nexa) the owner's first payment at the end of the trial saves the card and covers the next 30 days, and every 30 days Nexa charges that card for the renewal `PlatformInvoice`, with no split (periods and amounts are in 03). For Gate 2 (parents and adult students pay tutors) each payee has a `PayoutAccount` that is a Paystack subaccount, and one parent checkout can pay many invoices across children and tutors in **one** Paystack transaction with a multi-split: one share per payee, Nexa keeps 2%, and the card fee is borne by the payees in proportion. Webhooks are the source of truth: signatures are verified, every event is stored once in `PaymentEvent`, and the redirect is never trusted. Nexa never holds tutor money: the provider's escrow is not used and tutor shares settle straight to the tutor's bank.
 
 Status: draft for A2, 2026-11-16. Builds on [01-tenancy-roles.md](01-tenancy-roles.md) and [03-billing.md](03-billing.md) (`Subscription`, `PlatformInvoice`, `DiscountCode`, `Redemption`). All amounts are integer cents (ZAR); Paystack's ZAR subunit is also cents.
 
@@ -13,7 +13,7 @@ Schema in `prisma/schema/billing.prisma`; code in `src/features/payments/**`.
 | `ProviderCustomer` | `id`, `provider` (`PAYSTACK`, `PAYFAST`), `ownerType` (`WORKSPACE`, `USER`), `workspaceId?`, `userId?`, `customerCode` (String), `email` (String) | Gate 1 customer is the workspace; Gate 2 customer is the paying user. Unique (`provider`, `ownerType`, `workspaceId`, `userId`) |
 | `PaymentSettings` | `workspaceId` (PK), `payoutMode` (`WORKSPACE`, `PER_TUTOR`), `defaultDueDays` (Int, 7), `overdueReminders` (Boolean, true), `restrictOnOverdue` (Boolean, false), `offsiteInstructions` (String?) | One per workspace. A `SOLO` workspace is always `WORKSPACE` mode (the owner is the payee) |
 | `PayoutAccount` | `id`, `workspaceId`, `membershipId?` (set only in `PER_TUTOR` mode), `provider`, `subaccountCode` (String, unique), `businessName`, `bankCode`, `bankName`, `accountNumberLast4` (String), `accountName` (String, as resolved), `status` (`PENDING`, `ACTIVE`, `DISABLED`), `verifiedAt?`, `createdByUserId`, `createdAt` | Unique (`workspaceId`, `membershipId`). The full account number goes to the provider and is never stored |
-| `FeeSchedule` | `id`, `workspaceId`, `courseId`, `learnerId?` (null = course default), `kind` (`MONTHLY`, `LESSON_PACK`, `ONCE_OFF`), `amountCents` (Int), `lessonsInPack` (Int?), `description` (String), `billingDay` (Int 1-28, `MONTHLY` only), `startsOn` (Date), `endsOn` (Date?), `active` (Boolean) | A learner row overrides the course default |
+| `FeeSchedule` | `id`, `workspaceId`, `courseId`, `learnerId?` (null = course default), `kind` (`MONTHLY`, `LESSON_PACK`, `ONCE_OFF`), `amountCents` (Int), `lessonsInPack` (Int?), `description` (String), `billingDay` (Int 1-28, `MONTHLY` only), `startsOn` (Date), `endsOn` (Date?), `active` (Boolean) | A learner row overrides the course default. Tutor-set calendar schedules; the 30-day rule in 03 applies only to Gate 1 |
 | `Invoice` | `id`, `number` (String, unique per workspace), `workspaceId`, `payoutAccountId`, `learnerId`, `studentUserId`, `status` (`DRAFT`, `OPEN`, `PAID`, `VOID`, `REFUNDED`, `PARTIALLY_REFUNDED`), `issuedAt`, `dueAt`, `periodStart?`, `periodEnd?`, `subtotalCents`, `discountCents`, `totalCents` (Int), `paidAt?`, `paidVia` (`ONLINE`, `OFFSITE`)?, `payerUserId?`, `lockedByPaymentId?`, `lockedUntil?` | One per child per payee per run. Payee to payer. Not the same table as `PlatformInvoice` |
 | `InvoiceLine` | `id`, `invoiceId`, `feeScheduleId?`, `courseId?`, `description`, `quantity` (Int), `unitAmountCents` (Int), `amountCents` (Int), `discountCodeId?` | |
 | `Payment` | `id`, `provider`, `reference` (String, unique, ours), `purpose` (`CARD_AUTHORISATION`, `PLATFORM_INVOICE`, `PARENT_CHECKOUT`), `workspaceId?` (Gate 1), `payerUserId?` (Gate 2), `platformInvoiceId?`, `status` (`PENDING`, `SUCCEEDED`, `FAILED`, `ABANDONED`, `REFUNDED`, `PARTIALLY_REFUNDED`), `amountCents`, `commissionCents` (Int, 0 for Gate 1), `estimatedFeeCents` (Int), `feeCents` (Int?, actual), `channel` (String?), `splitSent` (Json?), `paidAt?`, `createdAt` | One provider transaction |
@@ -111,9 +111,10 @@ export type NormalisedEvent = {
 
 ## 4. Gate 1: workspace pays Nexa
 
-- **Card capture** at or before trial end: `startCardCapture` (03) creates the `ProviderCustomer`, a `Payment` with `purpose = CARD_AUTHORISATION` and an amount of 1 000 cents, card channel only, and redirects. On success the reusable authorisation goes to `Subscription`, the workspace converts (03, section 5), and the R10 is refunded at once. **Decision taken here:** a small verified charge, refunded. Alternative: no capture until the first invoice, which risks a failed first charge.
-- **Monthly charge:** the invoice run (03, section 7) creates a `Payment` with `purpose = PLATFORM_INVOICE` and reference `nx-inv-<invoiceId>-<attempt>`, then calls `chargeAuthorization` for the total. No split. The webhook marks the `PlatformInvoice` `PAID`. A failure starts dunning (03, section 8).
-- **Pay now / new card:** `initializeCheckout` for the invoice total; the new authorisation replaces the saved one.
+- **First payment** ends the trial: `startFirstPayment` (03) creates the `ProviderCustomer` and a `Payment` with `purpose = PLATFORM_INVOICE` for the first renewal invoice (seats in advance for 30 days), card channel only, and redirects. On success the reusable authorisation goes to `Subscription`, the first 30-day period starts at the payment time, and the workspace converts (03, section 6). No separate card-verification charge is needed.
+- **Renewal charge:** on `renewsAt` (30 days after the last payment) the daily job builds the renewal invoice (03, sections 4 and 7), creates a `Payment` with `purpose = PLATFORM_INVOICE` and reference `nx-inv-<invoiceId>-<attempt>`, and calls `chargeAuthorization` for the total. No split. The webhook marks the `PlatformInvoice` `PAID` and opens the next period from the payment time. A failure starts dunning, counted from the renewal date (03, section 7).
+- **Pay now:** `initializeCheckout` for the invoice total; the new authorisation replaces the saved one.
+- **Replace card without paying** (`startCardReplacement`): a `Payment` with `purpose = CARD_AUTHORISATION` of 1 000 cents, refunded as soon as the webhook confirms. Also used if a first payment would be zero (no learners yet). **Decision taken here.** Alternative: only allow card changes through Pay now.
 
 ```mermaid
 sequenceDiagram
@@ -122,23 +123,22 @@ sequenceDiagram
   participant N as Nexa (billing actions)
   participant P as Paystack
   participant W as Webhook route
-  O->>N: startCardCapture(returnPath)
+  O->>N: confirmTrialTiers, then startFirstPayment(returnPath)
   N->>P: createCustomer (if none)
-  N->>N: Payment(CARD_AUTHORISATION, 1000 cents, PENDING)
+  N->>N: PlatformInvoice (ADVANCE seats, 24 x 13900) + Payment(PLATFORM_INVOICE, 333600, PENDING)
   N->>P: initializeCheckout(reference, card only)
   P-->>N: authorizationUrl
   N-->>O: redirect
   O->>P: enters card, 3-D Secure
   P-->>O: redirect to /billing/return?reference
-  O->>N: getCardCaptureStatus (polls, shows "confirming")
+  O->>N: getBillingPaymentStatus (polls, shows "confirming")
   P->>W: charge.success (signed)
   W->>W: verify signature, store PaymentEvent
   W->>P: verifyTransaction(reference)
   P-->>W: SUCCEEDED, authorization reusable
-  W->>N: save authorization on Subscription, state ACTIVE, open BillingPeriod, drop trial caps
-  W->>P: refund(reference, 1000)
-  N-->>O: "Card saved. First bill on 1 March."
-  Note over N,P: 1st of each month: chargeAuthorization(invoice total), no split
+  W->>N: invoice PAID, save authorization, open period 3 Feb to 4 Mar, state ACTIVE, drop trial caps
+  N-->>O: "Paid. Renews on 5 March."
+  Note over N,P: On renewsAt: chargeAuthorization(renewal invoice total), no split
 ```
 
 ## 5. Gate 2: parents and adult students pay tutors
@@ -251,7 +251,7 @@ sequenceDiagram
 
 ## 8. For contracts/billing.md (payments)
 
-Same conventions as 03, section 11. Files: `src/features/payments/queries.ts` and `actions.ts`.
+Same conventions as 03, section 10. Files: `src/features/payments/queries.ts` and `actions.ts`.
 
 | Name | Kind | Permission | Input | Returns |
 | --- | --- | --- | --- | --- |
@@ -277,7 +277,7 @@ Same conventions as 03, section 11. Files: `src/features/payments/queries.ts` an
 ## Open questions
 
 1. Paystack sales: confirm that one South African account allows dynamic multi-split to many subaccounts, `charge_authorization` for Gate 1, and an education marketplace, and give chargeback fees (research 03).
-2. Paystack's minimum charge for the card-capture step, and whether a zero-amount authorisation exists, which would avoid the R10 charge and refund.
+2. Paystack's minimum charge for the card-replacement step, and whether a zero-amount authorisation exists, which would avoid the R10 charge and refund.
 3. How `all-proportional` distributes the fee in a multi-split, and how refunds debit split shares (sections 5 and 7).
 4. Whether South African account resolution needs the holder's ID number.
 5. When the (Pty) Ltd is registered, so the R1,000,000 sole-proprietor limit stops applying.
