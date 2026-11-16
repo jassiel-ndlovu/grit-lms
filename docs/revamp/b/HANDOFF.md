@@ -3,6 +3,42 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Legacy Batch 2: shell off ProfileContext, `revamp/b-legacy-batch2`
+Done (design 07, Batch 2):
+- `src/app/dashboard/layout.tsx` calls `getViewer()` once and builds a
+  `ShellUser` (`name`, `email`, `imageUrl`, `role`). Both shells get it as a
+  prop: the legacy `DashboardShell` → `Header` and `Nav`, and `AppShell`.
+- `Header` and `Nav` no longer call `useProfile()`. They no longer show
+  loading skeletons for the name either, because the server already knows
+  it.
+- `AppShell`'s account menu shows the avatar (`viewer.user.imageUrl`, via
+  `next/image`), falling back to initials.
+- `getOwnProfile()` turned out to be unnecessary: `getViewer()` already
+  reads the avatar from the Tutor or Student row.
+
+Notes:
+- The nav still goes by the legacy `session.user.role`. Moving it to
+  `viewer.persona`, plus the workspace switcher and the banners, is the
+  next B PR (navigation.md, "When getViewer() lands").
+- Names now come from `User.name` (the viewer), not `Tutor.fullName` or
+  `Student.fullName`. They are normally the same.
+- `ProfileProvider` stays in `providers.tsx`. Only the three Batch 3 pages
+  read it now: the review page, the create/edit page and the portal.
+
+Checked:
+- `tsc` and eslint pass.
+- `check-shell-nav` passes.
+- `/design-system/shell` renders.
+
+Not checked: the signed-in header, nav and account menu, because the dev
+database is production. Owner test from design 07, for each role (tutor,
+student, parent, admin), on Preview: the name, avatar and menu are right,
+and sign-out works.
+
+Next: nav by persona with the workspace switcher and banners, then Batch 3.
+
+Blocked on the other agent: the `assignment-brief` Blob kind for Batch 3.
+
 ## 2026-11-16 Legacy Batch 1 (B's half), `revamp/b-legacy-batch1`
 Done (design 07, Batch 1):
 - `src/app/providers.tsx` no longer mounts `ActivityLogProvider` and

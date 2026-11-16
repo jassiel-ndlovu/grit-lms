@@ -23,8 +23,7 @@ import {
   User,
 } from "lucide-react";
 
-import { useProfile } from "@/context/ProfileContext";
-import Skeleton from "../components/skeleton";
+import type { ShellUser } from "@/components/shell/app-shell";
 import { GlobalSearch } from "@/features/search/components/global-search";
 import { navPagesForRole } from "./nav";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
@@ -67,20 +66,18 @@ function getPageTitle(pathname: string) {
 interface DashboardHeaderProps {
   /** Opens the nav drawer (small screens only — the button hides at lg). */
   onOpenMenu: () => void;
+  /** From getViewer() in the layout (legacy Batch 2; was ProfileContext). */
+  user: ShellUser | null;
 }
 
-export default function DashboardHeader({ onOpenMenu }: DashboardHeaderProps) {
-  const { profile, session } = useProfile();
+export default function DashboardHeader({ onOpenMenu, user }: DashboardHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   const dateCtx = useDateContext();
-  const showNotificationBell = Boolean(session?.user);
-  const firstName = profile?.fullName?.split(" ")[0];
-  const searchPages = useMemo(
-    () => navPagesForRole(session?.user.role),
-    [session?.user.role],
-  );
+  const role = user?.role;
+  const firstName = user?.name.split(" ")[0];
+  const searchPages = useMemo(() => navPagesForRole(role), [role]);
 
   return (
     // Fixed height (h-14 / lg:h-20) so sticky bars further down the page
@@ -107,20 +104,16 @@ export default function DashboardHeader({ onOpenMenu }: DashboardHeaderProps) {
               <h1 className="font-display text-2xl leading-tight tracking-tight text-foreground">
                 {getPageTitle(pathname)}
               </h1>
-              {session?.user.role && (
+              {role && (
                 <Badge variant="soft" className="rounded-full px-2.5 py-0.5">
-                  {session.user.role.toLowerCase()}
+                  {role.toLowerCase()}
                 </Badge>
               )}
             </div>
-            {profile ? (
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {greetingFor(new Date(), dateCtx.timeZone)}
-                {firstName ? `, ${firstName}` : ""}.
-              </p>
-            ) : (
-              <Skeleton className="mt-1 h-4 w-40" />
-            )}
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {greetingFor(new Date(), dateCtx.timeZone)}
+              {firstName ? `, ${firstName}` : ""}.
+            </p>
           </div>
         </div>
 
@@ -139,31 +132,20 @@ export default function DashboardHeader({ onOpenMenu }: DashboardHeaderProps) {
             <HelpCircle className="h-5 w-5" />
           </button>
 
-          {showNotificationBell && <NotificationBell />}
+          {user && <NotificationBell />}
 
-          <ProfileMenu profile={profile} email={session?.user?.email ?? null} />
+          {user && <ProfileMenu user={user} />}
         </div>
       </div>
     </header>
   );
 }
 
-interface ProfileMenuProps {
-  profile: AppTypes.Student | AppTypes.Tutor | null;
-  email: string | null;
-}
-
-function ProfileMenu({ profile, email }: ProfileMenuProps) {
+function ProfileMenu({ user }: { user: ShellUser }) {
   const router = useRouter();
-
-  if (!profile) {
-    return <Skeleton className="h-10 w-12 rounded-md sm:w-32" />;
-  }
-
-  const initial = profile.fullName?.charAt(0).toUpperCase() ?? "U";
-  const firstName = profile.fullName?.split(" ")[0];
-  const avatarUrl =
-    "imageUrl" in profile ? profile.imageUrl : profile.profileImageUrl;
+  const initial = user.name.charAt(0).toUpperCase() || "U";
+  const firstName = user.name.split(" ")[0];
+  const avatarUrl = user.imageUrl;
 
   return (
     <DropdownMenu>
@@ -197,10 +179,10 @@ function ProfileMenu({ profile, email }: ProfileMenuProps) {
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="px-2 py-2">
           <p className="truncate text-sm font-medium text-foreground">
-            {profile.fullName}
+            {user.name}
           </p>
-          {email && (
-            <p className="truncate text-xs text-muted-foreground">{email}</p>
+          {user.email && (
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
           )}
         </DropdownMenuLabel>
 

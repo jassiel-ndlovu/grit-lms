@@ -60,8 +60,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { useProfile } from "@/context/ProfileContext";
-import Skeleton from "../components/skeleton";
+import type { ShellUser } from "@/components/shell/app-shell";
 import { APP_CONTACT, APP_LEGAL_NAME, APP_SHORT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 
@@ -158,6 +157,8 @@ interface NavProps {
   /** Mobile drawer state — owned by the shell so the header can open it. */
   mobileOpen: boolean;
   onMobileOpenChange: (open: boolean) => void;
+  /** From getViewer() in the layout (legacy Batch 2; was ProfileContext). */
+  user: ShellUser | null;
 }
 
 /**
@@ -167,7 +168,7 @@ interface NavProps {
  *     same panel as a left-hand drawer over the page, so content keeps the
  *     full width of a phone.
  */
-export default function Nav({ mobileOpen, onMobileOpenChange }: NavProps) {
+export default function Nav({ mobileOpen, onMobileOpenChange, user }: NavProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -190,6 +191,7 @@ export default function Nav({ mobileOpen, onMobileOpenChange }: NavProps) {
         )}
       >
         <NavPanel
+          user={user}
           collapsed={isCollapsed}
           onToggleCollapsed={() => setIsCollapsed((c) => !c)}
         />
@@ -209,6 +211,7 @@ export default function Nav({ mobileOpen, onMobileOpenChange }: NavProps) {
           >
             <DialogPrimitive.Title className="sr-only">Menu</DialogPrimitive.Title>
             <NavPanel
+              user={user}
               collapsed={false}
               onClose={() => onMobileOpenChange(false)}
             />
@@ -224,6 +227,7 @@ export default function Nav({ mobileOpen, onMobileOpenChange }: NavProps) {
 /* ------------------------------------------------------------------------- */
 
 interface NavPanelProps {
+  user: ShellUser | null;
   collapsed: boolean;
   /** Desktop: collapse/expand toggle. */
   onToggleCollapsed?: () => void;
@@ -231,14 +235,14 @@ interface NavPanelProps {
   onClose?: () => void;
 }
 
-function NavPanel({ collapsed, onToggleCollapsed, onClose }: NavPanelProps) {
-  const { session, profile } = useProfile();
+function NavPanel({ user, collapsed, onToggleCollapsed, onClose }: NavPanelProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const role = user?.role;
 
   const navItems = useMemo(
-    () => NAV_ITEMS_BY_ROLE[session?.user.role ?? "STUDENT"] ?? STUDENT_NAV_ITEMS,
-    [session?.user.role],
+    () => NAV_ITEMS_BY_ROLE[role ?? "STUDENT"] ?? STUDENT_NAV_ITEMS,
+    [role],
   );
 
   const allItems = useMemo(
@@ -275,9 +279,7 @@ function NavPanel({ collapsed, onToggleCollapsed, onClose }: NavPanelProps) {
                 {APP_SHORT_NAME}
               </p>
               <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
-                {session?.user.role
-                  ? `${session.user.role.toLowerCase()} portal`
-                  : "Loading"}
+                {role ? `${role.toLowerCase()} portal` : "Portal"}
               </p>
             </div>
           </div>
@@ -342,7 +344,7 @@ function NavPanel({ collapsed, onToggleCollapsed, onClose }: NavPanelProps) {
           </ul>
 
           <div className="mt-3 border-t border-border pt-3">
-            {profile ? (
+            {user ? (
               <button
                 type="button"
                 onClick={() => signOut()}
@@ -355,38 +357,23 @@ function NavPanel({ collapsed, onToggleCollapsed, onClose }: NavPanelProps) {
                 title={collapsed ? "Sign out" : undefined}
               >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground text-sm font-medium">
-                  {profile.fullName?.charAt(0).toUpperCase() ?? "U"}
+                  {user.name.charAt(0).toUpperCase() || "U"}
                 </div>
                 {!collapsed && (
                   <>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">
-                        {profile.fullName}
+                        {user.name}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {profile.email}
+                        {user.email}
                       </p>
                     </div>
                     <LogOut className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-destructive" />
                   </>
                 )}
               </button>
-            ) : (
-              <div
-                className={cn(
-                  "flex items-center gap-3 p-2",
-                  collapsed && "justify-center",
-                )}
-              >
-                <Skeleton className="h-9 w-9 rounded-md" />
-                {!collapsed && (
-                  <div className="flex-1">
-                    <Skeleton className="mb-1 h-3 w-24" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                )}
-              </div>
-            )}
+            ) : null}
           </div>
 
           {/* What used to be the sticky page footer. */}
