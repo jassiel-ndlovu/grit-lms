@@ -10,7 +10,9 @@
  */
 
 import { docToMarkdown } from "./markdown";
-import { validateDoc } from "./schema";
+import { Node as PMNode } from "@tiptap/pm/model";
+
+import { MAX_DOC_BYTES, contentSchema, validateDoc } from "./schema";
 import { readStoredContent, toStoredContent, type StoredContent } from "./value";
 
 export interface RichFieldWrite {
@@ -33,4 +35,22 @@ export function richFieldFromInput(value: unknown): RichFieldWrite | null {
   if (!doc) return null;
   const markdown = docToMarkdown(doc).trim();
   return { json: toStoredContent(doc), markdown, empty: markdown === "" };
+}
+
+/**
+ * Why `richFieldFromInput` refused a value, for server logs. Never throws.
+ * The message names nodes and rules, not the content.
+ */
+export function richFieldRefusal(value: unknown): string {
+  try {
+    const stored = readStoredContent(value);
+    if (!stored) return "not a content envelope this build understands";
+    if (JSON.stringify(stored.doc).length > MAX_DOC_BYTES) return "document too large";
+    PMNode.fromJSON(contentSchema(), stored.doc).check();
+    return "no reason found";
+  } catch (e) {
+    // A browser that sends non-plain objects (an old RichEditor bundle)
+    // lands here: React's server-action decoder refuses property access.
+    return e instanceof Error ? e.message : String(e);
+  }
 }
