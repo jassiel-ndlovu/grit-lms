@@ -3,6 +3,25 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-17 Account banners, `revamp/a-account-banners`
+
+Done:
+- `<AccountBanners viewer />` (`src/features/workspaces/components/account-banners.tsx`, a server component) for AppShell's `banner` slot, as B asked. The rules live in `src/features/workspaces/account-banners.ts` (`accountBannersFor(viewer, now)`, which is pure). The wording follows ux/03 and ux/06:
+  - **Impersonation:** first, danger, with a link back to `/admin`. `endImpersonation()` arrives with the admin console.
+  - **Billing:** staff only. Trial (last 5 days), past due, read-only and cancelled each have a version for billing people (owner or admin) and one for other staff. Learners and guardians never see billing banners. Amounts and renewal dates join the messages with the Phase 2 billing queries.
+  - **Email verification:** a "Resend link" button that calls the existing `requestEmailVerification` (throttled).
+- Removed `getOwnProfile()`: B found `getViewer()` already carries the avatar.
+- `scripts/check-account-banners.ts` (17 checks).
+
+Next:
+- Phase 1 tenancy schema and migration (design 01).
+
+Blocked on the other agent:
+- For B: in the dashboard layout pass `banner={<AccountBanners viewer={viewer} />}` to `AppShell`. In Phase 0 only the email banner can appear (for unverified users), because billing is comped and nobody impersonates.
+
+Questions for the owner:
+- None.
+
 ## 2026-11-16 Phase 0: supplies for legacy Batches 2 and 3, `revamp/a-batch23-supplies`
 
 Done:
