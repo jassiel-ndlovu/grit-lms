@@ -17,7 +17,7 @@ Blocked on the other agent:
 - For B: `math-input` tier is open (owner asked). Revision 3 only names graphing.
 
 Questions for the owner:
-- Tier order, `math-input` tier, Paystack account type, domain, and the month of the first payment. See `research/SUMMARY.md`.
+- Tier order, `math-input` tier, Paystack account type, the exact `.co.za` name (decided: `.co.za` at xneelo), and the month of the first payment. See `research/SUMMARY.md`.
 
 ## 2026-11-16 Cron fix, `revamp/a-cron-scheduler`
 
