@@ -6,7 +6,7 @@
 
 | Topic | Decision | What follows |
 | --- | --- | --- |
-| Tier prices | **Core R99, Plus R139, Pro R179** per student per course per month (research said R29 / R49 / R89) | **Assumed:** the order is Core < Plus < Pro, as in the plan. The owner's note listed "Pro R139, Plus R179" once and "R99/R139/R179" once. These prices are 6.9%, 9.7% and 12.5% of the R1,430 a parent pays for one subject at one hour a week (research 01). A solo tutor with 12 students in 2 subjects on Plus pays R3,336 a month, against R1,853 for Teach 'n Go Pro (100 students, no LMS). That is the market risk to watch in the trial |
+| Tier prices | **Core R99, Plus R139, Pro R179** per student per course per month (research said R29 / R49 / R89) | Order confirmed by the owner: Core < Plus < Pro. These prices are 6.9%, 9.7% and 12.5% of the R1,430 a parent pays for one subject at one hour a week (research 01). A solo tutor with 12 students in 2 subjects on Plus pays R3,336 a month, against R1,853 for Teach 'n Go Pro (100 students, no LMS). That is the market risk to watch in the trial |
 | Hosting and database | Vercel Pro and RDS af-south-1 **in 2027**, once tutors and students are on board. Stay on Hobby and Neon until then | Vercel Hobby is for non-commercial use only (research 05), so upgrade before Nexa takes its first payment. Children's data stays in the US until then: keep the POPIA notice and consent wording honest about that (research 09) |
 | Business entity | Not registered. Revenue is far below R80,000 a month | **Correction:** Paystack's Starter limit is **R80,000 in total, for the life of the account**, not per month (research 03). Register on Paystack as a sole proprietor (R1,000,000 lifetime limit, needs proof of address) or register a company before parent payments go live |
 | Parent payments | No combined subscription. A parent can claim several children and pay for them from one account. Payments are aggregated, and each child keeps their own account. Nexa is an education marketplace. Chargeback fees are negligible for now | One checkout per parent can cover several invoices. Paystack's multi-split pays each tutor's subaccount in one transaction (research 03). Tutor subscriptions (Gate 1) need no split |
@@ -15,7 +15,7 @@
 | Preview database | Preview uses a Neon branch with fake data | A schema-only Neon branch, seeded with fake data, becomes Preview's `DATABASE_URL`. Preview also shares production's Blob token; a separate store is a later step |
 | Wolfram | Get a quote | Draft request below. Agent B recommends a local maths engine instead (B research 02), so the quote is for comparison |
 | Domain and mail | **`.co.za`** at xneelo, about 3 mailboxes (the owner first suggested `.online`) | **Decided after this research:** `.online` is $1.96 in the first year but **$28.84 (R490) a year** after that at Porkbun, while `.co.za` is R110 a year at xneelo, including renewals ([Porkbun](https://porkbun.com/products/domains), checked 2026-11-16). Three mailboxes fit Zoho Mail Free (up to 5 users), so mail costs R0 |
-| Earlier (plan revision 3) | No UI modes; coding automarker and Judge0 parked; all graphing on Pro; Bedrock for AI marking | `viewer.md` drops `mode`. `services.md` puts `graphing` on Pro and has no `automarker` in v1. Judge0 leaves the launch budget |
+| Earlier (plan revision 3), revised | No UI modes; coding automarker and Judge0 parked; Bedrock for AI marking. **`graphing` and `math-input` are both on Plus** (the owner revised revision 3, which had put all graphing on Pro) | `viewer.md` drops `mode`. `services.md` puts `graphing` and `math-input` on Plus and has no `automarker` in v1. Judge0 leaves the launch budget |
 
 ### Wolfram quote request (draft, for the owner to send)
 
@@ -81,8 +81,6 @@ A solo tutor on Plus with 12 students in 2 subjects covers the base cost.
 
 The owner answered the first list on 16 November (see "Owner decisions"). Still open:
 
-1. **Tier order:** confirm Core R99, Plus R139, Pro R179 (Plus below Pro).
-2. **Math input tier:** plan revision 3 moves only graphing to Pro. Agent B's handoff also puts `math-input` on Pro. Plus or Pro?
-3. **Paystack account type:** sole proprietor (R1,000,000 lifetime limit) or a registered company, before parent payments go live? Who is the Information Officer?
-4. **Domain name:** `.co.za` at xneelo is decided (R110 a year). Which exact name? The owner checks availability and buys it.
-5. **First payment date:** Vercel Pro must be active before Nexa charges anyone. Which month?
+1. **Paystack account type:** sole proprietor (R1,000,000 lifetime limit) or a registered company, before parent payments go live? Who is the Information Officer?
+2. **Domain name:** `.co.za` at xneelo is decided (R110 a year). Which exact name? The owner checks availability and buys it.
+3. **First payment date:** Vercel Pro must be active before Nexa charges anyone. Which month?
