@@ -1,0 +1,77 @@
+# Encrypted database backup to Tigris (nexa-lms-backups, jnb).
+#
+# Manual only: there is no schedule yet. Add one (weekly) only after the owner
+# has run this by hand, restored a copy, and said yes.
+#
+# Runbook: docs/revamp/a/ops/backup-runbook.md
+#
+# Needs, in the GitHub environment "production" (owner as required reviewer):
+#   secrets.BACKUP_DATABASE_URL                direct (non-pooled) URL, read-only role
+#   secrets.TIGRIS_STORAGE_ACCESS_KEY_ID       Tigris key limited to nexa-lms-backups
+#   secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY
+#   vars.AGE_RECIPIENT                         owner's age PUBLIC key (age1...); not a secret
+#
+# The dump is never stored as a GitHub artifact or log: it contains children's
+# personal data. Only the encrypted file leaves the runner, and only to Tigris.
+
+name: Database backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (check secrets and tools only; contacts nothing)
+        type: boolean
+        default: true
+      date:
+        description: Object date YYYY-MM-DD (blank = today, UTC)
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    env:
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      TIGRIS_STORAGE_ACCESS_KEY_ID: ${{ secrets.TIGRIS_STORAGE_ACCESS_KEY_ID }}
+      TIGRIS_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_STORAGE_SECRET_ACCESS_KEY }}
+      AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+      TIGRIS_NO_TELEMETRY: "1"
+      TIGRIS_NO_UPDATE_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install PostgreSQL 17 client and age
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 age
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Install Tigris CLI
+        run: npm install -g @tigrisdata/cli@3.12.1
+
+      - name: Back up
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          DATE_INPUT: ${{ inputs.date }}
+        run: |
+          args=()
+          [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+          [ -n "$DATE_INPUT" ] && args+=(--date "$DATE_INPUT")
+          bash scripts/db-backup.sh "${args[@]}"

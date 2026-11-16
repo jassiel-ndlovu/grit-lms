@@ -3,7 +3,29 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
-## 2026-11-16 Phase 0: Preview on fake data and its own Blob store, `revamp/a-preview-env`
+## 2026-11-16 Phase 0 runbooks, `revamp/a-runbooks`
+
+Done:
+- `docs/revamp/a/ops/db-move-runbook.md`: the January 2027 move from Neon us-east-1 to RDS af-south-1 with the `cpt1` region switch. Assumptions to recheck, RDS and role setup, a timed rehearsal on a Neon branch, go/no-go list, the 30-minute window (W1 to W9) with a check per step, counts, sequences and grants queries, rollback by stage, and the after-list. Refers to research 06 §6 and design 06 §8 rather than copying them.
+- `scripts/blob-audit.ts` (+ `scripts/lib/blob-audit-core.ts`, check `scripts/check-blob-audit.ts`, 34 checks): read-only audit as in research 08. Paginated `list()` capped at 5 calls (1 for today's store), token from `VERCEL_BLOB_READ_WRITE_TOKEN` only, a READ ONLY transaction scanning every text, `text[]` and JSON column, report in git-ignored `.blob-audit/`. Never deletes. `--dry-run` uses fake data. Runbook `ops/blob-audit-runbook.md`, including how deletion is approved later.
+- `scripts/db-backup.sh` + `.github/workflows/db-backup.yml` (manual trigger only, dry run by default, environment `production`) + `ops/backup-runbook.md`: `pg_dump -Fc` from the direct URL in a read-only session, piped into `age`, uploaded to `t3://nexa-lms-backups/db/YYYY-MM-DD.dump.age` with a `.sha256`. Covers key handling, the 30-day lifecycle rule, the secrets, restore, and the drill.
+- `.gitignore`: `/.blob-audit/`, `/.db-backup/`, `*.dump`, `*.dump.age`.
+- Nothing ran against production, Blob or Tigris. Only the dry runs and the check ran.
+
+Next:
+- Owner runs the blob audit (runbook §2 and §3), then approves deletion by band. `scripts/blob-delete.ts` is a separate PR once there is an approved list.
+- Owner sets up the age key, the Tigris key and the lifecycle rule, and the `production` GitHub environment; first backup by hand, then the workflow; a restore drill before any schedule.
+- Build `MAINTENANCE_MODE` (needed by the move runbook) and `scripts/check-restore.ts`.
+
+Blocked on the other agent:
+- None.
+
+Questions for the owner:
+- May the blob audit run now, against a Neon branch of production you create (blob-audit runbook §2)?
+- Run the first backup by hand once the key and secrets exist?
+- `tigris stat` exiting non-zero for a missing object is assumed by `db-backup.sh` (refuse to overwrite); the first real run will confirm it.
+
+## 2026-11-16 Phase 0: Prisma 6 and the schema split, `revamp/a-prisma6-schema-split`
 
 Done:
 - Neon branch `preview` created from `production` as **schema-only** (`init_source: parent-schema`, no rows copied). Production was not written to; its size is unchanged.
