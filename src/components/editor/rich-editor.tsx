@@ -104,7 +104,10 @@ export function RichEditor({
       },
     },
     onUpdate: ({ editor: e }) => {
-      const next = toStoredContent(e.getJSON());
+      // A plain-JSON copy. ProseMirror builds attrs with Object.create(null),
+      // and React's server-action encoder sends such objects as opaque
+      // client references, so the server could not read `attrs.latex`.
+      const next = toStoredContent(JSON.parse(JSON.stringify(e.getJSON())) as JSONContent);
       setStored(next);
       latest.current.onChange?.(next);
     },

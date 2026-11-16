@@ -29,6 +29,22 @@ Preview failed with P2022 (`Lesson.descriptionJson` missing).
 - Both databases now report up to date, and `migrate diff` finds no
   difference on either.
 
+**Fix found in the owner's Preview test:** saving a lesson failed with
+"The lesson content couldn't be read".
+- ProseMirror builds node `attrs` with `Object.create(null)`. React's
+  server-action encoder sends such objects as opaque temporary client
+  references, so on the server `attrs.latex` threw and `validateDoc`
+  returned null. Any node with attributes did this (maths, headings,
+  tables, lists).
+- `RichEditor`'s `onChange` now hands back a plain-JSON copy.
+- Reproduced with a temporary page that sends the editor's envelope
+  through a raw server action and a `next-safe-action` one: both refused
+  it before the fix and accept it after.
+- Server-only tests can't catch this, because the documents there never
+  cross the action boundary.
+- **For A:** if you hold Tiptap JSON anywhere else, copy it to plain JSON
+  before passing it to an action.
+
 **For A:**
 - The baseline in your runbook is done; production now takes
   `migrate deploy`.
