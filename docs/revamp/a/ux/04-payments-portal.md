@@ -292,9 +292,44 @@ Business name    [ Thandi Maths Tutoring ]   (shown on parents' statements)
 
 Actions: `getPayoutSettings()`, `listBanks()`, `resolvePayoutAccount({ bankCode, accountNumber })`, `connectPayoutAccount({ bankCode, accountNumber, businessName })`, `setPayoutMode({ payoutMode })` (design/04, section 8).
 
+## 8. Payment holds
+
+**Owner decision (16 Nov):** online payments and payout changes are blocked during impersonation, on suspicious activity, and for accounts that aren't verified. Everyone affected gets an email.
+
+| Trigger | What is held | Who is emailed |
+| --- | --- | --- |
+| A Nexa admin is impersonating | Paying, changing the card, connecting or changing a payout account ([06](06-admin-console.md), section 7) | The user; the workspace owner and admins; Nexa admins |
+| Payout account not verified yet (Paystack status pending) | Parents can't pay that payee online | The tutor; the workspace owner and admins |
+| Staff or payer email not verified | That person can't pay or connect payouts | The person |
+| Suspicious activity (proposed triggers: bank details changed in the last 48 hours, several failed checkouts in an hour, a chargeback opened, a Nexa admin's manual hold) | Online payments to that payee, and further payout changes | The tutor; the workspace owner and admins; Nexa admins |
+
+What each person sees:
+
+```
+Tutor (fees page and payouts page)
+┌──────────────────────────────────────────────────────────────────┐
+│ ⚠ Online payments are paused for your account.                   │
+│   Your bank details changed on 16 Dec. To protect you, parents   │
+│   can pay online again from 18 Dec 14:00, or sooner once Nexa    │
+│   checks the change. Questions? support@nexa-lms.co.za           │
+└──────────────────────────────────────────────────────────────────┘
+
+Parent (portal, on that tutor's fees)
+  Online payment is paused for this tutor. Pay as arranged with them,
+  or try again later.
+```
+
+- A held fee leaves the parent's selectable list and shows under "Pay your tutor directly", the same as a fee whose tutor has no payouts connected. A checkout already in progress is not cancelled.
+- The parent never sees why. The tutor sees the reason and when the hold ends, if it ends by itself.
+- Nexa admins release or place holds in the console ([06](06-admin-console.md), section 5). Every hold and release writes the audit log.
+- Nexa cannot pull back money Paystack has already split to a tutor. A hold stops **new** payments only. **Open point for A2:** whether Paystack can pause settlement to a subaccount.
+
+Queries and actions (proposed): `getPaymentHolds({ workspaceId })`, which returns `{ payeeId, reason, since, endsAt? }`, and `listPayableInvoices`, which marks held fees.
+
 ## Open points for A2
 
 1. A receipt query (`getReceipt`) and a payouts list query for the connected view are not in design/04 yet.
 2. Default selection: fees due within 14 days ticked (proposed).
 3. Re-authentication and an owner email when payout details change (proposed).
+5. Payment holds (section 8): the record, its triggers, its emails, and whether Paystack can pause settlement to a subaccount.
 4. `setLearnerPaymentVisibility` is needed for section 5.

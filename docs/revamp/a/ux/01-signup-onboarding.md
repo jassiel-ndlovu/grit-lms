@@ -301,7 +301,7 @@ After creating students, and from a student's profile, the tutor sees a sign-in 
 - The code is shown in full only on this screen. Afterwards the profile shows "Code issued 16 Nov · not used yet" and [Issue a new code], which voids the old one.
 - "Print all" prints one card per student on A4, for a class handout.
 - **Student profile, "Sign-in" tab:** username, email, "Signed in last on 18 Nov", [Issue a new code] (also the v1 password reset for students without email), [Sign out everywhere].
-- **Minors:** students under 18 are created by the tutor (allowed in v1 by the owner). The consent step that later needs a parent is in "Later" below. **Open point for A2:** what the privacy notice and the tutor's confirmation say for a minor in v1 without a parent's consent; see design/02, open question 1.
+- **Minors:** students under 18 are created by the tutor (allowed in v1 by the owner). **Owner decision (16 Nov):** in v1 tutors onboard every student themselves and handle consent with parents outside Nexa. There is no consent screen or tutor confirmation in v1. Nexa's own consent feature comes later (see "Later" below).
 
 Actions: `createStudents` (above), `issueSignInCode({ learnerId })`, `setFirstPassword({ learnerId, password })`, `revokeSessions({ userId })` (proposed).
 
@@ -373,5 +373,5 @@ his information.                       [Read the privacy notice]
 
 1. Solo to organisation conversion: allowed or not (section 3)?
 2. Sign-in code only, or also a tutor-typed first password (section 6)?
-3. Minors in v1 without recorded parental consent: the wording and the legal basis (design/02, open question 1).
+3. **Decided by the owner (16 Nov):** no consent capture in v1; tutors handle it. The consent flow below ships later.
 4. Usernames: unique per workspace or across Nexa? A student in two workspaces needs one login, so proposed: across Nexa, with the workspace slug added on a clash.

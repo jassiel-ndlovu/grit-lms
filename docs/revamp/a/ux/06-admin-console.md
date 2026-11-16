@@ -156,7 +156,7 @@ Query: proposed `adminRevenue({ from, to })` → rows per month with `planCents`
 | Route | `/admin/payments/failed` |
 
 ```
-Failed payments            Workspace renewals · Parent checkouts · Webhooks
+Failed payments     Workspace renewals · Parent checkouts · Webhooks · Plan upgrades · Holds
 ──────────────────────────────────────────────────────────────────────────────
 Workspace       Amount     Failed    Reason               Next try   State
 Bongi Tutors    R1 251     2 Dec     Insufficient funds   9 Dec      Past due  [Open] [Retry now]
@@ -166,6 +166,8 @@ Sizwe Academy   R4 170     29 Nov    Card expired         —          Read-only
 - **Parent checkouts** tab: failed or abandoned checkouts over the last 7 days, for support. No retry; the parent pays again.
 - **Webhooks** tab: `PaymentEvent` rows with status `FAILED`, with [Reprocess] (design/04, section 6).
 - "Retry now" charges the saved card at once and asks for a reason.
+- **Plan upgrades** tab (owner decision, 16 Nov): each shortfall from a course that moved up mid-period. It shows the workspace, the course, the old and new plans, the students counted and the amount owed (for example "Gr 12 Maths · Plus → Pro · 12 × R40 = R480"). Actions: [Add to next payment] or [Waive], each with a reason. The workspace's billing page shows the result.
+- **Holds** tab: every payment hold ([04](04-payments-portal.md), section 8), with the payee, the trigger, the start time and the automatic end time. Actions: [Release] (needs a reason) and [Place hold] on any payee or user (needs a reason). Each one emails the people listed in 04 and writes the audit log.
 
 Queries and actions: proposed `adminListFailedPayments({ kind })`, `adminRetryCharge({ invoiceId, note })`, `adminReprocessEvent({ eventId, note })`.
 
@@ -218,16 +220,16 @@ Banner on every page while impersonating (the account banner slot, above everyth
 ```
 
 - Colour: B's danger tokens, so it never looks like a normal banner. On mobile it collapses to one line with the timer and [End].
-- **Blocked while impersonating** (proposal): paying anything, changing the card or payout account, changing the password, email or 2FA, deleting the workspace, and accepting terms or consent. Those buttons show "Not available while impersonating".
+- **Blocked while impersonating** (owner decision, 16 Nov): paying anything, changing the card or payout account, changing the password, email or 2FA, deleting the workspace, and accepting terms or consent. Those buttons show "Not available while impersonating".
 - Other writes are allowed and each writes the audit log with both ids (design/01, section 7).
 - At 30 minutes the session ends and returns to the user's row in `/admin` with "Impersonation ended (time limit)". "End now" does the same.
-- The user gets an email at the start (proposal, for trust): "A Nexa admin viewed your account on 16 Nov at 13:38 to help with: 'can't find the fees page'."
+- Emails at the start (owner decision, 16 Nov) go to the user, the workspace owner and admins, and Nexa admins: "A Nexa admin is viewing Thandi Mokoena's account to help with 'can't find the fees page'. Payments and payout changes are blocked until it ends (by 14:08)." The same rule applies to every payment hold ([04](04-payments-portal.md), section 8).
 
 Actions: proposed `startImpersonation({ userId, reason })` and `endImpersonation()` in `src/features/admin/actions.ts` (viewer.md rule 5); the banner reads `viewer.impersonatedBy`.
 
 ## Open points for A2
 
-1. Which writes are blocked during impersonation (proposed list in section 7), and whether the user is emailed.
+1. **Decided by the owner (16 Nov):** money and payout actions are blocked during impersonation, on suspicious activity and for unverified accounts, with emails to the tutor, the organisation's owner and admins, and Nexa admins. New actions are needed: `adminListPlanShortfalls`, `adminResolvePlanShortfall({ id, outcome, note })`, `adminPlaceHold`, `adminReleaseHold`.
 2. 2FA re-check for `/admin` after 12 hours.
 3. Revenue grouped by the month a payment succeeded; "recurring" as the sum of next renewals.
 4. Queries `adminGetWorkspace`, `adminRevenue`, `adminListFailedPayments`, `adminRetryCharge`, `adminReprocessEvent`, `adminListAudit`, `startImpersonation`, `endImpersonation` are not in design/03 or 04 yet.

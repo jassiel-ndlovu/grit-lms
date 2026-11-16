@@ -19,10 +19,11 @@ Blocked on the other agent:
 - For B: A supplies the panel content for pages B owns: course "Services" and "Fees" settings, and the student profile "Sign-in", "Parents" and "Fees" tabs.
 
 Questions for the owner:
-- How decision 2 reads: does a course that moves up get charged at the higher plan at the next renewal (proposed, one renewal date per workspace), or charged now for its own 30 days?
-- The exact renewal date rule (a payment on 3 Feb renews about 2 to 5 March).
-- Minors created by tutors in v1 before any parent consent: the wording and legal basis (design/02, open question 1).
-- While impersonating, block payments, payout and security changes, and email the user (proposed in 06)?
+- None open. The owner answered on 16 Nov, and the docs now reflect the answers:
+  - A course that moves up mid-period is charged at the new rates; Nexa admins resolve the shortfall (03, 06).
+  - Renewal is 30 days after the most recent payment (03).
+  - There is no consent capture in v1, because tutors onboard students and handle it themselves (01).
+  - Payments and payout changes are held during impersonation, on suspicious activity and for unverified accounts, with emails to the tutor, the organisation and Nexa admins (04 section 8, 06).
 
 ## 2026-11-16 Owner decisions on research, `revamp/a-owner-decisions`
 

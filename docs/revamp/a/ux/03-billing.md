@@ -2,7 +2,7 @@
 
 **Answer first.** A workspace pays Nexa per **active student per course**, for **30 days at a time**. Each payment covers the next 30 days and the workspace **renews on** a date shown everywhere. Nothing is billed by calendar month and nothing is prorated. Each course is on a plan, **Core R99, Plus R139 or Pro R179** per student per 30 days, set by the highest service switched on for it (services.md). The billing page shows the renewal date, what the next payment will be course by course, usage, past payments and the card. Switching a service on or off always shows the effect on the next payment before it applies. The 14-day trial needs no card. When it ends, the owner pays, and that payment starts the first 30 days. If a renewal fails the workspace is **past due**, then **read-only** for staff. Data is deleted **two months after the last payment**, and every read-only and cancellation screen says on which date. Students and parents never see any of this and never lose access while data exists.
 
-Read [README.md](README.md) first. Only people with `billing.view` see amounts; `billing.manage` can pay, change the card and set limits. Course leads with `courses.services` can switch services on their courses. Owner decisions of 16 November (via A2) apply: 30-day periods anchored to the payment date, a course that moves up bills at the higher plan for the next 30 days, a pooled AI allowance on Pro, no day pass in v1.
+Read [README.md](README.md) first. Only people with `billing.view` see amounts; `billing.manage` can pay, change the card and set limits. Course leads with `courses.services` can switch services on their courses. Owner decisions of 16 November (via A2) apply: each period is 30 days from the most recent payment; a course that moves up mid-period is charged at the new plan's rates, and Nexa admins resolve the shortfall for the period already paid; a pooled AI allowance on Pro, no day pass in v1.
 
 ## Map
 
@@ -31,7 +31,7 @@ flowchart LR
 ```
 
 - A period starts on the day a payment succeeds and lasts 30 days. The next renewal is on day 31. On screen: "Renews on 30 Dec 2026".
-- A late payment starts a new period on the day it is paid; the renewal date moves. **Open point:** the owner is confirming the exact rule (the example given was a payment on 3 February renewing between 2 and 5 March). These flows only need `renewsOn` from billing; the screens don't calculate it.
+- **Renewal rule (owner, 16 Nov):** the next renewal is 30 days after the most recent payment. A late payment starts a new period on the day it is paid, so the renewal date moves with it. Screens show `renewsOn` from billing and never calculate it.
 - The amount for a period is fixed when it is paid: for each course, active students × the course's plan price. Students added during a period are counted in the next payment (proposal for billing.md; the screen shows "added this period, counted at renewal").
 
 ## Billing states and what each person sees
@@ -77,12 +77,14 @@ Grade 11 Phys Sciences   Plus    12                R139          R1 668   [Servi
 Grade 10 Mathematics     Core     0                R99           R0       [Services]
 
 Usage above allowances (added to the next payment)               R0
+Plan upgrades this period (owed, under review by Nexa)          R0
 Discount  LAUNCH10, 10% off plans                             −R347.50
 ────────────────────────────────────────────────────────────────────────────
 Next payment on 30 Dec                                       R3 127.50
 Prices exclude VAT. Each payment covers 30 days.
 ```
 
+- "Plan upgrades this period" lists each shortfall from a mid-period upgrade, with its status: "Under review", "Added to next payment" or "Waived by Nexa".
 - "Active students" links to the list counted per course, with enrolment dates. "+1 added" marks students who joined during this period and are counted at renewal.
 - **Compare plans** opens a table of the three plans and their services, from `SERVICES` (services.md). Prices come from billing, never hard-coded.
 - No "this month" wording anywhere: always "this period", "renews on", "next payment".
@@ -135,9 +137,11 @@ This moves Grade 12 Mathematics from Plus to Pro.
 Now (Plus)                R139            R1 668 per 30 days
 After (Pro)               R179            R2 148 per 30 days
 
-AI marking is on from now. Your next payment on 30 Dec charges this
-course at Pro for its 30 days (+R480). Turning Pro services off before
-then doesn't lower that payment.
+AI marking is on from now, and this course is charged at Pro rates
+from now. You've already paid Plus for this period, so the difference
+(12 × R40 = R480) is recorded as owed. Nexa reviews it and either adds
+it to your next payment on 30 Dec or waives it. You'll see the outcome
+on the billing page.
 [ Turn on and move to Pro ]   Cancel
 ```
 
@@ -146,8 +150,8 @@ Confirm dialog when the last Pro or Plus service goes **off**:
 ```
 Turn off AI marking?
 Grade 12 Mathematics goes back to Plus. AI marking stops now.
-Your next payment on 30 Dec charges this course at Plus (−R480),
-unless it moved up during this period.
+Your next payment on 30 Dec charges this course at Plus (−R480).
+There is no refund for the rest of this period.
 ```
 
 - Switches that don't change the plan (a second Plus service on a Plus course) apply at once, with no dialog.
@@ -282,8 +286,8 @@ Action: `cancelWorkspace({ reason })` → `{ deleteAfter }` (design/03, section 
 
 ## Open points for A2 and billing.md
 
-1. The exact renewal rule (payment on 3 Feb renews "about 2 to 5 March"). Screens show `renewsOn` from billing and never calculate it.
-2. How decision 2 reads: proposed above as "a course that moves up during a period is charged at the higher plan in the next payment, even if switched off again". The alternative, an immediate charge for a new 30 days for that course, would give each course its own renewal date; the screens assume one date per workspace.
+1. **Decided by the owner (16 Nov):** renewal is 30 days after the most recent payment.
+2. **Decided by the owner (16 Nov):** a course that moves up mid-period is charged at the new plan's rates, and Nexa admins resolve the shortfall. billing.md needs a record for that shortfall (course, from plan, to plan, students, amount, status `OPEN`, `ADDED_TO_NEXT_PAYMENT` or `WAIVED`) and an admin action to resolve it; see [06](06-admin-console.md), section 5.
 3. Students added during a period: counted at the next renewal (proposed).
 4. A2's design/03 still uses calendar months, `monthDeltaCents`, `month: "YYYY-MM"` and `buyDayPass`; these flows need period fields and no day pass.
 5. Paying early during the trial: the first period starts when the trial ends (proposed).
