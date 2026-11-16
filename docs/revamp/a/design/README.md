@@ -18,22 +18,19 @@ Contracts drafted from these designs: [viewer.md](../../contracts/viewer.md), [s
 
 ## Security finding (ships before the redesign)
 
-`GET /api/activity` and `GET /api/notifications` check only that the caller is signed in. They return rows for any `userId`, `studentId` or `courseIds` in the query string, so a signed-in student can read another user's notifications and activity log. Checked by reading both handlers on 2026-11-16. The fix scopes both queries to the caller's own id and to courses they teach or are enrolled in. Returning 410 would break the root providers that call them on every page, so 07's Batch 0 should scope the queries, not remove the routes.
+`GET /api/activity` and `GET /api/notifications` check only that the caller is signed in. They return rows for any `userId`, `studentId` or `courseIds` in the query string, so a signed-in student can read another user's notifications and activity log. Checked by reading both handlers on 2026-11-16. **Fixed in PR #52:** both handlers now derive the reader from the session and ignore the query string. Returning 410 would have broken the root providers that call them on every page, so 07's Batch 0 is done by scoping, not removal.
 
 ## Owner questions
 
 | # | Question | From |
 | --- | --- | --- |
-| 1 | Renewal date: exactly 30 days (paid 3 Feb, renews 5 Mar), or the day before the same date next month (2 Mar, as in the owner's example)? | 03 |
-| 2 | Does a late payment start the new period on the payment date, or keep the original anchor? | 03 |
-| 3 | May the security fix above ship now, ahead of the redesign? | 07 |
+| – | **Answered 16 November:** renewals are exactly 30 days; a late payment starts a new 30-day period on the payment date; the security fix ships now (PR #52); backups are weekly to Tigris `nexa-lms-backups` (jnb); tax retention of invoices is deferred | 03, 06, 07 |
 | 4 | May the preview Blob store be emptied monthly under a standing approval? | 06 |
-| 5 | Stage 1 backups: a nightly encrypted dump to an S3 bucket in af-south-1 (a few rand a month, a new paid resource), or weekly manual dumps until RDS? | 06 |
 | 6 | Which free uptime checker: Better Stack or UptimeRobot? | 06 |
 | 7 | Owner 2FA: enforce at sign-up, or after a 14-day grace? | 02 |
 | 8 | Resend Pro (R340 a month): at launch, or when the free 100-a-day limit is first reached? | 05 |
 
-**For a lawyer or accountant:** whether a tutor's attestation covers parental consent under POPIA s35 in v1; how long invoices and payment records must be kept (5 years assumed).
+**For a lawyer or accountant:** whether a tutor's attestation covers parental consent under POPIA s35 in v1. Retention of invoices and payment records is deferred by the owner; they will be archived to object storage.
 
 **For Paystack sales:** multi-split to many subaccounts on one South African account, `charge_authorization` for renewals, chargeback fees, the minimum charge, and whether account checks need an ID number.
 

@@ -55,8 +55,8 @@ Keys come from [research/02-service-catalogue.md](../research/02-service-catalog
 
 ## 3. The 30-day period
 
-- **Rule:** a successful payment at time `t` starts a period `[t, t + 30 days)`. The renewal charge is attempted at `t + 30 days` (the start of the next period). In the workspace timezone a payment on 3 February 2027 covers 3 February to 4 March inclusive and renews on **5 March**. **Open question:** the owner's example said "renews on 2 March"; that would be a calendar rule ("same day next month, minus one"), not 30 days. This file uses exactly 30 days (`BillingConfig.periodDays`) until the owner confirms.
-- **Late payment:** "each payment is valid for the next 30 days", so a renewal paid late starts the new period on the payment date, and `renewsAt` moves with it. **Decision taken here.** The days between the missed renewal and the late payment are not billed (at most 14; staff were nagged throughout). Alternative: keep the anchor and let the late payment cover the period from the due date.
+- **Rule:** a successful payment at time `t` starts a period `[t, t + 30 days)`. The renewal charge is attempted at `t + 30 days` (the start of the next period). In the workspace timezone a payment on 3 February 2027 covers 3 February to 4 March inclusive and renews on **5 March**. **Owner decision (16 November):** exactly 30 days (`BillingConfig.periodDays = 30`).
+- **Late payment:** "each payment is valid for the next 30 days", so a renewal paid late starts the new period on the payment date, and `renewsAt` moves with it. **Owner decision (16 November):** a late payment still buys 30 days from the day it is paid. The days between the missed renewal and the late payment are not billed (at most 14; staff were nagged throughout).
 - **First period:** the owner's first payment ends the trial. Paying before day 14 starts the paid period at once and lifts the trial caps; the remaining trial days are not added. **Decision taken here.** Alternative: save the card early and charge at `trialEndsAt`.
 - **No proration** anywhere: adds, drops, tier changes and cancellation are all whole-period amounts.
 
@@ -257,6 +257,6 @@ No day-pass action exists in v1.
 
 ## Open questions
 
-1. Renewal date: exactly 30 days (3 Feb pays, renews 5 Mar), or the owner's example of 2 March, which implies a calendar rule? This file uses 30 days.
-2. Late renewals: start the new period on the payment date (this file) or keep the original anchor?
-3. Retention of invoices and payment records after deletion (lawyer or accountant): how long, and do parent invoices follow the same rule?
+Answered by the owner on 16 November: periods are exactly 30 days; a late payment starts a new 30-day period on the payment date.
+
+- **Deferred by the owner:** how long invoices and payment records are kept for tax. They will be archived to object storage (Tigris now, S3 later); the period is decided later.

@@ -193,7 +193,7 @@ Every job must be idempotent: QStash delivers at least once and GitHub can doubl
 | | Stage 1 (Neon) | Stage 2 (RDS) |
 | --- | --- | --- |
 | Point-in-time restore | 6-hour history window (current plan) | Automated backups, **14 days**, deletion protection on |
-| Extra copy | Nightly `pg_dump -Fc` by `.github/workflows/db-backup.yml`, encrypted with `age` to the owner's public key, uploaded to S3 bucket `nexa-backups` in af-south-1 with 30-day expiry (**Decision taken here**; alternative: the owner takes a weekly dump by hand to their own machine) | Monthly `pg_dump` to the same bucket; manual snapshot before every migration |
+| Extra copy | **Weekly** `pg_dump -Fc` (owner decision; daily if demand grows), encrypted with `age` to the owner's public key, uploaded to the private Tigris bucket **`nexa-lms-backups`** in Johannesburg (`jnb`, created 2026-11-16) under `db/YYYY-MM-DD.dump.age`, with a 30-day expiry rule. The owner runs it by hand at first; `.github/workflows/db-backup.yml` automates it once the owner adds the Tigris and read-only database secrets. Moves to S3 af-south-1 with the full AWS transition | Monthly `pg_dump` to the same bucket; manual snapshot before every migration |
 | Never | Dumps as GitHub artifacts or in the repo (children's personal data) | Snapshots copied out of af-south-1 |
 | Drill | Once before Stage 2: Neon restore to a timestamp as a new branch, `scripts/check-restore.ts` compares row counts and the newest `createdAt` per table, then delete the branch | Before 1 February, then quarterly: PITR to a new instance `nexa-restore-drill`, same check script, then delete it |
 | Record | `docs/revamp/a/ops/restore-log.md`: date, target time, minutes to restore (RTO), data lost (RPO) | Same |
@@ -268,7 +268,7 @@ None. This file only adds `JobRun` to `core.prisma` and does not change any tena
 ## Open questions
 
 1. May the preview Blob store be emptied monthly without a fresh approval each time (a standing yes for `nexa-preview-blob` only)?
-2. Nightly encrypted backups to an S3 bucket in af-south-1 in Stage 1 (needs an AWS bucket now, a few rand a month), or weekly manual dumps by the owner until RDS?
+2. Answered: weekly encrypted dumps to Tigris `nexa-lms-backups` (jnb) in Stage 1, daily if demand grows.
 3. Is Neon's schema-only branching available on the current plan? If not, may we use a separate Neon project for non-production?
 4. Which uptime checker does the owner prefer (Better Stack, UptimeRobot, or another free tier)?
 5. Confirm the Stage 2 release flow: `main` to staging automatically, `production` branch fast-forwarded by the owner.
