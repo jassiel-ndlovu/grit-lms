@@ -28,6 +28,22 @@ interface RichContentProps {
   className?: string;
 }
 
+/**
+ * A short fingerprint of the content (FNV-1a), used as the React key.
+ * MathJax typesets once, on mount, and rewrites the DOM under React. When a
+ * page swaps one lesson for another in place (the learner page's ?lesson=
+ * links), the new content must remount, or it shows the old formulas or raw
+ * TeX.
+ */
+function contentKey(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36) + ":" + text.length.toString(36);
+}
+
 export function RichContent({ value, markdown, className }: RichContentProps) {
   const stored = readStoredContent(value);
   // Saved documents were validated on write; check again, since a bad row
@@ -35,11 +51,13 @@ export function RichContent({ value, markdown, className }: RichContentProps) {
   const doc = stored ? validateDoc(stored.doc) : null;
 
   if (!doc) {
-    return markdown ? <LessonMarkdown content={markdown} dynamic={false} className={className} /> : null;
+    return markdown ? (
+      <LessonMarkdown key={contentKey(markdown)} content={markdown} dynamic={false} className={className} />
+    ) : null;
   }
 
   return (
-    <MathTypeset>
+    <MathTypeset key={contentKey(JSON.stringify(doc))}>
       <div data-slot="rich-content" className={cn("text-sm", className)}>
         {renderRichContent(doc)}
       </div>

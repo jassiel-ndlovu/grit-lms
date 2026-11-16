@@ -45,6 +45,21 @@ Preview failed with P2022 (`Lesson.descriptionJson` missing).
 - **For A:** if you hold Tiptap JSON anywhere else, copy it to plain JSON
   before passing it to an action.
 
+**Second fix, from the owner's learner-side test:** maths showed as raw TeX
+after switching lessons.
+- The learner page swaps lessons in place with `?lesson=` links.
+  `MathTypeset` (and the markdown fallback) typeset only on mount, so the
+  next lesson's TeX was never typeset. Rich to rich even showed the
+  previous lesson's formula.
+- `RichContent` now keys its output on a fingerprint of the content, so
+  new content remounts and typesets.
+- Checked on a temporary page that swaps rich and markdown lessons the
+  same way, under MathJax 3: every swap shows the right formula, with no
+  console errors.
+- Saving was confirmed working on Preview by the owner, on the branch
+  alias. Earlier "still failing" reports came from the first deployment
+  URL, which is pinned to the PR's first commit.
+
 **For A:**
 - The baseline in your runbook is done; production now takes
   `migrate deploy`.
