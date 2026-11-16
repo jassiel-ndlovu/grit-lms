@@ -14,6 +14,11 @@
  * a NONE-typed lesson is a content-free group heading. Its content fields
  * are hidden but kept, so switching a lesson back to CONTENT loses nothing.
  *
+ * The body is a RichEditor. The form holds only the envelope it hands back,
+ * and only once the tutor edits it: an untouched body sends nothing, so a
+ * lesson still in markdown stays as it is until someone changes it. The
+ * server validates the document and derives the markdown copy.
+ *
  * Attachments and video URLs are managed by their dedicated controlled
  * sub-components (AttachmentManager, VideoUrlList). The form composes them
  * via RHF FormFields so all state lives in one place and `handleSubmit`
@@ -30,7 +35,7 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MarkdownTextarea } from "@/components/markdown-textarea";
+import { RichEditor } from "@/components/editor/rich-editor";
 import {
   Select,
   SelectContent,
@@ -113,7 +118,8 @@ export function LessonForm({
     defaultValues: {
       id: defaultValues?.id,
       title: defaultValues?.title ?? "",
-      description: defaultValues?.description ?? "",
+      description: defaultValues?.description ?? null,
+      descriptionJson: undefined,
       courseId,
       order: defaultValues?.order ?? 0,
       duration: defaultValues?.duration ?? null,
@@ -142,7 +148,7 @@ export function LessonForm({
         const parsed = UpdateLessonSchema.parse({
           id: values.id,
           title: values.title,
-          description: values.description,
+          descriptionJson: values.descriptionJson,
           order: values.order,
           duration: values.duration ?? null,
           videoUrl: cleanVideos,
@@ -157,7 +163,7 @@ export function LessonForm({
       } else {
         const parsed = CreateLessonSchema.parse({
           title: values.title,
-          description: values.description,
+          descriptionJson: values.descriptionJson,
           courseId: values.courseId,
           order: values.order,
           duration: values.duration ?? null,
@@ -277,25 +283,24 @@ export function LessonForm({
         {!isGroup && (
         <FormField
           control={form.control}
-          name="description"
+          name="descriptionJson"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <MarkdownTextarea
-                  rows={10}
-                  placeholder="Write your lesson content in Markdown…"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  className="font-mono text-sm"
-                  previewTitle="Lesson preview"
-                />
-              </FormControl>
+              {/* The editor names itself (aria-label); this is the visible label. */}
+              <p className="text-sm leading-none font-medium">Content</p>
+              <RichEditor
+                label="Lesson content"
+                // Read once on mount; field.value keeps edits across a
+                // switch to "Group" and back.
+                value={field.value ?? defaultValues?.descriptionJson}
+                fallbackMarkdown={defaultValues?.description}
+                onChange={field.onChange}
+                placeholder="Write the lesson. Type / for blocks, $ for maths"
+                className="[&_.rich-editor-surface]:min-h-64"
+              />
               <FormDescription>
-                Markdown formatting is supported, including math (MathJax) and
-                code blocks.
+                Headings, lists, tables, code and maths. Type / for the block
+                menu.
               </FormDescription>
               <FormMessage />
             </FormItem>

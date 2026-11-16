@@ -3,6 +3,62 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Lessons use the rich editor, `revamp/b-lesson-rich-content`
+The first real field on the editor contract (contracts/editor.md).
+
+**Database (owner approved, applied 2026-11-16).** The production
+database had no migration history: `migrate status` showed `0_baseline`
+and `1_prisma6_m2m_pk` as not applied. Before writing anything,
+`migrate diff` from the live database to the schema showed exactly
+`1_prisma6_m2m_pk` and the new column, nothing else. Then, following A's
+runbook (`a/ops/prisma-baseline.md`):
+- `migrate resolve --applied 0_baseline`
+- `migrate deploy`, which applied `1_prisma6_m2m_pk` and
+  `2_lesson_description_json`
+- `migrate status` now says up to date, and `migrate diff` finds no
+  difference.
+
+**For A:** the baseline in your runbook is done; production now takes
+`migrate deploy`. `.env` has no `DIRECT_URL`, so I derived it in memory
+from the pooled URL (dropping `-pooler`) and wrote nothing to disk.
+
+Done:
+- `Lesson.descriptionJson Json?`, migration `2_lesson_description_json`.
+- `richFieldFromInput(value)` in `src/lib/content/save.ts`. It returns
+  the validated envelope, the derived markdown and an `empty` flag, or
+  null. It is rules 1 and 2 in one call; A can use it for messages.
+- `createLesson` and `updateLesson` write both columns together:
+  - From the envelope when sent: validated, markdown derived on the
+    server, browser markdown ignored. An invalid document is refused, and
+    an empty one clears both columns.
+  - Markdown alone (no caller does this now) clears the JSON, so it can't
+    go stale.
+- `LessonForm` uses `RichEditor` in place of the markdown textarea.
+  - It sends the envelope only after an edit, so lessons still in
+    markdown stay unchanged until a tutor edits them (lazy conversion).
+  - Edits survive switching to "Group" and back.
+- The learner's `LessonContent` renders with `RichContent`, which falls
+  back to the markdown column.
+
+Checked:
+- `tsc` and eslint pass.
+- `check-rich-content` and `check-rich-render` pass.
+- A scratch check of `richFieldFromInput`:
+  - valid documents pass;
+  - empty, unknown-node, bad-nesting, wrong-version and non-envelope
+    input are refused or flagged;
+  - TeX round-trips exactly.
+- The local install was Prisma 5.22; `npm ci` brought it to the
+  lockfile's 6.19.3.
+
+Not checked: the lesson pages need a signed-in tutor, and saving writes
+to production. Owner test on Preview:
+1. Open a lesson that is still markdown. It should look the same in the
+   editor and on the learner page.
+2. Edit and save it. Add maths with `$`, a table and a heading. Check
+   the learner page.
+3. Create a lesson and a group.
+
 ## 2026-11-16 Legacy Batch 3a: retire portal, review and overview; `deleteEntry`, `revamp/b-legacy-batch3a`
 Design 07 Batch 3 is split in two. This is the part that needs nothing
 from A. The assignment editor (create/edit) is Batch 3b, after A's
