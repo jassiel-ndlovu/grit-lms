@@ -1,17 +1,34 @@
 import { expandOccurrences, describeRecurrence } from "../src/features/events/lib/recurrence";
 
-const W0 = new Date("2026-01-01T00:00:00");
-const W1 = new Date("2027-06-30T23:59:59");
+// Every date here is a wall-clock time in Johannesburg (UTC+2, no DST),
+// built and printed explicitly, so the result does not depend on the zone
+// of the machine running the check. Run it under TZ=UTC as well: that is
+// what Vercel uses.
+const ZONE = "Africa/Johannesburg";
+function at(wall: string): Date {
+  return new Date(`${wall}+02:00`);
+}
 
-// Format in LOCAL time: the expander works in the server's zone, so
-// toISOString() would shift every result by the UTC offset.
+const W0 = at("2026-01-01T00:00:00");
+const W1 = at("2027-06-30T23:59:59");
+
+const fmtParts = new Intl.DateTimeFormat("en-CA", {
+  timeZone: ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 function fmt(ds: Date[]) {
-  const p = (n: number) => String(n).padStart(2, "0");
   return ds
-    .map(
-      (d) =>
-        `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`,
-    )
+    .map((d) => {
+      const p = Object.fromEntries(
+        fmtParts.formatToParts(d).map((x) => [x.type, x.value]),
+      );
+      return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+    })
     .join(", ");
 }
 function rule(over: Partial<Parameters<typeof expandOccurrences>[1]>) {
@@ -39,7 +56,7 @@ function check(name: string, got: string, want: string) {
 // 1. one-off
 check(
   "NONE yields just the start",
-  fmt(expandOccurrences(new Date("2026-03-04T09:00:00"), rule({}), W0, W1)),
+  fmt(expandOccurrences(at("2026-03-04T09:00:00"), rule({}), W0, W1)),
   "2026-03-04T09:00",
 );
 
@@ -48,7 +65,7 @@ check(
   "DAILY x1, count 5",
   fmt(
     expandOccurrences(
-      new Date("2026-03-04T09:00:00"),
+      at("2026-03-04T09:00:00"),
       rule({ repeatFrequency: "DAILY", repeatCount: 5 }),
       W0,
       W1,
@@ -62,11 +79,11 @@ check(
   "WEEKLY Mon/Wed/Fri until Mar 16",
   fmt(
     expandOccurrences(
-      new Date("2026-03-04T09:00:00"),
+      at("2026-03-04T09:00:00"),
       rule({
         repeatFrequency: "WEEKLY",
         repeatWeekdays: [1, 3, 5],
-        repeatUntil: new Date("2026-03-16T23:59:59"),
+        repeatUntil: at("2026-03-16T23:59:59"),
       }),
       W0,
       W1,
@@ -80,7 +97,7 @@ check(
   "WEEKLY x2, count 3",
   fmt(
     expandOccurrences(
-      new Date("2026-03-04T09:00:00"),
+      at("2026-03-04T09:00:00"),
       rule({ repeatFrequency: "WEEKLY", repeatInterval: 2, repeatCount: 3 }),
       W0,
       W1,
@@ -94,7 +111,7 @@ check(
   "MONTHLY from Jan 31, count 6",
   fmt(
     expandOccurrences(
-      new Date("2026-01-31T09:00:00"),
+      at("2026-01-31T09:00:00"),
       rule({ repeatFrequency: "MONTHLY", repeatCount: 6 }),
       W0,
       W1,
@@ -108,10 +125,10 @@ check(
   "YEARLY from Feb 29 2024, count 3, wide window",
   fmt(
     expandOccurrences(
-      new Date("2024-02-29T09:00:00"),
+      at("2024-02-29T09:00:00"),
       rule({ repeatFrequency: "YEARLY", repeatCount: 3 }),
-      new Date("2024-01-01T00:00:00"),
-      new Date("2027-01-01T00:00:00"),
+      at("2024-01-01T00:00:00"),
+      at("2027-01-01T00:00:00"),
     ),
   ),
   "2024-02-29T09:00, 2025-02-28T09:00, 2026-02-28T09:00",
@@ -122,7 +139,7 @@ check(
   "count consumed outside the window",
   fmt(
     expandOccurrences(
-      new Date("2025-12-29T09:00:00"),
+      at("2025-12-29T09:00:00"),
       rule({ repeatFrequency: "DAILY", repeatCount: 4 }),
       W0,
       W1,
@@ -133,10 +150,10 @@ check(
 
 // 8. open-ended daily is bounded by the window, not infinite
 const openEnded = expandOccurrences(
-  new Date("2026-01-01T09:00:00"),
+  at("2026-01-01T09:00:00"),
   rule({ repeatFrequency: "DAILY" }),
   W0,
-  new Date("2026-01-10T23:59:59"),
+  at("2026-01-10T23:59:59"),
 );
 check("open-ended DAILY bounded by window", String(openEnded.length), "10");
 
@@ -145,13 +162,63 @@ check(
   "series starting before the window",
   fmt(
     expandOccurrences(
-      new Date("2025-11-05T18:00:00"),
+      at("2025-11-05T18:00:00"),
       rule({ repeatFrequency: "MONTHLY" }),
-      new Date("2026-01-01T00:00:00"),
-      new Date("2026-03-31T23:59:59"),
+      at("2026-01-01T00:00:00"),
+      at("2026-03-31T23:59:59"),
     ),
   ),
   "2026-01-05T18:00, 2026-02-05T18:00, 2026-03-05T18:00",
+);
+
+// 11. Vercel runs in UTC. A Monday 00:30 SAST class is Sunday 22:30 UTC;
+// the weekday list must be read in the school's zone, not the server's.
+check(
+  "WEEKLY Mon at 00:30 SAST, count 3",
+  fmt(
+    expandOccurrences(
+      at("2026-03-02T00:30:00"),
+      rule({ repeatFrequency: "WEEKLY", repeatWeekdays: [1], repeatCount: 3 }),
+      W0,
+      W1,
+    ),
+  ),
+  "2026-03-02T00:30, 2026-03-09T00:30, 2026-03-16T00:30",
+);
+
+// 12. Same for the month anchor: the 1st at 00:30 SAST is the 31st in UTC.
+check(
+  "MONTHLY from Feb 1 00:30 SAST, count 3",
+  fmt(
+    expandOccurrences(
+      at("2026-02-01T00:30:00"),
+      rule({ repeatFrequency: "MONTHLY", repeatCount: 3 }),
+      W0,
+      W1,
+    ),
+  ),
+  "2026-02-01T00:30, 2026-03-01T00:30, 2026-04-01T00:30",
+);
+
+// 13. An explicit zone with daylight saving keeps the wall-clock time
+// across the change (London moves to BST on 29 March 2026).
+check(
+  "WEEKLY in Europe/London keeps 09:00 across DST",
+  new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(
+    expandOccurrences(
+      new Date("2026-03-23T09:00:00Z"),
+      rule({ repeatFrequency: "WEEKLY", repeatCount: 2 }),
+      W0,
+      W1,
+      "Europe/London",
+    )[1] ?? new Date(0),
+  ),
+  "09:00",
 );
 
 // 10. descriptions
@@ -163,7 +230,7 @@ check(
       rule({
         repeatFrequency: "WEEKLY",
         repeatWeekdays: [1, 3],
-        repeatUntil: new Date("2026-06-30T00:00:00"),
+        repeatUntil: at("2026-06-30T00:00:00"),
       }),
     ),
   ).replace(/until .+$/, "until <date>"),
