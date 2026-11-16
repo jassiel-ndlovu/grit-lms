@@ -1,73 +1,26 @@
-import { prisma } from "@/lib/db";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
 import { gone } from "@/lib/api-guard";
+import { prisma } from "@/lib/db";
 
+/**
+ * Returns the caller's own activity only. The `userId` and `courseIds`
+ * query parameters the legacy context still sends are ignored: they used to
+ * select whose rows came back, so any signed-in user could read anyone's
+ * activity log (with their email address). No screen shows course-wide
+ * activity today, so nothing else is returned.
+ */
 export async function GET(req: NextRequest) {
   try {
     const token = await getToken({ req });
-
-    if (!token) {
+    if (!token?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-    const courseIds = searchParams.getAll("courseIds");
-
-    if (!userId && courseIds.length === 0) {
-      return NextResponse.json(
-        { error: "Missing parameters" },
-        { status: 400 }
-      );
-    }
-
-    let whereClause = {};
-
-    if (userId && courseIds.length > 0) {
-      // For JSON field filtering, we need to use raw SQL or multiple OR conditions
-      // Since Prisma doesn't support `in` for JSON fields, we'll create multiple OR conditions
-      const courseIdConditions = courseIds.map(courseId => ({
-        meta: {
-          path: ['courseId'],
-          equals: courseId
-        }
-      }));
-
-      whereClause = {
-        OR: [
-          { userId: userId },
-          ...courseIdConditions
-        ],
-      };
-    } else if (userId) {
-      // Fetch only user-specific activities
-      whereClause = { userId: userId };
-    } else if (courseIds.length > 0) {
-      // For course-related activities, create multiple OR conditions
-      const courseIdConditions = courseIds.map(courseId => ({
-        meta: {
-          path: ['courseId'],
-          equals: courseId
-        }
-      }));
-
-      whereClause = {
-        OR: courseIdConditions
-      };
-    }
-
     const activities = await prisma.activityLog.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
+      where: { userId: token.id as string },
+      include: { user: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
       take: 20,
     });
