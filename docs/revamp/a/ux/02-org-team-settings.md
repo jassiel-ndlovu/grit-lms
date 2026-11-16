@@ -178,7 +178,7 @@ Preview
                                                 [ Save ]
 ```
 
-- **Gating:** `custom-branding` is a Plus service (services.md). The workspace logo and colour apply everywhere once **any** course has it on. Proposal for A2: branding is workspace-wide, so treat it as on when at least one course has `custom-branding` enabled. Until then the form is visible but disabled, with: "Turn on Custom branding for any course to use your logo. It moves that course to Plus (R139 per student a month)." [Choose a course].
+- **Gating:** `custom-branding` is a Plus service (services.md). The workspace logo and colour apply everywhere once **any** course has it on. Proposal for A2: branding is workspace-wide, so treat it as on when at least one course has `custom-branding` enabled. Until then the form is visible but disabled, with: "Turn on Custom branding for any course to use your logo. It moves that course to Plus (R139 per student per 30 days)." [Choose a course].
 - During the trial branding works, with the same note about the plan after the trial.
 - The colour picker refuses colours below 4.5:1 contrast with white text, and says why.
 - The sender name changes only the display name; mail still comes from `notify.nexa-lms.co.za`.
@@ -189,7 +189,7 @@ Actions: `updateBranding({ logoFile?, accentColor, senderName })` (proposed).
 
 ## 5. Profile (every staff member)
 
-A tutor without settings permissions sees only `/dashboard/settings/profile`: name, photo, email, password or magic link preference, two-step sign-in, notification emails. This is a user-level page shared with B's account settings; A supplies the actions (`updateProfile`, `changeEmail`, `enableTwoFactor`) and B decides where it sits.
+A tutor without settings permissions sees only `/dashboard/settings/profile`: name, photo, email, password, two-step sign-in (magic links later), notification emails. This is a user-level page shared with B's account settings; A supplies the actions (`updateProfile`, `changeEmail`, `enableTwoFactor`) and B decides where it sits.
 
 ## Open points for A2
 

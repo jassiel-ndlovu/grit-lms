@@ -6,11 +6,11 @@ Status: draft for A3, 2026-11-16. Branch `revamp/a-ux`.
 
 | File | Covers |
 | --- | --- |
-| [01-signup-onboarding.md](01-signup-onboarding.md) | Tutor sign-up, solo or organisation, the 5-step onboarding, staff and student invites, guardian claim codes, magic links |
+| [01-signup-onboarding.md](01-signup-onboarding.md) | Tutor sign-up, solo or organisation, the 5-step onboarding, staff invites, tutor-created students and parent links (v1); magic links, student invites and claim codes (later) |
 | [02-org-team-settings.md](02-org-team-settings.md) | Workspace settings, members, roles, teams, branding |
-| [03-billing.md](03-billing.md) | Tiers per course, service switches with the price change, usage and caps, invoices, the trial countdown, past-due and read-only banners |
+| [03-billing.md](03-billing.md) | Plans per course in 30-day periods, service switches with the effect on the next payment, the pooled AI allowance and limits, payments, the trial countdown, past-due, read-only and deletion banners |
 | [04-payments-portal.md](04-payments-portal.md) | Parent portal and adult-student portal, one checkout for several children, off-site payments, receipts, tutor fees and payout connection |
-| [05-discount-codes.md](05-discount-codes.md) | Nexa promo codes on a workspace's bill; tutor discounts on parent fees (proposal) |
+| [05-discount-codes.md](05-discount-codes.md) | Nexa promo codes on a workspace's bill; tutor codes on parent fees |
 | [06-admin-console.md](06-admin-console.md) | Workspaces, plans, revenue, failed payments, overrides with the audit log, impersonation and its banner |
 
 ## Sources this builds on
@@ -18,7 +18,9 @@ Status: draft for A3, 2026-11-16. Branch `revamp/a-ux`.
 - Owner decisions in [a/research/SUMMARY.md](../research/SUMMARY.md) and [b/research/SUMMARY.md](../../b/research/SUMMARY.md). They override everything else.
 - [contracts/viewer.md](../../contracts/viewer.md) and [contracts/services.md](../../contracts/services.md) (Draft 1, PR #43).
 - A2's [design/01-tenancy-roles.md](../design/01-tenancy-roles.md) (draft in progress on `revamp/a-system-design`): roles, the permissions matrix, payment visibility, impersonation rules.
-- `contracts/billing.md` and `contracts/navigation.md` do not exist yet. Action names below marked **(proposed)** are A3's suggestions for `billing.md` and A's feature folders; A2 picks the final names. The full list is at the end of this file.
+- A2's design drafts on `revamp/a-system-design`: [02-identity.md](../design/02-identity.md), [03-billing.md](../design/03-billing.md) (section 11 lists billing queries and actions), [04-payments.md](../design/04-payments.md) (section 8 lists payment queries and actions). Action names here follow those drafts.
+- Owner decisions relayed from A2 on 16 November: billing in **30-day periods** anchored to the payment date, no proration; a course that moves up bills at the higher plan for the next 30 days; Pro's AI allowance is 30 answers per active student per period, **pooled per course**, with marks above it at cost plus margin and no credit pack; **no day pass in v1**; in v1 **tutors create students** (name, optional email, a sign-in code or first password) and **link parents**, while magic links, student invites and claim codes with consent come later; data is **deleted two months after a workspace's last payment**. Where A2's drafts still say months or day passes, these flows follow the decisions and list the gap in "Open points".
+- `contracts/billing.md` and `contracts/navigation.md` do not exist yet. Names marked **(proposed)** are A3's suggestions where A2's drafts have no action yet; A2 picks the final names.
 
 ## Shell assumptions (until B's `navigation.md` lands)
 
@@ -85,18 +87,17 @@ flowchart LR
 
 ## Server actions these screens need
 
-`viewer.md` and `services.md` already define: `getViewer`, `requireViewer`, `can`, `canIn`, `switchWorkspace`, `hasService`, `getCourseServices`, `setCourseService`. Everything else below is **(proposed)**. All writes are next-safe-action actions on the clients in `viewer.md` (`viewerActionClient`, `staffActionClient`, `guardianActionClient`, `adminActionClient`), and all return the standard `SafeActionResult`.
+`viewer.md` and `services.md` define `getViewer`, `requireViewer`, `can`, `canIn`, `switchWorkspace` and `hasService`. Names in the "A2 drafts" column come from design/03 section 11 and design/04 section 8. Names in the last column are **(proposed)** by A3 and not in A2's drafts yet. All writes are next-safe-action actions and return the standard `SafeActionResult`.
 
-| Area | Proposed queries and actions | Home |
-| --- | --- | --- |
-| Sign-in | `signUp`, `signInWithPassword`, `requestMagicLink`, `verifyEmail`, `resendVerification` | `src/features/auth` |
-| Onboarding | `createWorkspace`, `getOnboarding`, `saveOnboardingStep`, `skipOnboardingStep`, `dismissOnboarding` | `src/features/workspaces` |
-| Invites | `inviteMembers`, `getInvite`, `acceptInvite`, `createStudentInvites`, `createJoinLink`, `revokeJoinLink`, `joinWithLink` | `src/features/workspaces`, `students` |
-| Parents | `createClaimCode`, `inviteParent`, `previewClaimCode`, `claimChild`, `revokeGuardianship` | `src/features/parents` |
-| Workspace | `updateWorkspace`, `updateBranding`, `deleteWorkspace`, `transferOwnership` | `src/features/workspaces` |
-| Members and teams | `listMembers`, `changeMemberRole`, `suspendMember`, `removeMember`, `resendInvite`, `revokeInvite`, `createTeam`, `updateTeam`, `deleteTeam`, `setTeamMembers` | `src/features/workspaces` |
-| Billing | `getBillingOverview`, `previewServiceChange`, `getUsage`, `setUsageLimit`, `listBills`, `getBill`, `startCardSetup`, `retryBillPayment`, `buyDayPass`, `buyAddOn`, `cancelWorkspace` | `src/features/billing` |
-| Fees and payouts | `getFeeSettings`, `setCourseFee`, `listFees`, `issueFees`, `markFeePaidOffsite`, `voidFee`, `getPayoutAccount`, `listBanks`, `resolveBankAccount`, `connectPayoutAccount`, `listPayouts` | `src/features/payments` |
-| Portal | `getPortalOverview`, `listPayableFees`, `createCheckout`, `getCheckoutResult`, `listReceipts`, `getReceipt` | `src/features/payments` |
-| Discounts | `previewPromoCode`, `redeemPromoCode`, `setLearnerFeeDiscount`; admin: `listPromoCodes`, `createPromoCode`, `updatePromoCode`, `endPromoCode` | `src/features/billing` |
-| Admin | `adminListWorkspaces`, `adminGetWorkspace`, `adminOverride`, `adminRevenue`, `adminListFailedPayments`, `adminRetryCharge`, `adminListAudit`, `startImpersonation`, `endImpersonation` | `src/features/admin` |
+| Area | In A2 drafts | Proposed by A3 | Home |
+| --- | --- | --- | --- |
+| Sign-in and onboarding | (Better Auth, design/02) | `signUp`, `signInWithPassword`, `requestPasswordReset`, `resendVerification`, `createWorkspace`, `getOnboarding`, `saveOnboardingStep`, `dismissOnboarding` | `src/features/auth`, `workspaces` |
+| Staff invites | | `inviteMembers`, `getInvite`, `acceptInvite`, `resendInvite`, `revokeInvite` | `src/features/workspaces` |
+| Students and parents (v1) | | `createStudents`, `issueSignInCode`, `setFirstPassword`, `revokeSessions`, `linkParent`, `revokeGuardianship`, `setLearnerPaymentVisibility` | `src/features/students`, `parents` |
+| Workspace, members, teams | | `updateWorkspace`, `updateBranding`, `transferOwnership`, `deleteWorkspace`, `cancelWorkspaceDeletion`, `listMembers`, `changeMemberRole`, `suspendMember`, `removeMember`, `createTeam`, `updateTeam`, `deleteTeam`, `setTeamMembers` | `src/features/workspaces` |
+| Billing | `getBillingOverview`, `getCourseTiers`, `getCourseServices`, `previewServiceChange`, `setCourseServices`, `getUsage`, `setUsageCap`, `listPlatformInvoices`, `getPlatformInvoice`, `startCardCapture`, `getCardCaptureStatus`, `payPlatformInvoice`, `redeemDiscountCode`, `cancelWorkspace` | period fields (`renewsOn`, `periodStart`, `periodEnd`, `nextPaymentDeltaCents`) in place of month fields | `src/features/billing` |
+| Fees, portal, payouts | `listPayableInvoices`, `startCheckout`, `getCheckoutStatus`, `getPayoutSettings`, `listBanks`, `resolvePayoutAccount`, `connectPayoutAccount`, `setPayoutMode`, `upsertFeeSchedule`, `listFeeInvoices`, `issueInvoice`, `voidInvoice`, `markInvoicePaidOffsite`, `voidOffsitePayment`, `requestRefund` | `getReceipt`, `listPayouts` | `src/features/payments` |
+| Discounts | `redeemDiscountCode`, `adminCreateDiscountCode`, `adminDeactivateDiscountCode` | `adminListDiscountCodes`, `adminGetDiscountCode`, `createFeeDiscountCode`, `endFeeDiscountCode`, `applyFeeDiscount` | `src/features/billing` |
+| Admin | `adminListWorkspaceBilling`, `adminExtendTrial`, `adminSetComp`, `adminOverrideCourseTier`, `adminIssueCreditNote`, `adminVoidPlatformInvoice`, `adminMarkPaidOffsite`, `adminRefundPayment`, `adminGetPaymentVolume` | `adminGetWorkspace`, `adminRevenue`, `adminListFailedPayments`, `adminRetryCharge`, `adminReprocessEvent`, `adminListAudit`, `startImpersonation`, `endImpersonation` | `src/features/admin` |
+
+Not in v1: `buyDayPass` (no day pass) and any AI credit pack.
