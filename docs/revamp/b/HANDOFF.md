@@ -21,7 +21,7 @@ Done:
   TeX. Fixtures follow the audit's shapes (matrices, `aligned`, `cases`,
   `\[26\]`, `\$5`, image widths, tables). Tampered documents are refused.
 - New dependencies (owner-approved Tiptap): `@tiptap/core`, `pm`,
-  `starter-kit`, `markdown`, `static-renderer`, `extension-image`,
+  `starter-kit`, `markdown`, `extension-image`,
   `extension-table`.
 - Restored the app-shell entry below. The merge of `main` into #46 dropped it.
 
