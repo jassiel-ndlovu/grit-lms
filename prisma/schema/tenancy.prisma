@@ -1,0 +1,5 @@
+// tenancy.prisma — owned by Agent A (docs/revamp/AGENTS.md, section 2).
+// Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+
+// Workspace, Team, Membership, Learner, Enrollment, Guardianship, AuditLog
+// arrive here in Phase 1 (docs/revamp/a/design/01-tenancy-roles.md).

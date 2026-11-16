@@ -1,0 +1,106 @@
+// learning.prisma — owned by Agent B (docs/revamp/AGENTS.md, section 2).
+// Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+
+model Course {
+  id                String         @id @default(cuid())
+  name              String
+  description       String?
+  imageUrl          String
+  tutorId           String
+  createdAt         DateTime       @default(now())
+  tutor             Tutor          @relation(fields: [tutorId], references: [id])
+  courseEvents      CourseEvent[]
+  Grade             Grade[]
+  lessons           Lesson[]
+  Notification      Notification[]
+  quizzes           Quiz[]
+  submissions       Submission[]
+  tests             Test[]
+  students          Student[]      @relation("CourseEnrollments")
+  // enumitem-style label template per lesson nesting level, e.g.
+  // ["\arabic*", "\arabic{enumi}.\arabic*"]. Empty = the default
+  // scheme. See src/lib/enum-labels.ts.
+  lessonLabelScheme String[]       @default([])
+}
+
+model Lesson {
+  id             String             @id @default(cuid())
+  title          String
+  description    String?
+  order          Int
+  courseId       String
+  createdAt      DateTime           @default(now())
+  duration       Int?
+  videoUrl       String[]           @default([])
+  attachmentUrls Attachment[]
+  course         Course             @relation(fields: [courseId], references: [id])
+  completions    LessonCompletion[]
+
+  // Lesson groups. A lesson may sit under a parent lesson; `order` is the
+  // position among its siblings. NONE lessons are content-free headings
+  // that only group their children (mirrors QuestionType.NONE).
+  type     LessonType @default(CONTENT)
+  parentId String?
+  parent   Lesson?    @relation("LessonGroups", fields: [parentId], references: [id], onDelete: SetNull)
+  children Lesson[]   @relation("LessonGroups")
+}
+
+enum LessonType {
+  CONTENT
+  NONE
+}
+
+model Attachment {
+  id       String @id @default(cuid())
+  title    String
+  url      String
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model LessonCompletion {
+  id          String   @id @default(cuid())
+  studentId   String
+  lessonId    String
+  completedAt DateTime
+  lesson      Lesson   @relation(fields: [lessonId], references: [id])
+  student     Student  @relation(fields: [studentId], references: [id])
+}
+
+model Resource {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  url         String
+  uploadedAt  DateTime @default(now())
+  uploadedBy  String
+}
+
+model Quiz {
+  id          String                 @id @default(cuid())
+  title       String
+  courseId    String
+  dueDate     DateTime
+  maxAttempts Int?
+  createdAt   DateTime               @default(now())
+  completions AssessmentCompletion[]
+  course      Course                 @relation(fields: [courseId], references: [id])
+}
+
+model UploadedFile {
+  id           String         @id @default(cuid())
+  fileUrl      String
+  fileType     FileType
+  questionId   String
+  submissionId String
+  question     TestQuestion   @relation(fields: [questionId], references: [id])
+  submission   TestSubmission @relation(fields: [submissionId], references: [id])
+}
+
+enum FileType {
+  PDF
+  DOCX
+  ZIP
+  JPEG
+  OTHER
+}
