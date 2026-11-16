@@ -74,9 +74,18 @@ export type Lesson = z.infer<typeof LessonSchema>;
  * after creation if needed). Duration is the only nullable input — the rest
  * use `.default()` so callers can omit them entirely.
  */
+/**
+ * The lesson body from RichEditor: the `{schemaVersion, doc}` envelope. Its
+ * shape is checked by `validateDoc` in the action, not here. When it is
+ * sent, the action derives `description` from it and ignores any markdown
+ * the browser sent (contracts/editor.md, rule 2). Null clears the body.
+ */
+const DescriptionJsonInput = z.unknown();
+
 export const CreateLessonSchema = z.object({
   title: NonEmptyString.max(120, "Title too long"),
-  description: z.string().max(20000, "Description too long").nullable(),
+  description: z.string().max(20000, "Description too long").nullable().default(null),
+  descriptionJson: DescriptionJsonInput.optional(),
   courseId: CuidSchema,
   order: z.number().int().nonnegative().default(0),
   duration: z.number().int().positive().nullable().default(null),
@@ -97,6 +106,7 @@ export const UpdateLessonSchema = z.object({
   id: CuidSchema,
   title: NonEmptyString.max(120, "Title too long").optional(),
   description: z.string().max(20000, "Description too long").nullable().optional(),
+  descriptionJson: DescriptionJsonInput.optional(),
   order: z.number().int().nonnegative().optional(),
   duration: z.number().int().positive().nullable().optional(),
   videoUrl: z.array(UrlSchema).optional(),

@@ -24,17 +24,20 @@ model Course {
 }
 
 model Lesson {
-  id             String             @id @default(cuid())
-  title          String
-  description    String?
-  order          Int
-  courseId       String
-  createdAt      DateTime           @default(now())
-  duration       Int?
-  videoUrl       String[]           @default([])
-  attachmentUrls Attachment[]
-  course         Course             @relation(fields: [courseId], references: [id])
-  completions    LessonCompletion[]
+  id              String             @id @default(cuid())
+  title           String
+  description     String?
+  /// Rich-text body: {schemaVersion, doc} from src/lib/content. `description`
+  /// keeps the markdown derived from it, for search, email and old readers.
+  descriptionJson Json?
+  order           Int
+  courseId        String
+  createdAt       DateTime           @default(now())
+  duration        Int?
+  videoUrl        String[]           @default([])
+  attachmentUrls  Attachment[]
+  course          Course             @relation(fields: [courseId], references: [id])
+  completions     LessonCompletion[]
 
   // Lesson groups. A lesson may sit under a parent lesson; `order` is the
   // position among its siblings. NONE lessons are content-free headings

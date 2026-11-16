@@ -196,6 +196,7 @@ export default async function ManageLessonsPage({
                 id: selectedLesson.id,
                 title: selectedLesson.title,
                 description: selectedLesson.description,
+                descriptionJson: selectedLesson.descriptionJson,
                 order: selectedLesson.order,
                 duration: selectedLesson.duration,
                 videoUrl: selectedLesson.videoUrl,

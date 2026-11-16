@@ -3,33 +3,107 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
-## 2026-11-16 Accessible reorder question, `revamp/b-a11y-fixes`
-Done (from the research SUMMARY's code issues):
-- Reorder question in the test runner (`question-renderer.tsx`):
-  - The arrow buttons have names, "Move item N up" and "Move item N down".
-    Before, a screen reader heard only "↑" and "↓".
-  - Rows keep stable keys, so focus follows the moved item. At the end of
-    the list, focus moves to the other arrow.
-  - A polite live region announces "Item moved to position N of M".
-- New preview at `/design-system/questions`, with a sample reorder
-  question, to check question inputs without a session.
-- Deleted `src/app/dashboard/components/pop-up.tsx`. Nothing imported it,
-  and it was the only unnamed icon button a scan of `src/features`,
-  `src/app/dashboard` and `src/components` found.
-- Already fixed earlier, so the SUMMARY's issues table is out of date on
-  these two: `--font-mono` defined in terms of itself (fixed in tokens),
-  and the drag-only old reorder (deleted in Batch 1).
+## 2026-11-16 Lessons use the rich editor, `revamp/b-lesson-rich-content`
+The first real field on the editor contract (contracts/editor.md).
+
+**Database (owner approved, applied 2026-11-16).** The production
+database had no migration history: `migrate status` showed `0_baseline`
+and `1_prisma6_m2m_pk` as not applied. Before writing anything,
+`migrate diff` from the live database to the schema showed exactly
+`1_prisma6_m2m_pk` and the new column, nothing else. Then, following A's
+runbook (`a/ops/prisma-baseline.md`):
+- `migrate resolve --applied 0_baseline`
+- `migrate deploy`, which applied `1_prisma6_m2m_pk` and
+  `2_lesson_description_json`
+- `migrate status` now says up to date, and `migrate diff` finds no
+  difference.
+
+**Preview database (applied 2026-11-17).** Preview runs on its own Neon
+branch, where every table belongs to the `nexa_preview` role. That
+branch already had `0_baseline` and `1_prisma6_m2m_pk`, so it only took
+`2_lesson_description_json`. Until that ran, the tutor course pages on
+Preview failed with P2022 (`Lesson.descriptionJson` missing).
+- The first try, as `neondb_owner`, failed with "must be owner of table
+  Lesson". Postgres rolled it back. I cleared the failed record with
+  `migrate resolve --rolled-back`, then deployed as `nexa_preview`.
+- Both databases now report up to date, and `migrate diff` finds no
+  difference on either.
+
+**Fix found in the owner's Preview test:** saving a lesson failed with
+"The lesson content couldn't be read".
+- ProseMirror builds node `attrs` with `Object.create(null)`. React's
+  server-action encoder sends such objects as opaque temporary client
+  references, so on the server `attrs.latex` threw and `validateDoc`
+  returned null. Any node with attributes did this (maths, headings,
+  tables, lists).
+- `RichEditor`'s `onChange` now hands back a plain-JSON copy.
+- Reproduced with a temporary page that sends the editor's envelope
+  through a raw server action and a `next-safe-action` one: both refused
+  it before the fix and accept it after.
+- Server-only tests can't catch this, because the documents there never
+  cross the action boundary.
+- **For A:** if you hold Tiptap JSON anywhere else, copy it to plain JSON
+  before passing it to an action.
+
+**Second fix, from the owner's learner-side test:** maths showed as raw TeX
+after switching lessons.
+- The learner page swaps lessons in place with `?lesson=` links.
+  `MathTypeset` (and the markdown fallback) typeset only on mount, so the
+  next lesson's TeX was never typeset. Rich to rich even showed the
+  previous lesson's formula.
+- `RichContent` now keys its output on a fingerprint of the content, so
+  new content remounts and typesets.
+- Checked on a temporary page that swaps rich and markdown lessons the
+  same way, under MathJax 3: every swap shows the right formula, with no
+  console errors.
+- Saving was confirmed working on Preview by the owner, on the branch
+  alias. Earlier "still failing" reports came from the first deployment
+  URL, which is pinned to the PR's first commit.
+
+**For A:**
+- The baseline in your runbook is done; production now takes
+  `migrate deploy`.
+- Nothing applies migrations to the Preview branch yet. Every PR with a
+  migration needs `migrate deploy` run there by hand, as `nexa_preview`.
+  It could become a step in the deploy workflow. `.env` has no `DIRECT_URL`, so I derived it in memory
+from the pooled URL (dropping `-pooler`) and wrote nothing to disk.
+
+Done:
+- `Lesson.descriptionJson Json?`, migration `2_lesson_description_json`.
+- `richFieldFromInput(value)` in `src/lib/content/save.ts`. It returns
+  the validated envelope, the derived markdown and an `empty` flag, or
+  null. It is rules 1 and 2 in one call; A can use it for messages.
+- `createLesson` and `updateLesson` write both columns together:
+  - From the envelope when sent: validated, markdown derived on the
+    server, browser markdown ignored. An invalid document is refused, and
+    an empty one clears both columns.
+  - Markdown alone (no caller does this now) clears the JSON, so it can't
+    go stale.
+- `LessonForm` uses `RichEditor` in place of the markdown textarea.
+  - It sends the envelope only after an edit, so lessons still in
+    markdown stay unchanged until a tutor edits them (lazy conversion).
+  - Edits survive switching to "Group" and back.
+- The learner's `LessonContent` renders with `RichContent`, which falls
+  back to the markdown column.
 
 Checked:
 - `tsc` and eslint pass.
-- On the preview, with the keyboard: moving item 2 down twice puts focus
-  on item 3's, then item 4's, "down" button. At the end it moves to
-  "Move item 4 up". Each move is announced.
-- No React ref warnings, and no page overflow.
+- `check-rich-content` and `check-rich-render` pass.
+- A scratch check of `richFieldFromInput`:
+  - valid documents pass;
+  - empty, unknown-node, bad-nesting, wrong-version and non-envelope
+    input are refused or flagged;
+  - TeX round-trips exactly.
+- The local install was Prisma 5.22; `npm ci` brought it to the
+  lockfile's 6.19.3.
 
-Still open from that list: extra time on timed tests (WCAG 2.2.1) needs a
-schema field (per-student extra time, owner decision 7), so it waits for
-the owner's approval of a schema change.
+Not checked: the lesson pages need a signed-in tutor, and saving writes
+to production. Owner test on Preview:
+1. Open a lesson that is still markdown. It should look the same in the
+   editor and on the learner page.
+2. Edit and save it. Add maths with `$`, a table and a heading. Check
+   the learner page.
+3. Create a lesson and a group.
 
 ## 2026-11-16 Legacy Batch 3a: retire portal, review and overview; `deleteEntry`, `revamp/b-legacy-batch3a`
 Design 07 Batch 3 is split in two. This is the part that needs nothing

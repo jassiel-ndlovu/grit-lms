@@ -20,7 +20,9 @@
 
 import { revalidatePath } from "next/cache";
 
+import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { richFieldFromInput, richFieldRefusal } from "@/lib/content/save";
 import { deleteBlob } from "@/lib/blob/server";
 import {
   tutorActionClient,
@@ -71,6 +73,31 @@ async function assertParentInCourse(parentId: string, courseId: string): Promise
   }
 }
 
+/**
+ * The two description columns to write, always together
+ * (contracts/editor.md, rules 1 and 2). With the RichEditor envelope, the
+ * document is validated and the markdown derived here; browser markdown is
+ * ignored. With only markdown (older callers), the JSON is cleared so it
+ * can't go stale. Neither sent: nothing to write.
+ */
+function descriptionData(input: {
+  description?: string | null;
+  descriptionJson?: unknown;
+}): { description?: string | null; descriptionJson?: Prisma.InputJsonValue | typeof Prisma.DbNull } {
+  if (input.descriptionJson === undefined) {
+    if (input.description === undefined) return {};
+    return { description: input.description || null, descriptionJson: Prisma.DbNull };
+  }
+  if (input.descriptionJson === null) return { description: null, descriptionJson: Prisma.DbNull };
+  const rich = richFieldFromInput(input.descriptionJson);
+  if (!rich) {
+    console.error("[lessons] rich content refused:", richFieldRefusal(input.descriptionJson));
+    throw new Error("The lesson content couldn't be read. Reload the page and try again.");
+  }
+  if (rich.empty) return { description: null, descriptionJson: Prisma.DbNull };
+  return { description: rich.markdown, descriptionJson: rich.json as unknown as Prisma.InputJsonValue };
+}
+
 function revalidateCourseLessons(courseId: string): void {
   revalidatePath(`/dashboard/manage-courses/lessons/${courseId}`);
   revalidatePath(`/dashboard/courses/lessons/${courseId}`);
@@ -107,12 +134,13 @@ export const createLesson = tutorActionClient
       await assertParentInCourse(parsedInput.parentId, parsedInput.courseId);
     }
     const isGroup = parsedInput.type === "NONE";
+    // A group heading carries no content of its own.
+    const body = isGroup ? {} : descriptionData(parsedInput);
 
     const created = await prisma.lesson.create({
       data: {
         title: parsedInput.title,
-        // A group heading carries no content of its own.
-        description: isGroup ? null : parsedInput.description,
+        ...body,
         order: parsedInput.order ?? 0,
         duration: isGroup ? null : parsedInput.duration ?? null,
         videoUrl: isGroup ? [] : parsedInput.videoUrl ?? [],
@@ -191,8 +219,7 @@ export const updateLesson = tutorActionClient
 
     const data: Record<string, unknown> = {};
     if (parsedInput.title !== undefined) data.title = parsedInput.title;
-    if (parsedInput.description !== undefined)
-      data.description = parsedInput.description;
+    Object.assign(data, descriptionData(parsedInput));
     if (parsedInput.order !== undefined) data.order = parsedInput.order;
     if (parsedInput.duration !== undefined) data.duration = parsedInput.duration;
     if (parsedInput.videoUrl !== undefined) data.videoUrl = parsedInput.videoUrl;
@@ -234,6 +261,7 @@ export const updateLesson = tutorActionClient
     const contentChanged =
       parsedInput.title !== undefined ||
       parsedInput.description !== undefined ||
+      parsedInput.descriptionJson !== undefined ||
       parsedInput.videoUrl !== undefined ||
       parsedInput.attachments !== undefined;
     if (contentChanged && updated.type !== "NONE") {
