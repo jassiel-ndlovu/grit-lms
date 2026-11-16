@@ -1,0 +1,192 @@
+// assessments.prisma — owned by Agent B (docs/revamp/AGENTS.md, section 2).
+// Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+
+model Test {
+  id                        String                 @id @default(cuid())
+  title                     String
+  courseId                  String
+  dueDate                   DateTime
+  createdAt                 DateTime               @default(now())
+  description               String
+  isActive                  Boolean                @default(true)
+  preTestInstructions       String?
+  timeLimit                 Int?
+  totalPoints               Int
+  // When true, the auto-marker runs at submit time AND the resulting
+  // grade is visible to the student immediately. When false the tutor
+  // still gets an auto-grade suggestion in the grading UI, but the
+  // student sees no grade until the tutor releases it.
+  releaseAutoMarksToStudent Boolean                @default(false)
+  // Share of the course's final mark, as a percentage (e.g. 30 = 30%).
+  // null means "no explicit weight" and the gradebook falls back to
+  // weighting this assessment by its totalPoints relative to the other
+  // unweighted assessments. See features/grades/lib/weighting.ts.
+  weight                    Float?
+  // Optional memo / worked-solutions documents for the whole test,
+  // uploaded by the tutor at authoring time. Students see them on the
+  // review page once their attempt has been graded.
+  memoFileUrls              String[]               @default([])
+  // enumitem-style label template per question nesting level. Empty =
+  // the default 1 / 1.a / 1.a.1 scheme. See src/lib/enum-labels.ts.
+  labelScheme               String[]               @default([])
+  AssessmentCompletion      AssessmentCompletion[]
+  course                    Course                 @relation(fields: [courseId], references: [id])
+  questions                 TestQuestion[]
+  submissions               TestSubmission[]
+}
+
+model TestQuestion {
+  id           String       @id @default(uuid())
+  testId       String
+  parentId     String?
+  order        Int?
+  question     String
+  type         QuestionType
+  points       Int
+  options      String[]
+  answer       Json?
+  language     String?
+  matchPairs   Json?
+  reorderItems String[]
+  blankCount   Int?
+  createdAt    DateTime     @default(now())
+
+  // Relations
+  test         Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
+  UploadedFile UploadedFile[]
+
+  // Self-relation for sub-questions
+  parent       TestQuestion?  @relation("SubQuestions", fields: [parentId], references: [id], onDelete: Cascade)
+  subQuestions TestQuestion[] @relation("SubQuestions")
+}
+
+model TestSubmission {
+  id             String           @id @default(cuid())
+  testId         String
+  studentId      String
+  startedAt      DateTime
+  submittedAt    DateTime?
+  answers        Json
+  score          Float?
+  feedback       String?
+  status         SubmissionStatus
+  grade          Grade?
+  questionGrades QuestionGrade[]
+  student        Student          @relation(fields: [studentId], references: [id])
+  test           Test             @relation(fields: [testId], references: [id], onDelete: Cascade)
+  uploadedFiles  UploadedFile[]
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  ESSAY
+  FILE_UPLOAD
+  MULTI_SELECT
+  CODE
+  MATCHING
+  REORDER
+  FILL_IN_THE_BLANK
+  NUMERIC
+  // Context-only — parent questions that group sub-questions but aren't
+  // themselves answerable. Tutor authoring should reject NONE for any
+  // question without subQuestions.
+  NONE
+}
+
+model AssessmentCompletion {
+  id          String    @id @default(cuid())
+  studentId   String
+  quizId      String?
+  testId      String?
+  startedAt   DateTime
+  completedAt DateTime?
+  score       Float?
+  quiz        Quiz?     @relation(fields: [quizId], references: [id])
+  student     Student   @relation(fields: [studentId], references: [id])
+  test        Test?     @relation(fields: [testId], references: [id], onDelete: Cascade)
+}
+
+model Submission {
+  id               String            @id @default(cuid())
+  title            String
+  courseId         String
+  dueDate          DateTime
+  createdAt        DateTime
+  fileType         String
+  maxAttempts      Int?
+  lastDueDate      DateTime?
+  description      String
+  descriptionFiles String[]
+  // Optional memo/solutions files a tutor can release after grading —
+  // separate from `descriptionFiles`, which are the brief given up-front.
+  // Students only see these once they've been added.
+  memoFileUrls     String[]          @default([])
+  totalPoints      Int               @default(1)
+  // Percentage share of the course's final mark; null = weight by points.
+  // Mirrors Test.weight - see features/grades/lib/weighting.ts.
+  weight           Float?
+  isActive         Boolean?          @default(true)
+  course           Course            @relation(fields: [courseId], references: [id])
+  entries          SubmissionEntry[]
+}
+
+model SubmissionEntry {
+  id             String           @id @default(cuid())
+  studentId      String
+  submissionId   String
+  submittedAt    DateTime
+  attemptNumber  Int
+  status         SubmissionStatus
+  feedback       String
+  fileUrl        String[]
+  grade          Grade?
+  questionGrades QuestionGrade[]
+  student        Student          @relation(fields: [studentId], references: [id])
+  submission     Submission       @relation(fields: [submissionId], references: [id])
+
+  @@unique([submissionId, studentId])
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  LATE
+  IN_PROGRESS
+  NOT_SUBMITTED
+  NOT_STARTED
+}
+
+model QuestionGrade {
+  id                String           @id @default(cuid())
+  questionId        String?
+  score             Float
+  outOf             Float
+  feedback          String?
+  testSubmissionId  String?
+  submissionEntryId String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
+  testSubmission    TestSubmission?  @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
+}
+
+model Grade {
+  id                String           @id @default(cuid())
+  studentId         String
+  courseId          String
+  type              String
+  title             String
+  outOf             Float
+  createdAt         DateTime         @default(now())
+  finalComments     String?
+  submissionEntryId String?          @unique
+  testSubmissionId  String?          @unique
+  updatedAt         DateTime         @updatedAt
+  score             Float
+  course            Course           @relation(fields: [courseId], references: [id])
+  student           Student          @relation(fields: [studentId], references: [id])
+  submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
+  testSubmission    TestSubmission?  @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
+}

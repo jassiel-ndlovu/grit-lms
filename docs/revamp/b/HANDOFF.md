@@ -3,6 +3,57 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Legacy Batch 1 (B's half), `revamp/b-legacy-batch1`
+Done (design 07, Batch 1):
+- `src/app/providers.tsx` no longer mounts `ActivityLogProvider` and
+  `NotificationProvider`. That stops the root's calls to `/api/activity`
+  and `/api/notifications` on every page.
+- The eight dead providers are unmounted: students, tutors, lessons,
+  tests, test submissions, grades, question grades and lesson completions.
+  Since the shell PR they live in `src/app/dashboard/legacy-providers.tsx`,
+  not `dashboard-shell.tsx`. Three are left (submissions, submission
+  entries, events) for Batch 3.
+- Deleted the dead files: `calendar/student-calendar.tsx`,
+  `calendar/tutor-calendar.tsx`, `tests/hooks/use-test-session.ts`, and
+  all eight files in `tests/components/`. That is 3,663 lines; nothing
+  imported them.
+
+**For A: Batch 1's deletions are clear to go once the owner has tested.**
+- These 10 contexts have no consumer left: `ActivityLogContext`,
+  `NotificationsContext`, `StudentContext`, `TutorContext`,
+  `LessonContext`, `TestContext`, `TestSubmissionContext`, `GradeContext`,
+  `QuestionGradeContext`, `LessonCompletionContext`.
+- A search for each name outside `src/context/` finds only their own
+  routes under `src/app/api/` and comments.
+- So routes 1, 2 and 15-37 have no caller from a page.
+
+Owner decisions (2026-11-16), answering design 07's open questions:
+- **`deleteEntry` stays.** Tutors keep the right to delete a learner's
+  hand-in. B adds a `deleteEntry` server action to
+  `src/features/submissions/actions.ts` in Batch 3, limited to the tutor
+  who owns the course, with a confirm step, and moves the overview list
+  onto it. Route 9's DELETE is then deleted in Batch 4 as planned. A:
+  please update open question 1 in design 07.
+- **`providers.tsx` is B's** (open question 2), as this PR does.
+
+Checked:
+- `tsc --noEmit` and eslint pass.
+- In the dev server, `/` and `/design-system/content` load with the root
+  providers, with no server or console errors.
+- `/dashboard`, `/dashboard/calendar` and `/dashboard/tests` redirect to
+  sign-in as expected.
+
+Not checked: signed-in dashboard pages, because the dev database is
+production. Owner test from design 07, on Preview:
+- sign in as a tutor and as a student
+- open the dashboard, a course, the bell and the notifications page
+- take a test and open the calendar
+
+Next: Batch 2 once `getViewer()` lands; Batch 3 (with `deleteEntry`) after it.
+
+Blocked on the other agent: `getViewer()` and `getOwnProfile()` for
+Batch 2; the `assignment-brief` Blob kind for Batch 3.
+
 ## 2026-11-16 Contracts: editor.md and navigation.md Draft 2, `revamp/b-contracts-editor-shell`
 Done:
 - `contracts/editor.md` Draft 2:
