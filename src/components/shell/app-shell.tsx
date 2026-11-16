@@ -58,6 +58,11 @@ interface AppShellProps {
   search?: boolean;
   /** The notification bell (needs a signed-in session). Default true. */
   notifications?: boolean;
+  /**
+   * Account-wide notice above every page (verify email, suspended,
+   * read-only). Agent A's slot; full width of the content column.
+   */
+  banner?: React.ReactNode;
 }
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -182,7 +187,7 @@ function ShellSidebar({
   );
 }
 
-export function AppShell({ user, sections, children, search = true, notifications = true }: AppShellProps) {
+export function AppShell({ user, sections, children, search = true, notifications = true, banner }: AppShellProps) {
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const menuButton = React.useRef<HTMLButtonElement>(null);
@@ -264,6 +269,7 @@ export function AppShell({ user, sections, children, search = true, notification
             <Search className="size-5" />
           </button>
         </div>
+        {banner ? <div data-slot="account-banner">{banner}</div> : null}
         <main className="flex-1 pb-12">{children}</main>
       </div>
 
