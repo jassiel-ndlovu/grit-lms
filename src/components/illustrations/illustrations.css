@@ -1,0 +1,10 @@
+/*
+ * Dark mode keeps the figures light: dark ink on light paper, as in light
+ * mode, rather than inverting them (owner decision, 2026-11-16). Set on the
+ * <svg> itself, so it wins over an ancestor's --illustration-surface (for
+ * example the avatar's card colour) and over the light text colour.
+ */
+.dark [data-illustration] {
+  --illustration-ink: #37352f;
+  --illustration-surface: #f7f7f5;
+}

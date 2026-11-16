@@ -24,11 +24,12 @@ import EmptyCourses from "@/components/illustrations/generated/empty-courses";
 - Import each illustration from its own file. Do not build a barrel: one module
   per illustration keeps each page to what it renders.
   `generated/registry.ts` holds lazy loaders for code that picks one by name.
-- **Theme.** Ink paths use `fill="currentColor"`, so lines take the text colour.
-  Paper paths have no fill and inherit the `<svg>`'s fill,
-  `var(--illustration-surface, var(--background))`. Both flip with the `dark`
-  class. On a card, set `[--illustration-surface:var(--card)]` on an ancestor.
-  In dark mode the art reads as a negative (light lines, dark paper).
+- **Theme.** Ink paths use `fill="currentColor"`, so lines take
+  `--illustration-ink` or the text colour. Paper paths have no fill and
+  inherit the `<svg>`'s fill, `var(--illustration-surface, var(--background))`.
+  On a card, set `[--illustration-surface:var(--card)]` on an ancestor.
+  In dark mode the figures stay light (dark ink on `#F7F7F5` paper), set on
+  the `<svg>` by `illustrations.css`; they are not inverted.
 - **Avatars.** `<PeepAvatar userId={id} size={40} />` is an async server
   component that picks one of 32 busts with `avatarIndexFor(id)` (FNV-1a, see
   `scripts/check-avatar-index.ts`). From a client component, call
