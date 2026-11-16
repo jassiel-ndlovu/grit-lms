@@ -3,6 +3,24 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: getViewer(), `revamp/a-viewer`
+
+Done:
+- `src/lib/viewer.ts` (server): `getViewer()`, `requireViewer()`, `canIn()`, `ViewerError`. `src/lib/viewer-core.ts` (client-safe): the types, `can()`, `needsScope()`, the permission matrix and `LEGACY_WORKSPACE`.
+- Phase 0 bridge: until Phase 1 creates workspaces, every user is in one comped organisation, "Nexa" (`ws_nexa_legacy`). TUTOR becomes staff with the TUTOR role, STUDENT a learner (minor, payments hidden), PARENT a guardian with no children yet, ADMIN a Nexa admin. The shape is final; Phase 1 swaps the internals.
+- `src/lib/safe-action.ts`: `viewerActionClient` and `guardianActionClient` added. `staffActionClient` and `adminActionClient` now add `ctx.viewer` beside `ctx.session` (non-breaking).
+- `src/features/workspaces/actions.ts`: `switchWorkspace` (sets the `nexa_ws` cookie).
+- `scripts/check-viewer.ts` (29 checks).
+
+Next:
+- Owner merges. Then legacy replacement batch 1 (design 07).
+
+Blocked on the other agent:
+- For B: import `getViewer` and `requireViewer` from `@/lib/viewer` in server code. Client components import types and `can()` from `@/lib/viewer-core`, because `viewer.ts` is server-only. The contract is updated to say so in its own PR.
+
+Questions for the owner:
+- None.
+
 ## 2026-11-16 Phase 0: Grit to Nexa rename, `revamp/a-rename-nexa`
 
 Done:
