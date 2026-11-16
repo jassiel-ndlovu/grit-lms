@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from "@/lib/branding";
 import { themeBootScript } from "@/components/preferences-provider";
+import { isRevampUi } from "@/lib/ui-flags";
 
 /**
  * Inter — body / UI sans.
@@ -32,9 +33,29 @@ const fraunces = Fraunces({
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
   display: "swap",
+});
+
+/**
+ * Geist and Geist Mono — the revamp's type (REVAMP_UI). `latin-ext` covers
+ * Afrikaans and other names with diacritics. Not preloaded: today's UI does
+ * not use them, so only revamp pages fetch the files. Inter, Fraunces and
+ * JetBrains Mono go when the flag is removed.
+ */
+const geist = Geist({
+  variable: "--font-geist",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  preload: false,
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -60,7 +81,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} ${geist.variable} ${geistMono.variable}`}
+      data-ui={isRevampUi() ? "revamp" : undefined}
       // The theme script and PreferencesProvider set `dark` / `lang` on the
       // client, so the attributes can legitimately differ from the SSR HTML.
       suppressHydrationWarning

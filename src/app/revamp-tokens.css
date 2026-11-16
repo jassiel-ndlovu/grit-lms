@@ -1,0 +1,168 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Revamp design tokens (Phase 0) — Notion-like, behind REVAMP_UI.
+   ─────────────────────────────────────────────────────────────────────────────
+   Active wherever `data-ui="revamp"` is set: on <html> when the REVAMP_UI
+   env flag is "1" (see src/lib/ui-flags.ts), or on any element that wants
+   to preview the new look (the /design-system page). Without the flag the
+   Inkwell tokens in globals.css stay in force, so production is unchanged.
+
+   Token names are shadcn's, so every existing primitive picks these up.
+   The Inkwell brand tokens (--brand-terracotta …) map onto the new accent,
+   so "brand" buttons and badges turn blue rather than staying orange.
+
+   Contrast (WCAG 2.2 AA, checked 2026-11-16; see docs/revamp/b/research/11):
+     light  text #37352F on #FFFFFF 12.26 · muted #6F6E69 5.11 (4.76 on the
+            sidebar) · white on accent #2563EB 5.17 · accent on sidebar 4.82
+            · input outline #8F8F8B 3.25 · success 5.16 · warning 5.52 ·
+            danger 5.47
+     dark   text #E3E2E0 on #191919 13.58 · muted #9B9A97 6.25 · link
+            #6EA8FE 7.28 · input #727270 3.65 · success 6.37 · warning
+            7.82 · danger 6.05
+   #E9E9E7 is for dividers only: at 1.22:1 it cannot outline a control.
+
+   Selectors work whatever the load order (globals.css imports this file
+   first, as @import must come first): `:root[data-ui]` outranks the Inkwell
+   `:root` and `.dark` blocks on <html>; on any other element a declaration
+   beats inherited values anyway. The dark selectors carry two parts, so
+   they beat the light block whether `.dark` sits on the same element or
+   above it, and come later in this file to win the tie with `:root[...]`.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root[data-ui="revamp"],
+[data-ui="revamp"] {
+  --radius: 0.375rem;
+
+  --app-font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Fraunces is gone: headings are Geist 600 with tight tracking. */
+  --app-font-display: var(--app-font-sans);
+  --app-font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, monospace;
+  --app-font-features: normal;
+
+  --background: #ffffff;
+  --foreground: #37352f;
+  --card: #ffffff;
+  --card-foreground: #37352f;
+  --popover: #ffffff;
+  --popover-foreground: #37352f;
+
+  /* Accent blue: solid primary actions and focus. */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1f1ef;
+  --secondary-foreground: #37352f;
+  --muted: #f7f7f5;
+  --muted-foreground: #6f6e69;
+  /* Hover fill for ghost and outline controls, as in Notion. */
+  --accent: #efefed;
+  --accent-foreground: #37352f;
+
+  --destructive: #c53030;
+  --destructive-foreground: #ffffff;
+  --success: #0f7b6c;
+  --success-foreground: #ffffff;
+  --warning: #8a6116;
+  --warning-foreground: #ffffff;
+  --link: #2563eb;
+
+  --border: #e9e9e7;
+  --input: #8f8f8b;
+  --ring: #2563eb;
+
+  --brand-terracotta: #2563eb;
+  --brand-terracotta-foreground: #ffffff;
+  --brand-slate: #37352f;
+  --brand-parchment: #ffffff;
+
+  --chart-1: #2563eb;
+  --chart-2: #0f7b6c;
+  --chart-3: #8a6116;
+  --chart-4: #7c3aed;
+  --chart-5: #c53030;
+
+  --sidebar: #f7f7f5;
+  --sidebar-foreground: #37352f;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efefed;
+  --sidebar-accent-foreground: #37352f;
+  --sidebar-border: #e9e9e7;
+  --sidebar-ring: #2563eb;
+
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #d3d3d0;
+  --scrollbar-thumb-hover: #8f8f8b;
+}
+
+[data-ui="revamp"].dark,
+.dark [data-ui="revamp"] {
+  --background: #191919;
+  --foreground: #e3e2e0;
+  --card: #202020;
+  --card-foreground: #e3e2e0;
+  --popover: #252525;
+  --popover-foreground: #e3e2e0;
+
+  /* Same blue as light: white on #2563EB passes at 5.17. */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #2c2c2c;
+  --secondary-foreground: #e3e2e0;
+  --muted: #252525;
+  --muted-foreground: #9b9a97;
+  --accent: #2c2c2c;
+  --accent-foreground: #e3e2e0;
+
+  --destructive: #c53030;
+  --destructive-foreground: #ffffff;
+  --success: #4dab9a;
+  --success-foreground: #191919;
+  --warning: #d9a441;
+  --warning-foreground: #191919;
+  --link: #6ea8fe;
+
+  --border: #2f2f2f;
+  --input: #727270;
+  --ring: #6ea8fe;
+
+  --brand-terracotta: #2563eb;
+  --brand-terracotta-foreground: #ffffff;
+  --brand-slate: #e3e2e0;
+  --brand-parchment: #191919;
+
+  --chart-1: #6ea8fe;
+  --chart-2: #4dab9a;
+  --chart-3: #d9a441;
+  --chart-4: #a78bfa;
+  --chart-5: #f07068;
+
+  --sidebar: #202020;
+  --sidebar-foreground: #e3e2e0;
+  --sidebar-primary: #6ea8fe;
+  --sidebar-primary-foreground: #191919;
+  --sidebar-accent: #2c2c2c;
+  --sidebar-accent-foreground: #e3e2e0;
+  --sidebar-border: #2f2f2f;
+  --sidebar-ring: #6ea8fe;
+
+  --scrollbar-thumb: #3a3a3a;
+  --scrollbar-thumb-hover: #727270;
+}
+
+/* 14 px base for body copy (rem spacing is left alone). */
+[data-ui="revamp"] body,
+body[data-ui="revamp"],
+body [data-ui="revamp"] {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Headings that used Fraunces now use Geist: heavier and tighter. */
+[data-ui="revamp"] .font-display,
+[data-ui="revamp"].font-display {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
