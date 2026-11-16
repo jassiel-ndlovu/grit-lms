@@ -22,6 +22,7 @@ import { NextResponse } from "next/server";
 import type { HandleUploadBody } from "@vercel/blob/client";
 
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { BlobKind } from "@/lib/blob/paths";
 import { issueUploadToken, type ClientPayload } from "@/lib/blob/server";
 
@@ -39,6 +40,22 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
 
         assertRoleAllowsKind(session.user.role, payload.kind);
+
+        // A brief for a saved assignment must belong to one of the tutor's
+        // own courses. A draft id (assignment not saved yet) has no row.
+        if (payload.kind === BlobKind.AssignmentBrief) {
+          const submissionId = pathname.split("/")[1];
+          const existing = await prisma.submission.findUnique({
+            where: { id: submissionId },
+            select: { course: { select: { tutor: { select: { email: true } } } } },
+          });
+          if (
+            existing &&
+            existing.course.tutor.email.toLowerCase() !== session.user.email.toLowerCase()
+          ) {
+            throw new Error("Cannot upload a brief to another tutor's assignment");
+          }
+        }
 
         // For user-avatar, ensure the path targets the requester's own folder.
         if (payload.kind === BlobKind.UserAvatar) {
@@ -70,6 +87,7 @@ function assertRoleAllowsKind(role: string, kind: ClientPayload["kind"]): void {
     case BlobKind.LessonAttachment:
     case BlobKind.LessonUpload:
     case BlobKind.TestQuestionImage:
+    case BlobKind.AssignmentBrief:
       if (role !== "TUTOR") {
         throw new Error("Tutor role required for this upload kind");
       }

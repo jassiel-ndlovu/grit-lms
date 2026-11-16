@@ -12,6 +12,7 @@
  *   courses/<courseId>/lessons/<lessonId>/attachments/<sanitized-filename>
  *   courses/<courseId>/lessons/<lessonId>/uploaded/<sanitized-filename>
  *   submissions/<submissionId>/<sanitized-filename>
+ *   submissions/<submissionId>/brief/<sanitized-filename>         (tutor)
  *   tests/<testId>/questions/<questionId>/<sanitized-filename>   (tutor)
  *   tests/<testId>/answers/<questionId>/<sanitized-filename>     (student)
  *   users/<userId>/avatar/<sanitized-filename>
@@ -33,6 +34,8 @@ export const BlobKind = {
   LessonAttachment: "lesson-attachment",
   LessonUpload: "lesson-upload",
   Submission: "submission",
+  /** A tutor-authored brief or worksheet attached to an assignment. */
+  AssignmentBrief: "assignment-brief",
   TestQuestionImage: "test-question-image",
   /** A student's file answer to a FILE_UPLOAD test question. */
   TestAnswer: "test-answer",
@@ -63,6 +66,16 @@ export function lessonUploadPath(
 
 export function submissionPath(submissionId: string, filename: string): string {
   return `submissions/${submissionId}/${sanitizeFilename(filename)}`;
+}
+
+/**
+ * A brief (instructions, worksheet) the tutor attaches to an assignment.
+ * The submission id may be a client-side draft id for an assignment that is
+ * not saved yet; unreferenced drafts are cleaned up after a 14-day grace
+ * period (docs/revamp/a/research/08-blob-cleanup.md).
+ */
+export function assignmentBriefPath(submissionId: string, filename: string): string {
+  return `submissions/${submissionId}/brief/${sanitizeFilename(filename)}`;
 }
 
 export function testQuestionImagePath(
@@ -109,6 +122,8 @@ export function isValidPath(kind: BlobKind, pathname: string): boolean {
       );
     case BlobKind.Submission:
       return /^submissions\/[^/]+\/[^/]+$/.test(pathname);
+    case BlobKind.AssignmentBrief:
+      return /^submissions\/[^/]+\/brief\/[^/]+$/.test(pathname);
     case BlobKind.TestQuestionImage:
       return /^tests\/[^/]+\/questions\/[^/]+\/[^/]+$/.test(pathname);
     case BlobKind.TestAnswer:
@@ -133,21 +148,25 @@ export function isValidPath(kind: BlobKind, pathname: string): boolean {
  * every upload with "Content type mismatch". Use `undefined` here when a
  * kind should accept anything, and the token issuer skips the constraint.
  */
+/** Documents a tutor hands out: lesson attachments and assignment briefs. */
+const TUTOR_DOCUMENT_TYPES = [
+  "image/*",
+  "application/pdf",
+  "application/zip",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/markdown",
+];
+
 export const ALLOWED_CONTENT_TYPES: Record<BlobKind, string[] | undefined> = {
   [BlobKind.CourseCover]: ["image/png", "image/jpeg", "image/webp"],
-  [BlobKind.LessonAttachment]: [
-    "image/*",
-    "application/pdf",
-    "application/zip",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "text/plain",
-    "text/markdown",
-  ],
+  [BlobKind.LessonAttachment]: TUTOR_DOCUMENT_TYPES,
+  [BlobKind.AssignmentBrief]: TUTOR_DOCUMENT_TYPES,
   // Lesson uploads and assignment submissions accept any file. The
   // assignment's `fileType` field is a soft hint surfaced in the UI; we
   // don't gate the upload itself on it.
@@ -182,6 +201,7 @@ export const MAX_BYTES: Record<BlobKind, number> = {
   [BlobKind.LessonAttachment]: 100 * 1024 * 1024, // 100 MB
   [BlobKind.LessonUpload]: 200 * 1024 * 1024, // 200 MB
   [BlobKind.Submission]: 200 * 1024 * 1024, // 200 MB
+  [BlobKind.AssignmentBrief]: 100 * 1024 * 1024, // 100 MB
   [BlobKind.TestQuestionImage]: 25 * 1024 * 1024, // 25 MB
   [BlobKind.TestAnswer]: 50 * 1024 * 1024, // 50 MB
   [BlobKind.UserAvatar]: 2 * 1024 * 1024, // 2 MB
