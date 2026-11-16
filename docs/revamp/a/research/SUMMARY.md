@@ -1,6 +1,27 @@
 # Agent A research: summary
 
-**Answer first.** Stay on Vercel but upgrade to Pro, and move the functions and the database to Cape Town together: Vercel `cpt1` plus AWS RDS Postgres in af-south-1. Use Paystack for payments, with Payfast as the fallback. Price tiers at **Core R29, Plus R49, Pro R89** per active student per subject per month. Keep the plan's 14-day trial, its 20% API margin and its 2% parent commission. At launch the platform costs about **R750 a month** to run. Three problems in production today need the owner's attention before the revamp starts (below).
+**Answer first.** The owner's decisions of 16 November (next section) override the recommendations below where they differ. Tiers are **Core R99, Plus R139, Pro R179** per active student per course per month. Stay on Vercel Hobby and Neon us-east-1 until tutors and students are on board in 2027, then move to Vercel Pro in `cpt1` and AWS RDS in af-south-1 together. Use Paystack, with Payfast as the fallback. Keep the plan's 14-day trial, 20% API margin and 2% parent commission. Three problems found in production are listed below; the cron problem is fixed (PR #37).
+
+## Owner decisions (16 November 2026)
+
+| Topic | Decision | What follows |
+| --- | --- | --- |
+| Tier prices | **Core R99, Plus R139, Pro R179** per student per course per month (research said R29 / R49 / R89) | Order confirmed by the owner: Core < Plus < Pro. These prices are 6.9%, 9.7% and 12.5% of the R1,430 a parent pays for one subject at one hour a week (research 01). A solo tutor with 12 students in 2 subjects on Plus pays R3,336 a month, against R1,853 for Teach 'n Go Pro (100 students, no LMS). That is the market risk to watch in the trial |
+| Hosting and database | Vercel Pro and RDS af-south-1 **in 2027**, once tutors and students are on board. Stay on Hobby and Neon until then | Vercel Hobby is for non-commercial use only (research 05), so upgrade before Nexa takes its first payment. Children's data stays in the US until then: keep the POPIA notice and consent wording honest about that (research 09) |
+| Business entity | Not registered. Revenue is far below R80,000 a month | **Correction:** Paystack's Starter limit is **R80,000 in total, for the life of the account**, not per month (research 03). Register on Paystack as a sole proprietor (R1,000,000 lifetime limit, needs proof of address) or register a company before parent payments go live |
+| Parent payments | No combined subscription. A parent can claim several children and pay for them from one account. Payments are aggregated, and each child keeps their own account. Nexa is an education marketplace. Chargeback fees are negligible for now | One checkout per parent can cover several invoices. Paystack's multi-split pays each tutor's subaccount in one transaction (research 03). Tutor subscriptions (Gate 1) need no split |
+| AI and POPIA | Personal information is redacted before any text goes to an LLM. The model marks or edits tests and never sees who wrote them | POPIA does not apply to information de-identified so that it cannot be re-identified (s6(1)(b)). Design the redaction step in A2 and B2: names, IDs and free-text personal details stripped, mapping kept only in Nexa's database |
+| Blob audit | Allowed to read the URL columns. Connect the store to the project | The owner connects `grit-lms-blob` to `grit-lms` in the dashboard for the **Development** environment only, because Preview and Production already have a token. Then run the read-only audit (research 08) |
+| Preview database | Preview uses a Neon branch with fake data | A schema-only Neon branch, seeded with fake data, becomes Preview's `DATABASE_URL`. Preview also shares production's Blob token; a separate store is a later step |
+| Wolfram | Get a quote | Draft request below. Agent B recommends a local maths engine instead (B research 02), so the quote is for comparison |
+| Domain and mail | **`.co.za`** at xneelo, about 3 mailboxes (the owner first suggested `.online`) | **Decided after this research:** `.online` is $1.96 in the first year but **$28.84 (R490) a year** after that at Porkbun, while `.co.za` is R110 a year at xneelo, including renewals ([Porkbun](https://porkbun.com/products/domains), checked 2026-11-16). Three mailboxes fit Zoho Mail Free (up to 5 users), so mail costs R0 |
+| Earlier (plan revision 3), revised | No UI modes; coding automarker and Judge0 parked; Bedrock for AI marking. **`graphing` and `math-input` are both on Plus** (the owner revised revision 3, which had put all graphing on Pro) | `viewer.md` drops `mode`. `services.md` puts `graphing` and `math-input` on Plus and has no `automarker` in v1. Judge0 leaves the launch budget |
+
+### Wolfram quote request (draft, for the owner to send)
+
+> We are building an online tutoring platform for South African schools and tutors. We would like a commercial quote for the Wolfram|Alpha Full Results API with step-by-step solutions (Show Steps), used to check students' maths working. Expected volume at launch: under 5,000 calls a month, growing to about 50,000. Please include: price per call or per tier, whether results may be cached, whether we may bill the cost on to our customers, attribution and branding rules, and any limits for use by students under 18.
+
+Send it through Wolfram's [custom solutions contact form](https://www.wolframalpha.com/contact-us/custom), linked from the [API page](https://products.wolframalpha.com/api/) (checked 2026-11-16), with the business's details. The volumes are **guesses**; adjust them if needed.
 
 Checked 2026-11-16. USD converted at R17.00 (Wise mid-market R16.95 that day, rounded). Every figure has its source in the topic file. Items marked **Guess** or **Unverified** there are not facts yet.
 
@@ -42,6 +63,8 @@ These were found while researching. None has been changed.
 
 A solo tutor on Plus with 12 students in 2 subjects covers the base cost.
 
+**Until 2027 (owner decision):** Vercel Hobby, Neon Free and no Judge0 (parked) leave only the domain, about **R9 a month** for `.co.za` alone. The table above is the cost once tutors pay.
+
 ## Where research differs from the plan
 
 | Plan (rev 2) | Research | Why |
@@ -56,15 +79,12 @@ A solo tutor on Plus with 12 students in 2 subjects covers the base cost.
 
 ## Open questions for the owner
 
-Most urgent first. Each topic file lists more.
+The owner answered every question on 16 November:
 
-1. **Crons:** do we fix the crons now (Vercel Pro) or wait for the revamp? Until then, tests are never auto-submitted after the due date.
-2. **Approvals for paid resources:** Vercel Pro (R340/month) and RDS in af-south-1 (R374/month) under your AWS account. Which day and hour suit a 30-minute maintenance window?
-3. **Business entity:** is Nexa a registered (Pty) Ltd? Paystack needs one to collect more than R80,000. Who is the Information Officer?
-4. **Prices:** R29 / R49 / R89, or launch at the plan's R15 / R30 / R55 as introductory pricing?
-5. **Paystack sales:** can one South African account combine subscriptions, subaccounts and splits? Is an education marketplace acceptable? What are the chargeback fees?
-6. **POPIA and AI:** may student work go to AI models routed outside South Africa? No Claude or GPT model runs in-country today. Should a lawyer review US hosting and s57 before launch?
-7. **Blob audit:** may it read the URL columns? Preferably from a Neon branch of production that you create. Do we connect the store to the project, or use a local token?
-8. **Preview environment:** may Preview move to a Neon branch with fake data, so previews stop writing to production?
-9. **Wolfram:** may we ask Wolfram for a commercial quote? Its free tier bans commercial use, so the `math-solve` add-on is blocked until then.
-10. **Domain:** which exact name, `.com` as well, and how many mailboxes?
+| Question | Answer | What follows |
+| --- | --- | --- |
+| Paystack account type | **Sole proprietor** | Lifetime collection limit R1,000,000; needs proof of address under 6 months (research 03). For a sole proprietor the Information Officer is the owner by default (POPIA s1, "head of a private body"); register on the Information Regulator portal (research 09) |
+| Domain | **nexa-lms.co.za** at xneelo | The owner checks availability and buys it. App mail from a `notify.nexa-lms.co.za` subdomain through Resend; DNS on Cloudflare (research 07) |
+| First payment | **February 2027** | Vercel Pro (functions in `cpt1`) and RDS in af-south-1 must be live before then. Plan the database move for January 2027 |
+
+No questions are open from this research.

@@ -182,7 +182,17 @@ function isEscapedBracket(body: string): boolean {
   return !/[\s\\]/.test(body);
 }
 
-export function normalizeTexDelimiters(src: string): string {
+export interface NormalizeTexOptions {
+  /**
+   * Escape maths bodies (and literal `\$`) so react-markdown hands them back
+   * verbatim. Default true. The rich-content importer (src/lib/content)
+   * passes false: its own tokenizer reads `$…$` bodies raw, so it wants only
+   * the delimiter rewrite.
+   */
+  escapeMath?: boolean;
+}
+
+export function normalizeTexDelimiters(src: string, { escapeMath = true }: NormalizeTexOptions = {}): string {
   if (
     !src ||
     (!src.includes("$") && !src.includes("\\(") && !src.includes("\\["))
@@ -198,14 +208,14 @@ export function normalizeTexDelimiters(src: string): string {
 
   while (i < src.length) {
     if (mask[i] === MATH_BODY) {
-      out += escapeMathBody(src[i]);
+      out += escapeMath ? escapeMathBody(src[i]) : src[i];
       i++;
       continue;
     }
 
     // A literal `\$` in prose — its backslash is already in `out`.
     if (src[i] === "$" && !isProtected(i) && isEscaped(src, i)) {
-      out += "\\\\$";
+      out += escapeMath ? "\\\\$" : "$";
       i++;
       continue;
     }
@@ -256,7 +266,7 @@ export function normalizeTexDelimiters(src: string): string {
     }
 
     const dollar = open === "(" ? "$" : "$$";
-    out += `${dollar}${escapeMathBody(body)}${dollar}`;
+    out += `${dollar}${escapeMath ? escapeMathBody(body) : body}${dollar}`;
     i = close + 2;
   }
 
