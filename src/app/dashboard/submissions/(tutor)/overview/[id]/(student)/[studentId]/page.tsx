@@ -37,6 +37,7 @@ import {
 } from "@/features/submissions/lib/sections";
 import { EntryGradingForm } from "@/features/submissions/components/entry-grading-form";
 import { MemoFilesEditor } from "@/features/submissions/components/memo-files-editor";
+import { DeleteEntryButton } from "@/features/submissions/components/delete-entry-button";
 
 interface PageProps {
   params: Promise<{ id: string; studentId: string }>;
@@ -136,12 +137,17 @@ export default async function StudentGradingPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-      <div>
+      <div className="flex items-center justify-between gap-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={`/dashboard/submissions/${submissionId}`}>
             ← Back to assignment
           </Link>
         </Button>
+        <DeleteEntryButton
+          entryId={entry.id}
+          submissionId={submissionId}
+          studentName={entry.student.fullName}
+        />
       </div>
 
       <header className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">

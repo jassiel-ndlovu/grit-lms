@@ -73,6 +73,10 @@ import { CreateAttachmentSchema } from "../lessons/schemas";
 export const DeleteSubmissionSchema = z.object({ id: CuidSchema });
 export type DeleteSubmissionInput = z.infer<typeof DeleteSubmissionSchema>;
 
+/** A tutor deletes one learner's hand-in (owner decision, 2026-11-16). */
+export const DeleteEntrySchema = z.object({ id: CuidSchema });
+export type DeleteEntryInput = z.infer<typeof DeleteEntrySchema>;
+
 /* ─── Submission CRUD inputs (tutor) ───────────────────────────────────── */
 
 /**
