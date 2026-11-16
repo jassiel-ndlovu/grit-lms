@@ -3,22 +3,22 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
-## 2026-11-16 Phase 0: legacy Batch 1 deletions, `revamp/a-legacy-batch1`
+## 2026-11-16 Phase 0: supplies for legacy Batches 2 and 3, `revamp/a-batch23-supplies`
 
 Done:
-- Deleted the 10 contexts with no consumer left after B's PR #59: ActivityLog, Grade, LessonCompletion, Lesson, Notifications, QuestionGrade, Student, Test, TestSubmission and Tutor.
-- Deleted routes 1, 2 and 15-37 from design 07: `/api/activity`, `/api/notifications` (with `[id]`), `grades`, `lesson-completions`, `lessons`, `login`, `question-grades`, `seed-users`, `students`, `test-submission`, `tests`, `tutors`, `courses/[id]` and `events/[id]`.
-- `scripts/check-feed-access.ts` removed (its routes are gone). `scripts/check-legacy-batch1.ts` added. README seed step points at `scripts/seed-fake.ts`.
+- `getOwnProfile(viewer)` in `src/features/users/queries.ts` returns `{ name, email, avatarUrl, persona, roleLabel }` from the viewer, with no extra query. It replaces `ProfileContext` and `/api/profile` for the shell.
+- Blob kind `assignment-brief` (`BlobKind.AssignmentBrief`, `assignmentBriefPath(submissionId, name)` = `submissions/<id>/brief/<name>`). Tutor only; same document types as lesson attachments; 100 MB. For a saved assignment, the token route checks that the tutor teaches its course. A draft id passes, and unused drafts fall under the 14-day grace rule.
+- `scripts/check-batch23-supplies.ts` (11 checks).
 
 Next:
-- Supplies for B: `getOwnProfile(viewer)` (Batch 2) and the `assignment-brief` Blob kind (Batch 3).
-- Batch 4 deletions after B's Batch 3 and the owner's test.
+- Batch 4 deletions once B finishes Batches 2 and 3 and the owner tests them.
 
 Blocked on the other agent:
-- None. Remaining legacy layer: routes 3-10 and contexts Course, Event, Profile, Submission, SubmissionEntry, for B's Batches 2 and 3.
+- For B, Batch 2: in `src/app/dashboard/layout.tsx` call `requireViewer()`, then `getOwnProfile(viewer)`, and pass the fields to `DashboardShell`, `Header` and `Nav`.
+- For B, Batch 3: upload briefs with `uploadFile({ kind: BlobKind.AssignmentBrief, pathname: assignmentBriefPath(id, file.name), file })`.
 
 Questions for the owner:
-- Before merging: do the Batch 1 walk-through on a Preview deployment. Sign in as a tutor and as a student; open the dashboard, a course, the bell and the notifications page; take a test; open the calendar.
+- None.
 
 ## 2026-11-16 Phase 0: getViewer(), `revamp/a-viewer`
 
