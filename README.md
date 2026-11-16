@@ -119,9 +119,9 @@ cp .env.example .env.local   # if you have one, otherwise create from scratch
 #    Needs DATABASE_URL and DIRECT_URL (direct, non-pooled) in .env
 npx prisma migrate deploy
 
-# 4. Seed at least one tutor account so you can log in
-# There's a seed route at src/app/api/seed-users/route.ts that provisions
-# demo tutor + student accounts. Hit it once from the browser after `npm run dev`.
+# 4. Seed fake data, including a tutor account to sign in with
+#    (refuses to run against production; see the script header)
+SEED_USER_PASSWORD=... npx tsx scripts/seed-fake.ts
 ```
 
 ---

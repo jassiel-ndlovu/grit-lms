@@ -3,6 +3,23 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: legacy Batch 1 deletions, `revamp/a-legacy-batch1`
+
+Done:
+- Deleted the 10 contexts with no consumer left after B's PR #59: ActivityLog, Grade, LessonCompletion, Lesson, Notifications, QuestionGrade, Student, Test, TestSubmission and Tutor.
+- Deleted routes 1, 2 and 15-37 from design 07: `/api/activity`, `/api/notifications` (with `[id]`), `grades`, `lesson-completions`, `lessons`, `login`, `question-grades`, `seed-users`, `students`, `test-submission`, `tests`, `tutors`, `courses/[id]` and `events/[id]`.
+- `scripts/check-feed-access.ts` removed (its routes are gone). `scripts/check-legacy-batch1.ts` added. README seed step points at `scripts/seed-fake.ts`.
+
+Next:
+- Supplies for B: `getOwnProfile(viewer)` (Batch 2) and the `assignment-brief` Blob kind (Batch 3).
+- Batch 4 deletions after B's Batch 3 and the owner's test.
+
+Blocked on the other agent:
+- None. Remaining legacy layer: routes 3-10 and contexts Course, Event, Profile, Submission, SubmissionEntry, for B's Batches 2 and 3.
+
+Questions for the owner:
+- Before merging: do the Batch 1 walk-through on a Preview deployment. Sign in as a tutor and as a student; open the dashboard, a course, the bell and the notifications page; take a test; open the calendar.
+
 ## 2026-11-16 Phase 0: getViewer(), `revamp/a-viewer`
 
 Done:
