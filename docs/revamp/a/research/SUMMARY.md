@@ -14,7 +14,7 @@
 | Blob audit | Allowed to read the URL columns. Connect the store to the project | The owner connects `grit-lms-blob` to `grit-lms` in the dashboard for the **Development** environment only, because Preview and Production already have a token. Then run the read-only audit (research 08) |
 | Preview database | Preview uses a Neon branch with fake data | A schema-only Neon branch, seeded with fake data, becomes Preview's `DATABASE_URL`. Preview also shares production's Blob token; a separate store is a later step |
 | Wolfram | Get a quote | Draft request below. Agent B recommends a local maths engine instead (B research 02), so the quote is for comparison |
-| Domain and mail | Cheaper domains such as `.online`; about 3 mailboxes | **Recommend `.co.za` anyway:** `.online` is $1.96 in the first year but **$28.84 (R490) a year** after that at Porkbun, while `.co.za` is R110 a year at xneelo, including renewals ([Porkbun](https://porkbun.com/products/domains), checked 2026-11-16). Three mailboxes fit Zoho Mail Free (up to 5 users), so mail costs R0 |
+| Domain and mail | **`.co.za`** at xneelo, about 3 mailboxes (the owner first suggested `.online`) | **Decided after this research:** `.online` is $1.96 in the first year but **$28.84 (R490) a year** after that at Porkbun, while `.co.za` is R110 a year at xneelo, including renewals ([Porkbun](https://porkbun.com/products/domains), checked 2026-11-16). Three mailboxes fit Zoho Mail Free (up to 5 users), so mail costs R0 |
 | Earlier (plan revision 3) | No UI modes; coding automarker and Judge0 parked; all graphing on Pro; Bedrock for AI marking | `viewer.md` drops `mode`. `services.md` puts `graphing` on Pro and has no `automarker` in v1. Judge0 leaves the launch budget |
 
 ### Wolfram quote request (draft, for the owner to send)
@@ -84,5 +84,5 @@ The owner answered the first list on 16 November (see "Owner decisions"). Still 
 1. **Tier order:** confirm Core R99, Plus R139, Pro R179 (Plus below Pro).
 2. **Math input tier:** plan revision 3 moves only graphing to Pro. Agent B's handoff also puts `math-input` on Pro. Plus or Pro?
 3. **Paystack account type:** sole proprietor (R1,000,000 lifetime limit) or a registered company, before parent payments go live? Who is the Information Officer?
-4. **Domain:** `.co.za` (R110 a year, recommended) or `.online`? Which name?
+4. **Domain name:** `.co.za` at xneelo is decided (R110 a year). Which exact name? The owner checks availability and buys it.
 5. **First payment date:** Vercel Pro must be active before Nexa charges anyone. Which month?
