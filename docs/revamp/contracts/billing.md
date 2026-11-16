@@ -134,13 +134,14 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 5. When `deleteAfter` is set, show the date in the cancellation and read-only screens: data is deleted 2 months after the last payment.
 6. The return page after a checkout polls the status query every 2 seconds for up to 60 seconds, then shows "We're confirming your payment" and lets the user leave. The webhook settles it.
 
-## Open questions (owner)
+## Renewal rules (owner decisions, 16 November)
 
-- **Renewal date rule.** The owner's example is "paid 3 February, renews 2 March". 30 days from 3 February is 5 March. Is the rule "30 days" or "the day before the same date next month"?
-- **Late payment.** Does paying late move the renewal anchor to the new payment date?
+- A period is exactly **30 days** from the payment: paid 3 February, renews 5 March.
+- A late payment starts a new 30-day period **on the day it is paid**; `period.renewsAt` moves with it.
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-11-16 | Draft 1.1. Renewal rules confirmed by the owner |
 | 2026-11-16 | Draft 1. 30-day periods anchored to payment; tier hold of 30 days; Pro AI allowance with pass-through overage; no day pass or AI credits in v1 |
