@@ -540,11 +540,18 @@ function TypeSpecificFields({
             Correct answer
           </label>
           <Input
-            type={question.type === "NUMERIC" ? "number" : "text"}
+            type="text"
+            inputMode={question.type === "NUMERIC" ? "decimal" : undefined}
             value={typeof question.answer === "string" ? question.answer : ""}
             onChange={(e) => patch("answer", e.target.value)}
             placeholder={question.type === "NUMERIC" ? "42" : "Expected answer"}
           />
+          {question.type === "NUMERIC" && (
+            <p className="text-muted-foreground text-xs">
+              Students may answer with a decimal comma or a fraction. To allow
+              a margin, write it after the answer, e.g. 3,14 ± 0,01.
+            </p>
+          )}
         </div>
       );
     case "CODE":

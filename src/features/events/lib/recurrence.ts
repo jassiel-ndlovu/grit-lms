@@ -13,9 +13,15 @@
  *     series starting on the 31st lands on the 30th in April and the 28th
  *     (or 29th) in February. Clamping is predictable and never skips a
  *     month, which is what a tutor scheduling a monthly review expects.
- *   - Times are handled in the server's local zone, matching how `date` is
- *     already read everywhere else in the app.
+ *   - Weekdays, month days and times of day are read in one IANA zone
+ *     (default Africa/Johannesburg), never the runtime's own. Vercel runs
+ *     in UTC, so a Monday 00:30 class would otherwise repeat on Sundays.
+ *     Arithmetic happens on "wall" dates whose UTC fields hold the
+ *     zone's wall-clock time; each occurrence converts back to an instant,
+ *     so a zone with daylight saving keeps the same local time.
  */
+
+import { DEFAULT_TIME_ZONE } from "@/lib/datetime";
 
 export type RepeatFrequency =
   | "NONE"
@@ -46,9 +52,52 @@ const MAX_STEPS = 5000;
 /** Largest number of occurrences a single expansion will return. */
 const MAX_RESULTS = 500;
 
+const partsFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function partsFormatter(timeZone: string): Intl.DateTimeFormat {
+  let f = partsFormatters.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hourCycle: "h23",
+    });
+    partsFormatters.set(timeZone, f);
+  }
+  return f;
+}
+
+/** The instant's wall-clock time in `timeZone`, held in a Date's UTC fields. */
+function toWall(instant: Date, timeZone: string): Date {
+  const p: Record<string, number> = {};
+  for (const part of partsFormatter(timeZone).formatToParts(instant)) {
+    if (part.type !== "literal") p[part.type] = Number(part.value);
+  }
+  return new Date(
+    Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) +
+      instant.getUTCMilliseconds(),
+  );
+}
+
+/**
+ * The instant at which `timeZone` shows the wall time `wall`. Two passes
+ * settle the offset; a wall time skipped by a DST jump lands just after it.
+ */
+function fromWall(wall: Date, timeZone: string): Date {
+  const offsetAt = (t: number) =>
+    toWall(new Date(t), timeZone).getTime() - t;
+  const guess = wall.getTime() - offsetAt(wall.getTime());
+  return new Date(wall.getTime() - offsetAt(guess));
+}
+
 function addDays(d: Date, n: number): Date {
   const out = new Date(d);
-  out.setDate(out.getDate() + n);
+  out.setUTCDate(out.getUTCDate() + n);
   return out;
 }
 
@@ -59,14 +108,12 @@ function addDays(d: Date, n: number): Date {
  */
 function addMonthsClamped(d: Date, n: number, anchorDay: number): Date {
   const out = new Date(d);
-  out.setDate(1);
-  out.setMonth(out.getMonth() + n);
+  out.setUTCDate(1);
+  out.setUTCMonth(out.getUTCMonth() + n);
   const lastDay = new Date(
-    out.getFullYear(),
-    out.getMonth() + 1,
-    0,
-  ).getDate();
-  out.setDate(Math.min(anchorDay, lastDay));
+    Date.UTC(out.getUTCFullYear(), out.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  out.setUTCDate(Math.min(anchorDay, lastDay));
   return out;
 }
 
@@ -76,7 +123,7 @@ function addYearsClamped(d: Date, n: number, anchorDay: number): Date {
 
 /** Start of the week (Sunday) containing `d`, preserving time-of-day. */
 function weekStart(d: Date): Date {
-  return addDays(d, -d.getDay());
+  return addDays(d, -d.getUTCDay());
 }
 
 function normaliseInterval(n: number): number {
@@ -130,12 +177,16 @@ export function describeRecurrence(rule: RecurrenceRule): string | null {
  *
  * `repeatCount` counts from the beginning of the series, not from the
  * window, so occurrences before the window still consume the budget.
+ *
+ * `timeZone` is the zone the series is defined in: its weekdays, month days
+ * and time of day.
  */
 export function expandOccurrences(
   start: Date,
   rule: RecurrenceRule,
   windowStart: Date,
   windowEnd: Date,
+  timeZone: string = DEFAULT_TIME_ZONE,
 ): Date[] {
   const out: Date[] = [];
 
@@ -151,12 +202,14 @@ export function expandOccurrences(
   const limit = rule.repeatCount != null && rule.repeatCount > 0
     ? rule.repeatCount
     : null;
-  const anchorDay = start.getDate();
+  const startWall = toWall(start, timeZone);
+  const anchorDay = startWall.getUTCDate();
 
   let emitted = 0; // counts occurrences in the SERIES, window or not
 
   /** @returns false when the series is over and iteration should stop. */
-  function consider(d: Date): boolean {
+  function consider(wall: Date): boolean {
+    const d = fromWall(wall, timeZone);
     if (until && d.getTime() > until.getTime()) return false;
     if (limit != null && emitted >= limit) return false;
     emitted += 1;
@@ -169,7 +222,7 @@ export function expandOccurrences(
     const days = [...new Set(rule.repeatWeekdays)]
       .filter((d) => d >= 0 && d <= 6)
       .sort((a, b) => a - b);
-    const firstWeek = weekStart(start);
+    const firstWeek = weekStart(startWall);
 
     for (let step = 0; step < MAX_STEPS; step++) {
       const base = addDays(firstWeek, step * interval * 7);
@@ -178,7 +231,7 @@ export function expandOccurrences(
       for (const day of days) {
         const occ = addDays(base, day);
         // The series cannot begin before its own start date.
-        if (occ.getTime() < start.getTime()) continue;
+        if (occ.getTime() < startWall.getTime()) continue;
         if (!consider(occ)) return out;
       }
     }
@@ -189,16 +242,16 @@ export function expandOccurrences(
     let occ: Date;
     switch (rule.repeatFrequency) {
       case "DAILY":
-        occ = addDays(start, step * interval);
+        occ = addDays(startWall, step * interval);
         break;
       case "WEEKLY":
-        occ = addDays(start, step * interval * 7);
+        occ = addDays(startWall, step * interval * 7);
         break;
       case "MONTHLY":
-        occ = addMonthsClamped(start, step * interval, anchorDay);
+        occ = addMonthsClamped(startWall, step * interval, anchorDay);
         break;
       case "YEARLY":
-        occ = addYearsClamped(start, step * interval, anchorDay);
+        occ = addYearsClamped(startWall, step * interval, anchorDay);
         break;
       default:
         return out;
@@ -217,6 +270,7 @@ export function occurrencesOf(
   event: { date: Date } & Partial<RecurrenceRule>,
   windowStart: Date,
   windowEnd: Date,
+  timeZone: string = DEFAULT_TIME_ZONE,
 ): Date[] {
   return expandOccurrences(
     event.date,
@@ -229,5 +283,6 @@ export function occurrencesOf(
     },
     windowStart,
     windowEnd,
+    timeZone,
   );
 }

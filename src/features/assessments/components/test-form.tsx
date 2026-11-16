@@ -84,6 +84,9 @@ export interface TestFormProps {
     memoFileUrls?: string[];
     labelScheme?: string[];
     questions: EditorQuestion[];
+    /** Edit mode: fingerprint of the test as loaded, so a stale tab can't
+     *  overwrite a newer save. See features/assessments/lib/test-fingerprint.ts. */
+    baseFingerprint?: string;
   };
 }
 
@@ -339,6 +342,7 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
           id: defaultValues.id,
           ...payload,
           notifyStudents: mode !== "preview",
+          baseFingerprint: defaultValues.baseFingerprint,
         });
         if (result?.serverError) throw new Error(result.serverError);
         if (result?.validationErrors) throw new Error("Some fields were rejected — check every question has text.");
