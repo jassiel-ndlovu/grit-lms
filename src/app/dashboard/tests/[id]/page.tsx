@@ -108,6 +108,7 @@ export default async function TestRunnerPage({ params }: PageProps) {
           timeLimit={test.timeLimit}
           labelScheme={test.labelScheme}
           startedAt={submission.startedAt}
+          dueDate={test.dueDate}
         />
       </div>
     </div>

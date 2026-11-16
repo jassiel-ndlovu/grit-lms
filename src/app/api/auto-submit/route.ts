@@ -1,6 +1,7 @@
 /**
  * GET /api/auto-submit — every five minutes (see vercel.json), closes
- * IN_PROGRESS test submissions whose due date or time limit has passed.
+ * IN_PROGRESS test submissions whose due date or time limit has passed
+ * (whichever comes first, plus a short grace period).
  *
  * Vercel sends `Authorization: Bearer $CRON_SECRET` when CRON_SECRET is
  * set on the project; we require it in production so the endpoint can't be
@@ -10,6 +11,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
+import {
+  AUTO_SUBMIT_GRACE_MS,
+  attemptDeadline,
+} from "@/features/assessments/lib/attempt-deadline";
 
 export const dynamic = "force-dynamic";
 
@@ -24,62 +29,50 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date();
+  const cutoff = now.getTime() - AUTO_SUBMIT_GRACE_MS;
 
-  // Find submissions that are still IN_PROGRESS but past their due time
-  const overdueSubs = await prisma.testSubmission.findMany({
+  // Candidates: open attempts on tests that are past due, or that have a
+  // time limit at all. The exact end is computed below with the same rule
+  // the runner's clock uses (lib/attempt-deadline.ts). The old query only
+  // looked at timed attempts started over an hour ago, so a 30-minute test
+  // could run on for another half hour.
+  const candidates = await prisma.testSubmission.findMany({
     where: {
       status: "IN_PROGRESS",
       OR: [
-        {
-          test: {
-            dueDate: { lt: now }, // past due date
-          },
-        },
-        {
-          // past time limit since started
-          AND: [
-            { startedAt: { not: undefined } },
-            {
-              test: {
-                timeLimit: { not: null },
-              },
-            },
-            {
-              startedAt: {
-                lt: new Date(now.getTime() - 1000 * 60 * 60), // fallback 1h ago
-              },
-            },
-          ],
-        },
+        { test: { dueDate: { lt: now } } },
+        { test: { timeLimit: { not: null } } },
       ],
     },
-    include: { test: true },
+    select: {
+      id: true,
+      startedAt: true,
+      test: { select: { dueDate: true, timeLimit: true } },
+    },
   });
 
-  for (const sub of overdueSubs) {
-    let endTime = sub.test.dueDate;
+  // Close an attempt only once its end plus a grace period has passed. The
+  // runner submits at zero WITH the student's latest answers; the cron just
+  // flips the status on whatever was last autosaved, so the client should
+  // win whenever it is online.
+  const overdue = candidates.filter((sub) => {
+    const { at } = attemptDeadline({
+      startedAt: sub.startedAt,
+      timeLimit: sub.test.timeLimit,
+      dueDate: sub.test.dueDate,
+    });
+    return at != null && at <= cutoff;
+  });
 
-    if (sub.test.timeLimit && sub.startedAt) {
-      const limitEnd = new Date(
-        sub.startedAt.getTime() + sub.test.timeLimit * 60_000
-      );
-      // whichever is earlier: timeLimit vs dueDate
-      endTime = new Date(Math.min(endTime.getTime(), limitEnd.getTime()));
-    }
-
-    if (now >= endTime) {
-      await prisma.testSubmission.update({
-        where: { id: sub.id },
-        data: {
-          status: "SUBMITTED",
-          submittedAt: now,
-        },
-      });
-    }
+  if (overdue.length > 0) {
+    await prisma.testSubmission.updateMany({
+      where: { id: { in: overdue.map((s) => s.id) }, status: "IN_PROGRESS" },
+      data: { status: "SUBMITTED", submittedAt: now },
+    });
   }
 
   return new Response(
-    JSON.stringify({ checked: overdueSubs.length, time: now }),
+    JSON.stringify({ checked: candidates.length, submitted: overdue.length, time: now }),
     { status: 200 }
   );
 }

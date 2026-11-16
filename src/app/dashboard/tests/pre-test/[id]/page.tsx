@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   CalendarDays,
   FileQuestion,
@@ -29,6 +30,7 @@ import {
 } from "@/features/assessments/queries";
 import { BeginTestButton } from "@/features/assessments/components/begin-test-button";
 import LessonMarkdown from "@/app/components/markdown";
+import { attemptDeadline } from "@/features/assessments/lib/attempt-deadline";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -88,6 +90,18 @@ export default async function PreTestPage({ params }: PageProps) {
 
   const topQuestionCount = test.questions.filter((q) => q.parentId === null).length;
 
+  // Starting now: does the due date end the attempt before the time limit?
+  // The auto-submit cron closes attempts at the due date, so say so up
+  // front instead of letting the clock promise time that won't be given.
+  const now = Date.now();
+  const ifStartedNow = attemptDeadline({
+    startedAt: now,
+    timeLimit: test.timeLimit,
+    dueDate: test.dueDate,
+  });
+  const minutesIfStartedNow =
+    ifStartedNow.at != null ? Math.max(0, Math.floor((ifStartedNow.at - now) / 60_000)) : null;
+
   return (
     <div className="bg-background">
       <div className="bg-card border-b border-border">
@@ -133,6 +147,21 @@ export default async function PreTestPage({ params }: PageProps) {
           />
         </Card>
 
+        {ifStartedNow.cutShort && minutesIfStartedNow != null && (
+          <div
+            role="note"
+            className="border-destructive/40 bg-destructive/5 flex items-start gap-3 rounded-md border p-4"
+          >
+            <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
+            <p className="text-foreground text-sm">
+              This test closes at its due time ({dateFmt.format(test.dueDate)}). If you
+              start now you&apos;ll have <strong>{minutesIfStartedNow} minutes</strong>, not
+              the full {test.timeLimit}. Your answers are submitted automatically when it
+              closes.
+            </p>
+          </div>
+        )}
+
         {test.preTestInstructions && (
           <Card className="space-y-3 p-6">
             <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
@@ -146,7 +175,9 @@ export default async function PreTestPage({ params }: PageProps) {
         <Card className="space-y-4 p-6">
           <p className="text-muted-foreground text-sm">
             Once you begin the timer starts immediately
-            {test.timeLimit ? " and you have " + test.timeLimit + " minutes." : "."}{" "}
+            {test.timeLimit
+              ? ` and you have ${ifStartedNow.cutShort ? minutesIfStartedNow : test.timeLimit} minutes.`
+              : "."}{" "}
             Drafts auto-save every few seconds, so you can refresh or
             navigate away and resume.
           </p>
