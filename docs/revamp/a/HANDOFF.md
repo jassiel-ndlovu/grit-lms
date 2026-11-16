@@ -3,50 +3,23 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
-## 2026-11-16 Phase 0 runbooks, `revamp/a-runbooks`
+## 2026-11-16 Phase 0: getViewer(), `revamp/a-viewer`
 
 Done:
-- `docs/revamp/a/ops/db-move-runbook.md`: the January 2027 move from Neon us-east-1 to RDS af-south-1 with the `cpt1` region switch. Assumptions to recheck, RDS and role setup, a timed rehearsal on a Neon branch, go/no-go list, the 30-minute window (W1 to W9) with a check per step, counts, sequences and grants queries, rollback by stage, and the after-list. Refers to research 06 §6 and design 06 §8 rather than copying them.
-- `scripts/blob-audit.ts` (+ `scripts/lib/blob-audit-core.ts`, check `scripts/check-blob-audit.ts`, 34 checks): read-only audit as in research 08. Paginated `list()` capped at 5 calls (1 for today's store), token from `VERCEL_BLOB_READ_WRITE_TOKEN` only, a READ ONLY transaction scanning every text, `text[]` and JSON column, report in git-ignored `.blob-audit/`. Never deletes. `--dry-run` uses fake data. Runbook `ops/blob-audit-runbook.md`, including how deletion is approved later.
-- `scripts/db-backup.sh` + `.github/workflows/db-backup.yml` (manual trigger only, dry run by default, environment `production`) + `ops/backup-runbook.md`: `pg_dump -Fc` from the direct URL in a read-only session, piped into `age`, uploaded to `t3://nexa-lms-backups/db/YYYY-MM-DD.dump.age` with a `.sha256`. Covers key handling, the 30-day lifecycle rule, the secrets, restore, and the drill.
-- `.gitignore`: `/.blob-audit/`, `/.db-backup/`, `*.dump`, `*.dump.age`.
-- Nothing ran against production, Blob or Tigris. Only the dry runs and the check ran.
+- `src/lib/viewer.ts` (server): `getViewer()`, `requireViewer()`, `canIn()`, `ViewerError`. `src/lib/viewer-core.ts` (client-safe): the types, `can()`, `needsScope()`, the permission matrix and `LEGACY_WORKSPACE`.
+- Phase 0 bridge: until Phase 1 creates workspaces, every user is in one comped organisation, "Nexa" (`ws_nexa_legacy`). TUTOR becomes staff with the TUTOR role, STUDENT a learner (minor, payments hidden), PARENT a guardian with no children yet, ADMIN a Nexa admin. The shape is final; Phase 1 swaps the internals.
+- `src/lib/safe-action.ts`: `viewerActionClient` and `guardianActionClient` added. `staffActionClient` and `adminActionClient` now add `ctx.viewer` beside `ctx.session` (non-breaking).
+- `src/features/workspaces/actions.ts`: `switchWorkspace` (sets the `nexa_ws` cookie).
+- `scripts/check-viewer.ts` (29 checks).
 
 Next:
-- Owner runs the blob audit (runbook §2 and §3), then approves deletion by band. `scripts/blob-delete.ts` is a separate PR once there is an approved list.
-- Owner sets up the age key, the Tigris key and the lifecycle rule, and the `production` GitHub environment; first backup by hand, then the workflow; a restore drill before any schedule.
-- Build `MAINTENANCE_MODE` (needed by the move runbook) and `scripts/check-restore.ts`.
+- Owner merges. Then legacy replacement batch 1 (design 07).
 
 Blocked on the other agent:
-- None.
+- For B: import `getViewer` and `requireViewer` from `@/lib/viewer` in server code. Client components import types and `can()` from `@/lib/viewer-core`, because `viewer.ts` is server-only. The contract is updated to say so in its own PR.
 
 Questions for the owner:
-- May the blob audit run now, against a Neon branch of production you create (blob-audit runbook §2)?
-- Run the first backup by hand once the key and secrets exist?
-- `tigris stat` exiting non-zero for a missing object is assumed by `db-backup.sh` (refuse to overwrite); the first real run will confirm it.
-
-## 2026-11-16 Phase 0: Prisma 6 and the schema split, `revamp/a-prisma6-schema-split`
-
-Done:
-- Neon branch `preview` created from `production` as **schema-only** (`init_source: parent-schema`, no rows copied). Production was not written to; its size is unchanged.
-- The branch inherited `neondb_owner` with production's password, so Preview uses a new role, `nexa_preview`, that exists only on the `preview` branch.
-- `scripts/seed-fake.ts` (with `scripts/check-seed-fake-guard.ts`): 1 tutor, 8 "Test Student N" users, 2 courses, lessons, tests and submissions, all `@example.test`. It refuses production's host always, and any other host unless it is the preview endpoint or `SEED_FAKE_ALLOW=1`.
-- Schema and seed on the preview branch only. After PR #60 merged into this branch, the branch was rebuilt with `prisma migrate deploy` (both migrations; `migrate status` up to date, diff exit 0) and reseeded.
-- Vercel: `DATABASE_URL` for Preview now points at the pooled preview branch. Production's record is unchanged.
-- Blob (owner approved): created `nexa-preview-blob` (cpt1, public) and connected it to Preview and Development. Production's four Blob variables now apply to Production only, with their values unchanged.
-- `ops/preview-environment.md`: setup, reseeding, and the Blob store.
-
-Next:
-- 5 MB cap on preview uploads in `issueUploadToken` (design 06 §3.3).
-- Set `DIRECT_URL` for Preview on Vercel (the direct `nexa_preview` URL) when the `vercel-build` migrate step is added. The app runs without it.
-
-Blocked on the other agent:
 - None.
-
-Questions for the owner:
-- May the preview Blob store be emptied monthly without a fresh approval each time? (design 06, open question 1)
-- Delete any old local `.env` files that still hold production's Blob token.
-- Store the seeded users' password in your password manager, or reseed with your own. Optionally reset `neondb_owner`'s password on the `preview` branch.
 
 ## 2026-11-16 Phase 0: Grit to Nexa rename, `revamp/a-rename-nexa`
 
