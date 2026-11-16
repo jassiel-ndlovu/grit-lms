@@ -64,5 +64,7 @@ All commands run from the repo root on `main` after this PR merges, with product
 ## After this
 
 - New schema changes: `npx prisma migrate dev --name <change>` against the Neon `dev` branch (never production), commit the migration with the schema change, and deploy with `prisma migrate deploy` (design 06 adds a manual GitHub workflow for production).
+- **Migration names:** `<next number>_<what>`, for example `4_workspace_tables`. Prisma applies folders in alphabetical order, so keep one scheme: a timestamp name such as `20261117…` sorts before `2_…` and would run out of order on a fresh database. Rename the folder `migrate dev` creates before committing, and take the next number after the highest one on `main`. If two pull requests pick the same number, the second one renumbers before merging.
+- **Done on production (2026-11-16/17):** B resolved `0_baseline` and applied `1_prisma6_m2m_pk` and `2_lesson_description_json` (PR #72). A applied `3_job_run` after a backup branch `backup-pre-migrate-20261117`.
 - `prisma db push` is not used again on any shared database.
 - Prisma prints a warning that `package.json#prisma` is deprecated in favour of `prisma.config.ts`. It works throughout Prisma 6. The move to a config file comes with Prisma 7, because a config file also stops Prisma loading `.env` on its own.
