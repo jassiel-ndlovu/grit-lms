@@ -246,6 +246,9 @@ export const UpdateTestWithQuestionsSchema = z.object({
   questions: z.array(CreateTestQuestionTreeSchema).optional(),
   /** false = save without the TEST_UPDATED fan-out. Default true. */
   notifyStudents: z.boolean().optional(),
+  /** Fingerprint of the test as the editor loaded it; a mismatch refuses
+   *  the save. See lib/test-fingerprint.ts. */
+  baseFingerprint: z.string().max(100).optional(),
 });
 export type UpdateTestWithQuestionsInput = z.infer<
   typeof UpdateTestWithQuestionsSchema

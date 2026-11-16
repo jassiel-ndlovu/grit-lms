@@ -30,6 +30,7 @@ import {
 } from "@/lib/safe-action";
 import { emitNotification, notifyHandIn } from "@/features/notifications/server";
 import { autoGradeSubmission } from "./lib/auto-grade";
+import { loadTestFingerprint, STALE_TEST_MESSAGE } from "./lib/test-fingerprint";
 
 import {
   CreateTestWithQuestionsSchema,
@@ -304,6 +305,16 @@ export const updateTest = tutorActionClient
     if (parsedInput.labelScheme !== undefined) data.labelScheme = parsedInput.labelScheme;
 
     const updated = await prisma.$transaction(async (tx) => {
+      if (parsedInput.baseFingerprint) {
+        // Lock the row so two saves can't both pass the check, then refuse
+        // the save if the test changed since this editor loaded it.
+        await tx.$executeRaw`SELECT 1 FROM "Test" WHERE id = ${parsedInput.id} FOR UPDATE`;
+        const current = await loadTestFingerprint(tx, parsedInput.id);
+        if (current !== parsedInput.baseFingerprint) {
+          throw new Error(STALE_TEST_MESSAGE);
+        }
+      }
+
       const t = await tx.test.update({
         where: { id: parsedInput.id },
         data,

@@ -22,6 +22,7 @@ import {
   type TestDetail,
 } from "@/features/assessments/queries";
 import { TestForm } from "@/features/assessments/components/test-form";
+import { loadTestFingerprint } from "@/features/assessments/lib/test-fingerprint";
 import { ExportTestButton } from "@/features/assessments/components/export-test-button";
 import type {
   EditorQuestion,
@@ -101,6 +102,10 @@ export default async function EditTestPage({ params }: PageProps) {
     );
   }
 
+  // Fingerprint first: if a save lands between the two reads, the editor
+  // holds the older fingerprint and the next save is refused rather than
+  // silently overwriting.
+  const baseFingerprint = await loadTestFingerprint(prisma, testId);
   const [test, courses] = await Promise.all([
     getTestDetailById(testId),
     listCoursesByTutorId(tutor.id),
@@ -155,6 +160,7 @@ export default async function EditTestPage({ params }: PageProps) {
             memoFileUrls: test.memoFileUrls,
             labelScheme: test.labelScheme,
             questions: editorQuestions,
+            baseFingerprint: baseFingerprint ?? undefined,
           }}
         />
       </div>
