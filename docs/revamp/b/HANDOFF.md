@@ -3,6 +3,34 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Accessible reorder question, `revamp/b-a11y-fixes`
+Done (from the research SUMMARY's code issues):
+- Reorder question in the test runner (`question-renderer.tsx`):
+  - The arrow buttons have names, "Move item N up" and "Move item N down".
+    Before, a screen reader heard only "↑" and "↓".
+  - Rows keep stable keys, so focus follows the moved item. At the end of
+    the list, focus moves to the other arrow.
+  - A polite live region announces "Item moved to position N of M".
+- New preview at `/design-system/questions`, with a sample reorder
+  question, to check question inputs without a session.
+- Deleted `src/app/dashboard/components/pop-up.tsx`. Nothing imported it,
+  and it was the only unnamed icon button a scan of `src/features`,
+  `src/app/dashboard` and `src/components` found.
+- Already fixed earlier, so the SUMMARY's issues table is out of date on
+  these two: `--font-mono` defined in terms of itself (fixed in tokens),
+  and the drag-only old reorder (deleted in Batch 1).
+
+Checked:
+- `tsc` and eslint pass.
+- On the preview, with the keyboard: moving item 2 down twice puts focus
+  on item 3's, then item 4's, "down" button. At the end it moves to
+  "Move item 4 up". Each move is announced.
+- No React ref warnings, and no page overflow.
+
+Still open from that list: extra time on timed tests (WCAG 2.2.1) needs a
+schema field (per-student extra time, owner decision 7), so it waits for
+the owner's approval of a schema change.
+
 ## 2026-11-16 Legacy Batch 3a: retire portal, review and overview; `deleteEntry`, `revamp/b-legacy-batch3a`
 Design 07 Batch 3 is split in two. This is the part that needs nothing
 from A. The assignment editor (create/edit) is Batch 3b, after A's

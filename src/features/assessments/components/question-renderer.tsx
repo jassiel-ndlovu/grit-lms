@@ -334,34 +334,88 @@ function Reorder({ question, value, onChange, disabled, shuffleSeed }: QuestionR
   );
   const order = Array.isArray(value) && value.length > 0 ? (value as string[]) : start;
 
+  // Stable keys (item text plus which copy of it), so a moved row keeps its
+  // DOM node and focus can follow it. Index-based keys remounted every row.
+  const keys = React.useMemo(() => {
+    const seen = new Map<string, number>();
+    return order.map((item) => {
+      const n = seen.get(item) ?? 0;
+      seen.set(item, n + 1);
+      return `${n}:${item}`;
+    });
+  }, [order]);
+  // Button is a plain function component (no forwardRef on React 18), so
+  // find the arrows through the list instead of refs.
+  const list = React.useRef<HTMLOListElement>(null);
+  const arrow = (id: string) =>
+    Array.from(list.current?.querySelectorAll<HTMLButtonElement>("button[data-move]") ?? []).find(
+      (el) => el.dataset.move === id,
+    );
+  const [announcement, setAnnouncement] = React.useState("");
+  const [focusAfterMove, setFocusAfterMove] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!focusAfterMove) return;
+    const [key, dir] = [focusAfterMove.slice(0, -2), focusAfterMove.slice(-2)];
+    // Stay on the same arrow; at the end of the list it is disabled, so use the other.
+    const same = arrow(`${key}${dir}`);
+    const other = arrow(`${key}${dir === ":u" ? ":d" : ":u"}`);
+    (same && !same.disabled ? same : other)?.focus();
+    setFocusAfterMove(null);
+  }, [focusAfterMove, order]);
+
   function move(idx: number, dir: -1 | 1) {
     const next = [...order];
     const j = idx + dir;
     if (j < 0 || j >= next.length) return;
     [next[idx], next[j]] = [next[j], next[idx]];
     onChange(next);
+    setAnnouncement(`Item moved to position ${j + 1} of ${next.length}.`);
+    setFocusAfterMove(`${keys[idx]}${dir === -1 ? ":u" : ":d"}`);
   }
 
   return (
-    <ol className="space-y-2">
-      {order.map((item, i) => (
-        <li
-          key={`${i}-${item}`}
-          className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-sm"
-        >
-          <span className="text-muted-foreground tabular-nums w-5 text-xs">{i + 1}</span>
-          <span className="min-w-0 flex-1 text-foreground"><LessonMarkdown content={item} className="prose-sm" /></span>
-          <div className="flex gap-1">
-            <Button type="button" variant="outline" size="sm" onClick={() => move(i, -1)} disabled={disabled || i === 0}>
-              ↑
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => move(i, 1)} disabled={disabled || i === order.length - 1}>
-              ↓
-            </Button>
-          </div>
-        </li>
-      ))}
-    </ol>
+    <>
+      <ol ref={list} className="space-y-2">
+        {order.map((item, i) => {
+          const key = keys[i];
+          return (
+            <li
+              key={key}
+              className="flex items-center gap-3 rounded-md border border-border bg-card px-4 py-3 text-sm"
+            >
+              <span className="text-muted-foreground tabular-nums w-5 text-xs" aria-hidden>{i + 1}</span>
+              <span className="min-w-0 flex-1 text-foreground"><LessonMarkdown content={item} className="prose-sm" /></span>
+              <div className="flex gap-1">
+                <Button
+                  data-move={`${key}:u`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Move item ${i + 1} up`}
+                  onClick={() => move(i, -1)}
+                  disabled={disabled || i === 0}
+                >
+                  <span aria-hidden>↑</span>
+                </Button>
+                <Button
+                  data-move={`${key}:d`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Move item ${i + 1} down`}
+                  onClick={() => move(i, 1)}
+                  disabled={disabled || i === order.length - 1}
+                >
+                  <span aria-hidden>↓</span>
+                </Button>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      <p aria-live="polite" className="sr-only">{announcement}</p>
+    </>
   );
 }
 
