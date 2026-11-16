@@ -3,6 +3,33 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Contracts: editor.md and navigation.md Draft 2, `revamp/b-contracts-editor-shell`
+Done:
+- `contracts/editor.md` Draft 2:
+  - It lists the shipped components and `RichEditor`'s real props.
+  - `onChange` returns the envelope only, and the server derives the markdown (rule 2).
+  - Email HTML is A's `renderEmailHtml`; B's `renderContentHtml` is dropped. The rules for it are in "For A".
+  - The Phase 0 toolbar sits above the field, not in the page ribbon.
+  - Empty maths writes no markdown.
+  - MathJax is 4 with `REVAMP_UI` and 3 until then.
+- `contracts/navigation.md` Draft 2:
+  - The `banner` slot in `AppShell`, and what may go in it.
+  - A's slot names mapped to B's components.
+  - The panel convention for A's content on B's pages.
+
+For A: the banner slot and the email rules are ready to build against.
+Stacked on #56 (the editor), so merge that first.
+
+Next: the first screens on the editor, or the shell work when `getViewer()` lands.
+
+Blocked on the other agent: `getViewer()`, for the workspace switcher, the
+banners' data and nav by persona.
+
+Questions for the owner:
+- `deleteEntry` (design 07, route 9): may tutors lose "delete this hand-in"
+  on the assignment overview list? B recommends yes. Tutors return or grade
+  instead, and the learner resubmits within `maxAttempts`.
+
 ## 2026-11-16 Phase 0: RichEditor, `revamp/b-rich-editor`
 Done:
 - `RichEditor` (`src/components/editor/rich-editor.tsx`), the client
