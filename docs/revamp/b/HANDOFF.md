@@ -3,6 +3,45 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: RichContent and MathJax 4, `revamp/b-rich-content`
+Done:
+- `<RichContent value markdown />` (`src/components/content/`), a server
+  component. It renders a stored rich document with
+  `@tiptap/static-renderer`, or falls back to `LessonMarkdown` when there
+  is no valid JSON. Element styles match `LessonMarkdown`
+  (`rich-content.css`). Images allow only http(s) and same-site URLs;
+  unsafe links are blanked by the link extension.
+- MathJax 4 with `REVAMP_UI=1`, MathJax 3 without. `mathJaxVersion()` in
+  `lib/ui-flags.ts` is the one source: better-react-mathjax allows one
+  version per process. The v4 config turns off the page-wide startup
+  typeset, which removes a hydration mismatch (below).
+- Importer fix: named HTML references (`&emsp;`, `&nbsp;`) are decoded
+  outside code. Before, they stayed literal and exported as `&amp;emsp;`.
+  Fixtures added.
+- Preview at `/design-system/content`: the same sample lesson through
+  `LessonMarkdown` and `RichContent`, side by side.
+- `scripts/check-rich-render.tsx`: maths markup, images, tables, and
+  hostile input (javascript: links, data: images, script text, TeX).
+
+Next:
+- `RichEditor` (Tiptap React, slash and bubble menus, maths popover,
+  toolbar in the RibbonToolbar) with a `/design-system/editor` preview.
+- `renderContentHtml` for A's emails, when A starts on templates.
+
+Blocked on the other agent (A):
+- Self-hosting MathJax 4. It loads from a pinned jsDelivr URL (as v3 does
+  from cdnjs), and fetches extra glyphs and its speech engine from there at
+  run time. Self-hosting means copying `mathjax` and
+  `@mathjax/mathjax-newcm-font` (about 50 MB) into `public/` at build:
+  root build config, A's call.
+
+Questions for the owner:
+- Existing behaviour: with MathJax 3 (production), `LessonMarkdown` pages
+  rendered on the server log a React hydration mismatch, because MathJax
+  typesets the page before React hydrates. Maths still shows correctly.
+  The v4 config fixes it, and the same one-line change could go to v3 now.
+  B left v3 alone in this PR; say if you want the change for v3 too.
+
 ## 2026-11-16 Phase 0: rich content core, `revamp/b-editor`
 Done:
 - `contracts/editor.md` Draft 1, in its own PR: the stored envelope

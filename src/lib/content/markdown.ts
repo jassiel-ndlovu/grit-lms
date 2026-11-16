@@ -14,6 +14,7 @@
 
 import type { JSONContent } from "@tiptap/core";
 import { MarkdownManager } from "@tiptap/markdown";
+import { decodeNamedCharacterReference } from "decode-named-character-reference";
 
 import { normalizeTexDelimiters } from "@/lib/tex-delimiters";
 
@@ -36,7 +37,24 @@ function md(): MarkdownManager {
 
 export function markdownToDoc(markdown: string): JSONContent {
   const src = normalizeTexDelimiters(markdown ?? "", { escapeMath: false });
-  return liftImages(md().parse(src));
+  return liftImages(decodeEntities(md().parse(src)));
+}
+
+/**
+ * marked decodes `&amp;`, `&lt;` and numeric references, but leaves named
+ * ones such as `&emsp;` and `&nbsp;` (used in question headings) as text,
+ * which would then show literally and export as `&amp;emsp;`. Decode them
+ * outside code, where markdown keeps references literal.
+ */
+const NAMED_REFERENCE = /&([A-Za-z][A-Za-z0-9]{1,31});/g;
+
+function decodeEntities(node: JSONContent): JSONContent {
+  if (node.type === "codeBlock") return node;
+  if (node.type === "text") {
+    if (!node.text?.includes("&") || node.marks?.some((m) => m.type === "code")) return node;
+    return { ...node, text: node.text.replace(NAMED_REFERENCE, (ref, name: string) => decodeNamedCharacterReference(name) || ref) };
+  }
+  return node.content ? { ...node, content: node.content.map(decodeEntities) } : node;
 }
 
 /**
