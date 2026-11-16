@@ -31,6 +31,7 @@ export type Permission =
   | "members.invite" | "members.role" | "teams.manage"
   | "courses.create" | "courses.edit" | "courses.services"
   | "learners.invite" | "learners.paymentVisibility" | "guardians.link"
+  | "messages.announce" | "messages.direct"
   | "content.view" | "grades.view"
   | "billing.view" | "billing.manage"
   | "fees.manage" | "fees.markOffsite" | "fees.pay" | "payouts.connect"
@@ -181,3 +182,4 @@ const viewer = await requireViewer({ persona: "guardian" });
 | Date | Change |
 | --- | --- |
 | 2026-11-16 | Draft 1. No `mode` field (owner decision, plan revision 3) |
+| 2026-11-16 | Draft 1.1. Added `messages.announce` and `messages.direct` (A2 messaging design) |

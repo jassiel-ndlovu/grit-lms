@@ -108,24 +108,15 @@ export function hasService(
   key: ServiceKey,
 ): Promise<boolean>;
 
-/** For the course settings screen. Requires `courses.services` (or read-only for staff without it). */
-export function getCourseServices(courseId: string): Promise<{
-  courseId: string;
-  tier: Tier;                       // derived from `enabled`
-  enabled: ServiceKey[];            // premium keys switched on
-  dayPassUntil: string | null;      // ISO 8601, when a day pass is active
-  inTrial: boolean;
-  prices: Record<Tier, number>;     // cents, excl. VAT
-  activeStudents: number;           // this month so far
-}>;
-
-// src/features/billing/actions.ts — server action (next-safe-action result shape)
-export const setCourseService: (input: {
-  courseId: string;
-  key: ServiceKey;                  // premium keys only
-  enabled: boolean;
-}) => Promise<SafeActionResult<{ tier: Tier; enabled: ServiceKey[] }>>;
 ```
+
+The course settings screen uses three calls defined in [billing.md](billing.md), so prices and services stay in one place:
+
+| Call | Kind | Use |
+| --- | --- | --- |
+| `getCourseServices({ courseId })` | query | Every service with its tier, status, whether it is on, and why it is unavailable (`PARKED`, `PAST_DUE`, `READ_ONLY`) |
+| `previewServiceChange({ courseId, enable, disable })` | query | The tier before and after, and the change to this month's bill, shown before the tutor confirms |
+| `setCourseServices({ courseId, enable, disable })` | action | Switches services on and off and returns the course's tier now and for the month |
 
 ## Rules
 
@@ -134,7 +125,7 @@ export const setCourseService: (input: {
 3. **During the trial** a tutor can switch on any `v1` premium service. The tier still follows from what is on, so the first invoice is predictable.
 4. **Parked and later keys** always return `false`. B ships no UI for them.
 5. **Billing state:** `hasService` does not check `READ_ONLY`; it answers "is the feature on". Write blocking is `viewer.workspace.readOnly` ([viewer.md](viewer.md)). Learners keep every service they had, so a read-only workspace never breaks a learner's view.
-6. **Turning a service off** mid-month changes the tier from the next day's metering ([a/design/03-billing.md](../a/design/03-billing.md)). B shows the new monthly price per student before the tutor confirms the switch.
+6. **Tier changes mid-month:** a course bills for the month at the highest tier it held on any day of that month ([a/design/03-billing.md](../a/design/03-billing.md)). Switching a service off lowers the tier from the next month. B shows `previewServiceChange()` before the tutor confirms.
 7. **Who can switch:** `courses.services` permission: owner, admin, or the course lead.
 
 ## Examples
@@ -154,3 +145,4 @@ if (!(await hasService(viewer, courseId, "ai-marking"))) {
 | Date | Change |
 | --- | --- |
 | 2026-11-16 | Draft 1. Owner prices R99 / R139 / R179; `math-input` and `graphing` on Plus; automarker, judge mode and code plagiarism parked; `leaderboards` split from `judge-mode` (owner decision: everyone enrolled appears) |
+| 2026-11-16 | Draft 1.1. Course-settings calls moved to `billing.md` (`setCourseServices` with enable and disable lists, plus `previewServiceChange`); highest-tier-in-month rule |
