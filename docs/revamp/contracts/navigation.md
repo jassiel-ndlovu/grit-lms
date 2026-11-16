@@ -1,10 +1,15 @@
 # Contract: navigation and the app shell
 
-Owner: Agent B. Reader: Agent A. Status: **Draft 2, 2026-11-16.** A asks for changes in `docs/revamp/a/HANDOFF.md` or an issue labelled `needs-b`; B edits this file in its own pull request.
+Owner: Agent B. Reader: Agent A. Status: **Draft 3, 2026-11-16.** A asks for changes in `docs/revamp/a/HANDOFF.md` or an issue labelled `needs-b`; B edits this file in its own pull request.
 
 **Answer first.** With `REVAMP_UI=1`, every `/dashboard` page renders inside `AppShell`: a Notion-style sidebar that holds everything global, and a content column where each page draws its own `PageHeader` (breadcrumb, one status, actions, help) and, if it has sub-views, a `Ribbon`. Navigation is plain data per persona in one file. A page never builds its own sidebar or global search. A's pages follow the same rules.
 
 Research behind it: [b/research/05-navigation.md](../b/research/05-navigation.md).
+
+Changes in Draft 3:
+- The nav goes by `viewer.persona` and permissions (`navSectionsFor`).
+- The account menu has the workspace switcher.
+- The banner content is A's `<AccountBanners viewer />` (requested).
 
 Changes in Draft 2:
 - `AppShell` has a `banner` slot for account-wide notices.
@@ -15,7 +20,7 @@ Changes in Draft 2:
 | Export | File | Runs on |
 | --- | --- | --- |
 | `AppShell`, `ShellUser` | `src/components/shell/app-shell.tsx` | Client |
-| `NavLink`, `NavSection`, `navSectionsForRole()`, `FOOTER_LINKS`, `activeHref()` | `src/components/shell/nav-config.ts` | Both (pure data, no React) |
+| `NavLink`, `NavSection`, `NavViewer`, `navSectionsFor()`, `FOOTER_LINKS`, `activeHref()` | `src/components/shell/nav-config.ts` | Both (pure data, no React) |
 | `PageHeader`, `Crumb` | `src/components/shell/page-header.tsx` | Both (no hooks) |
 | `Ribbon`, `RibbonNav`, `RibbonToolbar`, `RibbonButton`, `RibbonSeparator` | `src/components/shell/ribbon.tsx` | Client |
 | `StatusChip`, `StatusTone` | `src/components/shell/status-chip.tsx` | Both |
@@ -76,27 +81,33 @@ A's UX flows (`a/ux/`) name shell slots. They map to these components:
 - A ships the panel as a server component that takes ids and the viewer as props, such as `<CourseServicesPanel courseId viewer />`.
 - B mounts it as a `RibbonNav` view of that page.
 
-## Nav by role (today)
+## Nav by persona
 
-Until `getViewer()` ships, the layout reads `session.user.role` (`STUDENT`, `TUTOR`, `ADMIN`, `PARENT`; unknown values get the student nav). Every role gets Home and Notifications at the top and Settings and Help at the foot.
+The layout calls `getViewer()` once and passes `navSectionsFor(viewer)` to `AppShell`. Sections are chosen by `viewer.persona`. Every persona gets Home and Notifications at the top and Settings and Help at the foot. A link with `requires` shows only when the viewer holds that permission. A section left with no links is dropped. Signed out (no viewer) gets the `none` sections.
 
-| Role | Sections |
+| Persona | Sections (permission that shows the link) |
 | --- | --- |
-| STUDENT | Learning: Courses, Calendar, Tests, Assignments, Grades |
-| TUTOR | Teaching: Courses, Calendar, Tests, Assignments, Gradebook, Analytics. People: Users |
-| ADMIN | Platform: Users |
-| PARENT | (top and foot only) |
+| `learner` | Learning: Courses, Calendar, Tests, Assignments, Grades (`grades.view`) |
+| `staff` | Teaching: Courses (`courses.edit`), Calendar, Tests, Assignments, Gradebook and Analytics (`grades.view`). People: Users (`learners.invite`) |
+| `admin` | Platform: Users (`admin.console`) |
+| `guardian`, `none` | Top and foot only. Guardians get their children's pages in Phase 1 |
+
+Through today's bridge viewer, each legacy role keeps exactly its old links. The permission check hides UI only: pages and actions check again on the server (viewer.md rule 3).
 
 The current item is the longest nav href that equals the path or is a whole-segment prefix of it (`activeHref`). `/dashboard` only lights on itself. `scripts/check-shell-nav.ts` checks these rules.
 
-## When `getViewer()` lands (contracts/viewer.md)
+## Account menu and banners
 
-B will make these changes in its own PR, without changing the page rules above:
-
-- `navSectionsForRole(role)` becomes `navSectionsFor(viewer)`, keyed by `viewer.persona` (`staff`, `learner`, `guardian`, `admin`) and filtered with `can(viewer, …)`. Links stay plain `NavLink` data.
-- The account menu gains the **workspace switcher** (`viewer.workspaces`, calling A's `switchWorkspace`), and guardians get a child picker (`viewer.children`).
-- The layout passes A's banners to the `banner` slot: impersonation (`viewer.impersonatedBy`, rule 5 of viewer.md) and read-only billing (`workspace.readOnly`, rule 4).
-- `AppShell` takes only the fields it shows (name, email, image, persona, workspaces), never the whole `Viewer`.
+- **The account menu** (sidebar top) shows the name, email and avatar.
+  - With more than one entry in `viewer.workspaces`, it lists them as a radio group marked "Teaching" (staff) or "Learning" (learner).
+  - Picking one calls A's `switchWorkspace` and refreshes the page.
+  - With one workspace, its name shows under the email.
+  - `AppShell` receives a `ShellUser` (`name`, `email`, `imageUrl`, `role`, `workspaces`, `workspaceId`), never the whole `Viewer`.
+- **Guardians** get a child picker (`viewer.children`) in Phase 1, when guardianships exist.
+- **Banners.**
+  - A ships the content as a server component, `<AccountBanners viewer />`. It covers impersonation (`viewer.impersonatedBy`, viewer.md rule 5), read-only billing (`workspace.readOnly`, rule 4) and email verification.
+  - The dashboard layout passes it to the `banner` slot.
+  - It renders nothing when no banner applies.
 
 ## Adding a nav link
 
