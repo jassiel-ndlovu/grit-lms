@@ -8,7 +8,7 @@ Sources: plan "Pricing and payment gates (revision 2)", [a/research/02-service-c
 
 ## Tiers
 
-| Tier | Price per active student per course per month (excl. VAT) | What puts a course on it |
+| Tier | Price per active student per course per 30-day period (excl. VAT) | What puts a course on it |
 | --- | --- | --- |
 | `CORE` | R99 | Basic services only |
 | `PLUS` | R139 | At least one Plus service on |
@@ -49,7 +49,7 @@ Prices live in the database (`Tier` rows, [a/design/03-billing.md](../a/design/0
 | `custom-branding` | Workspace logo, accent colour and sender name | `PLUS` | no | v1 |
 | `calendar-sync` | ICS calendar feed per user | `PLUS` | no | v1 |
 | `secure-tests` | Lockdown settings, tab-switch and focus logs (honours extra time) | `PRO` | no | v1 |
-| `ai-marking` | AI-suggested marks for written answers; the tutor approves every mark | `PRO` | answers above the allowance | v1 |
+| `ai-marking` | AI-suggested marks for written answers; the tutor approves every mark | `PRO` | answers above 30 per active student per period, pooled per course, billed at cost ÷ 0.8 | v1 |
 | `leaderboards` | Course leaderboards (everyone enrolled appears) | `PRO` | no | later |
 | `api-access` | Workspace API keys and outgoing webhooks | `PRO` | requests above a quota | later |
 | `automarker` | Coding automarker | `PRO` | runs | parked |
@@ -58,12 +58,12 @@ Prices live in the database (`Tier` rows, [a/design/03-billing.md](../a/design/0
 
 ### Add-ons
 
-Add-ons are bought, not switched on per course. `hasService` treats an active add-on as granting its services.
+Add-ons are bought, not switched on per course. `retired` keys are never reused. `hasService` treats an active add-on as granting its services.
 
 | Key | Unit | Grants | Status |
 | --- | --- | --- | --- |
-| `day-pass` | per course per day | Every `PRO` service on that course for the day | v1 |
-| `ai-credits` | per 100 answers | `ai-marking` answers above the Pro allowance | v1 |
+| `day-pass` | per course per day | Every `PRO` service on that course for the day | later |
+| `ai-credits` | per 100 answers | Replaced by pass-through overage on `ai-marking` | retired |
 | `extra-storage` | per GB per month | Storage above the allowance | v1 |
 | `live-room` | per participant-hour | Nexa-hosted video | later |
 | `runner-capacity` | per runner-hour | Extra code runners | parked |
@@ -121,11 +121,11 @@ The course settings screen uses three calls defined in [billing.md](billing.md),
 ## Rules
 
 1. **Basic services** return `true` for any viewer who can see the course.
-2. **Premium services** return `true` when the key is in the course's `enabled` list, or a `day-pass` covers the course today, and the status is `v1`.
+2. **Premium services** return `true` when the key is in the course's `enabled` list and the status is `v1`. (A `day-pass` will also grant them once it ships.)
 3. **During the trial** a tutor can switch on any `v1` premium service. The tier still follows from what is on, so the first invoice is predictable.
 4. **Parked and later keys** always return `false`. B ships no UI for them.
 5. **Billing state:** `hasService` does not check `READ_ONLY`; it answers "is the feature on". Write blocking is `viewer.workspace.readOnly` ([viewer.md](viewer.md)). Learners keep every service they had, so a read-only workspace never breaks a learner's view.
-6. **Tier changes mid-month:** a course bills for the month at the highest tier it held on any day of that month ([a/design/03-billing.md](../a/design/03-billing.md)). Switching a service off lowers the tier from the next month. B shows `previewServiceChange()` before the tutor confirms.
+6. **Tier changes:** billing runs in 30-day periods from each payment. Raising a course's tier bills it at that tier for the next 30 days, even if the service is switched off sooner ([a/design/03-billing.md](../a/design/03-billing.md)). B shows `previewServiceChange()` before the tutor confirms.
 7. **Who can switch:** `courses.services` permission: owner, admin, or the course lead.
 
 ## Examples
@@ -145,4 +145,5 @@ if (!(await hasService(viewer, courseId, "ai-marking"))) {
 | Date | Change |
 | --- | --- |
 | 2026-11-16 | Draft 1. Owner prices R99 / R139 / R179; `math-input` and `graphing` on Plus; automarker, judge mode and code plagiarism parked; `leaderboards` split from `judge-mode` (owner decision: everyone enrolled appears) |
+| 2026-11-16 | Draft 1.2. 30-day periods; `day-pass` later; `ai-credits` retired (overage at cost ÷ 0.8); Pro includes 30 AI marks per student per period |
 | 2026-11-16 | Draft 1.1. Course-settings calls moved to `billing.md` (`setCourseServices` with enable and disable lists, plus `previewServiceChange`); highest-tier-in-month rule |
