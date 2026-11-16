@@ -4,6 +4,8 @@
  * Live search and the notification bell are off: this page has no session.
  * Two sample workspaces show the account menu's switcher; picking one calls
  * switchWorkspace, which refuses without a session (an error toast).
+ * `?banner=1` fills the account-banner slot with A's AccountBanners for an
+ * unverified sample user (its "Resend link" needs a session too).
  * Same gate as /design-system: development, or REVAMP_UI=1.
  */
 
@@ -17,6 +19,7 @@ import { navSectionsFor } from "@/components/shell/nav-config";
 import { PageHeader } from "@/components/shell/page-header";
 import { Ribbon, RibbonButton, RibbonNav, RibbonSeparator, RibbonToolbar } from "@/components/shell/ribbon";
 import { StatusChip } from "@/components/shell/status-chip";
+import { AccountBanners } from "@/features/workspaces/components/account-banners";
 import { canPreviewDesignSystem } from "@/lib/ui-flags";
 import { buildLegacyViewer } from "@/lib/viewer-core";
 
@@ -29,12 +32,19 @@ const SAMPLE_TUTOR = buildLegacyViewer({
   profileId: null,
 });
 
-export default function ShellPreviewPage() {
+const SAMPLE_UNVERIFIED = buildLegacyViewer({
+  user: { id: "sample", name: "Nomsa Mahlangu", email: "tutor@example.test", role: "TUTOR", emailVerified: false, imageUrl: null },
+  profileId: null,
+});
+
+export default async function ShellPreviewPage({ searchParams }: { searchParams: Promise<{ banner?: string }> }) {
   if (!canPreviewDesignSystem()) notFound();
+  const showBanner = (await searchParams).banner === "1";
 
   return (
     <div data-ui="revamp" className="font-sans">
       <AppShell
+        banner={showBanner ? <AccountBanners viewer={SAMPLE_UNVERIFIED} /> : null}
         user={{
           name: "Nomsa Mahlangu",
           email: "tutor@example.test",
