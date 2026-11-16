@@ -3,6 +3,100 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: rich content core, `revamp/b-editor`
+Done:
+- `contracts/editor.md` Draft 1, in its own PR: the stored envelope
+  (`{ schemaVersion: 1, doc }` in an `xJson Json?` column beside the
+  markdown column), the version 1 node set, the save and read rules, and
+  the planned `RichContent`, `renderContentHtml` and `RichEditor`.
+- `src/lib/content/` (server-safe, no React): `contentExtensions()`
+  (StarterKit, block image with the `[50%]` width convention, tables, and our
+  own `inlineMath`/`blockMath` nodes for MathJax 4, not KaTeX),
+  `markdownToDoc`/`docToMarkdown` on `@tiptap/markdown`, `validateDoc`
+  (schema check plus a 512 KB cap), and the stored envelope.
+- `normalizeTexDelimiters` takes `{ escapeMath: false }` for the importer;
+  the default is unchanged.
+- `scripts/check-rich-content.ts`: 70+ checks. Every fixture round-trips
+  (markdown, JSON, markdown, same JSON), and the maths nodes hold the exact
+  TeX. Fixtures follow the audit's shapes (matrices, `aligned`, `cases`,
+  `\[26\]`, `\$5`, image widths, tables). Tampered documents are refused.
+- New dependencies (owner-approved Tiptap): `@tiptap/core`, `pm`,
+  `starter-kit`, `markdown`, `extension-image`,
+  `extension-table`.
+- Restored the app-shell entry below. The merge of `main` into #46 dropped it.
+
+Next:
+- `RichContent` (static renderer plus MathJax 4) and the MathJax 4 move,
+  then `RichEditor` with a `/design-system/editor` preview.
+- The first `Json` column needs `prisma db push`: B will ask the owner in
+  the PR that moves the first field (lesson body).
+
+Blocked on the other agent (A):
+- None. A: messages and email templates should follow editor.md's rules
+  (validate, save both columns, render with B's functions).
+
+Questions for the owner:
+- None yet. The `db push` question comes with the first field.
+
+## 2026-11-16 Phase 0: app shell, `revamp/b-app-shell`
+Done:
+- `contracts/navigation.md` (Draft 1, its own PR as the contracts README asks): the frame, eight rules for pages
+  (one PageHeader, one status, one primary action, help at the right,
+  sub-views as RibbonNav links, commands in a RibbonToolbar, nothing global
+  on a page), nav by role, and what changes when `getViewer()` lands.
+- `src/components/shell/`: `AppShell` (Notion-style sidebar with account
+  menu, notification bell, search, role nav, settings and help; a top bar
+  and drawer below lg; Ctrl/⌘K palette with "Go to" pages plus live
+  `searchEverything` results), `PageHeader`, `Ribbon`/`RibbonNav`/
+  `RibbonToolbar` (Radix toolbar, new dependency, owner-approved),
+  `StatusChip`, and `nav-config.ts` with `scripts/check-shell-nav.ts`.
+- `src/app/dashboard/layout.tsx` renders `AppShell` when `REVAMP_UI=1`,
+  else today's shell. The 11 legacy context providers moved to
+  `legacy-providers.tsx`, which both shells use, so every existing page
+  works in the new frame. Without the flag nothing changes.
+- Preview at `/design-system/shell` (development, or the flag).
+
+Next:
+- Move the first pages onto `PageHeader` (course overview and the test
+  runner), then the Tiptap editor contract (`contracts/editor.md`).
+
+Blocked on the other agent (A):
+- Set `REVAMP_UI=1` on staging so the shell can be checked signed in.
+  B has not seen `/dashboard` in the new frame with a real session: the
+  dev database is production, so B does not sign in there.
+- `src/lib/viewer.ts`: the layout reads `session.user.role` until then
+  (the one exception to viewer.md rule 7, marked `TODO(viewer)`).
+
+Questions for the owner:
+- None.
+
+## 2026-11-16 Phase 0: component library, `revamp/b-components`
+Done:
+- New primitives in `src/components/ui/`: `table`, `property-list`,
+  `sidebar`, `empty-state` (with a server `Scene` loader for the Open Peeps
+  scenes), `command-palette` (Radix dialog, combobox/listbox roles, arrow
+  keys, Ctrl/⌘K hook, static and server-filtered groups) and `kbd`.
+  Button, input, badge, card and the rest already pick up the revamp
+  tokens, so they were not rewritten.
+- Preview at `/design-system/components` (development, or `REVAMP_UI=1`).
+- PR #41 (illustrations) was changed after review: dark mode keeps figures
+  light (dark ink on #F7F7F5), the owner's choice. The illustration entry
+  below predates that.
+- Noted from A's HANDOFF: the owner moved `graphing` and `math-input` to
+  **Plus** (revision 3 had graphing on Pro). B follows `services.md`.
+
+Next:
+- `contracts/navigation.md` and the new app shell (header with breadcrumb
+  and workspace switcher, ribbon, sidebar, command palette wired to
+  `searchEverything`), behind `REVAMP_UI`.
+
+Blocked on the other agent (A):
+- The shell reads today's session until `getViewer()` ships (contract
+  draft in PR #43). B will switch to it when `src/lib/viewer.ts` lands.
+
+Questions for the owner:
+- None.
+
 ## 2026-11-16 Phase 0: design tokens, `revamp/b-design-tokens`
 Done:
 - The owner asked to start building after B1 (2026-11-16), so B2 and B3

@@ -6,8 +6,8 @@ issue. Changes to a contract go in their own pull request.
 
 | File | Owner | Status |
 | --- | --- | --- |
-| viewer.md | A | Not written yet |
-| services.md | A | Not written yet |
-| billing.md | A | Not written yet |
-| navigation.md | B | Not written yet |
-| editor.md | B | Not written yet |
+| [viewer.md](viewer.md) | A | Draft 1 (2026-11-16) |
+| [services.md](services.md) | A | Draft 1 (2026-11-16) |
+| billing.md | A | Waiting on A2 billing design |
+| [navigation.md](navigation.md) | B | Draft 1 (2026-11-16) |
+| [editor.md](editor.md) | B | Draft 1 (2026-11-16) |
