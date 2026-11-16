@@ -28,22 +28,25 @@ Questions for the owner:
 ## 2026-11-16 Phase 0: Prisma 6 and the schema split, `revamp/a-prisma6-schema-split`
 
 Done:
-- Prisma 5.22 to 6.19.3 (the last 6.x; Prisma 7 later, with `prisma.config.ts`). No code changes were needed; `tsc` is clean.
-- `prisma/schema.prisma` split into `prisma/schema/*.prisma`, one file per owner (AGENTS.md section 2). An offline diff shows the split is identical to the old file.
-- `directUrl = env("DIRECT_URL")` added for migrations.
-- Old migrations moved to `prisma/migrations-archive/`. New `prisma/schema/migrations/0_baseline` (today's live schema) and `1_prisma6_m2m_pk` (Prisma 6's primary key on `_CourseEnrollments`). Both were checked on a throwaway schema-only Neon branch, now deleted.
-- `docs/revamp/a/ops/prisma-baseline.md`: the steps for production, which need the owner.
-- `scripts/check-schema-split.ts`.
+- Neon branch `preview` created from `production` as **schema-only** (`init_source: parent-schema`, no rows copied). Production was not written to; its size is unchanged.
+- The branch inherited `neondb_owner` with production's password, so Preview uses a new role, `nexa_preview`, that exists only on the `preview` branch.
+- `scripts/seed-fake.ts` (with `scripts/check-seed-fake-guard.ts`): 1 tutor, 8 "Test Student N" users, 2 courses, lessons, tests and submissions, all `@example.test`. It refuses production's host always, and any other host unless it is the preview endpoint or `SEED_FAKE_ALLOW=1`.
+- Schema and seed on the preview branch only. After PR #60 merged into this branch, the branch was rebuilt with `prisma migrate deploy` (both migrations; `migrate status` up to date, diff exit 0) and reseeded.
+- Vercel: `DATABASE_URL` for Preview now points at the pooled preview branch. Production's record is unchanged.
+- Blob (owner approved): created `nexa-preview-blob` (cpt1, public) and connected it to Preview and Development. Production's four Blob variables now apply to Production only, with their values unchanged.
+- `ops/preview-environment.md`: setup, reseeding, and the Blob store.
 
 Next:
-- Owner runs the baseline runbook. Then `getViewer()` (P0.2).
+- 5 MB cap on preview uploads in `issueUploadToken` (design 06 §3.3).
+- Set `DIRECT_URL` for Preview on Vercel (the direct `nexa_preview` URL) when the `vercel-build` migrate step is added. The app runs without it.
 
 Blocked on the other agent:
-- For B: your schema files are now `prisma/schema/learning.prisma`, `assessments.prisma`, `calendar.prisma` and `coding.prisma`. Schema changes are migrations from now on: `npx prisma migrate dev --name <change>` against the Neon `dev` branch, never `db push`. Rebase open PRs that touch `prisma/schema.prisma`.
-- For B: the comment in `src/features/shared/enums.ts` still points at `prisma/schema.prisma` (shared folder, left alone).
+- None.
 
 Questions for the owner:
-- Run `docs/revamp/a/ops/prisma-baseline.md` against production when convenient: one metadata row, then two statements on `_CourseEnrollments`.
+- May the preview Blob store be emptied monthly without a fresh approval each time? (design 06, open question 1)
+- Delete any old local `.env` files that still hold production's Blob token.
+- Store the seeded users' password in your password manager, or reseed with your own. Optionally reset `neondb_owner`'s password on the `preview` branch.
 
 ## 2026-11-16 Phase 0: Grit to Nexa rename, `revamp/a-rename-nexa`
 
