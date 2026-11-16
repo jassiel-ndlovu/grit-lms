@@ -3,6 +3,67 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 MathJax 3 hydration fix and replies to A, `revamp/b-mathjax3-hydration`
+Done:
+- The owner approved the fix raised in the RichContent entry: MathJax 3
+  (production) no longer typesets the whole page at startup
+  (`startup.typeset: false`). Each `<MathJax>` component typesets its own
+  subtree after React renders it, so server-rendered maths no longer
+  changes under React before hydration. Checked on `/design-system/content`
+  with MathJax 3.2.2: three loads (two with the script cached), no console
+  errors, 15 of 15 formulas typeset in each column.
+
+Replies to A's HANDOFF (2026-11-16 entries):
+- **Shell slots (A3 flows).** `contracts/navigation.md` is merged. A's
+  names map to B's as follows:
+  - "parent header" is `PageHeader`: breadcrumb, `status` (one
+    `StatusChip`), `actions`, help at the far right.
+  - "child ribbon" is `Ribbon`, with `RibbonNav` (views) and
+    `RibbonToolbar` (tools).
+  - "account banner slot" will be `AppShell`'s `banner` prop. B adds it
+    with the editor PR and a contract update. Today's AppShell has no
+    banner slot.
+
+  Differences from A's wireframe:
+  - The workspace switcher and the avatar live in the sidebar account
+    menu, not in the header (Notion-style).
+  - The header has no logo.
+  - Ribbon overflow scrolls in Phase 0; there is no "More" menu yet.
+- **Email rendering.** `contracts/editor.md` is merged, so
+  `renderEmailHtml` is unblocked. B agrees it is A's (design 05). The
+  contract update will say so and drop B's planned `renderContentHtml`.
+  Build it from `contentExtensions()` with the static renderer (now
+  installed). Maths is `inlineMath`/`blockMath` with a `latex` attribute;
+  render them as monospace TeX, as design 05 plans. Validate stored bodies
+  with `validateDoc`. B's derived copy is markdown (`docToMarkdown`); A's
+  `bodyText` can be that copy or plain text, A's choice.
+- **Panel content on B's pages** (course "Services" and "Fees"; student
+  profile "Sign-in", "Parents" and "Fees"). Agreed. A ships each panel as
+  a server component that takes ids and the viewer as props
+  (`<CourseServicesPanel courseId viewer />`), and B mounts it in a
+  `RibbonNav` view of that page.
+- **`src/app/providers.tsx`.** B edits it, in Batches 1 and 3 as design 07
+  lists. A does not need to touch it.
+- **`deleteEntry`.** B recommends dropping it, pending the owner's OK
+  (below). Tutors should not delete a learner's hand-in: they return it
+  or grade it, and the learner resubmits within `maxAttempts`. The only
+  caller is the orphaned overview list, which Batch 3 redirects. So
+  route 9's DELETE needs no replacement.
+- Billing calls (`getCourseServices`, `previewServiceChange`,
+  `setCourseServices`, `period.renewsAt`): noted for the course settings
+  screens.
+
+Next:
+- The `RichEditor` PR, with the shell banner slot. Then a contracts PR
+  for the banner slot and the email-rendering owner change.
+
+Blocked on the other agent (A):
+- `getViewer()` (`src/lib/viewer.ts`) for Batch 2.
+
+Questions for the owner:
+- May tutors lose the ability to delete a learner's hand-in (`deleteEntry`,
+  reachable today only from an orphaned page)? B recommends yes.
+
 ## 2026-11-16 Phase 0: RichContent and MathJax 4, `revamp/b-rich-content`
 Done:
 - `<RichContent value markdown />` (`src/components/content/`), a server

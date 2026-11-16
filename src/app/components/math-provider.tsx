@@ -64,19 +64,19 @@ const config = {
   options: {
     skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],
   },
+  /*
+   * No typeset pass over the whole page at startup. The <MathJax> components
+   * typeset their own subtree after React has rendered it. A page-wide pass
+   * could run before React hydrates server-rendered maths, change the DOM
+   * under it, and cause a hydration mismatch (seen with LessonMarkdown).
+   */
+  startup: { typeset: false },
 };
-
-/*
- * v4 only: no typeset pass over the whole page at startup. The <MathJax>
- * components typeset their own subtree; a page-wide pass could run before
- * React hydrates server-rendered maths and cause a hydration mismatch.
- */
-const configV4 = { ...config, startup: { typeset: false } };
 
 /** `version` must come from mathJaxVersion() (lib/ui-flags): one per process. */
 export function MathProvider({ children, version = 3 }: { children: React.ReactNode; version?: MathJaxVersion }) {
   return (
-    <MathJaxContext version={version} src={MATHJAX_SRC[version]} config={version === 4 ? configV4 : config}>
+    <MathJaxContext version={version} src={MATHJAX_SRC[version]} config={config}>
       {children}
     </MathJaxContext>
   );
