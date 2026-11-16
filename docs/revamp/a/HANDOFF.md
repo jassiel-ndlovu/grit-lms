@@ -3,6 +3,28 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: Preview on fake data, `revamp/a-preview-env`
+
+Done:
+- Neon branch `preview` created from `production` as **schema-only** (`init_source: parent-schema`, no rows copied). Production was not written to; its size is unchanged.
+- The branch inherited `neondb_owner` with production's password, so Preview uses a new role, `nexa_preview`, that exists only on the `preview` branch.
+- `scripts/seed-fake.ts` (with `scripts/check-seed-fake-guard.ts`): 1 tutor, 8 "Test Student N" users, 2 courses, lessons, tests and submissions, all `@example.test`. It refuses production's host always, and any other host unless it is the preview endpoint or `SEED_FAKE_ALLOW=1`.
+- `prisma db push` and the seed ran against the preview branch only.
+- Vercel: `DATABASE_URL` for Preview now points at the pooled preview branch. Production's record is unchanged.
+- `ops/preview-environment.md`: setup, reseeding, and the Blob question.
+
+Next:
+- Once the owner says yes: create Blob store `nexa-preview-blob` for Preview and Development, and take production's Blob variables off Preview and Development.
+- After the Prisma 6 and schema-split PR merges, push the new schema to the preview branch (see the ops doc).
+
+Blocked on the other agent:
+- None.
+
+Questions for the owner:
+- May Agent A create `nexa-preview-blob` and remove production's Blob token from Preview and Development? (ops doc section 4)
+- Store the seeded users' password in your password manager, or reseed with your own. Optionally reset `neondb_owner`'s password on the `preview` branch.
+- `package-lock.json` is out of sync (`npm ci` fails). This is for the session that owns `package.json`.
+
 ## 2026-11-16 A4 Write-up, `revamp/a-writeup`
 
 Done:
