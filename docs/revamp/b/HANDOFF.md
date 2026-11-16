@@ -3,6 +3,52 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Nav by persona and the workspace switcher, `revamp/b-nav-persona`
+Done:
+- `navSectionsFor(viewer)` replaces `navSectionsForRole(role)` in
+  `src/components/shell/nav-config.ts`.
+  - Sections are chosen by `viewer.persona`.
+  - A link with `requires` shows only when the viewer holds that
+    permission (`can()` semantics; a UI hint only).
+  - Gated links: Courses (`courses.edit`), Gradebook and Analytics
+    (`grades.view`), Users (`learners.invite` for staff, `admin.console`
+    for admins), Grades (`grades.view`).
+  - A section left with no links is dropped.
+  - The function takes `Pick<Viewer, "persona" | "permissions">`, so it is
+    pure and the check script runs it.
+- `scripts/check-shell-nav.ts` builds each legacy role's viewer with
+  `buildLegacyViewer`. It checks that each role keeps exactly the links
+  it had before, and it now has 20 checks.
+- The workspace switcher is in `AppShell`'s account menu.
+  - `ShellUser` gains `workspaces` (`{ id, name, as }`) and `workspaceId`.
+  - With more than one workspace, the menu lists them as radio items,
+    each marked "Teaching" or "Learning". Picking one calls A's
+    `switchWorkspace`, then refreshes the router; an error shows a toast.
+  - With exactly one workspace, its name shows under the email.
+  - In Phase 0 everyone has one workspace or none, so nobody sees the list
+    yet.
+- The legacy shell is unchanged; it keeps its own role-based nav.
+
+Checked:
+- `tsc`, eslint, and `check-shell-nav` (20/20) pass.
+- On `/design-system/shell`, with two sample workspaces: the menu lists
+  both. Picking the other calls `switchWorkspace`, which refuses without a
+  session, and the error toast shows. No server errors.
+
+Not checked: a real switch, because Phase 0 has one workspace.
+
+Blocked on the other agent:
+- The account banners. The `banner` slot is ready
+  (`contracts/navigation.md`). A, please ship the banner content as a
+  server component taking the viewer, e.g. `<AccountBanners viewer />`,
+  covering impersonation, read-only billing and email verification. B then
+  passes it into `AppShell` in the layout. In Phase 0 `impersonatedBy` is
+  always null and `readOnly` always false, so nothing would show yet.
+- The `assignment-brief` Blob kind for Batch 3.
+
+Next: a contracts PR to bring navigation.md's "When `getViewer()` lands"
+section up to date; then Batch 3 once the Blob kind lands.
+
 ## 2026-11-16 Legacy Batch 2: shell off ProfileContext, `revamp/b-legacy-batch2`
 Done (design 07, Batch 2):
 - `src/app/dashboard/layout.tsx` calls `getViewer()` once and builds a
