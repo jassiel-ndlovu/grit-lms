@@ -85,6 +85,8 @@ export const InlineMath = Node.create({
 
   renderMarkdown(node) {
     const latex = String(node.attrs?.latex ?? "");
+    // Empty maths writes nothing: "$$" would read back as display maths.
+    if (!latex.trim()) return "";
     return node.attrs?.display ? `$$${latex}$$` : `$${latex}$`;
   },
 });
@@ -133,6 +135,7 @@ export const BlockMath = Node.create({
   },
 
   renderMarkdown(node) {
-    return `$$\n${String(node.attrs?.latex ?? "")}\n$$`;
+    const latex = String(node.attrs?.latex ?? "");
+    return latex.trim() ? `$$\n${latex}\n$$` : "";
   },
 });

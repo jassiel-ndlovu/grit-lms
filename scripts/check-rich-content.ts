@@ -177,5 +177,15 @@ check("refuses an oversized doc", validateDoc(para([{ type: "text", text: "x".re
 const cleaned = validateDoc(para([{ type: "inlineMath", attrs: { latex: "x", evil: "<img>" } }]));
 check("drops unknown attributes", cleaned !== null && !JSON.stringify(cleaned).includes("evil"), cleaned);
 
+// Empty maths (an editor node left blank) writes nothing, not "$$".
+const emptyMath = docToMarkdown({
+  type: "doc",
+  content: [
+    { type: "paragraph", content: [{ type: "text", text: "a " }, { type: "inlineMath", attrs: { latex: "" } }, { type: "text", text: " b" }] },
+    { type: "blockMath", attrs: { latex: " " } },
+  ],
+});
+check("empty maths writes nothing", !emptyMath.includes("$"), emptyMath);
+
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

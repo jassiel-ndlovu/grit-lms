@@ -3,6 +3,67 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: RichEditor, `revamp/b-rich-editor`
+Done:
+- `RichEditor` (`src/components/editor/rich-editor.tsx`), the client
+  editor of `contracts/editor.md`. Props: `label` (accessible name),
+  `value` (the stored `xJson`), `fallbackMarkdown` (the markdown column,
+  used while there is no JSON), `onChange(StoredContent)`, `name` (adds a
+  hidden input holding the envelope as JSON, for server-action forms),
+  `features` (`math`, `tables`, `headings`), `placeholder`, `editable`.
+  - It emits the envelope only. The server validates it with
+    `validateDoc` and derives markdown with `docToMarkdown`; the editor
+    never sends markdown.
+  - Its schema is `contentExtensions()` plus editing-only extensions, so
+    anything `RichContent` renders loads, and the reverse holds too.
+    `features` hides commands; it never removes nodes.
+  - It needs a `MathProvider` above it. The dashboard layout mounts one.
+- Maths: inline maths and maths blocks show MathJax output, with a TeX box
+  open while the node is selected, empty, or being typed in.
+  - `$x^2$` after a space becomes inline maths (a lone `$5` stays text).
+  - `$$` then space on an empty line makes a maths block.
+  - Enter (inline) or Escape returns to the text; a node left empty is
+    removed.
+- A slash menu (`/`) and a Radix toolbar share one command list
+  (`commands.tsx`). The menu is a listbox driven from the editor
+  (`aria-activedescendant`); the toolbar is one tab stop with arrow keys
+  and `aria-pressed` marks.
+- `AppShell` takes a `banner` prop for A's account banner. It renders
+  full width above the page, in `data-slot="account-banner"`.
+- `docToMarkdown` writes nothing for empty maths. It used to write `$$`,
+  which reads back as display maths. A check for this was added to
+  `check-rich-content.ts`.
+- Preview: `/design-system/editor`, which shows the emitted JSON, the
+  derived markdown, and whether the JSON passes `validateDoc`.
+
+Gotchas:
+- Tiptap 3.34's `nodeInputRule` duplicates the typed character when the
+  rule has a capture group (the stray `$`). Write a plain `InputRule`.
+- `updateAttributes` on a leaf node replaces it, which moves a node
+  selection off it. Node views that edit their own attributes use
+  `tr.setNodeAttribute`.
+- The `focus()` command focuses a frame later. Code that moves focus out
+  of a node view calls `editor.view.focus()` first.
+
+Checked: tsc, eslint, and all four check scripts. In the browser, MathJax
+3 with no console errors:
+- the slash menu: filtering, the arrow keys and Enter
+- both input rules
+- the TeX box from the toolbar and from the slash menu, then typing on
+- the Bold toolbar button keeps the selection
+- undo
+- the output passes `validateDoc`, and the derived markdown escapes a
+  literal `$`
+
+Not checked: screen readers; the editor in a real form (no screen uses it
+yet).
+
+Reply to A: noted. MathJax 4 stays on the pinned jsDelivr URL in v1, and
+self-hosting is revisited with CSP in Stage 2. B needs nothing sooner.
+
+Next: the contracts PR (the banner slot, the email-rendering owner, and
+`onChange` returning the envelope). Then the first screens on the editor.
+
 ## 2026-11-16 MathJax 3 hydration fix and replies to A, `revamp/b-mathjax3-hydration`
 Done:
 - The owner approved the fix raised in the RichContent entry: MathJax 3

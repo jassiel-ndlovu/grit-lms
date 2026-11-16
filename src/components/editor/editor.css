@@ -1,0 +1,44 @@
+/* Editing-only styles for RichEditor; reading styles come from rich-content.css. */
+
+.rich-editor-surface p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--muted-foreground);
+}
+
+/* Slash query while the menu is open. */
+.rich-editor-surface .suggestion {
+  border-radius: 0.25rem;
+  background: var(--accent);
+}
+
+/* Table editing: selected cells and the column resize handle. */
+.rich-editor-surface .selectedCell {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+}
+.rich-editor-surface .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary);
+  pointer-events: none;
+}
+.rich-editor-surface .tableWrapper {
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+.rich-editor-surface td,
+.rich-editor-surface th {
+  position: relative;
+}
+
+/* A selected atom (maths, divider) shows a ring instead of the browser's own highlight. */
+.rich-editor-surface .ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+  border-radius: 0.25rem;
+}
