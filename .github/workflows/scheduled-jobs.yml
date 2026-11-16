@@ -17,15 +17,17 @@
 name: Scheduled jobs
 
 on:
+  # Must match src/lib/jobs/registry.ts (scripts/check-jobs.ts compares them).
   schedule:
     - cron: "0 * * * *"        # on the hour: auto-submit + notification jobs
     - cron: "5-55/5 * * * *"   # every other 5 minutes: auto-submit only
+    - cron: "30 0 * * *"       # daily 00:30 UTC: housekeeping
   workflow_dispatch:
     inputs:
       job:
         description: Which job to run
         type: choice
-        options: [auto-submit, notifications, both]
+        options: [auto-submit, notifications, housekeeping, both]
         default: both
 
 permissions: {}
@@ -41,7 +43,7 @@ jobs:
     env:
       APP_URL: ${{ vars.APP_URL || 'https://grit-lms.vercel.app' }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
-      JOB: ${{ inputs.job || (github.event.schedule == '0 * * * *' && 'both' || 'auto-submit') }}
+      JOB: ${{ inputs.job || (github.event.schedule == '0 * * * *' && 'both') || (github.event.schedule == '30 0 * * *' && 'housekeeping') || 'auto-submit' }}
     steps:
       - name: Check secret
         run: |
@@ -56,7 +58,7 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 60 \
             --retry 2 --retry-delay 10 --retry-all-errors \
             -H "Authorization: Bearer $CRON_SECRET" \
-            "$APP_URL/api/auto-submit"
+            "$APP_URL/api/cron/auto-submit"
           echo
 
       - name: Notification jobs (reminders and digests)
@@ -65,4 +67,12 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 90 \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/notifications"
+          echo
+
+      - name: Housekeeping (prune old job records)
+        if: env.JOB == 'housekeeping'
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/housekeeping"
           echo

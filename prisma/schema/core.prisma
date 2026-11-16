@@ -144,3 +144,19 @@ enum DashboardTab {
   CALENDAR
   GRADES
 }
+
+// One row per scheduled-job run (src/lib/jobs/define.ts). Read by
+// /api/health to alert when a job stops. Counts only, never personal data.
+// Pruned after 30 days by the housekeeping job.
+model JobRun {
+  id         String    @id @default(cuid())
+  job        String
+  trigger    String // "bearer" (GitHub Actions, Vercel Cron, manual) or "qstash"
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean?
+  result     Json?
+  error      String?
+
+  @@index([job, startedAt])
+}
