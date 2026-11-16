@@ -63,7 +63,20 @@ const FIXTURES: Fixture[] = [
     name: "mark allocation stays text",
     md: "**Integration Techniques** &emsp; \\[26\\]",
     inline: [],
-    text: ["[26]"],
+    text: ["[26]", " "],
+    notText: ["&emsp;"],
+  },
+  {
+    name: "named references decode outside code only",
+    md: "A&nbsp;B &ndash; C, AT&T, and `&emsp;` stays.",
+    text: ["A B – C, AT&T"],
+    more: (doc) => {
+      const out = docToMarkdown(doc);
+      return [
+        ["code keeps the reference", collect(doc, "text").some((t) => t.text === "&emsp;" && t.marks?.some((m) => m.type === "code")), doc],
+        ["export has no double-encoded reference", !/&amp;[a-z]+;/i.test(out), out],
+      ];
+    },
   },
   {
     name: "display block: bmatrix keeps row breaks",

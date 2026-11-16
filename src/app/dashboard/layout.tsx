@@ -7,7 +7,8 @@
  *
  * Today's UI: the legacy client shell in ./dashboard-shell.tsx.
  * REVAMP_UI=1: the revamp AppShell (components/shell) with the same legacy
- * context providers, so existing pages keep working inside it.
+ * context providers, so existing pages keep working inside it, and
+ * MathJax 4 instead of 3.
  */
 
 import type { ReactNode } from "react";
@@ -18,7 +19,7 @@ import { navSectionsForRole } from "@/components/shell/nav-config";
 import { getUserPreferences } from "@/features/users/preferences";
 import { auth } from "@/lib/auth";
 import { resolveLocale } from "@/lib/datetime";
-import { isRevampUi } from "@/lib/ui-flags";
+import { isRevampUi, mathJaxVersion } from "@/lib/ui-flags";
 
 import DashboardShell from "./dashboard-shell";
 import { LegacyProviders } from "./legacy-providers";
@@ -30,7 +31,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // TODO(viewer): read getViewer() once src/lib/viewer.ts lands (contracts/viewer.md).
   const user = session?.user;
   const shell = isRevampUi() ? (
-    <LegacyProviders>
+    <LegacyProviders mathjax={mathJaxVersion()}>
       <AppShell
         user={{ name: user?.name ?? "", email: user?.email ?? "", role: user?.role ?? "STUDENT" }}
         sections={navSectionsForRole(user?.role)}

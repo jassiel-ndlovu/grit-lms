@@ -13,3 +13,12 @@ export function isRevampUi(): boolean {
 export function canPreviewDesignSystem(): boolean {
   return process.env.NODE_ENV === "development" || isRevampUi();
 }
+
+/**
+ * MathJax version for the whole app: 4 with the flag, else 3. One per
+ * process: better-react-mathjax refuses two versions in one app, so every
+ * MathProvider must take its version from here.
+ */
+export function mathJaxVersion(): 3 | 4 {
+  return isRevampUi() ? 4 : 3;
+}
