@@ -19,7 +19,7 @@ Blocked on the other agent:
 - For B: the owner moved `graphing` and `math-input` to **Plus** (revision 3 had all graphing on Pro).
 
 Questions for the owner:
-- Paystack account type, the exact `.co.za` name, and the month of the first payment. See `research/SUMMARY.md`.
+- None. Answered: Paystack as a sole proprietor, domain `nexa-lms.co.za`, first payment February 2027 (so Vercel Pro and RDS go live by January 2027).
 
 ## 2026-11-16 Cron fix, `revamp/a-cron-scheduler`
 

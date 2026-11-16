@@ -79,8 +79,12 @@ A solo tutor on Plus with 12 students in 2 subjects covers the base cost.
 
 ## Open questions for the owner
 
-The owner answered the first list on 16 November (see "Owner decisions"). Still open:
+The owner answered every question on 16 November:
 
-1. **Paystack account type:** sole proprietor (R1,000,000 lifetime limit) or a registered company, before parent payments go live? Who is the Information Officer?
-2. **Domain name:** `.co.za` at xneelo is decided (R110 a year). Which exact name? The owner checks availability and buys it.
-3. **First payment date:** Vercel Pro must be active before Nexa charges anyone. Which month?
+| Question | Answer | What follows |
+| --- | --- | --- |
+| Paystack account type | **Sole proprietor** | Lifetime collection limit R1,000,000; needs proof of address under 6 months (research 03). For a sole proprietor the Information Officer is the owner by default (POPIA s1, "head of a private body"); register on the Information Regulator portal (research 09) |
+| Domain | **nexa-lms.co.za** at xneelo | The owner checks availability and buys it. App mail from a `notify.nexa-lms.co.za` subdomain through Resend; DNS on Cloudflare (research 07) |
+| First payment | **February 2027** | Vercel Pro (functions in `cpt1`) and RDS in af-south-1 must be live before then. Plan the database move for January 2027 |
+
+No questions are open from this research.
