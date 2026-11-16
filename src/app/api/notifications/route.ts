@@ -13,60 +13,44 @@
  * with its remaining consumers.
  */
 
-import { prisma } from "@/lib/db";
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
+import { prisma } from "@/lib/db";
+import {
+  buildRecipientWhere,
+  getNotificationViewer,
+} from "@/features/notifications/queries";
+
+/**
+ * Returns the caller's own notifications only. The `studentId` and
+ * `courseIds` query parameters the legacy context still sends are ignored:
+ * they used to select whose rows came back, so any signed-in user could read
+ * anyone's notifications. The recipient filter is the same one the
+ * notifications feature uses (`buildRecipientWhere`).
+ */
 export async function GET(req: NextRequest) {
   try {
     const token = await getToken({ req });
-
-    if (!token) {
+    if (!token?.id || !token.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const studentId = searchParams.get("studentId");
-    const courseIds = searchParams.getAll("courseIds");
-
-    if (!studentId && courseIds.length === 0) {
-      return NextResponse.json(
-        { error: "Missing parameters" },
-        { status: 400 },
-      );
-    }
-
-    let whereClause = {};
-
-    if (studentId && courseIds.length > 0) {
-      // Fetch both user-specific and course-specific notifications
-      whereClause = {
-        OR: [{ studentId: studentId }, { courseId: { in: courseIds } }],
-      };
-    } else if (studentId) {
-      // Fetch only user-specific notifications
-      whereClause = { studentId: studentId };
-    } else if (courseIds.length > 0) {
-      // Fetch only course-specific notifications
-      whereClause = { courseId: { in: courseIds } };
-    }
+    const viewer = await getNotificationViewer({
+      id: token.id as string,
+      email: token.email,
+      role: String(token.role ?? ""),
+    });
+    const where = await buildRecipientWhere(viewer);
 
     const notifications = await prisma.notification.findMany({
-      where: whereClause,
+      where,
       include: {
-        course: {
-          select: {
-            name: true,
-            imageUrl: true,
-          },
-        },
-        student: {
-          select: {
-            fullName: true,
-          },
-        },
+        course: { select: { name: true, imageUrl: true } },
+        student: { select: { fullName: true } },
       },
       orderBy: { createdAt: "desc" },
+      take: 100,
     });
 
     return NextResponse.json(notifications);
