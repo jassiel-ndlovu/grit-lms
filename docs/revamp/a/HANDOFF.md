@@ -3,6 +3,20 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 A4 Write-up, `revamp/a-writeup`
+
+Done:
+- `docs/revamp/a/WRITEUP.md`: one document combining A1 to A3, with 14 Mermaid diagrams (system context, both deployment stages, use cases, the tenancy, billing and payments data model, four sequences, sign-up, the renewal run, dunning, the POPIA data flow, and Phase 0). All 14 render with Mermaid 11.4.1.
+
+Next:
+- Owner approval of this write-up and B's. Then Phase 0: schema split and baseline, `getViewer()`, legacy replacement batches, Preview on a fake-data branch, the Grit-to-Nexa rename, runbooks.
+
+Blocked on the other agent:
+- None new. The open B items are listed in WRITEUP section 11.
+
+Questions for the owner:
+- Approve the write-up, or ask for changes.
+
 ## 2026-11-16 Contract follow-up, `revamp/a-billing-contract`
 
 Done:
