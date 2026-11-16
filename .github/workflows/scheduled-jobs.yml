@@ -1,0 +1,68 @@
+# Scheduled jobs for the app, run by GitHub Actions.
+#
+# Why not Vercel Cron: the project is on Vercel Hobby, which only allows
+# crons that run once a day, and auto-submit needs every 5 minutes. The old
+# src/vercel.json was never read (the project root is the repo root), so no
+# cron ever ran. Move these to Vercel Cron or a queue once on Vercel Pro.
+#
+# Needs:
+#   secrets.CRON_SECRET  same value as CRON_SECRET on the Vercel project
+#   vars.APP_URL         optional; defaults to the production URL below
+#
+# GitHub may start a scheduled run late under load, and it pauses schedules
+# on a public repo after 60 days without commits. Auto-submit has a grace
+# period and the test runner submits on the client too, so a late run only
+# delays closing abandoned attempts.
+
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: "0 * * * *"        # on the hour: auto-submit + notification jobs
+    - cron: "5-55/5 * * * *"   # every other 5 minutes: auto-submit only
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which job to run
+        type: choice
+        options: [auto-submit, notifications, both]
+        default: both
+
+permissions: {}
+
+concurrency:
+  group: scheduled-jobs
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      APP_URL: ${{ vars.APP_URL || 'https://grit-lms.vercel.app' }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      JOB: ${{ inputs.job || (github.event.schedule == '0 * * * *' && 'both' || 'auto-submit') }}
+    steps:
+      - name: Check secret
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET is not set in the repository secrets"
+            exit 1
+          fi
+
+      - name: Auto-submit expired test attempts
+        if: env.JOB == 'auto-submit' || env.JOB == 'both'
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            --retry 2 --retry-delay 10 --retry-all-errors \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/auto-submit"
+          echo
+
+      - name: Notification jobs (reminders and digests)
+        if: env.JOB == 'notifications' || env.JOB == 'both'
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/notifications"
+          echo
