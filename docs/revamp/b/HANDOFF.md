@@ -3,6 +3,38 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Phase 0: app shell, `revamp/b-app-shell`
+Done:
+- `contracts/navigation.md` (Draft 1, its own PR as the contracts README asks): the frame, eight rules for pages
+  (one PageHeader, one status, one primary action, help at the right,
+  sub-views as RibbonNav links, commands in a RibbonToolbar, nothing global
+  on a page), nav by role, and what changes when `getViewer()` lands.
+- `src/components/shell/`: `AppShell` (Notion-style sidebar with account
+  menu, notification bell, search, role nav, settings and help; a top bar
+  and drawer below lg; Ctrl/⌘K palette with "Go to" pages plus live
+  `searchEverything` results), `PageHeader`, `Ribbon`/`RibbonNav`/
+  `RibbonToolbar` (Radix toolbar, new dependency, owner-approved),
+  `StatusChip`, and `nav-config.ts` with `scripts/check-shell-nav.ts`.
+- `src/app/dashboard/layout.tsx` renders `AppShell` when `REVAMP_UI=1`,
+  else today's shell. The 11 legacy context providers moved to
+  `legacy-providers.tsx`, which both shells use, so every existing page
+  works in the new frame. Without the flag nothing changes.
+- Preview at `/design-system/shell` (development, or the flag).
+
+Next:
+- Move the first pages onto `PageHeader` (course overview and the test
+  runner), then the Tiptap editor contract (`contracts/editor.md`).
+
+Blocked on the other agent (A):
+- Set `REVAMP_UI=1` on staging so the shell can be checked signed in.
+  B has not seen `/dashboard` in the new frame with a real session: the
+  dev database is production, so B does not sign in there.
+- `src/lib/viewer.ts`: the layout reads `session.user.role` until then
+  (the one exception to viewer.md rule 7, marked `TODO(viewer)`).
+
+Questions for the owner:
+- None.
+
 ## 2026-11-16 Phase 0: component library, `revamp/b-components`
 Done:
 - New primitives in `src/components/ui/`: `table`, `property-list`,
