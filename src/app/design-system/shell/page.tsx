@@ -2,6 +2,8 @@
  * /design-system/shell — the revamp app shell with sample data: sidebar
  * (tutor nav), mobile drawer, page header, ribbon and Ctrl/⌘K palette.
  * Live search and the notification bell are off: this page has no session.
+ * Two sample workspaces show the account menu's switcher; picking one calls
+ * switchWorkspace, which refuses without a session (an error toast).
  * Same gate as /design-system: development, or REVAMP_UI=1.
  */
 
@@ -11,15 +13,21 @@ import { ArrowDownUp, BookOpen, CalendarDays, Clock, Download, Filter, User } fr
 import { Button } from "@/components/ui/button";
 import { PropertyList, PropertyRow } from "@/components/ui/property-list";
 import { AppShell } from "@/components/shell/app-shell";
-import { navSectionsForRole } from "@/components/shell/nav-config";
+import { navSectionsFor } from "@/components/shell/nav-config";
 import { PageHeader } from "@/components/shell/page-header";
 import { Ribbon, RibbonButton, RibbonNav, RibbonSeparator, RibbonToolbar } from "@/components/shell/ribbon";
 import { StatusChip } from "@/components/shell/status-chip";
 import { canPreviewDesignSystem } from "@/lib/ui-flags";
+import { buildLegacyViewer } from "@/lib/viewer-core";
 
 export const metadata = { title: "Shell · Design system", robots: { index: false } };
 
 const HERE = "/design-system/shell";
+
+const SAMPLE_TUTOR = buildLegacyViewer({
+  user: { id: "sample", name: "Nomsa Mahlangu", email: "tutor@example.test", role: "TUTOR", emailVerified: true, imageUrl: null },
+  profileId: null,
+});
 
 export default function ShellPreviewPage() {
   if (!canPreviewDesignSystem()) notFound();
@@ -27,8 +35,17 @@ export default function ShellPreviewPage() {
   return (
     <div data-ui="revamp" className="font-sans">
       <AppShell
-        user={{ name: "Nomsa Mahlangu", email: "tutor@example.test", role: "TUTOR" }}
-        sections={navSectionsForRole("TUTOR")}
+        user={{
+          name: "Nomsa Mahlangu",
+          email: "tutor@example.test",
+          role: "TUTOR",
+          workspaces: [
+            { id: "ws_sample_1", name: "Riverside Maths Academy", as: "staff" },
+            { id: "ws_sample_2", name: "Evening Coding Club", as: "learner" },
+          ],
+          workspaceId: "ws_sample_1",
+        }}
+        sections={navSectionsFor(SAMPLE_TUTOR)}
         search={false}
         notifications={false}
       >

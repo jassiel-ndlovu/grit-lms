@@ -17,7 +17,7 @@ import type { ReactNode } from "react";
 
 import { PreferencesProvider } from "@/components/preferences-provider";
 import { AppShell, type ShellUser } from "@/components/shell/app-shell";
-import { navSectionsForRole } from "@/components/shell/nav-config";
+import { navSectionsFor } from "@/components/shell/nav-config";
 import { getUserPreferences } from "@/features/users/preferences";
 import { auth } from "@/lib/auth";
 import { resolveLocale } from "@/lib/datetime";
@@ -31,18 +31,25 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const [session, viewer] = await Promise.all([auth(), getViewer()]);
   const prefs = session?.user ? await getUserPreferences(session.user.id) : null;
 
-  // Nav still goes by the legacy session role until it moves to
-  // viewer.persona (contracts/navigation.md, "When getViewer() lands").
+  // The revamp nav goes by viewer.persona and permissions. `role` is only
+  // for the legacy shell's own nav and its role chip.
   const role = session?.user?.role ?? "STUDENT";
   const user: ShellUser | null = viewer
-    ? { name: viewer.user.name, email: viewer.user.email, imageUrl: viewer.user.imageUrl, role }
+    ? {
+        name: viewer.user.name,
+        email: viewer.user.email,
+        imageUrl: viewer.user.imageUrl,
+        role,
+        workspaces: viewer.workspaces.map((w) => ({ id: w.id, name: w.name, as: w.as })),
+        workspaceId: viewer.workspace?.id ?? null,
+      }
     : null;
 
   const shell = isRevampUi() ? (
     <LegacyProviders mathjax={mathJaxVersion()}>
       <AppShell
         user={user ?? { name: "", email: "", role }}
-        sections={navSectionsForRole(role)}
+        sections={navSectionsFor(viewer)}
       >
         {children}
       </AppShell>

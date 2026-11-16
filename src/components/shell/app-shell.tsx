@@ -17,7 +17,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
@@ -29,13 +29,15 @@ import {
 import { CommandPalette, useCommandPaletteShortcut, type CommandGroup } from "@/components/ui/command-palette";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
 import { Sidebar, SidebarItem, SidebarSection } from "@/components/ui/sidebar";
 import { searchEverything } from "@/features/search/actions";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
+import { switchWorkspace } from "@/features/workspaces/actions";
 import { APP_SHORT_NAME } from "@/lib/branding";
+import { toast } from "sonner";
 
 import { FOOTER_LINKS, activeHref, type NavIcon, type NavSection } from "./nav-config";
 
@@ -52,6 +54,17 @@ export interface ShellUser {
   /** Legacy role (STUDENT, TUTOR, ADMIN, PARENT) until nav goes by persona. */
   role: string;
   imageUrl?: string | null;
+  /** Workspaces the user can switch to (viewer.workspaces). */
+  workspaces?: ShellWorkspace[];
+  /** The active one (viewer.workspace.id); null for guardians and admins. */
+  workspaceId?: string | null;
+}
+
+export interface ShellWorkspace {
+  id: string;
+  name: string;
+  /** How the user belongs to it, shown beside the name. */
+  as: "staff" | "learner";
 }
 
 interface AppShellProps {
@@ -107,7 +120,23 @@ function usePaletteSearch(enabled: boolean) {
   return { groups, busy, onQueryChange };
 }
 
+/** Switches through A's switchWorkspace action, then re-renders with the new context. */
+function useWorkspaceSwitch() {
+  const router = useRouter();
+  const [pending, start] = React.useTransition();
+  const switchTo = (workspaceId: string) =>
+    start(async () => {
+      const res = await switchWorkspace({ workspaceId });
+      if (res?.data) router.refresh();
+      else toast.error("Could not switch workspace. Try again.");
+    });
+  return { pending, switchTo };
+}
+
 function AccountMenu({ user }: { user: ShellUser }) {
+  const workspaces = user.workspaces ?? [];
+  const current = workspaces.find((w) => w.id === user.workspaceId);
+  const { pending, switchTo } = useWorkspaceSwitch();
   const initials = user.name
     .split(/\s+/)
     .map((p) => p[0])
@@ -127,11 +156,31 @@ function AccountMenu({ user }: { user: ShellUser }) {
         <span className="min-w-0 flex-1 truncate font-medium">{user.name}</span>
         <ChevronsUpDown className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-60">
+      <DropdownMenuContent align="start" className="w-72">
         <DropdownMenuLabel className="font-normal">
           <p className="truncate text-sm font-medium">{user.name}</p>
           <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+          {current && workspaces.length === 1 ? (
+            <p className="text-muted-foreground mt-1 truncate text-xs">{current.name}</p>
+          ) : null}
         </DropdownMenuLabel>
+        {workspaces.length > 1 ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">Workspace</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={user.workspaceId ?? ""}
+              onValueChange={(id) => id !== user.workspaceId && switchTo(id)}
+            >
+              {workspaces.map((w) => (
+                <DropdownMenuRadioItem key={w.id} value={w.id} disabled={pending}>
+                  <span className="min-w-0 flex-1 truncate">{w.name}</span>
+                  <span className="text-muted-foreground text-xs">{w.as === "staff" ? "Teaching" : "Learning"}</span>
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </>
+        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/dashboard/profile"><User /> Profile</Link>
