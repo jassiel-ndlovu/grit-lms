@@ -3,6 +3,7 @@
 import { ReactNode, useState } from 'react';
 import Header from './models/header';
 import Nav from './models/nav';
+import type { ShellUser } from '@/components/shell/app-shell';
 import { LegacyProviders } from './legacy-providers';
 
 /*
@@ -17,18 +18,18 @@ import { LegacyProviders } from './legacy-providers';
  *   - No page footer — its content lives at the foot of the nav.
  *   - With REVAMP_UI the layout renders AppShell instead (components/shell).
  */
-export default function DashboardShell({ children }: { children: ReactNode }) {
+export default function DashboardShell({ children, user }: { children: ReactNode; user: ShellUser | null }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <LegacyProviders>
     <div className="flex min-h-screen bg-background">
-      <Nav mobileOpen={menuOpen} onMobileOpenChange={setMenuOpen} />
+      <Nav user={user} mobileOpen={menuOpen} onMobileOpenChange={setMenuOpen} />
 
       {/* min-w-0 lets wide children (tables, code) scroll inside themselves
           instead of widening the page past the viewport. */}
       <main className="flex min-w-0 flex-1 flex-col bg-background">
-        <Header onOpenMenu={() => setMenuOpen(true)} />
+        <Header user={user} onOpenMenu={() => setMenuOpen(true)} />
           <div className="flex-1 pb-12">
             {children}
           </div>
