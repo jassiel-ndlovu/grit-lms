@@ -3,6 +3,59 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-16 Legacy Batch 3a: retire portal, review and overview; `deleteEntry`, `revamp/b-legacy-batch3a`
+Design 07 Batch 3 is split in two. This is the part that needs nothing
+from A. The assignment editor (create/edit) is Batch 3b, after A's
+`assignment-brief` Blob kind.
+
+Done:
+- `deleteEntry` server action in `src/features/submissions/actions.ts`.
+  - It replaces `DELETE /api/submission-entry/[id]`.
+  - Only the tutor who owns the assignment's course may delete, the same
+    rule as the old route.
+  - The grade and section grades cascade.
+  - Uploaded files stay in Blob, as before. Deleting Blob items is a
+    separate clean-up that needs the owner's approval.
+  - No notification is sent, as before.
+- `DeleteEntryButton`, with a confirm dialog, on the per-student grading
+  page (`overview/[id]/[studentId]`). On success it returns to the
+  assignment's list of hand-ins. This is where the delete control lives
+  now; the old overview list is gone.
+- Retired pages: `portal/[id]`, `review/[id]` and `overview/[id]` (the
+  list) now `redirect()` to `/dashboard/submissions/[id]`, which serves
+  both roles.
+- Deleted the overview's client layout, four unused skeletons and the
+  unused `models/actions-menu.tsx`.
+- Unmounted `SubmissionEntryProvider`. `LegacyProviders` now holds only
+  `SubmissionProvider` and `EventProvider`, both used only by the
+  create/edit page.
+
+**For A (Batch 4).** These have no caller from a page now:
+- `SubmissionEntryContext`
+- `/api/submission-entry` (POST)
+- `/api/submission-entry/[id]` (route 9, PUT and DELETE)
+
+A search outside `src/context/` and `src/app/api/` finds only comments.
+`ProfileContext`, `CourseContext`, `SubmissionContext` and `EventContext`
+are still used by the create/edit page until Batch 3b.
+
+Checked: `tsc` and eslint pass.
+
+Not checked: every changed page is behind dashboard sign-in, and testing
+the delete needs a write to the dev database, which is production. Owner
+test on Preview:
+- As a tutor, open a student's hand-in from the assignment page. Click
+  "Delete hand-in", cancel, then confirm. You should land back on the list
+  without that student, and the student can hand in again.
+- Old `/dashboard/submissions/portal/<id>`, `/review/<id>` and
+  `/overview/<id>` links land on `/dashboard/submissions/<id>`.
+- A student hands in and resubmits; the tutor grades.
+
+Next: Batch 3b (the assignment editor as RSC) when the Blob kind lands.
+
+Blocked on the other agent: the `assignment-brief` Blob kind (design 07
+section 5), and `<AccountBanners viewer />`.
+
 ## 2026-11-16 Nav by persona and the workspace switcher, `revamp/b-nav-persona`
 Done:
 - `navSectionsFor(viewer)` replaces `navSectionsForRole(role)` in

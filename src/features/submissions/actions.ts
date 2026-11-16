@@ -8,6 +8,9 @@
  *                        SUBMISSION_DUE to the student (legacy "we got it"
  *                        receipt).
  *   - gradeEntry:        upserts Grade + emits SUBMISSION_GRADED with score.
+ *   - deleteEntry:       tutor removes one hand-in (replaces DELETE
+ *                        /api/submission-entry/[id]); no notification, as
+ *                        before.
  *
  * Note: legacy notif link `/dashboard//submissions/...` had a double-slash
  * bug — we fix it here to `/dashboard/submissions/...`.
@@ -28,6 +31,7 @@ import { emitNotification, notifyHandIn } from "@/features/notifications/server"
 
 import {
   CreateSubmissionInputSchema,
+  DeleteEntrySchema,
   DeleteSubmissionSchema,
   GradeSubmissionEntrySchema,
   GradeSubmissionEntryWithSectionsSchema,
@@ -195,6 +199,43 @@ export const deleteSubmission = tutorActionClient
     revalidatePath("/dashboard/notifications");
 
     return { id: parsedInput.id, courseId };
+  });
+
+/* ------------------------------------------------------------------------- */
+/* deleteEntry                                                                */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Tutor deletes one student's hand-in. Tutors keep this by the owner's
+ * decision (2026-11-16, design 07 open question 1). Only the tutor who owns
+ * the assignment's course may. The entry's grade and section grades cascade.
+ * Uploaded files stay in Blob, as with the route this replaces: deleting
+ * Blob items is a separate, owner-approved clean-up (AGENTS.md section 4).
+ */
+export const deleteEntry = tutorActionClient
+  .schema(DeleteEntrySchema)
+  .action(async ({ parsedInput, ctx }) => {
+    const entry = await prisma.submissionEntry.findUnique({
+      where: { id: parsedInput.id },
+      select: {
+        id: true,
+        studentId: true,
+        submission: { select: { id: true, course: { select: { id: true, tutor: { select: { email: true } } } } } },
+      },
+    });
+    if (!entry) throw new Error("Hand-in not found");
+    if (entry.submission.course.tutor.email !== ctx.session.user.email) {
+      throw new Error("You don't own this assignment");
+    }
+
+    await prisma.submissionEntry.delete({ where: { id: entry.id } });
+
+    const submissionId = entry.submission.id;
+    revalidatePath(`/dashboard/submissions/${submissionId}`);
+    revalidatePath(`/dashboard/submissions/overview/${submissionId}/${entry.studentId}`);
+    revalidatePath(`/dashboard/gradebook/${entry.submission.course.id}`);
+
+    return { id: entry.id, submissionId };
   });
 
 /* ------------------------------------------------------------------------- */
