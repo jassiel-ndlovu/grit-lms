@@ -25,6 +25,8 @@
  * No I/O, no Prisma imports; safe to test in isolation.
  */
 
+import { numericMatches } from "./numeric";
+
 /* ─── Types ────────────────────────────────────────────────────────────── */
 
 /** Minimum question shape needed for auto-marking. Matches what
@@ -106,15 +108,9 @@ function isCorrect(q: AutoGradeQuestion, answer: unknown): boolean {
     case "SHORT_ANSWER":
       return norm(answer) === norm(q.answer);
 
-    case "NUMERIC": {
-      // The runner now stores NUMERIC as a string; tolerate both.
-      const a = typeof answer === "string" ? answer.trim() : answer;
-      const key = typeof q.answer === "string" ? q.answer.trim() : q.answer;
-      const na = typeof a === "number" ? a : Number(a);
-      const nk = typeof key === "number" ? key : Number(key);
-      if (!Number.isFinite(na) || !Number.isFinite(nk)) return false;
-      return na === nk;
-    }
+    case "NUMERIC":
+      // Decimal commas, fractions and a "± margin" on the key: see numeric.ts.
+      return numericMatches(answer, q.answer);
 
     case "MULTI_SELECT": {
       const want = Array.isArray(q.answer) ? (q.answer as unknown[]).map(norm) : [];
