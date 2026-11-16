@@ -1,6 +1,6 @@
 # Preview environment: fake-data database and separate Blob store
 
-**Answer first.** As of 2026-11-16, Vercel Preview deployments use the Neon branch `preview`, which holds fake data only, and the Blob store `nexa-preview-blob`. Production's `DATABASE_URL` and Blob variables did not change. Preview and Development no longer hold any credential for production's database or files (section 4).
+**Answer first.** As of 2026-11-16, Vercel Preview deployments use the Neon branch `preview`, which holds fake data only, and the Blob store `nexa-preview-blob`. Production's `DATABASE_URL` and Blob variables did not change. Preview and Development no longer hold any credential for production's database or files (section 3).
 
 Phase 0 item from [design/06-deployment.md](../design/06-deployment.md) §3.1 to §3.3 and §7. Checked 2026-11-16.
 
@@ -12,7 +12,7 @@ Phase 0 item from [design/06-deployment.md](../design/06-deployment.md) §3.1 to
 | Production branch | `production`, endpoint `ep-aged-scene-a4fhpg0t` | Not written to. Size before and after: 35,201,024 bytes |
 | Preview branch | `preview` (`br-hidden-poetry-a4aut3d9`), endpoint `ep-wandering-sea-a4bvyaiw` | Created from `production` with `--schema-only`. Neon reports `init_source: parent-schema`, so no production rows were copied. The project's current Neon plan allowed it |
 | Preview role | `nexa_preview`, created on the `preview` branch only | Owns every table on the branch. See "Why a separate role" |
-| Schema | `prisma db push` from today's `prisma/schema.prisma` (Prisma 5), run as `nexa_preview` against the preview endpoint | |
+| Schema | `prisma migrate deploy` (`0_baseline`, `1_prisma6_m2m_pk`), run as `nexa_preview` against the preview endpoint | Rebuilt after PR #60 (Prisma 6, schema split). `migrate status` is up to date, and `migrate diff` against `prisma/schema` exits 0. The first build used `db push` from the Prisma 5 schema |
 | Seed | `scripts/seed-fake.ts` | 9 users (1 tutor, 8 students), 2 courses, 6 lessons, 2 tests, 8 test submissions, 4 assignment entries |
 | Vercel `DATABASE_URL` | Preview: `nexa_preview` on the **pooled** preview host, Secret, all branches. Production: the old record, unchanged (created 199 days ago) | It used to be one record covering Preview and Production. The Preview target was removed from it with `vercel env remove DATABASE_URL --environment preview`, then a new Preview-only record was added |
 
@@ -20,7 +20,7 @@ Phase 0 item from [design/06-deployment.md](../design/06-deployment.md) §3.1 to
 
 A schema-only child branch inherits the parent's roles **and their passwords**. On 2026-11-16, `neondb_owner` on `preview` had the same password as on `production` (compared by hash; the value was never printed). If Vercel Preview used `neondb_owner`, a leaked preview URL would also open production. So the app's Preview URL uses `nexa_preview`, a role that exists only on the `preview` branch.
 
-To give that role the tables, the empty `public` schema on `preview` was dropped and recreated by `neondb_owner` on the preview endpoint, after a check that it held no `User` rows. `nexa_preview` was granted the schema and then created the tables with `db push`.
+To give that role the tables, the empty `public` schema on `preview` was dropped and recreated by `neondb_owner` on the preview endpoint, after a check that it held no `User` rows (later, no non-`@example.test` users). `nexa_preview` was granted the schema and then created the tables, first with `db push` and now with `migrate deploy`.
 
 `neondb_owner` on the preview branch still has production's password. That only matters to someone who already has that password. Resetting it on the branch (`neon roles reset-password neondb_owner --branch preview`) is safe in principle, since roles are per branch, but it was not done. A mistake there would take production down, so it should be a deliberate owner step.
 
@@ -59,15 +59,17 @@ The script refuses to run when:
 
 `npx tsx scripts/check-seed-fake-guard.ts` checks the host guard without touching a database.
 
-**After a schema change** that lands on `main`, push it to the preview branch the same way: `DATABASE_URL=<direct, non-pooled nexa_preview URL> npx prisma db push`. Check that the host printed on the "Datasource" line is `ep-wandering-sea-a4bvyaiw` before you confirm. Once design 06 §3.4 moves us to `prisma migrate`, a `vercel-build` step will do this automatically for previews.
+**After a migration lands on `main`**, apply it to the preview branch. `prisma db push` is retired (see [prisma-baseline.md](prisma-baseline.md)).
+
+```bash
+DATABASE_URL="<pooled nexa_preview URL>" DIRECT_URL="<direct nexa_preview URL, from step 1 without --pooled>" npx prisma migrate deploy
+```
+
+Check that the host on the "Datasource" line is `ep-wandering-sea-a4bvyaiw`. Later, a `vercel-build` step will do this for every preview (design 06 §3.4). That step needs `DIRECT_URL` set for Preview on Vercel, which it is not yet. The app itself does not need `DIRECT_URL`: the Prisma 6 client was checked with `DATABASE_URL` alone.
 
 **If the branch gets into a bad state**, delete it and repeat section 1. Never recreate it without `--schema-only`.
 
-## 3. Things noticed, not changed
-
-- `package-lock.json` is out of sync with `package.json` (`picomatch`), so `npm ci` fails. This session used `npm install --no-save --package-lock=false`. The Prisma 6 upgrade session owns `package.json` and should regenerate the lockfile.
-
-## 4. Blob store for Preview and Development
+## 3. Blob store for Preview and Development
 
 Approved by the owner on 2026-11-16 (design 06 §3.3, option A). Before this, Preview wrote uploads to `grit-lms-blob` (production, 888.7 MB of 1 GB) with a token that could also delete production files. Development also had production's `VERCEL_BLOB_*` variables, which were added when `grit-lms-blob` was connected to the project.
 

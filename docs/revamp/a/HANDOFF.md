@@ -9,14 +9,14 @@ Done:
 - Neon branch `preview` created from `production` as **schema-only** (`init_source: parent-schema`, no rows copied). Production was not written to; its size is unchanged.
 - The branch inherited `neondb_owner` with production's password, so Preview uses a new role, `nexa_preview`, that exists only on the `preview` branch.
 - `scripts/seed-fake.ts` (with `scripts/check-seed-fake-guard.ts`): 1 tutor, 8 "Test Student N" users, 2 courses, lessons, tests and submissions, all `@example.test`. It refuses production's host always, and any other host unless it is the preview endpoint or `SEED_FAKE_ALLOW=1`.
-- `prisma db push` and the seed ran against the preview branch only.
+- Schema and seed on the preview branch only. After PR #60 merged into this branch, the branch was rebuilt with `prisma migrate deploy` (both migrations; `migrate status` up to date, diff exit 0) and reseeded.
 - Vercel: `DATABASE_URL` for Preview now points at the pooled preview branch. Production's record is unchanged.
 - Blob (owner approved): created `nexa-preview-blob` (cpt1, public) and connected it to Preview and Development. Production's four Blob variables now apply to Production only, with their values unchanged.
 - `ops/preview-environment.md`: setup, reseeding, and the Blob store.
 
 Next:
 - 5 MB cap on preview uploads in `issueUploadToken` (design 06 §3.3).
-- After the Prisma 6 and schema-split PR merges, push the new schema to the preview branch (see the ops doc).
+- Set `DIRECT_URL` for Preview on Vercel (the direct `nexa_preview` URL) when the `vercel-build` migrate step is added. The app runs without it.
 
 Blocked on the other agent:
 - None.
@@ -25,7 +25,6 @@ Questions for the owner:
 - May the preview Blob store be emptied monthly without a fresh approval each time? (design 06, open question 1)
 - Delete any old local `.env` files that still hold production's Blob token.
 - Store the seeded users' password in your password manager, or reseed with your own. Optionally reset `neondb_owner`'s password on the `preview` branch.
-- `package-lock.json` is out of sync (`npm ci` fails). This is for the session that owns `package.json`.
 
 ## 2026-11-16 Phase 0: Grit to Nexa rename, `revamp/a-rename-nexa`
 
