@@ -11,8 +11,9 @@ Model behind it: [a/design/01-tenancy-roles.md](../a/design/01-tenancy-roles.md)
 | Export | File | Runs on |
 | --- | --- | --- |
 | `getViewer()`, `requireViewer()`, `ViewerError` | `src/lib/viewer.ts` | Server only (`import "server-only"`) |
-| `Viewer` and related types | `src/lib/viewer.ts` (type exports are safe to import from client components) | Both |
-| `can(viewer, permission, scope?)` | `src/lib/viewer.ts` | Both (pure function over the `Viewer` object) |
+| `Viewer` and related types, `PERMISSIONS` | `src/lib/viewer-core.ts` (re-exported from `src/lib/viewer.ts`) | Both. Client components import from `@/lib/viewer-core` |
+| `can(viewer, permission)` | `src/lib/viewer-core.ts` (re-exported from `src/lib/viewer.ts`) | Both (pure function over the `Viewer` object) |
+| `canIn(viewer, permission, scope)` | `src/lib/viewer.ts` | Server only (checks the database) |
 | `switchWorkspace(workspaceId)` | `src/features/workspaces/actions.ts` | Server action |
 | Safe-action clients `viewerActionClient`, `staffActionClient`, `guardianActionClient`, `adminActionClient` | `src/lib/safe-action.ts` | Server; each adds `ctx.viewer` |
 
@@ -182,4 +183,5 @@ const viewer = await requireViewer({ persona: "guardian" });
 | Date | Change |
 | --- | --- |
 | 2026-11-16 | Draft 1. No `mode` field (owner decision, plan revision 3) |
+| 2026-11-16 | Draft 1.2. Client components import types and `can()` from `@/lib/viewer-core`, because `viewer.ts` is server-only. Phase 0 bridge: one comped organisation until Phase 1 (PR #63) |
 | 2026-11-16 | Draft 1.1. Added `messages.announce` and `messages.direct` (A2 messaging design) |
