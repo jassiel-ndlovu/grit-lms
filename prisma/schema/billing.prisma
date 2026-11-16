@@ -1,0 +1,5 @@
+// billing.prisma — owned by Agent A (docs/revamp/AGENTS.md, section 2).
+// Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+
+// Tier, Service, CourseService, Subscription, BillingPeriod, invoices and payments
+// arrive here in Phase 2 (docs/revamp/a/design/03-billing.md, 04-payments.md).
