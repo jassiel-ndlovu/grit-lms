@@ -1,10 +1,14 @@
 # Contract: navigation and the app shell
 
-Owner: Agent B. Reader: Agent A. Status: **Draft 1, 2026-11-16.** A asks for changes in `docs/revamp/a/HANDOFF.md` or an issue labelled `needs-b`; B edits this file in its own pull request.
+Owner: Agent B. Reader: Agent A. Status: **Draft 2, 2026-11-16.** A asks for changes in `docs/revamp/a/HANDOFF.md` or an issue labelled `needs-b`; B edits this file in its own pull request.
 
 **Answer first.** With `REVAMP_UI=1`, every `/dashboard` page renders inside `AppShell`: a Notion-style sidebar that holds everything global, and a content column where each page draws its own `PageHeader` (breadcrumb, one status, actions, help) and, if it has sub-views, a `Ribbon`. Navigation is plain data per persona in one file. A page never builds its own sidebar or global search. A's pages follow the same rules.
 
 Research behind it: [b/research/05-navigation.md](../b/research/05-navigation.md).
+
+Changes in Draft 2:
+- `AppShell` has a `banner` slot for account-wide notices.
+- A's wireframe names are mapped to these components (see "A's slot names").
 
 ## Where it lives
 
@@ -24,8 +28,10 @@ The switch is in `src/app/dashboard/layout.tsx`: `isRevampUi()` picks `AppShell`
 
 ```
 +----------------+----------------------------------------------------------+
-| Account v  (o) | Courses > Maths > Unit 3 quiz  * Published  [Share] ?    |  PageHeader (sticky)
+| Account v  (o) | Your account is read-only until payment.      [Pay now]  |  banner (optional)
 | Search  Ctrl K +----------------------------------------------------------+
+|                | Courses > Maths > Unit 3 quiz  * Published  [Share] ?    |  PageHeader (sticky)
+|                +----------------------------------------------------------+
 |                | Overview  Questions  Submissions    Filter  Sort  Export |  Ribbon (optional)
 | Home           +----------------------------------------------------------+
 | Notifications  |                                                          |
@@ -40,6 +46,7 @@ The switch is in `src/app/dashboard/layout.tsx`: `isRevampUi()` picks `AppShell`
 - **lg (1024 px) and up:** the sidebar is sticky beside the content.
 - **Below lg:** a 48 px top bar (menu, product name, search) replaces the sidebar. The menu opens the same sidebar as a drawer. `PageHeader` sticks under the top bar.
 - **Scrolling:** the window is the only vertical scroller. Wide tables and code scroll inside themselves.
+- **Banner:** `AppShell`'s `banner` prop (a React node) renders full width at the top of the content column, above every page, in `data-slot="account-banner"`. It is for account-wide notices only: verify your email, impersonation, read-only billing. A owns what goes in it; the dashboard layout passes it in. It scrolls away with the page, and `PageHeader` still sticks. Notices about one page belong in that page.
 - **Ctrl/⌘K** opens the command palette anywhere. It shows "Go to" (every nav link, matched on label and keywords) and, from two characters, live results from `searchEverything`.
 
 ## Rules for pages (both agents)
@@ -52,6 +59,22 @@ The switch is in `src/app/dashboard/layout.tsx`: `isRevampUi()` picks `AppShell`
 6. **Commands for the current view use `RibbonToolbar`** (filter, sort, export, bulk actions). It is one `role="toolbar"` stop: Tab enters, the arrow keys move. Give it an `aria-label`.
 7. **Do not add global things to a page:** no own sidebar, search box, account menu or notification bell. Ask B to add a nav link instead (below).
 8. **Do not put a page's heading in the header.** The header carries the breadcrumb; the page's `<h1>` sits in the content, in `font-display`.
+
+## A's slot names
+
+A's UX flows (`a/ux/`) name shell slots. They map to these components:
+
+| A's name | Component |
+| --- | --- |
+| Parent header | `PageHeader`: breadcrumb, `status`, `actions`, help |
+| Child ribbon | `Ribbon`, with `RibbonNav` (views) and `RibbonToolbar` (tools) |
+| Account banner slot | `AppShell`'s `banner` prop |
+| Workspace switcher, avatar | The sidebar account menu, not the header (there is no header logo) |
+| Ribbon "More" | Not in Phase 0: ribbons scroll sideways |
+
+**Panels on B's pages.** Where A owns a panel's content on one of B's pages, such as course "Services" and "Fees", or a student's "Sign-in", "Parents" and "Fees":
+- A ships the panel as a server component that takes ids and the viewer as props, such as `<CourseServicesPanel courseId viewer />`.
+- B mounts it as a `RibbonNav` view of that page.
 
 ## Nav by role (today)
 
@@ -72,7 +95,7 @@ B will make these changes in its own PR, without changing the page rules above:
 
 - `navSectionsForRole(role)` becomes `navSectionsFor(viewer)`, keyed by `viewer.persona` (`staff`, `learner`, `guardian`, `admin`) and filtered with `can(viewer, …)`. Links stay plain `NavLink` data.
 - The account menu gains the **workspace switcher** (`viewer.workspaces`, calling A's `switchWorkspace`), and guardians get a child picker (`viewer.children`).
-- The shell shows A's banners above the content column: impersonation (`viewer.impersonatedBy`, rule 5 of viewer.md) and read-only billing (`workspace.readOnly`, rule 4).
+- The layout passes A's banners to the `banner` slot: impersonation (`viewer.impersonatedBy`, rule 5 of viewer.md) and read-only billing (`workspace.readOnly`, rule 4).
 - `AppShell` takes only the fields it shows (name, email, image, persona, workspaces), never the whole `Viewer`.
 
 ## Adding a nav link

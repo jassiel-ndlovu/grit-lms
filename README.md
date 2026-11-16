@@ -109,7 +109,7 @@ uploads.
 ```bash
 # 1. Clone and install
 git clone <your fork>
-cd grit-lms
+cd grit-lms     # the GitHub repo keeps its old name
 npm install     # runs `prisma generate` in postinstall
 
 # 2. Create .env.local (see next section)
@@ -141,6 +141,14 @@ NEXTAUTH_SECRET="generate-with: openssl rand -base64 32"
 # Vercel Blob (used by client uploads via /api/blob/upload-token)
 # Get this from the Vercel dashboard → Storage → your Blob store → .env.local
 BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."
+
+# Email (Resend). Without RESEND_API_KEY, sends are skipped and logged.
+RESEND_API_KEY="re_..."
+# Optional. Defaults to Resend's dev sender ("Nexa LMS <onboarding@resend.dev>"),
+# which only reaches the Resend account owner. Set it once nexa-lms.co.za is
+# verified in Resend:
+# EMAIL_FROM="Nexa LMS <noreply@notify.nexa-lms.co.za>"
+# EMAIL_REPLY_TO="support@nexa-lms.co.za"
 ```
 
 If you skip `BLOB_READ_WRITE_TOKEN`, the UI still renders but any file upload
@@ -349,6 +357,7 @@ npm run dev      # next dev
 npm run build    # prisma generate + next build
 npm run start    # next start (serves the build)
 npm run lint     # next lint (eslint)
+npx tsx scripts/check-branding.ts   # fails if the old product name is back in platform files
 ```
 
 Prisma workflow:

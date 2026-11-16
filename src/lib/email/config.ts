@@ -5,9 +5,14 @@
  * sender. Resend only delivers dev-sender mail to the address that owns the
  * Resend account; sends to anyone else are rejected (we log and move on).
  *
- * To switch to a real domain: verify it in Resend, then set EMAIL_FROM
- * (e.g. `Nexa LMS <hello@nexa.example>`) in the environment. Nothing else
- * needs to change.
+ * The planned sender is the `notify.nexa-lms.co.za` subdomain of
+ * `nexa-lms.co.za` (not yet bought or verified). Once Resend has verified
+ * it, set EMAIL_FROM in the environment, e.g.
+ *
+ *   EMAIL_FROM="Nexa LMS <noreply@notify.nexa-lms.co.za>"
+ *
+ * Nothing else needs to change. Until then, leave EMAIL_FROM unset so the
+ * dev sender below keeps working.
  */
 
 import "server-only";
