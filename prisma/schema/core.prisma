@@ -16,20 +16,39 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   name          String
-  email         String    @unique
+  email         String       @unique
   password      String
-  role          Role      @default(STUDENT)
-  createdAt     DateTime  @default(now())
+  role          Role         @default(STUDENT)
+  createdAt     DateTime     @default(now())
   // Set once the user clicks the link in their verification email.
   // Notification emails are only sent to verified addresses.
   emailVerified DateTime?
+  // Nexa staff vs everyone else (design 01). What a person is inside a
+  // workspace comes from Membership, Learner and Guardianship, not `role`,
+  // which stays until the app stops reading it.
+  platformRole  PlatformRole @default(USER)
 
   preferences             UserPreferences?
   activities              ActivityLog[]
   notifications           Notification[]
   emailVerificationTokens EmailVerificationToken[]
+
+  // Tenancy (tenancy.prisma)
+  memberships        Membership[]
+  learners           Learner[]
+  guardianOf         Guardianship[] @relation("GuardianshipGuardian")
+  guardedBy          Guardianship[] @relation("GuardianshipStudent")
+  auditActions       AuditLog[]     @relation("AuditActor")
+  auditImpersonating AuditLog[]     @relation("AuditImpersonator")
+  tutorProfile       Tutor?
+  studentProfile     Student?
+}
+
+enum PlatformRole {
+  USER
+  NEXA_ADMIN
 }
 
 // One-time email verification links. Only a SHA-256 hash of the token is
@@ -80,6 +99,10 @@ model Tutor {
   profileImageUrl String?
   bio             String?
   courses         Course[]
+  // Replaces matching on email (design 01, section 8). Backfilled by
+  // scripts/backfill-tenancy.ts; required once every row has one.
+  userId          String?  @unique
+  user            User?    @relation(fields: [userId], references: [id])
 }
 
 model Student {
@@ -94,6 +117,10 @@ model Student {
   submissionEntries     SubmissionEntry[]
   TestSubmission        TestSubmission[]
   courses               Course[]               @relation("CourseEnrollments")
+  // Replaces matching on email (design 01, section 8). Backfilled by
+  // scripts/backfill-tenancy.ts; required once every row has one.
+  userId                String?                @unique
+  user                  User?                  @relation(fields: [userId], references: [id])
 }
 
 model ActivityLog {
