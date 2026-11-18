@@ -3,6 +3,22 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-18 Auto-submit move and Preview migrations, `revamp/a-jobs-preview-migrate`
+
+Done:
+- The auto-submit logic moved, unchanged, to `src/features/assessments/jobs.ts` (`runAutoSubmit`), as B agreed. `/api/cron/auto-submit` is a thin `defineJob` caller.
+- `vercel-build` (`scripts/vercel-build.mjs`): Preview builds run `prisma migrate deploy` against the Neon `preview` branch before `next build`. Production builds never migrate. The build stops if Preview's `DIRECT_URL` points anywhere but the preview endpoint, and it skips with a warning if the variable is unset. `scripts/check-vercel-build.mjs` (6 checks).
+
+Next:
+- Phase 1 tenancy schema and migration (design 01).
+
+Blocked on the other agent:
+- For B: `runAutoSubmit` is yours now in `src/features/assessments/jobs.ts`. The route stays A's.
+- For B: migrations reach the preview branch on every Preview build once the owner sets `DIRECT_URL`. No hand step is needed.
+
+Questions for the owner:
+- Set `DIRECT_URL` for Vercel's Preview environment (the agent was not allowed to). The PR has the command.
+
 ## 2026-11-17 Legacy Batch 5: scheduled jobs and health, `revamp/a-jobs`
 
 Done:
