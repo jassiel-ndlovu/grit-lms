@@ -3,26 +3,14 @@
 import type { ReactNode } from "react";
 
 import { MathProvider, type MathJaxVersion } from "@/app/components/math-provider";
-import { EventProvider } from "@/context/EventContext";
-import { SubmissionProvider } from "@/context/SubmissionContext";
 
 /**
- * The context providers today's dashboard pages still read from. Both the
- * legacy shell and the revamp shell (REVAMP_UI) wrap pages in these, so
- * every existing page keeps working inside the new frame.
+ * What both dashboard shells (legacy and REVAMP_UI) wrap pages in.
  *
- * Legacy Batch 1 (design 07) removed the eight providers nothing read
- * (students, tutors, lessons, tests, test submissions, grades, question
- * grades, lesson completions). Batch 3a retired the portal, review and
- * overview pages, which took the submission-entry provider with them. These
- * two go when the assignment editor is rebuilt (Batch 3b).
+ * Legacy Batches 1 to 3b (design 07) removed every legacy context provider:
+ * no page reads a React context for data any more. Only MathJax is left, so
+ * this can become the MathProvider itself once nothing imports the name.
  */
 export function LegacyProviders({ children, mathjax = 3 }: { children: ReactNode; mathjax?: MathJaxVersion }) {
-  return (
-    <MathProvider version={mathjax}>
-      <SubmissionProvider>
-        <EventProvider>{children}</EventProvider>
-      </SubmissionProvider>
-    </MathProvider>
-  );
+  return <MathProvider version={mathjax}>{children}</MathProvider>;
 }
