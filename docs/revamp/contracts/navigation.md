@@ -1,15 +1,19 @@
 # Contract: navigation and the app shell
 
-Owner: Agent B. Reader: Agent A. Status: **Draft 3, 2026-11-16.** A asks for changes in `docs/revamp/a/HANDOFF.md` or an issue labelled `needs-b`; B edits this file in its own pull request.
+Owner: Agent B. Reader: Agent A. Status: **Draft 4, 2026-11-18.** A asks for changes in `docs/revamp/a/HANDOFF.md` or an issue labelled `needs-b`; B edits this file in its own pull request.
 
 **Answer first.** With `REVAMP_UI=1`, every `/dashboard` page renders inside `AppShell`: a Notion-style sidebar that holds everything global, and a content column where each page draws its own `PageHeader` (breadcrumb, one status, actions, help) and, if it has sub-views, a `Ribbon`. Navigation is plain data per persona in one file. A page never builds its own sidebar or global search. A's pages follow the same rules.
 
 Research behind it: [b/research/05-navigation.md](../b/research/05-navigation.md).
 
+Changes in Draft 4:
+- `<AccountBanners viewer />` has shipped (A) and is in the layout's `banner` slot (B).
+- `LegacyProviders` now holds only `MathProvider`; no page reads a legacy context.
+
 Changes in Draft 3:
 - The nav goes by `viewer.persona` and permissions (`navSectionsFor`).
 - The account menu has the workspace switcher.
-- The banner content is A's `<AccountBanners viewer />` (requested).
+- The banner content is A's `<AccountBanners viewer />`.
 
 Changes in Draft 2:
 - `AppShell` has a `banner` slot for account-wide notices.
@@ -27,7 +31,7 @@ Changes in Draft 2:
 | `LegacyProviders` | `src/app/dashboard/legacy-providers.tsx` | Client |
 | `CommandPalette`, `useCommandPaletteShortcut` | `src/components/ui/command-palette.tsx` | Client |
 
-The switch is in `src/app/dashboard/layout.tsx`: `isRevampUi()` picks `AppShell`, otherwise the legacy `DashboardShell`. Both wrap pages in `LegacyProviders`, so today's pages work unchanged in either frame.
+The switch is in `src/app/dashboard/layout.tsx`: `isRevampUi()` picks `AppShell`, otherwise the legacy `DashboardShell`. Both wrap pages in `LegacyProviders`, which is now only the `MathProvider`.
 
 ## The frame
 
@@ -105,7 +109,7 @@ The current item is the longest nav href that equals the path or is a whole-segm
   - `AppShell` receives a `ShellUser` (`name`, `email`, `imageUrl`, `role`, `workspaces`, `workspaceId`), never the whole `Viewer`.
 - **Guardians** get a child picker (`viewer.children`) in Phase 1, when guardianships exist.
 - **Banners.**
-  - A ships the content as a server component, `<AccountBanners viewer />`. It covers impersonation (`viewer.impersonatedBy`, viewer.md rule 5), read-only billing (`workspace.readOnly`, rule 4) and email verification.
+  - A's server component `<AccountBanners viewer />` (`src/features/workspaces/components/account-banners.tsx`) is the content. It covers impersonation (`viewer.impersonatedBy`, viewer.md rule 5), read-only billing (`workspace.readOnly`, rule 4) and email verification.
   - The dashboard layout passes it to the `banner` slot.
   - It renders nothing when no banner applies.
 

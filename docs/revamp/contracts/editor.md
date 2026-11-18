@@ -1,8 +1,15 @@
 # Contract: rich content and the editor
 
-Owner: Agent B. Reader: Agent A. Status: **Draft 2, 2026-11-16.** A asks for changes in `docs/revamp/a/HANDOFF.md` or an issue labelled `needs-b`; B edits this file in its own pull request.
+Owner: Agent B. Reader: Agent A. Status: **Draft 3, 2026-11-18.** A asks for changes in `docs/revamp/a/HANDOFF.md` or an issue labelled `needs-b`; B edits this file in its own pull request.
 
 **Answer first.** Rich text in Nexa is a Tiptap document stored as JSON, inside a small versioned envelope, in a nullable `Json` column. The old string column stays and holds a markdown copy that is regenerated on every save, for search, AI marking, export and older screens. Maths is TeX in node attributes, rendered by MathJax on every page (version 4 with `REVAMP_UI`, version 3 until then; one version per app), never KaTeX. One extension list defines the format; the editor, the converter, the validator and the renderers all build from it. A stores and renders rich content (messages, email templates) with B's functions and never parses the JSON by hand. A owns the email renderer, `renderEmailHtml`.
+
+Changes in Draft 3:
+- The first field is live: `Lesson.descriptionJson`, with migration `2_lesson_description_json`.
+- `richFieldFromInput()` does rules 1 and 2 in one call (see "Functions").
+- Columns ship as `prisma migrate` migrations, not `db push`.
+- `RichEditor`'s `onChange` returns plain JSON, so it can go straight to a server action (new rule 7).
+- `RichContent` remounts when its content changes, so pages that swap content in place show the right maths.
 
 Changes in Draft 2:
 - The components have shipped. Their real props are listed under "Components".
@@ -25,7 +32,7 @@ Decisions behind it: [b/research/SUMMARY.md](../b/research/SUMMARY.md), owner de
 - **Column pair.** For a field `x`, the JSON goes in `xJson Json?` beside the existing `x String`. On every save, both are written together: the envelope and `docToMarkdown(doc)`.
 - **Reading.** Use `readStoredContent(row.xJson)`. When it returns null (no JSON yet, or a version this build does not know), show the markdown column with today's renderer.
 - **Schema version.** `CONTENT_SCHEMA_VERSION` is 1. A node change bumps it, and `readStoredContent` gains an upgrade step. Rows are never rewritten in bulk without the owner's approval.
-- **Columns need the owner.** Each `Json` column is added in the PR that moves its field to the editor, with `prisma db push` approved by the owner first (AGENTS.md section 4). No column exists yet.
+- **Columns need the owner.** Each `Json` column is added in the PR that moves its field to the editor, as a migration in `prisma/schema/migrations`. The owner approves applying it with `prisma migrate deploy`, to production and to the Preview database (AGENTS.md section 4). Live columns: `Lesson.descriptionJson`.
 - **Plain fields stay plain.** Options, match pairs, reorder items and short answers stay markdown strings: they are short and need no blocks.
 
 ## The node set (version 1)
@@ -58,6 +65,8 @@ Decisions behind it: [b/research/SUMMARY.md](../b/research/SUMMARY.md), owner de
 | `docToMarkdown(doc)` | `markdown.ts` | The derived markdown copy |
 | `validateDoc(json)` | `schema.ts` | The document as the schema reads it, or null: unknown nodes, marks or nesting, or over 512 KB. Unknown attributes are dropped |
 | `toStoredContent(doc)`, `readStoredContent(json)`, `CONTENT_SCHEMA_VERSION`, `StoredContent` | `value.ts` | The envelope |
+| `richFieldFromInput(value)` | `save.ts` | For server actions: the validated envelope (`json`), the derived `markdown` and an `empty` flag, or null to refuse the save |
+| `richFieldRefusal(value)` | `save.ts` | Why `richFieldFromInput` refused a value, for server logs. Names the rule, not the content |
 
 `scripts/check-rich-content.ts` checks round trips and validation against fixtures in the shapes the maths audit found.
 
@@ -69,12 +78,13 @@ Decisions behind it: [b/research/SUMMARY.md](../b/research/SUMMARY.md), owner de
 4. **Do not parse or edit the JSON by hand.** To change content in code (an import, a copy), go through `markdownToDoc` or the planned editor commands.
 5. **Copies keep the JSON as is.** A copied test or lesson (owner decision 8) copies `xJson` and `x` unchanged. An `embeddedQuestion` points to the copied question's new id, which the copy step remaps.
 6. **Search, AI marking and exports read the markdown column.** AI marking also goes through A's redaction step first (A's HANDOFF).
+7. **Send plain JSON to server actions.** ProseMirror builds node attributes with `Object.create(null)`, and React's server-action encoder sends those as opaque references the server can't read. `RichEditor`'s `onChange` already returns a plain copy. Any other code that holds editor JSON copies it with `JSON.parse(JSON.stringify(...))` before calling an action.
 
 ## Components
 
 | Component | File | Runs on | Purpose |
 | --- | --- | --- | --- |
-| `<RichContent value markdown className? />` | `src/components/content/rich-content.tsx` | Server | Read-only view. Renders the JSON with `@tiptap/static-renderer`, or the markdown with `LessonMarkdown` when there is no valid JSON. Needs a `MathProvider` above it |
+| `<RichContent value markdown className? />` | `src/components/content/rich-content.tsx` | Server | Read-only view. Renders the JSON with `@tiptap/static-renderer`, or the markdown with `LessonMarkdown` when there is no valid JSON. Keyed on its content, so new content remounts and MathJax typesets it. Needs a `MathProvider` above it |
 | `<RichEditor … />` | `src/components/editor/rich-editor.tsx` | Client | The editor (props below). Needs a `MathProvider` above it |
 | `renderEmailHtml` | A's (messaging, design 05) | Server | HTML for emails. **Owned by A.** Rules below |
 
