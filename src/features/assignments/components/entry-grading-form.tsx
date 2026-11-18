@@ -13,7 +13,7 @@
  *         sections for this entry on save.
  *
  * Sections are persisted through `gradeEntryWithSections` — see
- * features/submissions/actions.ts. The action wipes and recreates the
+ * features/assignments/actions.ts. The action wipes and recreates the
  * entry's QuestionGrade rows in one transaction.
  */
 

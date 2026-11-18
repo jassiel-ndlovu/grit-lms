@@ -40,11 +40,11 @@ import {
 import {
   getEntryByStudentAndSubmission,
   listActiveSubmissionsByCourseId,
-} from "@/features/submissions/queries";
+} from "@/features/assignments/queries";
 import { listGradesForStudentInCourse } from "@/features/grades/queries";
 import { listEventsByCourseId } from "@/features/events/queries";
 import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesson-tree";
-import { assignmentRoutes } from "@/features/submissions/routes";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 interface PageProps {
   params: Promise<{ id: string }>;

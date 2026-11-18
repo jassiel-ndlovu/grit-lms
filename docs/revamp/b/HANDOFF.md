@@ -3,6 +3,24 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Feature folder renamed to `assignments`, `revamp/b-assignments-folder`
+
+Done:
+- `src/features/submissions` is now `src/features/assignments`, as in
+  the AGENTS.md ownership map. Only file moves and import paths change.
+  The code's own names (`createSubmission`, the `Submission` model and
+  so on) stay, because they follow the database.
+- Updated every import, plus `scripts/check-assignment-routes.ts`.
+
+Checked: `tsc` and eslint pass, and `check-assignment-routes` and
+`check-shell-nav` pass.
+
+Blocked on the other agent:
+- For A: comments in `src/app/api/submissions/**` and
+  `src/app/api/submission-entry/**` still name
+  `src/features/submissions/...`. Those are comments only, nothing
+  breaks; update them when you next touch those routes.
+
 ## 2026-11-19 Submissions renamed to Assignments (Phase 0 item 4), `revamp/b-assignments-rename`
 
 Done:

@@ -33,14 +33,14 @@ import {
   getEntryByStudentAndSubmission,
   getSubmissionDetailById,
   listEntriesForSubmission,
-} from "@/features/submissions/queries";
-import { SubmissionForm } from "@/features/submissions/components/submission-form";
+} from "@/features/assignments/queries";
+import { SubmissionForm } from "@/features/assignments/components/submission-form";
 import { RichContent } from "@/components/content/rich-content";
 import {
   parseSectionFeedback,
   sectionOrdinal,
-} from "@/features/submissions/lib/sections";
-import { assignmentRoutes } from "@/features/submissions/routes";
+} from "@/features/assignments/lib/sections";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 function fileNameFromUrl(url: string): string {
   try {

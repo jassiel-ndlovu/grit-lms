@@ -153,7 +153,7 @@ export type GradeSubmissionEntryInput = z.infer<
  *                   both submission entries and test submissions)
  *   - feedback    = JSON-encoded `{ title, remarks, memoFileUrl }` — see
  *                   `parseSectionFeedback` / `stringifySectionFeedback` in
- *                   features/submissions/lib/sections.ts
+ *                   features/assignments/lib/sections.ts
  */
 export const SubmissionSectionSchema = z.object({
   title: NonEmptyString.max(200, "Section title too long"),

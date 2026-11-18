@@ -1,6 +1,6 @@
 /** /dashboard/assignments/[id]/edit — a tutor edits an assignment they set. */
 
-import { AssignmentEditorPage } from "@/features/submissions/components/assignment-editor-page";
+import { AssignmentEditorPage } from "@/features/assignments/components/assignment-editor-page";
 
 export const metadata = { title: "Edit assignment" };
 

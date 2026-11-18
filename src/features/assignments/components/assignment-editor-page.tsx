@@ -13,9 +13,9 @@ import { notFound, redirect } from "next/navigation";
 
 import "server-only";
 
-import { AssignmentForm, type AssignmentFormValues } from "@/features/submissions/components/assignment-form";
+import { AssignmentForm, type AssignmentFormValues } from "@/features/assignments/components/assignment-form";
 import { listCoursesByTutorId } from "@/features/courses/queries";
-import { getSubmissionDetailById, submissionBelongsToTutor } from "@/features/submissions/queries";
+import { getSubmissionDetailById, submissionBelongsToTutor } from "@/features/assignments/queries";
 import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";

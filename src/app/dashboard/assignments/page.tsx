@@ -20,19 +20,19 @@ import {
   getEntryByStudentAndSubmission,
   listActiveSubmissionsForStudent,
   listSubmissionsByTutorId,
-} from "@/features/submissions/queries";
-import { SubmissionCard } from "@/features/submissions/components/submission-card";
-import { SubmissionGrid } from "@/features/submissions/components/submission-grid";
+} from "@/features/assignments/queries";
+import { SubmissionCard } from "@/features/assignments/components/submission-card";
+import { SubmissionGrid } from "@/features/assignments/components/submission-grid";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { TutorSubmissionActions } from "@/features/submissions/components/tutor-submission-actions";
+import { TutorSubmissionActions } from "@/features/assignments/components/tutor-submission-actions";
 import { TestsTabs } from "@/features/assessments/components/tests-tabs";
 import {
   bucketCounts,
   filterByBucket,
   type FilterBucket,
 } from "@/features/assessments/lib/filters";
-import { assignmentRoutes } from "@/features/submissions/routes";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 export const metadata = { title: "Assignments" };
 

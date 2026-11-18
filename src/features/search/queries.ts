@@ -21,7 +21,7 @@ import type { Session } from "next-auth";
 import { prisma } from "@/lib/db";
 
 import type { SearchGroup, SearchHit } from "./schemas";
-import { assignmentRoutes } from "@/features/submissions/routes";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 /** Hits per group — the dropdown is a jump list, not a results page. */
 const PER_GROUP = 5;

@@ -7,7 +7,7 @@
 
 import { permanentRedirect } from "next/navigation";
 
-import { legacyAssignmentPath } from "@/features/submissions/routes";
+import { legacyAssignmentPath } from "@/features/assignments/routes";
 
 export default async function LegacySubmissionsRedirect({
   params,

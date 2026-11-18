@@ -1,11 +1,11 @@
 /**
  * Checks assignment URLs and where each old /dashboard/submissions URL
- * redirects (src/features/submissions/routes.ts).
+ * redirects (src/features/assignments/routes.ts).
  *
  *   npx tsx scripts/check-assignment-routes.ts
  */
 
-import { assignmentRoutes as r, legacyAssignmentPath } from "../src/features/submissions/routes";
+import { assignmentRoutes as r, legacyAssignmentPath } from "../src/features/assignments/routes";
 
 let failures = 0;
 function check(name: string, got: unknown, want: unknown) {

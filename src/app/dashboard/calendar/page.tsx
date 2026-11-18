@@ -37,7 +37,7 @@ import { listActiveTestsByCourseId, listActiveTestsForStudent } from "@/features
 import {
   listActiveSubmissionsByCourseId,
   listActiveSubmissionsForStudent,
-} from "@/features/submissions/queries";
+} from "@/features/assignments/queries";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import {
   CalendarView,
@@ -45,7 +45,7 @@ import {
 } from "@/features/events/components/calendar-view";
 import { CreateEventButton } from "@/features/events/components/create-event-button";
 import { occurrencesOf } from "@/features/events/lib/recurrence";
-import { assignmentRoutes } from "@/features/submissions/routes";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 /**
  * How far ahead the calendar materialises repeating events. The grid only
