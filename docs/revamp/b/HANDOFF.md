@@ -3,6 +3,74 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-18 Legacy Batch 3b: assignment editor as RSC; all context providers unmounted, `revamp/b-legacy-batch3b`
+
+Done:
+- `/dashboard/submissions/create/[[id]]` is now a server page. It does
+  the following:
+  - It reads `getViewer()` and requires `courses.edit`.
+  - It loads the tutor's courses (`listCoursesByTutorId`) and, when
+    editing, the assignment (`getSubmissionDetailById`, owner checked
+    with `submissionBelongsToTutor`; anything else gives a 404).
+  - It renders `AssignmentForm`
+    (`src/features/submissions/components/assignment-form.tsx`).
+- `AssignmentForm` keeps the legacy fields, validation, layout and draft
+  keys, so drafts written by the old page still restore. Changes:
+  - **Saving:** it uses `createSubmission` and `updateSubmission`.
+    Afterwards it opens the assignment page instead of the list.
+  - **Brief uploads** use `BlobKind.AssignmentBrief` at
+    `assignmentBriefPath`. A new assignment uses a `draft-<uuid>` id, as
+    A's design allows.
+  - **Failed uploads:** a failed upload stops the save with a message.
+    The old page dropped failed files silently.
+  - **Attached files** show their file name, not "File N".
+- **No calendar events.** The old page created a `CourseEvent` on create
+  and another "(Updated)" one on every edit. The calendar already lists
+  every active assignment from `Submission.dueDate`, so those were
+  duplicates.
+  - Existing legacy `SUBMISSION` events stay in the database; removing
+    them is a row delete, which needs the owner's OK.
+  - Design 07 assumed `createCourseEvent` would be called here. This is
+    the deliberate exception.
+- Unmounted the last legacy providers:
+  - `LegacyProviders` is now only `MathProvider`.
+  - `providers.tsx` is now only next-auth's `SessionProvider`.
+  - `ProfileProvider` and `CoursesProvider` fetched on every page, so
+    those requests are gone.
+- Deleted `submissions/skeletons/submission-form-skeleton.tsx`, which
+  had no other user.
+
+**For A (Batch 4), confirmation:** no file outside `src/context/` imports
+`@/context/*`, and `useProfile`, `useCourses`, `useSubmission`,
+`useEvents` and `useSubmissionEntry` have no caller. After the owner
+tests this on Preview, Batch 4 can delete:
+- the contexts;
+- their API routes;
+- `src/lib/blob.ts`, if nothing else imports it.
+
+Checked:
+- `tsc` and eslint pass.
+- On a temporary page using the real form with sample data:
+  - Edit mode loads every field: the local due time, "Unlimited"
+    attempts, file types, the attached file's name and draft mode.
+  - Every label points at its control.
+  - Submitting empty shows the three required-field errors.
+  - Picked files list and remove correctly.
+  - Auto-save writes `nexa:draft:assignment-new`, and after a reload
+    "Restore" brings back the title and due date.
+  - No console errors.
+
+Not checked: saving and uploading. Those need a signed-in tutor and
+write to the database and Blob store. Owner test on Preview (design 07):
+1. Create an assignment with a brief file and a due date, and see it on
+   the calendar.
+2. Edit it: change the due date, remove a file and add one.
+3. A student hands in and resubmits, and the tutor grades.
+4. Old portal and review links still redirect.
+
+Follow-up: the assignment description is still markdown. Moving it to
+the rich editor needs a `descriptionJson` column, in its own PR.
+
 ## 2026-11-17 Draft key rename, `revamp/b-draft-key`
 Closes A's rename item for `src/lib/use-local-draft.ts`.
 

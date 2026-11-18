@@ -1,5 +1,173 @@
 // tenancy.prisma — owned by Agent A (docs/revamp/AGENTS.md, section 2).
 // Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+//
+// Design: docs/revamp/a/design/01-tenancy-roles.md. Phase 1, part 1: the
+// tables that do not reference Course. Enrollment and CourseStaff, and
+// Course.workspaceId, follow once Agent B agrees to the Course changes in
+// learning.prisma.
 
-// Workspace, Team, Membership, Learner, Enrollment, Guardianship, AuditLog
-// arrive here in Phase 1 (docs/revamp/a/design/01-tenancy-roles.md).
+enum WorkspaceKind {
+  ORGANISATION
+  SOLO
+}
+
+enum BillingState {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  READ_ONLY
+  COMPED
+  CANCELLED
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  TUTOR
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum LearnerStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum GuardianRelationship {
+  PARENT
+  GUARDIAN
+  OTHER
+}
+
+enum GuardianshipStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+/// The tenant: an organisation with tutor teams, or a solo practice.
+model Workspace {
+  id           String        @id @default(cuid())
+  kind         WorkspaceKind
+  name         String
+  slug         String        @unique
+  timezone     String        @default("Africa/Johannesburg")
+  logoUrl      String?
+  accentColor  String?
+  billingState BillingState  @default(TRIAL)
+  trialEndsAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  teams       Team[]
+  memberships Membership[]
+  learners    Learner[]
+  auditLogs   AuditLog[]
+}
+
+/// Organisations only. A solo practice has no teams.
+model Team {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members   TeamMember[]
+
+  @@index([workspaceId])
+}
+
+/// Staff in a workspace. Created ACTIVE when an invite is accepted
+/// (pending invites live in Invite, design 02).
+model Membership {
+  id          String           @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        MembershipRole
+  status      MembershipStatus @default(ACTIVE)
+  invitedById String?
+  joinedAt    DateTime         @default(now())
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teams     TeamMember[]
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model TeamMember {
+  teamId       String
+  membershipId String
+  isLead       Boolean @default(false)
+
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, membershipId])
+  @@index([membershipId])
+}
+
+/// A student's place in one workspace. Enrollments (per course) follow in part 2.
+model Learner {
+  id                String        @id @default(cuid())
+  workspaceId       String
+  userId            String
+  status            LearnerStatus @default(ACTIVE)
+  /// Adult students may see and pay their own fees. Never true for a minor.
+  paymentVisible    Boolean       @default(false)
+  isMinor           Boolean       @default(true)
+  /// v1: the tutor attests they hold a parent's consent (design 02).
+  consentAttestedAt DateTime?
+  consentAttestedBy String?
+  createdAt         DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+/// A parent or guardian linked to a student, across workspaces.
+/// Guardian invites and in-app consent come after v1 (owner decision).
+model Guardianship {
+  id             String               @id @default(cuid())
+  guardianUserId String
+  studentUserId  String
+  relationship   GuardianRelationship @default(PARENT)
+  status         GuardianshipStatus   @default(PENDING)
+  consentAt      DateTime?
+  consentVersion String?
+  createdAt      DateTime             @default(now())
+
+  guardian User @relation("GuardianshipGuardian", fields: [guardianUserId], references: [id], onDelete: Cascade)
+  student  User @relation("GuardianshipStudent", fields: [studentUserId], references: [id], onDelete: Cascade)
+
+  @@unique([guardianUserId, studentUserId])
+  @@index([studentUserId])
+}
+
+/// Every admin override, impersonation, role change and money action.
+model AuditLog {
+  id                 String   @id @default(cuid())
+  workspaceId        String?
+  actorUserId        String
+  impersonatorUserId String?
+  action             String
+  targetType         String
+  targetId           String?
+  data               Json?
+  at                 DateTime @default(now())
+
+  workspace    Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  actor        User       @relation("AuditActor", fields: [actorUserId], references: [id])
+  impersonator User?      @relation("AuditImpersonator", fields: [impersonatorUserId], references: [id])
+
+  @@index([workspaceId, at])
+  @@index([actorUserId, at])
+}
