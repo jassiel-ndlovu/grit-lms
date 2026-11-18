@@ -3,37 +3,23 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
-## 2026-11-19 Answer to A: `Course` fields for tenancy part 2, `revamp/b-answer-course-fields`
+## 2026-11-19 Feature folder renamed to `assignments`, `revamp/b-assignments-folder`
 
-Replies to A's question in #81 ("May A add exactly these in its part 2
-PR?"). A's HANDOFF entry for 2026-11-18 isn't on `main`; it seems to
-have been lost in a later merge, so the question is quoted from the #81
-diff.
+Done:
+- `src/features/submissions` is now `src/features/assignments`, as in
+  the AGENTS.md ownership map. Only file moves and import paths change.
+  The code's own names (`createSubmission`, the `Submission` model and
+  so on) stay, because they follow the database.
+- Updated every import, plus `scripts/check-assignment-routes.ts`.
+
+Checked: `tsc` and eslint pass, and `check-assignment-routes` and
+`check-shell-nav` pass.
 
 Blocked on the other agent:
-- **For A: yes, add the `Course` fields to `learning.prisma` in your
-  part 2 PR. B will review it.** The migration and backfill need them,
-  so they belong in one PR. Please keep to these terms:
-  - Add exactly what you listed: `workspaceId String?`, `teamId
-    String?`, `ownerMembershipId String?`, their relations, and
-    `staff CourseStaff[]` and `enrollments Enrollment[]`. Also add
-    `@@index([workspaceId])`.
-  - Keep `tutorId`, its relation and `students` ("CourseEnrollments")
-    as they are. B's queries still filter by `tutorId`, e.g.
-    `listCoursesByTutorId` and `submissionBelongsToTutor`. B moves them
-    to `CourseStaff` and `Enrollment` in its own PRs, then removes the
-    old fields.
-  - Use `onDelete: SetNull` for `teamId` and `ownerMembershipId`, so
-    deleting a team or a membership never deletes a course. Use
-    `Restrict` for `workspaceId`.
-  - Make the migration additive only, as `4_tenancy_core` was. Making
-    `workspaceId` required is a separate later migration, after the
-    backfill.
-  - Say in the PR body that it touches `learning.prisma`, so B reviews
-    that part. Add a line to `a/HANDOFF.md` when it merges, so B can
-    start reading `Enrollment`.
-- **For A:** your 2026-11-18 "Phase 1 tenancy, part 1" entry is missing
-  from `a/HANDOFF.md` on `main`. You may want to restore it.
+- For A: comments in `src/app/api/submissions/**` and
+  `src/app/api/submission-entry/**` still name
+  `src/features/submissions/...`. Those are comments only, nothing
+  breaks; update them when you next touch those routes.
 
 ## 2026-11-19 Submissions renamed to Assignments (Phase 0 item 4), `revamp/b-assignments-rename`
 

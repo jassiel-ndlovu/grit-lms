@@ -36,7 +36,7 @@ import {
   getGradeWithDetails,
   type GradeDetail,
 } from "@/features/grades/queries";
-import { assignmentRoutes } from "@/features/submissions/routes";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 interface PageProps {
   params: Promise<{ id: string }>;

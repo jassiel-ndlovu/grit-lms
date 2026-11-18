@@ -42,14 +42,14 @@ import {
 import {
   getEntryByStudentAndSubmission,
   listActiveSubmissionsForStudent,
-} from "@/features/submissions/queries";
+} from "@/features/assignments/queries";
 import { listGradesForStudent } from "@/features/grades/queries";
 import { listUpcomingEventsForStudent } from "@/features/events/queries";
 import { getUserPreferences } from "@/features/users/preferences";
 import { AdminDashboard } from "@/features/admin/components/admin-dashboard";
 import { ParentDashboard } from "@/features/parents/components/parent-dashboard";
 import { DEFAULT_TIME_ZONE, formatDate, greetingFor, resolveLocale } from "@/lib/datetime";
-import { assignmentRoutes } from "@/features/submissions/routes";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 export const metadata = { title: "Dashboard" };
 

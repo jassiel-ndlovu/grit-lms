@@ -12,7 +12,7 @@
  */
 
 import type { Permission, Persona, Viewer } from "@/lib/viewer-core";
-import { assignmentRoutes } from "@/features/submissions/routes";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 export type NavIcon =
   | "home" | "book" | "calendar" | "test" | "assignment" | "grades"

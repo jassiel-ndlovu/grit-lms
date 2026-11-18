@@ -31,7 +31,7 @@ import {
   computeStudentMark,
   summariseClass,
 } from "@/features/grades/lib/weighting";
-import { assignmentRoutes } from "@/features/submissions/routes";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 interface PageProps {
   params: Promise<{ courseId: string; studentId: string }>;

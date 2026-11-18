@@ -29,15 +29,15 @@ import {
   getEntryByStudentAndSubmission,
   getSubmissionDetailById,
   submissionBelongsToTutor,
-} from "@/features/submissions/queries";
+} from "@/features/assignments/queries";
 import {
   parseSectionFeedback,
   sectionOrdinal,
-} from "@/features/submissions/lib/sections";
-import { EntryGradingForm } from "@/features/submissions/components/entry-grading-form";
-import { MemoFilesEditor } from "@/features/submissions/components/memo-files-editor";
-import { DeleteEntryButton } from "@/features/submissions/components/delete-entry-button";
-import { assignmentRoutes } from "@/features/submissions/routes";
+} from "@/features/assignments/lib/sections";
+import { EntryGradingForm } from "@/features/assignments/components/entry-grading-form";
+import { MemoFilesEditor } from "@/features/assignments/components/memo-files-editor";
+import { DeleteEntryButton } from "@/features/assignments/components/delete-entry-button";
+import { assignmentRoutes } from "@/features/assignments/routes";
 
 interface PageProps {
   params: Promise<{ id: string; studentId: string }>;

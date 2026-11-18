@@ -4,7 +4,7 @@
  * Grades are 1:1 with either a TestSubmission or a SubmissionEntry. We
  * never duplicate grading writes here — the canonical write path is
  *   - gradeTestSubmission   (features/assessments/actions.ts)
- *   - gradeSubmissionEntry  (features/submissions/actions.ts)
+ *   - gradeSubmissionEntry  (features/assignments/actions.ts)
  * — both of which upsert the Grade row inside their transaction. This
  * file is read-only on purpose.
  */
