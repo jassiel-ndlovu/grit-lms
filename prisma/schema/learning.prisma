@@ -21,6 +21,20 @@ model Course {
   // ["\arabic*", "\arabic{enumi}.\arabic*"]. Empty = the default
   // scheme. See src/lib/enum-labels.ts.
   lessonLabelScheme String[]       @default([])
+
+  // Tenancy (Agent A, design 01; added in A's tenancy part 2 with the
+  // owner's go-ahead, for B to review). Nullable until the backfill has
+  // run everywhere; `tutorId` and `students` stay until the app reads these.
+  workspaceId       String?
+  teamId            String?
+  ownerMembershipId String?
+  workspace         Workspace?    @relation(fields: [workspaceId], references: [id])
+  team              Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  ownerMembership   Membership?   @relation("CourseOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
+  staff             CourseStaff[]
+  enrollments       Enrollment[]
+
+  @@index([workspaceId])
 }
 
 model Lesson {

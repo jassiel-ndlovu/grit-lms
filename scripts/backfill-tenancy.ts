@@ -17,8 +17,13 @@
  *   5. Every ADMIN user gets platformRole NEXA_ADMIN.
  *   PARENT users need nothing: no guardian links exist yet.
  *
- * Enrollments and course ownership follow in part 2, after the Course
- * changes in learning.prisma.
+ * Part 2 (needs 6_tenancy_courses):
+ *   6. Every Course gets workspaceId = the legacy workspace.
+ *   7. Course.ownerMembershipId = its tutor's membership, plus a CourseStaff
+ *      LEAD row (design 01 §8, step 3).
+ *   8. Each student in the implicit CourseEnrollments join becomes an ACTIVE
+ *      Enrollment starting at the course's createdAt (the real join date was
+ *      never stored). Skipped when that course and learner already have one.
  *
  * Prints counts only, never names or emails. Refuses production's endpoint
  * unless --allow-production is given: running it there needs the owner's
@@ -70,6 +75,36 @@ async function main() {
     (await prisma.learner.findMany({ where: { workspaceId: WORKSPACE_ID }, select: { userId: true } })).map((l) => l.userId),
   );
 
+  // Part 2: courses, staff and enrollments
+  const courses = await prisma.course.findMany({
+    select: { id: true, createdAt: true, workspaceId: true, ownerMembershipId: true, tutor: { select: { userId: true, email: true } }, students: { select: { userId: true, email: true } } },
+  });
+  const memberships = new Map(
+    (await prisma.membership.findMany({ where: { workspaceId: WORKSPACE_ID }, select: { id: true, userId: true } })).map((m) => [m.userId, m.id]),
+  );
+  const learnerIds = new Map(
+    (await prisma.learner.findMany({ where: { workspaceId: WORKSPACE_ID }, select: { id: true, userId: true } })).map((l) => [l.userId, l.id]),
+  );
+  const existingEnrollments = new Set(
+    (await prisma.enrollment.findMany({ select: { courseId: true, learnerId: true } })).map((e) => `${e.courseId}:${e.learnerId}`),
+  );
+  const existingStaff = new Set(
+    (await prisma.courseStaff.findMany({ select: { courseId: true, membershipId: true } })).map((c) => `${c.courseId}:${c.membershipId}`),
+  );
+  // Users are resolved by email here too, so a dry run before the part 1
+  // links works; after --apply the userId links and learners exist.
+  const userIdOf = (p: { userId: string | null; email: string }) => p.userId ?? byEmail.get(lower(p.email))?.id ?? null;
+  const coursePlan = courses.map((c) => {
+    const tutorUserId = userIdOf(c.tutor);
+    return { c, tutorUserId, students: c.students.map((st) => userIdOf(st)) };
+  });
+  const coursesWithoutOwner = coursePlan.filter((p) => !p.tutorUserId || !tutorUsers.some((u) => u.id === p.tutorUserId)).length;
+  const unmatchedEnrolments = coursePlan.reduce((n, p) => n + p.students.filter((id) => !id || !studentUsers.some((u) => u.id === id)).length, 0);
+  const enrolmentsToCreate = coursePlan.reduce(
+    (n, p) => n + p.students.filter((id) => id && learnerIds.has(id) && !existingEnrollments.has(`${p.c.id}:${learnerIds.get(id)}`)).length,
+    0,
+  );
+
   const plan = {
     workspace: (await prisma.workspace.findUnique({ where: { id: WORKSPACE_ID } })) ? "exists" : "create",
     tutorProfilesToLink: tutorLinks.length,
@@ -79,6 +114,10 @@ async function main() {
     learnersToCreate: studentUsers.filter((u) => !existingLearners.has(u.id)).length,
     adminsToMark: adminUsers.length,
     owner: ownerEmail ? "set" : "none (every tutor becomes ADMIN)",
+    coursesToPlace: courses.filter((c) => !c.workspaceId).length,
+    coursesWithoutOwner,
+    enrolmentsToCreate: learnerIds.size ? enrolmentsToCreate : "after learners exist (run --apply)",
+    implicitEnrolmentsUnmatched: unmatchedEnrolments,
   };
   console.log(apply ? "Applying:" : "Dry run (nothing written):", JSON.stringify(plan, null, 2));
   if (!apply) return;
@@ -115,12 +154,44 @@ async function main() {
     }
   }, { timeout: 60_000 });
 
+  // Part 2, after part 1 so memberships and learners exist.
+  const memberOf = new Map(
+    (await prisma.membership.findMany({ where: { workspaceId: WORKSPACE_ID }, select: { id: true, userId: true } })).map((m) => [m.userId, m.id]),
+  );
+  const learnerOf = new Map(
+    (await prisma.learner.findMany({ where: { workspaceId: WORKSPACE_ID }, select: { id: true, userId: true } })).map((l) => [l.userId, l.id]),
+  );
+  await prisma.$transaction(async (tx) => {
+    for (const { c, tutorUserId, students } of coursePlan) {
+      const ownerId = tutorUserId ? memberOf.get(tutorUserId) : undefined;
+      if (!c.workspaceId || (ownerId && !c.ownerMembershipId)) {
+        await tx.course.update({
+          where: { id: c.id },
+          data: { workspaceId: c.workspaceId ?? WORKSPACE_ID, ...(ownerId && !c.ownerMembershipId ? { ownerMembershipId: ownerId } : {}) },
+        });
+      }
+      if (ownerId && !existingStaff.has(`${c.id}:${ownerId}`)) {
+        await tx.courseStaff.create({ data: { courseId: c.id, membershipId: ownerId, role: "LEAD" } });
+      }
+      for (const uid of students) {
+        const learnerId = uid ? learnerOf.get(uid) : undefined;
+        if (!learnerId || existingEnrollments.has(`${c.id}:${learnerId}`)) continue;
+        await tx.enrollment.create({ data: { workspaceId: WORKSPACE_ID, courseId: c.id, learnerId, status: "ACTIVE", startedAt: c.createdAt } });
+        existingEnrollments.add(`${c.id}:${learnerId}`);
+      }
+    }
+  }, { timeout: 120_000 });
+
   const after = {
     memberships: await prisma.membership.count({ where: { workspaceId: WORKSPACE_ID } }),
     learners: await prisma.learner.count({ where: { workspaceId: WORKSPACE_ID } }),
     tutorsLinked: await prisma.tutor.count({ where: { userId: { not: null } } }),
     studentsLinked: await prisma.student.count({ where: { userId: { not: null } } }),
     nexaAdmins: await prisma.user.count({ where: { platformRole: "NEXA_ADMIN" } }),
+    coursesPlaced: await prisma.course.count({ where: { workspaceId: WORKSPACE_ID } }),
+    coursesWithOwner: await prisma.course.count({ where: { ownerMembershipId: { not: null } } }),
+    courseStaff: await prisma.courseStaff.count(),
+    enrollments: await prisma.enrollment.count({ where: { workspaceId: WORKSPACE_ID } }),
   };
   console.log("Done:", JSON.stringify(after));
 }
