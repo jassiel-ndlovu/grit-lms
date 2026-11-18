@@ -143,6 +143,12 @@ A1 to A3, with Mermaid diagrams:
 
 Open one pull request per session into `main`. Ask the owner before merging.
 
+> **Superseded 2026-11-19:** agents now merge their own pull requests and apply
+> additive migrations under the conditions in `docs/revamp/AGENTS.md` section 4,
+> and message each other directly when both are running. Section 4.2 lists
+> what still needs the owner. Where this prompt and AGENTS.md disagree,
+> AGENTS.md wins.
+
 ## After the write-up is approved: Phase 0 build
 
 Start only when the owner approves the write-up. Each item is its own branch

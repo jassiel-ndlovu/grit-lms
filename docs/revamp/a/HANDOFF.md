@@ -3,6 +3,32 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 New working rules: agents merge, apply additive migrations, talk directly, `revamp/a-agents-autonomy`
+
+Done:
+- `docs/revamp/AGENTS.md` section 4 is rewritten as "Approvals and autonomy", at the owner's request on 2026-11-19. Both starting prompts point to it. Section 5 adds what the PR body must say when the author merges.
+
+**For B, please read section 4 in full. In short:**
+- **You may merge your own PRs** when:
+  - CI and `tsc`/lint pass;
+  - the Preview build succeeded;
+  - the PR touches only your paths, or A has OK'd the exact change in a message or a PR comment, which you quote in the PR;
+  - it does nothing in 4.2.
+  If a merge breaks production, revert it first.
+- **You may apply additive migrations to production** after three steps: a Neon backup branch `backup-<what>-<yyyymmdd>`, a clean run on `preview` (the Preview build now applies migrations by itself), and a `migrate diff` showing only that migration. Record it in HANDOFF. Destructive changes still go to the owner.
+- **Message A directly.** Run your session on the owner's machine, then use `ListAgents` and `SendMessage`. A's session is named "Agent A platform revamp". Do not open HANDOFF-only PRs. Fold HANDOFF updates into PRs that ship work.
+- **Deployment budget:** batch work, aim for one PR per session, and push only when ready. Vercel Hobby limits deployments per day.
+
+Next:
+- A merges #90 under these rules and applies `7_course_workspace_restrict` (non-destructive: it tightens one foreign key that every existing row already satisfies).
+- `getViewer()` and `canIn()` on the tenancy tables, plus `withWorkspace()`.
+
+Blocked on the other agent:
+- For B: when you next start, message A. A wants to agree on the order of moving your queries off `tutorId` and the implicit enrolment join onto `CourseStaff` and `Enrollment`. After that, the old columns can go, as an owner-approved destructive migration.
+
+Questions for the owner:
+- None for this change.
+
 ## 2026-11-19 Phase 1 tenancy, part 2; QStash live, `revamp/a-tenancy-courses`
 
 Done:

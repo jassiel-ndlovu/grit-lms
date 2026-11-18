@@ -71,26 +71,89 @@ changes; it never edits the contract.
 | `navigation.md` | B | Parent header and child ribbon slots, so A's pages (admin, billing) plug in |
 | `editor.md` | B | The rich-text and math editor component and its stored format, so A's email templates and messages can render it |
 
-## 4. Things only the owner may approve
+## 4. Approvals and autonomy
+
+Updated 2026-11-19 by the owner to speed up development. Agents merge their
+own pull requests and apply additive migrations. The owner keeps the rest.
+
+### 4.1 What agents may do without asking
+
+- **Merge their own pull requests** into `main` when all of these hold:
+  1. CI passes, and `npx tsc --noEmit` and `npm run lint` pass.
+  2. The Vercel Preview build for the PR succeeded.
+  3. The PR touches only paths the agent owns (section 2), **or** the other
+     agent has given written OK to the exact change, by direct message or a
+     PR comment. Quote or link that OK in the PR body.
+  4. The PR does nothing listed in 4.2.
+
+  Merging deploys production. If a merge breaks production, the agent
+  reverts its own PR at once, then fixes forward.
+- **Apply additive migrations to production** (`prisma migrate deploy`).
+  These are migrations that only add tables, enums, nullable or defaulted
+  columns or indexes, or that change a constraint every existing row already
+  satisfies. Before each one:
+  1. Take a Neon backup branch of `production` named
+     `backup-<what>-<yyyymmdd>`.
+  2. Make sure it ran cleanly on the `preview` branch (the Preview build
+     applies it).
+  3. Run `prisma migrate diff` against production and confirm it shows only
+     that migration.
+
+  Record the run in HANDOFF.md.
+- **Run idempotent backfills** that only insert rows or fill empty columns,
+  under the same backup rule, dry run first.
+- **Message the other agent directly** (4.3), and start subagents or
+  sessions for independent work in the agent's own paths.
+
+### 4.2 Still owner-only
 
 Stop and ask the owner (Jassiel) before any of these. Write the question in
 HANDOFF.md and in the session's chat. Do not work around a no.
 
-- `prisma db push`, `prisma migrate deploy`, or any write to a shared
-  database. Today's database is shared with production.
-- Creating or changing paid cloud resources: Vercel plan, a database, VMs,
-  domains, mailboxes, Paystack accounts, Bedrock or Wolfram API keys.
-- Deleting anything in the Vercel Blob store or any database row. List
-  first, then ask with the list.
-- Merging to `main`, pushing a tag, or deploying to production.
+- Any **destructive** database change on production or shared data:
+  dropping or renaming a table or column, changing a column type, a
+  migration that rewrites or deletes rows, or `prisma db push` anywhere
+  shared.
+- Deleting database rows (except fake data on `preview`) or anything in a
+  Blob store. List first, then ask with the list.
+- Creating or changing paid cloud resources or accounts: the Vercel plan,
+  databases, VMs, domains, mailboxes, Paystack, Sentry, Bedrock or Wolfram
+  keys, QStash plans.
+- Spending money or accepting terms of service.
 - Sending email to anyone other than the owner. The Resend dev sender only
   reaches the owner's inbox.
-- Spending money or accepting terms of service.
-- Deleting a legacy context or route. Replace first; delete only after the
-  owner has tested the replacement.
+- Deleting a legacy context or route before the owner has tested its
+  replacement.
+- Changing production environment variables that hold secrets, unless the
+  owner has supplied the value for that purpose.
+- Pushing a tag or a release.
+- Changing this section.
 
 Never put secrets, tokens or personal data in the repo, in pull request text
 or in chat.
+
+### 4.3 Talking to the other agent
+
+- When both agents run as Claude Code sessions on the owner's machine, they
+  message each other directly: `ListAgents` shows the other one and
+  `SendMessage` reaches it. Settle questions, contract tweaks and "may I edit
+  your file" there, instead of HANDOFF-only pull requests or asking the owner
+  to relay.
+- A written OK in a message counts for 4.1, condition 3. Quote it in the PR.
+- HANDOFF.md stays the record. Summarise what was agreed in your next entry,
+  inside a PR that ships real work. Do not open a PR only to update
+  HANDOFF.md.
+- If the other agent is not running, write the request in HANDOFF.md as
+  before and carry on with other work.
+
+### 4.4 Deployment budget
+
+Vercel Hobby limits deployments per day, and every push to a PR branch
+builds a Preview. So:
+- Batch related changes into one PR, up to about 600 changed lines with
+  generated files excluded.
+- Push when the work is ready, not after every commit.
+- Aim for one PR per working session per agent, plus urgent fixes.
 
 ## 5. Every pull request
 
@@ -101,6 +164,8 @@ or in chat.
 - Includes a check: a script under `scripts/check-*.ts`, a test, or a
   screenshot for UI.
 - `npx tsc --noEmit` and `npm run lint` pass.
+- When the author merges it (section 4.1), the body says that each 4.1
+  condition holds, and quotes the other agent's OK when one was needed.
 
 ## 6. HANDOFF.md
 
