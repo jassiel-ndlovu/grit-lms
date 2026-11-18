@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Tenancy part 2 on production; follow-ups to B's review, `revamp/a-tenancy-followups`
+
+Done:
+- **Production** (owner approved): backup branch `backup-pre-tenancy2-20261119`, then `6_tenancy_courses`. The part 2 backfill placed and owned 6 courses (6 LEAD staff rows) and created 12 enrolments, with 0 unmatched. A re-run found nothing to do, and the diff against the repo is identical.
+- **B's terms from #86:** `Course.workspace` is now `onDelete: Restrict` (migration `7_course_workspace_restrict`). The team and owner links were already `SetNull`, and the other terms were already met.
+- **Restored** the 2026-11-18 "tenancy part 1" entry, which a merge had dropped (B spotted it).
+- **Reminder links:** `notifications/jobs.ts` builds them with `assignmentRoutes`. Reminders sent under the old `/dashboard/submissions` URL still count as sent, so nobody gets the same one twice.
+
+Next:
+- Owner approval for `7_course_workspace_restrict` on production.
+- `getViewer()` on the tenancy tables, plus `withWorkspace()`.
+- Batch 4 deletions after the owner tests B's Batch 3b.
+
+Blocked on the other agent:
+- For B: the old-folder comments in `src/app/api/submissions*` are left alone, because those routes go in Batch 4.
+- For B: production now has `Enrollment` and `CourseStaff` rows for every existing course, so your queries can start moving off `tutorId` and the implicit join when ready.
+
+Questions for the owner:
+- May A apply `7_course_workspace_restrict` on production after this merges? It is one foreign key change.
+
 ## 2026-11-19 Phase 1 tenancy, part 2; QStash live, `revamp/a-tenancy-courses`
 
 Done:
@@ -47,6 +67,22 @@ Blocked on the other agent:
 
 Questions for the owner:
 - Set up QStash: `docs/revamp/a/ops/qstash-setup.md` (account, two signing keys and `APP_URL` on Vercel Production, then the sync script).
+
+## 2026-11-18 Phase 1 tenancy, part 1, `revamp/a-tenancy-core`
+
+Done:
+- `tenancy.prisma`: `Workspace`, `Team`, `Membership`, `TeamMember`, `Learner` (with the v1 tutor consent attestation), `Guardianship` and `AuditLog`, plus their enums. `core.prisma`: `User.platformRole`, and `Tutor.userId`/`Student.userId` (unique, nullable until backfilled). Migration `4_tenancy_core` is additive only.
+- `scripts/backfill-tenancy.ts`: idempotent, dry-run by default, counts only. It refuses production without `--allow-production`. It creates `ws_nexa_legacy` (comped organisation "Nexa"), links profiles by email, and makes tutors members (OWNER via `--owner-email`, otherwise ADMIN), students learners and admins `NEXA_ADMIN`.
+- On the preview branch: the migration is applied, the backfill linked 1 tutor and 8 students (0 unmatched), and a re-run found nothing to do.
+
+Next:
+- Part 2: `Enrollment` and `CourseStaff`, `Course.workspaceId`/`teamId`/`ownerMembershipId`, and the enrolment backfill. Then `getViewer()` reads the tables instead of the Phase 0 bridge, and `withWorkspace()`.
+
+Blocked on the other agent:
+- For B: part 2 needs these on `Course` in `learning.prisma` (your file): `workspaceId String?` (made required after the backfill), `teamId String?`, `ownerMembershipId String?`, their relations, and the back-relations `staff CourseStaff[]` and `enrollments Enrollment[]`. The implicit `CourseEnrollments` join stays until your pages read `Enrollment`. May A add exactly these in its part 2 PR for you to review, or would you rather add them? Answer in `b/HANDOFF.md`.
+
+Questions for the owner:
+- Production, when ready: `migrate deploy` (applies `4_tenancy_core`), then the backfill dry run, then `--apply --allow-production --owner-email=<your email>`.
 
 ## 2026-11-18 Auto-submit move and Preview migrations, `revamp/a-jobs-preview-migrate`
 
