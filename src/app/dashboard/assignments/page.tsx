@@ -8,7 +8,7 @@
 
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -33,6 +33,7 @@ import {
   type FilterBucket,
 } from "@/features/assessments/lib/filters";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 export const metadata = { title: "Assignments" };
 
@@ -75,23 +76,22 @@ export default async function SubmissionsIndexPage() {
         <SubmissionGrid
           isEmpty={filtered.length === 0}
           empty={
-            <div className="border-input rounded-lg border border-dashed p-8 sm:p-12 text-center">
-              <Pencil className="text-muted-foreground mx-auto size-10" />
-              <h3 className="font-display mt-3 text-lg text-foreground">
-                Nothing here
-              </h3>
-              <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
-                {b === "upcoming"
-                  ? "No upcoming assignments — you're caught up."
+            <EmptyState
+              className="border-input rounded-lg border border-dashed"
+              illustration={<Scene name="empty-submissions" />}
+              title={
+                b === "upcoming"
+                  ? "No upcoming assignments"
                   : b === "missed"
-                    ? "No missed assignments. Nice."
+                    ? "No missed assignments"
                     : b === "submitted"
-                      ? "No assignments awaiting a grade."
+                      ? "Nothing waiting for a grade"
                       : b === "graded"
-                        ? "No graded assignments yet."
-                        : "No active assignments."}
-              </p>
-            </div>
+                        ? "No graded assignments yet"
+                        : "No active assignments"
+              }
+              description={b === "upcoming" || b === "missed" ? "You're caught up." : undefined}
+            />
           }
         >
           {filtered.map(({ sub: s, entry }) => (
@@ -204,15 +204,12 @@ export default async function SubmissionsIndexPage() {
         </header>
 
         {rows.length === 0 ? (
-          <div className="border-input rounded-lg border border-dashed p-8 sm:p-12 text-center">
-            <Pencil className="text-muted-foreground mx-auto size-10" />
-            <h3 className="font-display mt-3 text-lg text-foreground">
-              No assignments yet
-            </h3>
-            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
-              Create one from a course&apos;s manage page.
-            </p>
-          </div>
+          <EmptyState
+            className="border-input rounded-lg border border-dashed"
+            illustration={<Scene name="empty-submissions" />}
+            title="No assignments yet"
+            description="Use New assignment to set the first one."
+          />
         ) : (
           <div className="border-border overflow-hidden rounded-lg border bg-card">
             <div className="flex items-baseline justify-between gap-3 px-5 py-4">

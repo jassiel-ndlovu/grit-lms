@@ -41,6 +41,7 @@ import {
   sectionOrdinal,
 } from "@/features/assignments/lib/sections";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 function fileNameFromUrl(url: string): string {
   try {
@@ -421,9 +422,12 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
           </div>
           <Separator />
           {entries.length === 0 ? (
-            <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">
-              No submissions yet.
-            </div>
+            <EmptyState
+              compact
+              illustration={<Scene name="nothing-to-grade" />}
+              title="No submissions yet"
+              description="Students' work shows up here when they hand in."
+            />
           ) : (
             <ul className="divide-border divide-y">
               {entries.map((e) => {

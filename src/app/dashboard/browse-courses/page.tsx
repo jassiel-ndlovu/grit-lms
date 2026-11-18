@@ -10,13 +10,13 @@
  */
 
 import { redirect } from "next/navigation";
-import { Search } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { listAllCourses } from "@/features/courses/queries";
 import { CourseCard } from "@/features/courses/components/course-card";
 import { CourseGrid } from "@/features/courses/components/course-grid";
 import { getUserPreferences } from "@/features/users/preferences";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 export const metadata = { title: "Browse courses" };
 
@@ -41,15 +41,12 @@ export default async function BrowseCoursesPage() {
         view={(await getUserPreferences(session.user.id)).preferredView}
         isEmpty={courses.length === 0}
         empty={
-          <div className="border-input rounded-lg border border-dashed p-8 sm:p-12 text-center">
-            <Search className="text-muted-foreground mx-auto size-10" />
-            <h3 className="font-display mt-3 text-lg text-foreground">
-              No courses yet
-            </h3>
-            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
-              The catalogue is empty. Check back soon.
-            </p>
-          </div>
+          <EmptyState
+            className="border-input rounded-lg border border-dashed"
+            illustration={<Scene name="empty-courses" />}
+            title="No courses yet"
+            description="The catalogue is empty. Check back soon."
+          />
         }
       >
         {courses.map((course) => (

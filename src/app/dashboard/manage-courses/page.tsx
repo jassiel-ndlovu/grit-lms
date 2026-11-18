@@ -8,7 +8,6 @@
  */
 
 import { redirect } from "next/navigation";
-import { ImageIcon } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -17,6 +16,7 @@ import { listCoursesByTutorId } from "@/features/courses/queries";
 import { listAllStudents } from "@/features/students/queries";
 import { CourseCard } from "@/features/courses/components/course-card";
 import { CourseGrid } from "@/features/courses/components/course-grid";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { getUserPreferences } from "@/features/users/preferences";
 import { CourseActions } from "@/features/courses/components/course-actions";
 import { CreateCourseButton } from "@/features/courses/components/create-course-button";
@@ -65,16 +65,12 @@ export default async function ManageCoursesPage() {
         view={(await getUserPreferences(session.user.id)).preferredView}
         isEmpty={courses.length === 0}
         empty={
-          <div className="border-input rounded-lg border border-dashed p-8 sm:p-12 text-center">
-            <ImageIcon className="text-muted-foreground mx-auto size-10" />
-            <h3 className="font-display mt-3 text-lg text-foreground">
-              No courses yet
-            </h3>
-            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
-              Create your first course to start adding lessons, assessments,
-              and enrolling students.
-            </p>
-          </div>
+          <EmptyState
+            className="border-input rounded-lg border border-dashed"
+            illustration={<Scene name="empty-courses" />}
+            title="No courses yet"
+            description="Create your first course to start adding lessons and assessments, and enrolling students."
+          />
         }
       >
         {courses.map((course) => (

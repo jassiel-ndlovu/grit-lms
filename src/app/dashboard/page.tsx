@@ -50,6 +50,7 @@ import { AdminDashboard } from "@/features/admin/components/admin-dashboard";
 import { ParentDashboard } from "@/features/parents/components/parent-dashboard";
 import { DEFAULT_TIME_ZONE, formatDate, greetingFor, resolveLocale } from "@/lib/datetime";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 export const metadata = { title: "Dashboard" };
 
@@ -248,7 +249,12 @@ export default async function DashboardLanding() {
           <SectionHeader title="Up next" href="/dashboard/calendar" label="View schedule" />
           <Card className="overflow-hidden p-0">
             {upNext.length === 0 ? (
-              <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">Nothing pending. Take a deep breath.</div>
+              <EmptyState
+                compact
+                illustration={<Scene name="calendar-empty" />}
+                title="Nothing coming up"
+                description="Tests, assignments and events due soon show up here."
+              />
             ) : (
               <ul className="divide-border divide-y">
                 {upNext.map((item) => {
@@ -279,7 +285,12 @@ export default async function DashboardLanding() {
           <SectionHeader title="Recent grades" href="/dashboard/grades" label="All grades" />
           <Card className="overflow-hidden p-0">
             {recentGrades.length === 0 ? (
-              <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">No grades released yet.</div>
+              <EmptyState
+                compact
+                illustration={<Scene name="nothing-to-grade" />}
+                title="No grades released yet"
+                description="Marks show up here once they're released."
+              />
             ) : (
               <ul className="divide-border divide-y">
                 {recentGrades.map((g) => {
