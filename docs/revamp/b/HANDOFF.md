@@ -3,6 +3,46 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Empty states on the main pages (Phase 1), `revamp/b-empty-states`
+
+Done:
+- `EmptyState` with an Open Peeps `Scene` now replaces the plain "nothing
+  here" text on 14 screens:
+  - **Home:** "Up next" and "Recent grades".
+  - **Assignments:** the student list (per tab), the tutor list, and an
+    assignment's class list.
+  - **Tests:** the student list (per tab), the tutor list, and a test's
+    attempts.
+  - **Courses:** "My courses", the catalogue, Manage courses, a
+    course's lessons, schedule and grades, and the student lesson
+    reader.
+  - **Lesson editor:** "No lessons yet" now has its "Create first
+    lesson" action in the empty state.
+  - **Also:** the gradebook with no students, and notifications.
+- Titles are short and specific ("No upcoming tests", "Nothing waiting
+  for a grade"). The tutor's assignment list no longer says to create
+  one from the course page; it points to New assignment.
+- Not changed:
+  - per-field notes ("No answer recorded", "No key set");
+  - small inline lists (videos, attachments, memo files);
+  - the search palette's "No matches";
+  - `tutor-tests/new`, whose "No courses yet" is the page's heading.
+
+Checked:
+- `tsc` and eslint pass.
+- On a temporary page, the three layouts used here (dashed list, compact
+  in a card, full card with an action) look right in light and dark
+  mode and at phone width, with no sideways scroll and no console
+  errors. The scenes are `aria-hidden`.
+- The real pages weren't opened, because they need sign-in. Owner check
+  on Preview: a new account, or a course with no lessons, tests or
+  students, shows the illustrations.
+
+Next: the rest of B's Phase 1 (plan doc) is the restyle of the tutor home,
+the course page and the lesson editor, and the onboarding wizard UI once
+A's sign-up API lands. Reading `Enrollment` and `CourseStaff` waits for
+`6_tenancy_courses` on production.
+
 ## 2026-11-19 Review of A's tenancy part 2 (#88); answer restored, `revamp/b-handoff-restore`
 
 Done:
