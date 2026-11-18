@@ -166,6 +166,8 @@ Stage 2 monthly cost: Vercel Pro R340 + RDS R374 + QStash R0-R51 + Sentry R0 + u
 
 ## 5. Jobs and the queue
 
+**Update 2026-11-19 (owner):** QStash runs the jobs from Stage 1, because GitHub Actions fires 5-minute schedules only every few hours. Setup: [ops/qstash-setup.md](../ops/qstash-setup.md). GitHub stays as a backup.
+
 **Decision taken here: QStash, not Inngest** (research 05 §7). QStash calls plain HTTP routes we already have, its free tier (1,000 messages a day, 10 schedules) covers launch, and paid use costs about R17 per 100,000 messages. Inngest needs its SDK inside every handler and jumps to $99 a month once past 50,000 executions. Vercel Cron (Pro) stays the fallback: it calls the same routes with the same Bearer `CRON_SECRET`.
 
 How a job is written, so the caller can change without code changes:

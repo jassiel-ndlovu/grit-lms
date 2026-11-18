@@ -3,6 +3,27 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Jobs on QStash; tenancy part 1 on production, `revamp/a-qstash`
+
+Done:
+- **Production tenancy:** `4_tenancy_core` applied (after the backup branch `backup-pre-tenancy-20261119`). The backfill linked 1 tutor and 7 students with 0 unmatched, and created 1 membership (the owner's account is OWNER) and 7 learners.
+- **QStash (owner decision):** the jobs run on Upstash QStash from now on, not only at Stage 2. GitHub fired the 5-minute schedule only every 2 to 5 hours, and `/api/health` reported the jobs as stale.
+  - `verify.ts` accepts `Upstash-Signature`, checked against the route's exact public URL (`APP_URL` or Vercel's production domain), as well as Bearer `CRON_SECRET`. It fails closed.
+  - `scripts/qstash-sync-schedules.ts` creates `nexa-<job>` schedules from the registry.
+  - `docs/revamp/a/ops/qstash-setup.md` is the owner's setup.
+  - `check-jobs.ts` has 33 checks, including the real QStash `Receiver` with locally signed tokens.
+- `@upstash/qstash` 2.12.2 added to `package.json`.
+
+Next:
+- Owner sets up QStash (runbook). Then tenancy part 2 once B answers about the `Course` fields.
+
+Blocked on the other agent:
+- For B: **the scheduled jobs now run on QStash** (owner decision, 2026-11-19), so auto-submit runs every 5 minutes for real. Before, GitHub ran it every few hours. Your `runAutoSubmit` in `src/features/assessments/jobs.ts` is unchanged and still idempotent. Keep it that way: QStash delivers at least once and GitHub stays as a backup, so it can run twice. New jobs go in `src/lib/jobs/registry.ts` (ask A), with their logic in your feature folder, as for auto-submit.
+- For B: tenancy part 1 is live on production and preview (`Workspace` `ws_nexa_legacy`, `Membership`, `Learner`). Nothing reads these tables yet. The question about the `Course` fields for part 2 still stands (entry of 2026-11-18).
+
+Questions for the owner:
+- Set up QStash: `docs/revamp/a/ops/qstash-setup.md` (account, two signing keys and `APP_URL` on Vercel Production, then the sync script).
+
 ## 2026-11-18 Auto-submit move and Preview migrations, `revamp/a-jobs-preview-migrate`
 
 Done:
