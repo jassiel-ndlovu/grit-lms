@@ -118,6 +118,9 @@ model Submission {
   maxAttempts      Int?
   lastDueDate      DateTime?
   description      String
+  /// Rich-text brief: {schemaVersion, doc} from src/lib/content. `description`
+  /// keeps the markdown derived from it.
+  descriptionJson  Json?
   descriptionFiles String[]
   // Optional memo/solutions files a tutor can release after grading —
   // separate from `descriptionFiles`, which are the brief given up-front.

@@ -20,8 +20,9 @@
 
 import { revalidatePath } from "next/cache";
 
-import type { Prisma } from "@/generated/prisma";
+import { Prisma } from "@/generated/prisma";
 
+import { richColumnsFromInput } from "@/lib/content/columns";
 import { prisma } from "@/lib/db";
 import {
   studentActionClient,
@@ -59,10 +60,16 @@ export const createSubmission = tutorActionClient
       throw new Error("You don't own this course");
     }
 
+    const brief =
+      parsedInput.descriptionJson !== undefined
+        ? richColumnsFromInput(parsedInput.descriptionJson, "assignments")
+        : null;
+
     const created = await prisma.submission.create({
       data: {
         title: parsedInput.title,
-        description: parsedInput.description,
+        description: brief ? brief.markdown : parsedInput.description,
+        ...(brief ? { descriptionJson: brief.json } : {}),
         courseId: parsedInput.courseId,
         dueDate: parsedInput.dueDate,
         lastDueDate: parsedInput.lastDueDate,
@@ -117,7 +124,17 @@ export const updateSubmission = tutorActionClient
 
     const data: Prisma.SubmissionUpdateInput = {};
     if (parsedInput.title !== undefined) data.title = parsedInput.title;
-    if (parsedInput.description !== undefined) data.description = parsedInput.description;
+    if (parsedInput.descriptionJson !== undefined) {
+      // Both columns from the validated document; browser markdown ignored.
+      const brief = richColumnsFromInput(parsedInput.descriptionJson, "assignments");
+      data.description = brief.markdown;
+      data.descriptionJson = brief.json;
+    } else if (parsedInput.description !== undefined) {
+      // Markdown alone (no caller does this now): clear the JSON so it
+      // can't go stale.
+      data.description = parsedInput.description;
+      data.descriptionJson = Prisma.DbNull;
+    }
     if (parsedInput.dueDate !== undefined) data.dueDate = parsedInput.dueDate;
     if (parsedInput.lastDueDate !== undefined) data.lastDueDate = parsedInput.lastDueDate;
     if (parsedInput.fileType !== undefined) data.fileType = parsedInput.fileType;

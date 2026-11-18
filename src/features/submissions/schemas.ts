@@ -86,6 +86,12 @@ export type DeleteEntryInput = z.infer<typeof DeleteEntrySchema>;
 export const CreateSubmissionInputSchema = z.object({
   title: NonEmptyString.max(200),
   description: z.string().max(10000).default(""),
+  /**
+   * The brief from RichEditor ({schemaVersion, doc}); checked by the action
+   * with validateDoc. When sent, the action derives `description` from it
+   * and ignores browser markdown (contracts/editor.md, rule 2).
+   */
+  descriptionJson: z.unknown().optional(),
   courseId: CuidSchema,
   dueDate: DateSchema,
   lastDueDate: DateSchema.nullable().default(null),

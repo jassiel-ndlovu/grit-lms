@@ -3,6 +3,43 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Assignment brief on the rich editor, `revamp/b-assignment-rich-content`
+
+Done:
+- **Schema:** `Submission.descriptionJson Json?` beside the markdown
+  `description`, in migration `5_submission_description_json` (one
+  `ADD COLUMN`, hand-written). It follows A's `4_tenancy_core`.
+- **Shared helper:** `richColumnsFromInput(value, area)` in
+  `src/lib/content/columns.ts` returns both columns for a rich field
+  (markdown, and the envelope or `DbNull` when empty), and throws a
+  user-facing message when the document can't be read. Lessons now use it
+  too; their behaviour is unchanged.
+- **Actions:** `createSubmission` and `updateSubmission` accept
+  `descriptionJson`. When it's sent, the server derives `description`
+  from it and ignores the browser's markdown. Markdown alone clears the
+  JSON so it can't go stale.
+- **Form:** `AssignmentForm` uses `RichEditor`. Old briefs open from their
+  markdown. `descriptionJson` is sent only after an edit, so saving an
+  untouched old assignment leaves its row as it was. Drafts keep the
+  document, and Restore remounts the editor; old markdown-only drafts
+  still restore.
+- **View:** the assignment page's Brief card renders `RichContent`
+  (document, else markdown). The submission card keeps plain text.
+
+Checked: `tsc` and eslint clean. On a temporary page under MathJax 3: an
+old markdown brief opened in the editor with its maths; an emptied editor
+failed "Description is required" and typed text passed; a saved draft
+restored into the editor; the view rendered the maths.
+
+Migration: with the owner's approval, `5_submission_description_json`
+was applied on 2026-11-19 to Preview (role `nexa_preview`) and then
+production, after A's `4_tenancy_core`. Afterwards `migrate status`
+reported both up to date and `migrate diff` was empty on both.
+
+Not done:
+- Saving through the real action wasn't exercised locally; the owner
+  tests it on the Preview deployment. It's the same path as lessons.
+
 ## 2026-11-18 Legacy Batch 3b: assignment editor as RSC; all context providers unmounted, `revamp/b-legacy-batch3b`
 
 Done:

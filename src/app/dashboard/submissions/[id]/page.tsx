@@ -35,7 +35,7 @@ import {
   listEntriesForSubmission,
 } from "@/features/submissions/queries";
 import { SubmissionForm } from "@/features/submissions/components/submission-form";
-import LessonMarkdown from "@/app/components/markdown";
+import { RichContent } from "@/components/content/rich-content";
 import {
   parseSectionFeedback,
   sectionOrdinal,
@@ -144,10 +144,10 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
               <FileText className="text-brand-terracotta size-4" />
               Brief
             </h2>
-            {/* Markdown + MathJax rendered via LessonMarkdown so tutors can
-                use $…$ / $$…$$ math and standard markdown in the brief. */}
+            {/* The rich document when there is one, else the markdown
+                (contracts/editor.md); both render maths. */}
             <div className="text-sm">
-              <LessonMarkdown content={submission.description} />
+              <RichContent value={submission.descriptionJson} markdown={submission.description} />
             </div>
             {submission.descriptionFiles &&
               submission.descriptionFiles.length > 0 && (
