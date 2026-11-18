@@ -31,20 +31,14 @@ old markdown brief opened in the editor with its maths; an emptied editor
 failed "Description is required" and typed text passed; a saved draft
 restored into the editor; the view rendered the maths.
 
-Not done:
-- **The migration isn't applied anywhere.** Until it is, the assignment
-  pages fail with P2022 on that database. The owner applies it to
-  production and Preview (`nexa_preview`) before testing.
-- Saving through the real action wasn't exercised locally, since no
-  database has the column yet. It's the same path as lessons.
+Migration: with the owner's approval, `5_submission_description_json`
+was applied on 2026-11-19 to Preview (role `nexa_preview`) and then
+production, after A's `4_tenancy_core`. Afterwards `migrate status`
+reported both up to date and `migrate diff` was empty on both.
 
-Questions for the owner:
-- May I run `migrate deploy` for `5_submission_description_json`?
-  - **Preview:** only this `ADD COLUMN` is pending (read-only
-    `migrate status` and `migrate diff`, 2026-11-19).
-  - **Production:** A's `4_tenancy_core` is pending there too, and
-    `migrate deploy` applies both in order. Either A deploys theirs
-    first, or the owner approves both together.
+Not done:
+- Saving through the real action wasn't exercised locally; the owner
+  tests it on the Preview deployment. It's the same path as lessons.
 
 ## 2026-11-18 Legacy Batch 3b: assignment editor as RSC; all context providers unmounted, `revamp/b-legacy-batch3b`
 
