@@ -35,6 +35,7 @@ import {
   buildLessonTree,
   flattenLessonTree,
 } from "@/features/lessons/lib/lesson-tree";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -233,12 +234,12 @@ export default async function CourseLessonsPage({
             <LessonContent lesson={selectedLesson} />
           </>
         ) : (
-          <Card className="flex min-h-[400px] flex-col items-center justify-center gap-3 p-8 sm:p-12 text-center">
-            <h3 className="text-base font-medium">No lessons yet</h3>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              Your tutor hasn&apos;t published any lessons for this course yet.
-              Check back soon.
-            </p>
+          <Card className="flex min-h-[400px] items-center justify-center p-8 sm:p-12">
+            <EmptyState
+              illustration={<Scene name="empty-lessons" />}
+              title="No lessons yet"
+              description="Your tutor hasn't published any lessons for this course yet. Check back soon."
+            />
           </Card>
         )}
       </main>

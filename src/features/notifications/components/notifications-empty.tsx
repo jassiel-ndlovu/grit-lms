@@ -4,9 +4,8 @@
  * user is filtering for unread-only.
  */
 
-import { Bell } from "lucide-react";
-
 import { Card } from "@/components/ui/card";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 export interface NotificationsEmptyProps {
   unreadOnly?: boolean;
@@ -14,20 +13,16 @@ export interface NotificationsEmptyProps {
 
 export function NotificationsEmpty({ unreadOnly }: NotificationsEmptyProps) {
   return (
-    <Card className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-8 sm:p-12 text-center">
-      <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
-        <Bell className="size-6" />
-      </div>
-      <div>
-        <h3 className="font-display text-xl leading-tight text-foreground">
-          {unreadOnly ? "No unread notifications" : "No notifications yet"}
-        </h3>
-        <p className="text-muted-foreground mt-2 max-w-sm text-sm">
-          {unreadOnly
+    <Card className="flex min-h-[280px] items-center justify-center p-8 sm:p-12">
+      <EmptyState
+        illustration={<Scene name="inbox-empty" />}
+        title={unreadOnly ? "No unread notifications" : "No notifications yet"}
+        description={
+          unreadOnly
             ? "You're all caught up. New activity from your courses and tutors will show up here."
-            : "Activity from your courses, tutors, and submissions will show up here."}
-        </p>
-      </div>
+            : "Activity from your courses, tutors and assignments will show up here."
+        }
+      />
     </Card>
   );
 }

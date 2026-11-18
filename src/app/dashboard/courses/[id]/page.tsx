@@ -45,6 +45,7 @@ import { listGradesForStudentInCourse } from "@/features/grades/queries";
 import { listEventsByCourseId } from "@/features/events/queries";
 import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesson-tree";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -235,8 +236,8 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
             label="Open lessons"
           />
           {lessons.length === 0 ? (
-            <Card className="text-muted-foreground p-8 sm:p-12 text-center text-sm">
-              No lessons published yet.
+            <Card className="p-0">
+              <EmptyState compact illustration={<Scene name="empty-lessons" />} title="No lessons published yet" />
             </Card>
           ) : (
             <Card className="overflow-hidden p-0">
@@ -360,9 +361,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
             <SectionHeader title="Schedule" href="/dashboard/calendar" label="Full schedule" />
             <Card className="overflow-hidden p-0">
               {upcomingEvents.length === 0 ? (
-                <div className="text-muted-foreground p-8 text-center text-sm">
-                  No upcoming events.
-                </div>
+                <EmptyState compact illustration={<Scene name="calendar-empty" />} title="No upcoming events" />
               ) : (
                 <ul className="divide-border divide-y">
                   {upcomingEvents.map((event) => (
@@ -388,9 +387,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
             <SectionHeader title="Grades" href="/dashboard/grades" label="All grades" />
             <Card className="overflow-hidden p-0">
               {grades.length === 0 ? (
-                <div className="text-muted-foreground p-8 text-center text-sm">
-                  No grades released yet.
-                </div>
+                <EmptyState compact illustration={<Scene name="nothing-to-grade" />} title="No grades released yet" />
               ) : (
                 <ul className="divide-border divide-y">
                   {grades.slice(0, 5).map((g) => {

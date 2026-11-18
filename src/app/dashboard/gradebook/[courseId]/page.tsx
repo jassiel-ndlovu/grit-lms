@@ -40,6 +40,7 @@ import {
   summariseClass,
 } from "@/features/grades/lib/weighting";
 import { WeightsEditor } from "@/features/grades/components/weights-editor";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 interface PageProps {
   params: Promise<{ courseId: string }>;
@@ -205,9 +206,12 @@ export default async function CourseGradebookPage({ params }: PageProps) {
         <Separator />
 
         {book.students.length === 0 ? (
-          <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">
-            Nobody is enrolled in this course yet.
-          </div>
+          <EmptyState
+            compact
+            illustration={<Scene name="empty-courses" />}
+            title="Nobody is enrolled yet"
+            description="Students appear here once they join this course."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

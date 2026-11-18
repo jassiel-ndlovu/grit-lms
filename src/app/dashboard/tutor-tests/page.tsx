@@ -8,7 +8,8 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus, Target } from "lucide-react";
+import { Plus } from "lucide-react";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -83,18 +84,12 @@ export default async function TutorTestsPage() {
       </header>
 
       {rows.length === 0 ? (
-        <Card className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-8 sm:p-12 text-center">
-          <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
-            <Target className="size-6" />
-          </div>
-          <div>
-            <h3 className="font-display text-xl leading-tight text-foreground">
-              No tests yet
-            </h3>
-            <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-sm">
-              Tests you create from &ldquo;New test&rdquo; will show up here.
-            </p>
-          </div>
+        <Card className="flex min-h-[280px] items-center justify-center p-8 sm:p-12">
+          <EmptyState
+            illustration={<Scene name="empty-tests" />}
+            title="No tests yet"
+            description="Tests you create from New test will show up here."
+          />
         </Card>
       ) : (
         <Card className="overflow-hidden p-0">
