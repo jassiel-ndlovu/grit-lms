@@ -1,5 +1,5 @@
 /**
- * /dashboard/submissions/[id] — single assignment detail.
+ * /dashboard/assignments/[id] — single assignment detail.
  *
  * Server Component. Behaviour branches on session role:
  *   - Student → assignment description + uploads + their entry status. The
@@ -40,6 +40,7 @@ import {
   parseSectionFeedback,
   sectionOrdinal,
 } from "@/features/submissions/lib/sections";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 function fileNameFromUrl(url: string): string {
   try {
@@ -60,7 +61,7 @@ const dateFmt = new Intl.DateTimeFormat(undefined, {
   year: "numeric",
 });
 
-export const metadata = { title: "Submission" };
+export const metadata = { title: "Assignment" };
 
 export default async function SubmissionDetailPage({ params }: PageProps) {
   const { id } = await params;
@@ -384,7 +385,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href="/dashboard/submissions">
+          <Link href={assignmentRoutes.index}>
             ← Back to assignments
           </Link>
         </Button>
@@ -430,7 +431,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                 // whole <li> content in a Link makes the row keyboard-focusable
                 // and gives the tutor a natural "click the student to grade
                 // them" affordance.
-                const href = `/dashboard/submissions/overview/${submission.id}/${e.studentId}`;
+                const href = assignmentRoutes.student(submission.id, e.studentId);
                 return (
                   <li key={e.id}>
                     <Link

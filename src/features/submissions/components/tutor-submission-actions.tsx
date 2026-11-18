@@ -2,8 +2,8 @@
 
 /**
  * TutorSubmissionActions — three-dot dropdown on tutor assignment cards.
- *   - View submissions  → /dashboard/submissions/[id]
- *   - Edit              → /dashboard/submissions/create/[id] (the assignment
+ *   - View submissions  → /dashboard/assignments/[id]
+ *   - Edit              → /dashboard/assignments/[id]/edit (the assignment
  *                          editor; it doubles as the create form)
  *   - Delete            → confirmation → deleteSubmission action
  */
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { deleteSubmission } from "../actions";
+import { assignmentRoutes } from "../routes";
 
 export interface TutorSubmissionActionsProps {
   submissionId: string;
@@ -84,12 +85,12 @@ export function TutorSubmissionActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/submissions/${submissionId}`}>
+            <Link href={assignmentRoutes.detail(submissionId)}>
               <Eye className="size-4" /> View submissions
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/submissions/create/${submissionId}`}>
+            <Link href={assignmentRoutes.edit(submissionId)}>
               <Pencil className="size-4" /> Edit
             </Link>
           </DropdownMenuItem>

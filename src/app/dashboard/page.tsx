@@ -49,6 +49,7 @@ import { getUserPreferences } from "@/features/users/preferences";
 import { AdminDashboard } from "@/features/admin/components/admin-dashboard";
 import { ParentDashboard } from "@/features/parents/components/parent-dashboard";
 import { DEFAULT_TIME_ZONE, formatDate, greetingFor, resolveLocale } from "@/lib/datetime";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 export const metadata = { title: "Dashboard" };
 
@@ -160,7 +161,7 @@ export default async function DashboardLanding() {
       title: assignment.title,
       course: assignment.course.name,
       date: assignment.dueDate,
-      href: `/dashboard/submissions/${assignment.id}`,
+      href: assignmentRoutes.detail(assignment.id),
     }));
 
   const eventRows = events.map((e) => ({
@@ -366,7 +367,7 @@ function TutorDashboard() {
           </Link>
         </Card>
         <Card className="p-6">
-          <Link href="/dashboard/submissions" className="block space-y-2">
+          <Link href={assignmentRoutes.index} className="block space-y-2">
             <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 items-center justify-center rounded-md"><Pencil className="size-5" /></div>
             <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">Assignments</h2>
             <p className="text-muted-foreground text-sm">Review and grade student submissions.</p>

@@ -12,6 +12,7 @@
  */
 
 import type { Permission, Persona, Viewer } from "@/lib/viewer-core";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 export type NavIcon =
   | "home" | "book" | "calendar" | "test" | "assignment" | "grades"
@@ -46,7 +47,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Courses", href: "/dashboard/courses", icon: "book" },
         CALENDAR,
         { label: "Tests", href: "/dashboard/tests", icon: "test", keywords: ["quiz", "assessment"] },
-        { label: "Assignments", href: "/dashboard/submissions", icon: "assignment", keywords: ["submissions", "tasks"] },
+        { label: "Assignments", href: assignmentRoutes.index, icon: "assignment", keywords: ["submissions", "tasks"] },
         { label: "Grades", href: "/dashboard/grades", icon: "grades", keywords: ["marks", "results"], requires: "grades.view" },
       ],
     },
@@ -59,7 +60,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Courses", href: "/dashboard/manage-courses", icon: "book", keywords: ["lessons", "authoring"], requires: "courses.edit" },
         CALENDAR,
         { label: "Tests", href: "/dashboard/tutor-tests", icon: "test", keywords: ["quiz", "grading", "marking"] },
-        { label: "Assignments", href: "/dashboard/submissions", icon: "assignment", keywords: ["submissions", "marking"] },
+        { label: "Assignments", href: assignmentRoutes.index, icon: "assignment", keywords: ["submissions", "marking"] },
         { label: "Gradebook", href: "/dashboard/gradebook", icon: "gradebook", keywords: ["marks", "weights"], requires: "grades.view" },
         { label: "Analytics", href: "/dashboard/analytics", icon: "analytics", keywords: ["performance"], requires: "grades.view" },
       ],

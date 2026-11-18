@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { deleteEntry } from "../actions";
+import { assignmentRoutes } from "../routes";
 
 export function DeleteEntryButton({
   entryId,
@@ -46,7 +47,7 @@ export function DeleteEntryButton({
       if (!res?.data) throw new Error(res?.serverError ?? "Delete failed");
       toast.success(`Deleted ${studentName}'s hand-in`);
       setOpen(false);
-      router.push(`/dashboard/submissions/${submissionId}`);
+      router.push(assignmentRoutes.detail(submissionId));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Delete failed");
     } finally {

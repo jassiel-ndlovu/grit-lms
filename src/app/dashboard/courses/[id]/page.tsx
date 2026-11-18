@@ -44,6 +44,7 @@ import {
 import { listGradesForStudentInCourse } from "@/features/grades/queries";
 import { listEventsByCourseId } from "@/features/events/queries";
 import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesson-tree";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -316,7 +317,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
           </section>
 
           <section className="space-y-4">
-            <SectionHeader title="Active assignments" href="/dashboard/submissions" label="All assignments" />
+            <SectionHeader title="Active assignments" href={assignmentRoutes.index} label="All assignments" />
             <Card className="overflow-hidden p-0">
               {pendingAssignments.length === 0 ? (
                 <div className="text-muted-foreground p-8 text-center text-sm">
@@ -327,7 +328,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
                   {pendingAssignments.map(({ assignment, entry }) => (
                     <li key={assignment.id}>
                       <Link
-                        href={`/dashboard/submissions/${assignment.id}`}
+                        href={assignmentRoutes.detail(assignment.id)}
                         className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 transition-colors"
                       >
                         <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">

@@ -27,8 +27,8 @@ check("no false prefix (tests vs tutor-tests)", activeHref("/dashboard/tutor-tes
 check("trailing segment boundary", activeHref("/dashboard/testsuite", hrefs), null);
 // Each legacy role, through today's bridge viewer, keeps exactly the links it had.
 const BEFORE: Record<LegacyRole, string[]> = {
-  STUDENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses", "/dashboard/calendar", "/dashboard/tests", "/dashboard/submissions", "/dashboard/grades"],
-  TUTOR: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-courses", "/dashboard/calendar", "/dashboard/tutor-tests", "/dashboard/submissions", "/dashboard/gradebook", "/dashboard/analytics", "/dashboard/manage-users"],
+  STUDENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses", "/dashboard/calendar", "/dashboard/tests", "/dashboard/assignments", "/dashboard/grades"],
+  TUTOR: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-courses", "/dashboard/calendar", "/dashboard/tutor-tests", "/dashboard/assignments", "/dashboard/gradebook", "/dashboard/analytics", "/dashboard/manage-users"],
   ADMIN: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-users"],
   PARENT: ["/dashboard", "/dashboard/notifications"],
 };
