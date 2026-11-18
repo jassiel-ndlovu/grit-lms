@@ -1,5 +1,5 @@
 /**
- * /dashboard/submissions — student catalogue of assignments across enrolled
+ * /dashboard/assignments — student catalogue of assignments across enrolled
  * courses. Tutors land here too but see their own assignments-by-course view.
  *
  * Server Component. Replaces the legacy student-submissions / tutor-submissions
@@ -32,8 +32,9 @@ import {
   filterByBucket,
   type FilterBucket,
 } from "@/features/assessments/lib/filters";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
-export const metadata = { title: "Submissions" };
+export const metadata = { title: "Assignments" };
 
 export default async function SubmissionsIndexPage() {
   const session = await auth();
@@ -117,7 +118,7 @@ export default async function SubmissionsIndexPage() {
                     }
                   : null
               }
-              href={`/dashboard/submissions/${s.id}`}
+              href={assignmentRoutes.detail(s.id)}
             />
           ))}
         </SubmissionGrid>
@@ -196,7 +197,7 @@ export default async function SubmissionsIndexPage() {
             </p>
           </div>
           <Button asChild variant="brand">
-            <Link href="/dashboard/submissions/create">
+            <Link href={assignmentRoutes.new}>
               <Plus className="size-4" /> New assignment
             </Link>
           </Button>
@@ -243,7 +244,7 @@ export default async function SubmissionsIndexPage() {
                     >
                       <td className="px-4 py-3">
                         <Link
-                          href={`/dashboard/submissions/${sub.id}`}
+                          href={assignmentRoutes.detail(sub.id)}
                           className="block"
                         >
                           <p className="text-foreground font-medium leading-tight">

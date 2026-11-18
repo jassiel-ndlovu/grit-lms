@@ -45,6 +45,7 @@ import {
 } from "@/features/events/components/calendar-view";
 import { CreateEventButton } from "@/features/events/components/create-event-button";
 import { occurrencesOf } from "@/features/events/lib/recurrence";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 /**
  * How far ahead the calendar materialises repeating events. The grid only
@@ -183,7 +184,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
         location: null,
         duration: null,
         link: null,
-        href: `/dashboard/submissions/${a.id}`,
+        href: assignmentRoutes.detail(a.id),
       })),
     ];
   } else if (session.user.role === "TUTOR") {
@@ -241,7 +242,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
           location: null,
           duration: null,
           link: null,
-          href: `/dashboard/submissions/${s.id}`,
+          href: assignmentRoutes.detail(s.id),
         })),
       ]),
     ];

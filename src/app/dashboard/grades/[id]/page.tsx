@@ -36,6 +36,7 @@ import {
   getGradeWithDetails,
   type GradeDetail,
 } from "@/features/grades/queries";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -551,7 +552,7 @@ function SubmissionBreakdown({ grade }: { grade: GradeDetail }) {
 
       <div className="flex justify-end">
         <Button asChild variant="outline">
-          <Link href={`/dashboard/submissions/${entry.submission.id}`}>
+          <Link href={assignmentRoutes.detail(entry.submission.id)}>
             Open assignment page
           </Link>
         </Button>

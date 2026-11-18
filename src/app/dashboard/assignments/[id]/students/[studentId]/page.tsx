@@ -1,5 +1,5 @@
 /**
- * /dashboard/submissions/overview/[id]/[studentId] — tutor grades a single
+ * /dashboard/assignments/[id]/students/[studentId] — tutor grades a single
  * student's submission entry.
  *
  * Server Component. Loads the entry + any existing QuestionGrade rows
@@ -10,9 +10,8 @@
  * entry into sections with per-section score, remarks, and an optional
  * memo file.
  *
- * Entry point: the student list on /dashboard/submissions/[id]. Back links
- * return there rather than to the legacy /dashboard/submissions/overview/[id]
- * page, which is no longer part of the tutor flow.
+ * Entry point: the student list on /dashboard/assignments/[id]. Back links
+ * return there.
  */
 
 import Link from "next/link";
@@ -38,6 +37,7 @@ import {
 import { EntryGradingForm } from "@/features/submissions/components/entry-grading-form";
 import { MemoFilesEditor } from "@/features/submissions/components/memo-files-editor";
 import { DeleteEntryButton } from "@/features/submissions/components/delete-entry-button";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 interface PageProps {
   params: Promise<{ id: string; studentId: string }>;
@@ -98,7 +98,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
     return (
       <div className="mx-auto max-w-4xl space-y-4 px-4 sm:px-6 py-6 sm:py-10">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/submissions/${submissionId}`}>
+          <Link href={assignmentRoutes.detail(submissionId)}>
             ← Back to assignment
           </Link>
         </Button>
@@ -139,7 +139,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
     <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
       <div className="flex items-center justify-between gap-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/submissions/${submissionId}`}>
+          <Link href={assignmentRoutes.detail(submissionId)}>
             ← Back to assignment
           </Link>
         </Button>

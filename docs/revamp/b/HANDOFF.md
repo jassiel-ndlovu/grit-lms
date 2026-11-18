@@ -3,6 +3,59 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Submissions renamed to Assignments (Phase 0 item 4), `revamp/b-assignments-rename`
+
+Done:
+- Assignment pages moved to `/dashboard/assignments`:
+
+  | Old | New |
+  | --- | --- |
+  | `/dashboard/submissions` | `/dashboard/assignments` |
+  | `/submissions/[id]`, `overview/[id]`, `portal/[id]`, `review/[id]` | `/assignments/[id]` |
+  | `/submissions/create` | `/assignments/new` |
+  | `/submissions/create/[id]` | `/assignments/[id]/edit` |
+  | `/submissions/overview/[id]/[studentId]` | `/assignments/[id]/students/[studentId]` |
+
+- `src/features/submissions/routes.ts` holds every assignment URL
+  (`assignmentRoutes`) and the old-to-new map (`legacyAssignmentPath`).
+  All of B's links, `revalidatePath` calls and notification links now
+  use it.
+- `/dashboard/submissions/[[...path]]` redirects every old URL
+  permanently (308) and keeps the query string. Old links stay in emails,
+  stored notifications and bookmarks, so this page stays. It replaces the
+  three Batch 3a redirect stubs, which this PR deletes.
+- The editor is one server component,
+  `features/submissions/components/assignment-editor-page.tsx`, behind
+  `new` and `[id]/edit`.
+- Visible names: the legacy nav says "Assignments", and the page titles
+  are "Assignments", "Assignment", "New assignment" and "Edit
+  assignment". "Submission" stays where it means a student's hand-in.
+- The feature folder is still `src/features/submissions`. Renaming it
+  touches only imports and can go in its own PR.
+
+Checked:
+- `tsc` and eslint pass.
+- `scripts/check-assignment-routes.ts` passes all 21 checks.
+- `scripts/check-shell-nav.ts` passes, with its expected link lists
+  updated.
+- On the dev server, the redirect page answered each old URL shape with
+  a 308 to the right new URL, keeping the query string, including
+  repeated keys. I mounted it at a temporary path because the pane isn't
+  signed in.
+
+Not checked: the new pages signed in. Owner test on Preview:
+1. Open Assignments from the nav, then an assignment, then a student's
+   work, as a tutor.
+2. Create a new assignment and edit it.
+3. Open an old link, e.g. `/dashboard/submissions/<id>`; it should land
+   on `/dashboard/assignments/<id>`.
+
+Blocked on the other agent:
+- For A: `src/features/notifications/jobs.ts` and `src/app/api/**` still
+  build `/dashboard/submissions/...` links. They redirect, so nothing
+  breaks. Switch to `assignmentRoutes` from
+  `@/features/submissions/routes` when convenient.
+
 ## 2026-11-19 Assignment brief on the rich editor, `revamp/b-assignment-rich-content`
 
 Done:

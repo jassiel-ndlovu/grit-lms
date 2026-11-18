@@ -12,8 +12,7 @@
  *                        /api/submission-entry/[id]); no notification, as
  *                        before.
  *
- * Note: legacy notif link `/dashboard//submissions/...` had a double-slash
- * bug — we fix it here to `/dashboard/submissions/...`.
+ * Links come from ../routes (assignmentRoutes).
  */
 
 "use server";
@@ -43,6 +42,7 @@ import {
   sectionQuestionId,
   stringifySectionFeedback,
 } from "./lib/sections";
+import { assignmentRoutes } from "./routes";
 
 /* ------------------------------------------------------------------------- */
 /* createSubmission                                                          */
@@ -89,7 +89,7 @@ export const createSubmission = tutorActionClient
         {
           title: "New Assignment",
           message: `Assignment "${created.title}" has been created.`,
-          link: `/dashboard/submissions/${created.id}`,
+          link: assignmentRoutes.detail(created.id),
           type: "SUBMISSION_CREATED",
           priority: "NORMAL",
           courseId: created.courseId,
@@ -98,7 +98,7 @@ export const createSubmission = tutorActionClient
       );
     }
 
-    revalidatePath("/dashboard/submissions");
+    revalidatePath(assignmentRoutes.index);
     revalidatePath(`/dashboard/courses/${created.courseId}`);
     revalidatePath(`/dashboard/manage-courses/${created.courseId}`);
     revalidatePath("/dashboard/notifications");
@@ -164,7 +164,7 @@ export const updateSubmission = tutorActionClient
           message: dueChanged
             ? `The due date for "${updated.title}" has changed.`
             : `The assignment "${updated.title}" has been updated.`,
-          link: `/dashboard/submissions/${updated.id}`,
+          link: assignmentRoutes.detail(updated.id),
           type: "SUBMISSION_UPDATED",
           courseId: updated.courseId,
         },
@@ -172,8 +172,8 @@ export const updateSubmission = tutorActionClient
       );
     }
 
-    revalidatePath(`/dashboard/submissions/${updated.id}`);
-    revalidatePath("/dashboard/submissions");
+    revalidatePath(assignmentRoutes.detail(updated.id));
+    revalidatePath(assignmentRoutes.index);
     revalidatePath(`/dashboard/courses/${updated.courseId}`);
 
     return { id: updated.id, courseId: updated.courseId };
@@ -211,7 +211,7 @@ export const deleteSubmission = tutorActionClient
       { revalidate: false },
     );
 
-    revalidatePath("/dashboard/submissions");
+    revalidatePath(assignmentRoutes.index);
     revalidatePath(`/dashboard/courses/${courseId}`);
     revalidatePath("/dashboard/notifications");
 
@@ -248,8 +248,8 @@ export const deleteEntry = tutorActionClient
     await prisma.submissionEntry.delete({ where: { id: entry.id } });
 
     const submissionId = entry.submission.id;
-    revalidatePath(`/dashboard/submissions/${submissionId}`);
-    revalidatePath(`/dashboard/submissions/overview/${submissionId}/${entry.studentId}`);
+    revalidatePath(assignmentRoutes.detail(submissionId));
+    revalidatePath(assignmentRoutes.student(submissionId, entry.studentId));
     revalidatePath(`/dashboard/gradebook/${entry.submission.course.id}`);
 
     return { id: entry.id, submissionId };
@@ -343,11 +343,11 @@ export const submitEntry = studentActionClient
       title: submission.title,
       courseId: submission.courseId,
       studentId: student.id,
-      studentLink: `/dashboard/submissions/${submission.id}`,
-      tutorLink: `/dashboard/submissions/overview/${submission.id}/${student.id}`,
+      studentLink: assignmentRoutes.detail(submission.id),
+      tutorLink: assignmentRoutes.student(submission.id, student.id),
     });
 
-    revalidatePath(`/dashboard/submissions/${submission.id}`);
+    revalidatePath(assignmentRoutes.detail(submission.id));
     revalidatePath(`/dashboard/courses/${submission.courseId}`);
     revalidatePath("/dashboard/notifications");
 
@@ -419,7 +419,7 @@ export const gradeEntry = tutorActionClient
       {
         title: "Grade Released",
         message: `You received ${parsedInput.score}/${parsedInput.outOf} for "${entry.submission.title}".`,
-        link: `/dashboard/submissions/${entry.submission.id}`,
+        link: assignmentRoutes.detail(entry.submission.id),
         type: "SUBMISSION_GRADED",
         priority: "NORMAL",
         studentId,
@@ -428,9 +428,9 @@ export const gradeEntry = tutorActionClient
       { revalidate: false, email: parsedInput.notifyByEmail },
     );
 
-    revalidatePath(`/dashboard/submissions/${entry.submission.id}`);
+    revalidatePath(assignmentRoutes.detail(entry.submission.id));
     revalidatePath(
-      `/dashboard/submissions/overview/${entry.submission.id}/${studentId}`,
+      assignmentRoutes.student(entry.submission.id, studentId),
     );
     revalidatePath(`/dashboard/courses/${entry.submission.courseId}`);
     revalidatePath("/dashboard/notifications");
@@ -527,7 +527,7 @@ export const gradeEntryWithSections = tutorActionClient
       {
         title: "Grade Released",
         message: `You received ${parsedInput.score}/${parsedInput.outOf} for "${entry.submission.title}".`,
-        link: `/dashboard/submissions/${entry.submission.id}`,
+        link: assignmentRoutes.detail(entry.submission.id),
         type: "SUBMISSION_GRADED",
         priority: "NORMAL",
         studentId,
@@ -536,9 +536,9 @@ export const gradeEntryWithSections = tutorActionClient
       { revalidate: false, email: parsedInput.notifyByEmail },
     );
 
-    revalidatePath(`/dashboard/submissions/${entry.submission.id}`);
+    revalidatePath(assignmentRoutes.detail(entry.submission.id));
     revalidatePath(
-      `/dashboard/submissions/overview/${entry.submission.id}/${studentId}`,
+      assignmentRoutes.student(entry.submission.id, studentId),
     );
     revalidatePath(`/dashboard/courses/${entry.submission.courseId}`);
     revalidatePath("/dashboard/notifications");

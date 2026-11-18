@@ -21,6 +21,7 @@ import type { Session } from "next-auth";
 import { prisma } from "@/lib/db";
 
 import type { SearchGroup, SearchHit } from "./schemas";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 /** Hits per group — the dropdown is a jump list, not a results page. */
 const PER_GROUP = 5;
@@ -134,7 +135,7 @@ async function searchAsStudent(email: string, q: string): Promise<SearchGroup[]>
       id: s.id,
       title: s.title,
       subtitle: s.course.name,
-      href: `/dashboard/submissions/${s.id}`,
+      href: assignmentRoutes.detail(s.id),
     }))),
     group("events", "Events", events),
   ]);
@@ -204,7 +205,7 @@ async function searchAsTutor(email: string, q: string): Promise<SearchGroup[]> {
       id: s.id,
       title: s.title,
       subtitle: s.course.name,
-      href: `/dashboard/submissions/${s.id}`,
+      href: assignmentRoutes.detail(s.id),
     }))),
     group("events", "Events", events),
   ]);

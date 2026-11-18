@@ -38,6 +38,7 @@ import { formatForDateTimeLocal, parseDateTimeLocal } from "@/lib/functions";
 import { useLocalDraft } from "@/lib/use-local-draft";
 
 import { createSubmission, updateSubmission } from "../actions";
+import { assignmentRoutes } from "../routes";
 
 export interface AssignmentFormValues {
   title: string;
@@ -213,7 +214,7 @@ export function AssignmentForm({
 
       draft.clear();
       toast.success(isEditing ? "Assignment updated" : "Assignment created");
-      router.push(`/dashboard/submissions/${res.data.id}`);
+      router.push(assignmentRoutes.detail(res.data.id));
       router.refresh();
     } catch (err) {
       setErrors({ submit: err instanceof Error ? err.message : "Couldn't save the assignment. Please try again." });
@@ -234,7 +235,7 @@ export function AssignmentForm({
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="flex h-14 items-center">
             <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href={isEditing ? `/dashboard/submissions/${id}` : "/dashboard/submissions"}>
+              <Link href={isEditing ? assignmentRoutes.detail(id) : assignmentRoutes.index}>
                 <ArrowLeft className="size-4" /> {isEditing ? "Back to assignment" : "Back to assignments"}
               </Link>
             </Button>
@@ -499,7 +500,7 @@ export function AssignmentForm({
             <DraftStatus draft={draft} />
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild type="button" variant="ghost">
-                <Link href={isEditing ? `/dashboard/submissions/${id}` : "/dashboard/submissions"}>Cancel</Link>
+                <Link href={isEditing ? assignmentRoutes.detail(id) : assignmentRoutes.index}>Cancel</Link>
               </Button>
               <SaveProgressButton draft={draft} />
               <Button type="submit" variant="brand" disabled={saving}>

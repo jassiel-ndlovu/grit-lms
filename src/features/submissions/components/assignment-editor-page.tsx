@@ -1,6 +1,6 @@
 /**
- * /dashboard/submissions/create/[[id]] — tutor creates or edits an
- * assignment (legacy Batch 3b, design 07).
+ * The assignment editor behind /dashboard/assignments/new and
+ * /dashboard/assignments/[id]/edit (legacy Batch 3b, design 07).
  *
  * Server Component: reads the viewer, the tutor's courses and, when
  * editing, the assignment, then hands plain values to AssignmentForm (a
@@ -11,6 +11,8 @@
 
 import { notFound, redirect } from "next/navigation";
 
+import "server-only";
+
 import { AssignmentForm, type AssignmentFormValues } from "@/features/submissions/components/assignment-form";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { getSubmissionDetailById, submissionBelongsToTutor } from "@/features/submissions/queries";
@@ -18,12 +20,8 @@ import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";
 
-export const metadata = { title: "Assignment" };
-
-export default async function AssignmentEditorPage({ params }: { params: Promise<{ id?: string[] }> }) {
-  const { id: segments } = await params;
-  const id = segments?.[0];
-
+/** `id` edits that assignment; without one, a new assignment. */
+export async function AssignmentEditorPage({ id }: { id?: string }) {
   const viewer = await getViewer();
   if (!viewer) redirect("/");
   if (!can(viewer, "courses.edit")) redirect("/dashboard");

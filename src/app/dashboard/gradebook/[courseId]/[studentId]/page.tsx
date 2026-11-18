@@ -31,6 +31,7 @@ import {
   computeStudentMark,
   summariseClass,
 } from "@/features/grades/lib/weighting";
+import { assignmentRoutes } from "@/features/submissions/routes";
 
 interface PageProps {
   params: Promise<{ courseId: string; studentId: string }>;
@@ -54,7 +55,7 @@ function gradeHref(key: string, studentId: string): string | null {
   const parsed = parseAssessmentKey(key);
   if (!parsed) return null;
   return parsed.kind === "assignment"
-    ? `/dashboard/submissions/overview/${parsed.id}/${studentId}`
+    ? assignmentRoutes.student(parsed.id, studentId)
     : `/dashboard/tutor-tests/submissions/${parsed.id}/${studentId}`;
 }
 

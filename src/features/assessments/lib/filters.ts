@@ -1,6 +1,6 @@
 /**
  * Assessment/submission filter helpers — used by the tabs on
- * /dashboard/tests, /dashboard/submissions, and the tutor mirrors.
+ * /dashboard/tests, /dashboard/assignments, and the tutor mirrors.
  *
  * Buckets:
  *   - upcoming  — due in the future AND not yet graded/submitted
