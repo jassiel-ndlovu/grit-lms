@@ -12,34 +12,41 @@ Code: `src/lib/jobs/verify.ts` accepts `Upstash-Signature` (checked against the 
 
 ## 2. Vercel, Production only (owner)
 
-In Git Bash, one command per value; each prompts for nothing and prints nothing secret:
+Put the four values in `.env.local` at the repo root (git-ignored), named exactly `QSTASH_URL`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY` and `QSTASH_NEXT_SIGNING_KEY`. Then, in Git Bash from the repo root, load them into this terminal only (nothing is printed):
 
 ```bash
-read -rs K; vercel env add QSTASH_CURRENT_SIGNING_KEY --environment production --project grit-lms --value "$K" --sensitive --yes; unset K
+set -a; source .env.local; set +a
 ```
 
 ```bash
-read -rs K; vercel env add QSTASH_NEXT_SIGNING_KEY --environment production --project grit-lms --value "$K" --sensitive --yes; unset K
+vercel env add QSTASH_CURRENT_SIGNING_KEY --environment production --project grit-lms --value "$QSTASH_CURRENT_SIGNING_KEY" --sensitive --yes
+```
+
+```bash
+vercel env add QSTASH_NEXT_SIGNING_KEY --environment production --project grit-lms --value "$QSTASH_NEXT_SIGNING_KEY" --sensitive --yes
 ```
 
 ```bash
 vercel env add APP_URL --environment production --project grit-lms --value "https://grit-lms.vercel.app" --no-sensitive --yes
 ```
 
-`read -rs` waits for you to paste the key (nothing shows) and press Enter. `APP_URL` pins the origin the signatures are checked against; without it the app falls back to Vercel's production domain. When `nexa-lms.co.za` goes live, change `APP_URL` and re-run step 3.
+`APP_URL` pins the origin the signatures are checked against; without it the app falls back to Vercel's production domain. When `nexa-lms.co.za` goes live, change `APP_URL` and re-run step 3.
 
-Then redeploy production (merge any PR, or **Redeploy** in the Vercel dashboard) so the new variables load.
+Then deploy production with this code: merge this PR, or **Redeploy** in the Vercel dashboard if it is already merged, so the new variables load. **Do step 3 only after that deploy**, or QStash calls code that cannot verify its signature yet and every call fails.
 
 ## 3. Create the schedules
 
+In the same terminal (the variables from step 2 are still loaded), from the repo root on `main` after this PR is merged:
+
 ```bash
-read -rs QSTASH_TOKEN; export QSTASH_TOKEN; read -r QSTASH_URL; export QSTASH_URL
 npx tsx scripts/qstash-sync-schedules.ts            # dry run: lists what it would create
-npx tsx scripts/qstash-sync-schedules.ts --apply
-unset QSTASH_TOKEN QSTASH_URL
 ```
 
-It creates `nexa-auto-submit`, `nexa-notifications` and `nexa-housekeeping` (POST, 3 retries). Re-running updates them in place.
+```bash
+npx tsx scripts/qstash-sync-schedules.ts --apply
+```
+
+It creates `nexa-auto-submit`, `nexa-notifications` and `nexa-housekeeping` (POST, 3 retries). Re-running updates them in place. Close the terminal afterwards so the keys leave memory.
 
 ## 4. Check
 
