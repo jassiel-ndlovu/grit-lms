@@ -3,6 +3,49 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Assignment brief on the rich editor, `revamp/b-assignment-rich-content`
+
+Done:
+- **Schema:** `Submission.descriptionJson Json?` beside the markdown
+  `description`, in migration `5_submission_description_json` (one
+  `ADD COLUMN`, hand-written). It follows A's `4_tenancy_core`.
+- **Shared helper:** `richColumnsFromInput(value, area)` in
+  `src/lib/content/columns.ts` returns both columns for a rich field
+  (markdown, and the envelope or `DbNull` when empty), and throws a
+  user-facing message when the document can't be read. Lessons now use it
+  too; their behaviour is unchanged.
+- **Actions:** `createSubmission` and `updateSubmission` accept
+  `descriptionJson`. When it's sent, the server derives `description`
+  from it and ignores the browser's markdown. Markdown alone clears the
+  JSON so it can't go stale.
+- **Form:** `AssignmentForm` uses `RichEditor`. Old briefs open from their
+  markdown. `descriptionJson` is sent only after an edit, so saving an
+  untouched old assignment leaves its row as it was. Drafts keep the
+  document, and Restore remounts the editor; old markdown-only drafts
+  still restore.
+- **View:** the assignment page's Brief card renders `RichContent`
+  (document, else markdown). The submission card keeps plain text.
+
+Checked: `tsc` and eslint clean. On a temporary page under MathJax 3: an
+old markdown brief opened in the editor with its maths; an emptied editor
+failed "Description is required" and typed text passed; a saved draft
+restored into the editor; the view rendered the maths.
+
+Not done:
+- **The migration isn't applied anywhere.** Until it is, the assignment
+  pages fail with P2022 on that database. The owner applies it to
+  production and Preview (`nexa_preview`) before testing.
+- Saving through the real action wasn't exercised locally, since no
+  database has the column yet. It's the same path as lessons.
+
+Questions for the owner:
+- May I run `migrate deploy` for `5_submission_description_json`?
+  - **Preview:** only this `ADD COLUMN` is pending (read-only
+    `migrate status` and `migrate diff`, 2026-11-19).
+  - **Production:** A's `4_tenancy_core` is pending there too, and
+    `migrate deploy` applies both in order. Either A deploys theirs
+    first, or the owner approves both together.
+
 ## 2026-11-18 Legacy Batch 3b: assignment editor as RSC; all context providers unmounted, `revamp/b-legacy-batch3b`
 
 Done:

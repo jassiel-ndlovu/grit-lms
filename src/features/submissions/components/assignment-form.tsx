@@ -29,10 +29,11 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MarkdownTextarea } from "@/components/markdown-textarea";
+import { RichEditor } from "@/components/editor/rich-editor";
 import { DraftStatus, RestoreDraftBanner, SaveProgressButton } from "@/components/draft-controls";
 import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, assignmentBriefPath } from "@/lib/blob/paths";
+import { readStoredContent } from "@/lib/content/value";
 import { formatForDateTimeLocal, parseDateTimeLocal } from "@/lib/functions";
 import { useLocalDraft } from "@/lib/use-local-draft";
 
@@ -40,7 +41,13 @@ import { createSubmission, updateSubmission } from "../actions";
 
 export interface AssignmentFormValues {
   title: string;
+  /** Markdown; the fallback when there is no rich document. */
   description: string;
+  /**
+   * The brief as RichEditor's envelope. From the row on load; after an edit,
+   * what the editor handed back, which is what gets saved.
+   */
+  descriptionJson?: unknown;
   descriptionFiles: string[];
   courseId: string;
   fileType: string;
@@ -74,6 +81,19 @@ const BLANK: AssignmentFormValues = {
   isActive: true,
 };
 
+/** Whether a brief has any text: the document's, else the markdown's. */
+function hasBrief(json: unknown, markdown: string): boolean {
+  const stored = readStoredContent(json);
+  if (!stored) return markdown.trim().length > 0;
+  const text = (n: { text?: string; type?: string; content?: unknown[] }): boolean =>
+    Boolean(n.text?.trim()) ||
+    n.type === "image" ||
+    n.type === "blockMath" ||
+    n.type === "inlineMath" ||
+    (n.content ?? []).some((c) => text(c as typeof n));
+  return text(stored.doc);
+}
+
 /** The file name from a Blob URL, without Vercel's random suffix. */
 function fileLabel(url: string, index: number): string {
   try {
@@ -104,6 +124,10 @@ export function AssignmentForm({
   const [files, setFiles] = React.useState<File[]>([]);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState(false);
+  // Whether the brief was edited here; only then is descriptionJson sent.
+  const [briefEdited, setBriefEdited] = React.useState(false);
+  // Remounts the editor when a draft is restored (it reads value on mount).
+  const [editorKey, setEditorKey] = React.useState(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   // Where a new assignment's briefs go before it has an id.
   const draftId = React.useMemo(() => id ?? `draft-${crypto.randomUUID()}`, [id]);
@@ -125,6 +149,9 @@ export function AssignmentForm({
       descriptionFiles: f.descriptionFiles ?? [],
       isActive: f.isActive ?? true,
     });
+    // An old page's draft has markdown only; the editor then falls back to it.
+    setBriefEdited(f.descriptionJson !== undefined);
+    setEditorKey((k) => k + 1);
     setMaxAttemptsOption(d.maxAttemptsOption === "Unlimited" ? "Unlimited" : "Limited");
     setMaxAttempts(Number(d.maxAttempts) || 1);
   }
@@ -136,7 +163,7 @@ export function AssignmentForm({
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!formData.title.trim()) e.title = "Title is required";
-    if (!formData.description.trim()) e.description = "Description is required";
+    if (!hasBrief(formData.descriptionJson, formData.description)) e.description = "Description is required";
     if (!formData.courseId) e.courseId = "Course is required";
     if (!formData.dueDate || Number.isNaN(formData.dueDate.getTime())) e.dueDate = "Due date is required";
     if (!formData.totalPoints || formData.totalPoints < 1) e.totalPoints = "Total points must be at least 1";
@@ -169,6 +196,8 @@ export function AssignmentForm({
       const values = {
         title: formData.title.trim(),
         description: formData.description,
+        // The server derives the markdown from the document (contracts/editor.md).
+        ...(briefEdited ? { descriptionJson: formData.descriptionJson ?? null } : {}),
         descriptionFiles: [...formData.descriptionFiles, ...uploaded],
         courseId: formData.courseId,
         fileType: formData.fileType,
@@ -261,17 +290,18 @@ export function AssignmentForm({
             label="Description"
             required
             error={errors.description}
-            hint="Markdown and MathJax supported — use Preview render to check it."
+            hint="Headings, lists, tables, code and maths. Type / for the block menu, $ for maths."
           >
-            <MarkdownTextarea
-              id="a-description"
-              value={formData.description}
-              onChange={(e) => set("description", e.target.value)}
-              className="font-mono text-sm"
-              aria-invalid={Boolean(errors.description)}
-              rows={4}
-              placeholder="Enter assignment description or instructions (Markdown supported)..."
-              previewTitle="Assignment description preview"
+            <RichEditor
+              key={editorKey}
+              label="Assignment description"
+              value={formData.descriptionJson}
+              fallbackMarkdown={formData.description}
+              onChange={(v) => {
+                setBriefEdited(true);
+                set("descriptionJson", v);
+              }}
+              placeholder="Write the brief. Type / for blocks, $ for maths"
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

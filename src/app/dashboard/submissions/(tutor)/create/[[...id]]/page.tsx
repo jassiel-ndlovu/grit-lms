@@ -43,6 +43,7 @@ export default async function AssignmentEditorPage({ params }: { params: Promise
     ? {
         title: submission.title,
         description: submission.description,
+        descriptionJson: submission.descriptionJson,
         descriptionFiles: submission.descriptionFiles,
         courseId: submission.courseId,
         fileType: submission.fileType,

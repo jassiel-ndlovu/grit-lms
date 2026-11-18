@@ -22,7 +22,7 @@ import { revalidatePath } from "next/cache";
 
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
-import { richFieldFromInput, richFieldRefusal } from "@/lib/content/save";
+import { richColumnsFromInput } from "@/lib/content/columns";
 import { deleteBlob } from "@/lib/blob/server";
 import {
   tutorActionClient,
@@ -88,14 +88,8 @@ function descriptionData(input: {
     if (input.description === undefined) return {};
     return { description: input.description || null, descriptionJson: Prisma.DbNull };
   }
-  if (input.descriptionJson === null) return { description: null, descriptionJson: Prisma.DbNull };
-  const rich = richFieldFromInput(input.descriptionJson);
-  if (!rich) {
-    console.error("[lessons] rich content refused:", richFieldRefusal(input.descriptionJson));
-    throw new Error("The lesson content couldn't be read. Reload the page and try again.");
-  }
-  if (rich.empty) return { description: null, descriptionJson: Prisma.DbNull };
-  return { description: rich.markdown, descriptionJson: rich.json as unknown as Prisma.InputJsonValue };
+  const body = richColumnsFromInput(input.descriptionJson, "lessons");
+  return { description: body.markdown || null, descriptionJson: body.json };
 }
 
 function revalidateCourseLessons(courseId: string): void {
