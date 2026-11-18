@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, FileText, GraduationCap, Inbox } from "lucide-react";
+import { ArrowLeft, FileText, GraduationCap } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -25,6 +25,7 @@ import {
   listSubmissionsForTest,
   testBelongsToTutor,
 } from "@/features/assessments/queries";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -128,12 +129,12 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
           </div>
           <Separator />
           {submissions.length === 0 ? (
-            <div className="text-muted-foreground flex flex-col items-center justify-center gap-3 p-8 sm:p-12 text-center text-sm">
-              <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-12 items-center justify-center rounded-full">
-                <Inbox className="size-5" />
-              </div>
-              <p>No student has started this test yet.</p>
-            </div>
+            <EmptyState
+              compact
+              illustration={<Scene name="nothing-to-grade" />}
+              title="No one has started this test yet"
+              description="Attempts show up here as students start them."
+            />
           ) : (
             <ul className="divide-border divide-y">
               {submissions.map((s) => {

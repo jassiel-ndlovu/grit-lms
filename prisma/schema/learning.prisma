@@ -28,7 +28,7 @@ model Course {
   workspaceId       String?
   teamId            String?
   ownerMembershipId String?
-  workspace         Workspace?    @relation(fields: [workspaceId], references: [id])
+  workspace         Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   team              Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
   ownerMembership   Membership?   @relation("CourseOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
   staff             CourseStaff[]

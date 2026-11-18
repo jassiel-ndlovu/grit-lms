@@ -9,7 +9,6 @@
 
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { Target } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -26,6 +25,7 @@ import {
   filterByBucket,
   type FilterBucket,
 } from "@/features/assessments/lib/filters";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 export const metadata = { title: "Tests & Quizzes" };
 
@@ -76,23 +76,22 @@ export default async function StudentTestsPage() {
       <TestGrid
         isEmpty={filtered.length === 0}
         empty={
-          <div className="border-input rounded-lg border border-dashed p-8 sm:p-12 text-center">
-            <Target className="text-muted-foreground mx-auto size-10" />
-            <h3 className="font-display mt-3 text-lg text-foreground">
-              Nothing here
-            </h3>
-            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
-              {b === "upcoming"
-                ? "No upcoming tests — you're all caught up."
+          <EmptyState
+            className="border-input rounded-lg border border-dashed"
+            illustration={<Scene name="empty-tests" />}
+            title={
+              b === "upcoming"
+                ? "No upcoming tests"
                 : b === "missed"
-                  ? "No missed tests. Nice."
+                  ? "No missed tests"
                   : b === "submitted"
-                    ? "No tests waiting to be graded."
+                    ? "Nothing waiting for a grade"
                     : b === "graded"
-                      ? "No graded tests yet."
-                      : "No active tests."}
-            </p>
-          </div>
+                      ? "No graded tests yet"
+                      : "No active tests"
+            }
+            description={b === "upcoming" || b === "missed" ? "You're caught up." : undefined}
+          />
         }
       >
         {filtered.map(({ test, submission }) => (

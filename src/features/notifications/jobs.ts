@@ -22,6 +22,8 @@ import { DEFAULT_TIME_ZONE, hourInZone } from "@/lib/datetime";
 import { sendEmail } from "@/lib/email/send";
 import { digestEmail } from "@/lib/email/templates";
 
+import { assignmentRoutes } from "@/features/assignments/routes";
+
 import { emitNotification, wantsEmail } from "./server";
 
 const HOUR = 60 * 60 * 1000;
@@ -59,14 +61,15 @@ async function studentUsers(students: { id: string; email: string }[]) {
 async function notYetNotified(
   userIds: string[],
   type: NotificationType,
-  link: string,
+  /** The link to send, or several: any earlier one counts as already sent. */
+  link: string | string[],
   since?: Date,
 ) {
   if (userIds.length === 0) return [];
   const done = await prisma.notification.findMany({
     where: {
       type,
-      link,
+      link: Array.isArray(link) ? { in: link } : link,
       userId: { in: userIds },
       ...(since ? { createdAt: { gt: since } } : {}),
     },
@@ -97,8 +100,9 @@ export async function dueDateReminders(now: Date) {
       a.entries.filter((e) => e.status !== "NOT_SUBMITTED" && e.status !== "IN_PROGRESS").map((e) => e.studentId),
     );
     const pending = await studentUsers(a.course.students.filter((s) => !handedIn.has(s.id)));
-    const link = `/dashboard/submissions/${a.id}`;
-    const userIds = await notYetNotified(pending.map((p) => p.userId), "SUBMISSION_DUE", link);
+    const link = assignmentRoutes.detail(a.id);
+    // Reminders sent before the rename used the old URL; they still count.
+    const userIds = await notYetNotified(pending.map((p) => p.userId), "SUBMISSION_DUE", [link, `/dashboard/submissions/${a.id}`]);
     if (userIds.length === 0) continue;
     const r = await emitNotification(
       {
@@ -238,11 +242,11 @@ export async function gradingReminders(now: Date) {
     const total = entries + tests;
     if (total === 0) continue;
 
-    const link = "/dashboard/submissions";
+    const link = assignmentRoutes.index;
     const [userId] = await notYetNotified(
       [tutor.id],
       "GRADING_REMINDER",
-      link,
+      [link, "/dashboard/submissions"],
       new Date(now.getTime() - 20 * HOUR),
     );
     if (!userId) continue;

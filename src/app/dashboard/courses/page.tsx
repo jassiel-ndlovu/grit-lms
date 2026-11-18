@@ -9,13 +9,13 @@
  */
 
 import { redirect } from "next/navigation";
-import { BookOpen } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { listCoursesByStudentId } from "@/features/courses/queries";
 import { CourseCard } from "@/features/courses/components/course-card";
 import { CourseGrid } from "@/features/courses/components/course-grid";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { getUserPreferences } from "@/features/users/preferences";
 
 export const metadata = { title: "My courses" };
@@ -54,15 +54,12 @@ export default async function StudentCoursesPage() {
         view={(await getUserPreferences(session.user.id)).preferredView}
         isEmpty={courses.length === 0}
         empty={
-          <div className="border-input rounded-lg border border-dashed p-8 sm:p-12 text-center">
-            <BookOpen className="text-muted-foreground mx-auto size-10" />
-            <h3 className="font-display mt-3 text-lg text-foreground">
-              You haven&apos;t enrolled in any courses yet
-            </h3>
-            <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
-              Browse the catalogue to find a course to enrol in.
-            </p>
-          </div>
+          <EmptyState
+            className="border-input rounded-lg border border-dashed"
+            illustration={<Scene name="empty-courses" />}
+            title="You haven't enrolled in any courses yet"
+            description="Browse the catalogue to find a course to enrol in."
+          />
         }
       >
         {courses.map((course) => (

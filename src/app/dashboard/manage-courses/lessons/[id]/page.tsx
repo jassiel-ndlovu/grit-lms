@@ -42,6 +42,7 @@ import {
   type LessonTreeNode,
 } from "@/features/lessons/lib/lesson-tree";
 import type { ReorderNode } from "@/components/tree-reorder-dialog";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -223,25 +224,24 @@ function EmptyEditorState({
   totalLessons: number;
 }) {
   return (
-    <Card className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-8 sm:p-12 text-center">
-      <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
-        <BookOpenText className="size-6" />
-      </div>
-      <div>
-        <h3 className="font-display text-xl leading-tight text-foreground">
-          {totalLessons === 0 ? "No lessons yet" : "Select a lesson"}
-        </h3>
-        <p className="text-muted-foreground mt-2 max-w-sm text-sm">
-          {totalLessons === 0
-            ? "Create your first lesson using the button on the left."
-            : "Pick a lesson from the sidebar to edit its content, videos, and attachments."}
-        </p>
-      </div>
-      {totalLessons === 0 && (
-        <CreateLessonButton
-          courseId={courseId}
-          nextOrder={0}
-          label="Create first lesson"
+    <Card className="flex min-h-[400px] items-center justify-center p-8 sm:p-12">
+      {totalLessons === 0 ? (
+        <EmptyState
+          illustration={<Scene name="empty-lessons" />}
+          title="No lessons yet"
+          description="Create the first lesson for this course."
+          action={<CreateLessonButton courseId={courseId} nextOrder={0} label="Create first lesson" />}
+        />
+      ) : (
+        <EmptyState
+          compact
+          illustration={
+            <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
+              <BookOpenText className="size-6" />
+            </div>
+          }
+          title="Select a lesson"
+          description="Pick a lesson from the sidebar to edit its content, videos and attachments."
         />
       )}
     </Card>
