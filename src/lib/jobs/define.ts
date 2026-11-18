@@ -36,7 +36,8 @@ async function record<T>(label: string, op: () => Promise<T>): Promise<T | null>
 
 export function defineJob(name: JobName, run: () => Promise<JobResult>) {
   async function handle(req: NextRequest) {
-    const auth = verifyJobRequest(req.headers);
+    const body = req.method === "POST" ? await req.text() : "";
+    const auth = await verifyJobRequest({ headers: req.headers, body, path: req.nextUrl.pathname });
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
