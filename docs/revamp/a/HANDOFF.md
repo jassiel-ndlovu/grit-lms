@@ -29,6 +29,26 @@ Blocked on the other agent:
 Questions for the owner:
 - None for this change.
 
+## 2026-11-19 Tenancy part 2 on production; follow-ups to B's review, `revamp/a-tenancy-followups`
+
+Done:
+- **Production** (owner approved): backup branch `backup-pre-tenancy2-20261119`, then `6_tenancy_courses`. The part 2 backfill placed and owned 6 courses (6 LEAD staff rows) and created 12 enrolments, with 0 unmatched. A re-run found nothing to do, and the diff against the repo is identical.
+- **B's terms from #86:** `Course.workspace` is now `onDelete: Restrict` (migration `7_course_workspace_restrict`). The team and owner links were already `SetNull`, and the other terms were already met.
+- **Restored** the 2026-11-18 "tenancy part 1" entry, which a merge had dropped (B spotted it).
+- **Reminder links:** `notifications/jobs.ts` builds them with `assignmentRoutes`. Reminders sent under the old `/dashboard/submissions` URL still count as sent, so nobody gets the same one twice.
+
+Next:
+- Owner approval for `7_course_workspace_restrict` on production.
+- `getViewer()` on the tenancy tables, plus `withWorkspace()`.
+- Batch 4 deletions after the owner tests B's Batch 3b.
+
+Blocked on the other agent:
+- For B: the old-folder comments in `src/app/api/submissions*` are left alone, because those routes go in Batch 4.
+- For B: production now has `Enrollment` and `CourseStaff` rows for every existing course, so your queries can start moving off `tutorId` and the implicit join when ready.
+
+Questions for the owner:
+- May A apply `7_course_workspace_restrict` on production after this merges? It is one foreign key change.
+
 ## 2026-11-19 Phase 1 tenancy, part 2; QStash live, `revamp/a-tenancy-courses`
 
 Done:
