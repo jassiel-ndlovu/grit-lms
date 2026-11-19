@@ -3,6 +3,34 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Tenancy dual writes and parity (#93 steps 2 and 3), `revamp/b-tenancy-writes`
+
+Done:
+- `createCourse` and `updateCourse` now write the old columns and the new
+  tables in one `$transaction` (15 s timeout), through A's
+  `setUpCourseTenancy` and `setCourseEnrollment` (#100).
+  - `updateCourse` always runs `setUpCourseTenancy`, which is
+    idempotent.
+  - It runs `setCourseEnrollment` only when the form sends `studentIds`.
+  - These are the only writers of the enrolment join. The legacy
+    `CourseContext.updateCourse` calls a PUT route that no longer exists.
+- `scripts/check-tenancy-parity.ts` (read-only) compares, per course:
+  - the workspace;
+  - the owner membership and its LEAD staff row;
+  - the old enrolment join against the open `Enrollment` rows.
+  It prints counts and course ids only, and exits 1 on any difference.
+- Parity is clean on production (6 courses, 12 enrolments) and Preview.
+- On Preview, a fake course went through the same transaction steps:
+  - create: workspace, owner, LEAD and 3 open rows;
+  - change enrolment: 1 dropped, 1 added;
+  - rename: no change to enrolments.
+  Parity stayed clean. Emptying the old join alone made it report the
+  course, as it should. The fake course is deleted.
+
+Next (step 4): move B's reads to `CourseStaff`/`Enrollment` and
+`canIn`, after this is live and parity is still clean. Then A drops
+`tutorId` and the join (step 5, owner approval).
+
 ## 2026-11-19 Course page and lesson editor restyle (Phase 1), `revamp/b-course-lesson`
 
 Done:
