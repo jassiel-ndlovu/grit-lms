@@ -9,7 +9,7 @@ Designs behind this contract: [a/design/03-billing.md](../a/design/03-billing.md
 ## Conventions
 
 - **Files.** Billing: `src/features/billing/queries.ts` and `actions.ts`. Payments: `src/features/payments/queries.ts` and `actions.ts`. Queries are server-only async functions; actions are next-safe-action clients with Zod input.
-- **Results.** Actions return the next-safe-action shape `{ data?, serverError?, validationErrors? }`. `serverError` starts with a stable code: `TRIAL_CAP_REACHED`, `READ_ONLY`, `CODE_INVALID`, `CODE_EXPIRED`, `CODE_USED`, `CARD_REQUIRED`, `PROVIDER_ERROR`, `FORBIDDEN`. B maps codes to messages; the rest of the string is for logs.
+- **Results.** Actions return the next-safe-action shape `{ data?, serverError?, validationErrors? }`. `serverError` starts with a stable code: `TRIAL_CAP_REACHED`, `READ_ONLY`, `PAST_DUE`, `BILLING_DISABLED`, `NOT_FOUND`, `CODE_INVALID`, `CODE_EXPIRED`, `CODE_USED`, `CARD_REQUIRED`, `PROVIDER_ERROR`, `FORBIDDEN`. B maps codes to messages; the rest of the string is for logs.
 - **Money.** Integer cents in ZAR, in fields ending `Cents`. VAT appears only as `vatCents` and only when `vatRegistered` is true.
 - **Dates.** ISO 8601 strings. Day-only values are `YYYY-MM-DD` in the workspace's time zone.
 - **Permissions.** Each call names the permission from [viewer.md](viewer.md) it checks. "Guardian" means the caller holds an active guardianship for the child concerned.
@@ -20,12 +20,12 @@ Designs behind this contract: [a/design/03-billing.md](../a/design/03-billing.md
 ```ts
 type TierKey = "CORE" | "PLUS" | "PRO";
 type BillingState = "TRIAL" | "ACTIVE" | "PAST_DUE" | "READ_ONLY" | "COMPED" | "CANCELLED";
-type Meter = "ai-marks" | "storage-gb" | "api-pass-through";
+type Meter = "active-students" | "ai-marks" | "storage-gb" | "api-pass-through" | "live-room-minutes";
 
 type Period = { start: string; end: string; renewsAt: string };
 
 type EstimateLine = {
-  kind: "SEATS" | "CATCH_UP" | "USAGE" | "PASS_THROUGH" | "DISCOUNT" | "CREDIT";
+  kind: "SEATS" | "CATCH_UP" | "USAGE" | "PASS_THROUGH" | "DISCOUNT" | "CREDIT" | "VAT";
   description: string;
   quantity: number;
   unitPriceCents: number;
@@ -58,6 +58,8 @@ type PaymentStatus = "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALL
 | `getUsage(input)` | `billing.view` | `{ meter: Meter, periodStart?: string }` (default: current period) | `{ period: Period, days: Array<{ day, quantity }>, totalQuantity, cap: CapStatus \| null, estimatedCents }` |
 | `listPlatformInvoices(input)` | `billing.view` | `{ cursor?: string, limit?: number }` | `{ items: Array<{ id, number, periodStart, periodEnd, status: InvoiceStatus, totalCents, issuedAt, paidAt }>, nextCursor: string \| null }` |
 | `getPlatformInvoice(id)` | `billing.view` | `{ id }` | `{ ...summary, lines: EstimateLine[], subtotalCents, discountCents, creditCents, vatCents, payments: Array<{ at, amountCents, via, status }>, pdfUrl }` |
+
+**Built (2026-11-19):** `getBillingOverview`, `getCourseTiers`, `getCourseServices`, `previewServiceChange` and the action `setCourseServices`, in `src/features/billing/`. All are behind `BILLING=1`; with the flag off they throw `BILLING_DISABLED`. `previewServiceChange`: `catchUpCents` is the extra arrears this change adds to the next renewal (tier upgrades and catch-up seats for the current period); `nextRenewalDeltaCents` is the whole change to the next renewal invoice and **includes** `catchUpCents`; `holdUntil` is the date the tier after the change is held until, whether the hold is new or already running. `getCourseServices` returns `status` as `"v1" | "later" | "parked"` and `kind` as `"basic" | "premium"`, as in services.md.
 
 `derivedTierKey` is what the switched-on services make the course today. `billedTierKey` is what it bills at: a raised tier holds for 30 days (`holdUntil`).
 
@@ -143,5 +145,6 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
 | Date | Change |
 | --- | --- |
+| 2026-11-19 | Draft 1.2. Section 1 queries and `setCourseServices` built. Added `PAST_DUE`, `BILLING_DISABLED` and `NOT_FOUND` codes, the `active-students` and `live-room-minutes` meters, and the `VAT` estimate line; defined `catchUpCents`, `nextRenewalDeltaCents` and `holdUntil` in `previewServiceChange` |
 | 2026-11-16 | Draft 1.1. Renewal rules confirmed by the owner |
 | 2026-11-16 | Draft 1. 30-day periods anchored to payment; tier hold of 30 days; Pro AI allowance with pass-through overage; no day pass or AI credits in v1 |
