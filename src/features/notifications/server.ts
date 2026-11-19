@@ -175,24 +175,30 @@ async function resolveRecipients(
   if (input.courseId) {
     const course = await prisma.course.findUnique({
       where: { id: input.courseId },
+      // Teachers from CourseStaff and students from open enrolments, not
+      // Course.tutorId and the old join (issue #93).
       select: {
-        tutor: { select: { email: true } },
-        students: { select: { id: true, email: true } },
+        staff: { where: { membership: { status: "ACTIVE" } }, select: { membership: { select: { user: { select: { email: true } } } } } },
+        enrollments: {
+          where: { endedAt: null },
+          select: { learner: { select: { user: { select: { studentProfile: { select: { id: true, email: true } } } } } } },
+        },
       },
     });
     if (!course) return [];
 
     if (input.audience === "tutor") {
-      const [user] = await usersByEmails([course.tutor.email]);
-      return user ? [{ ...user, studentId: null }] : [];
+      const users = await usersByEmails(course.staff.map((s) => s.membership.user.email));
+      return users.map((u) => ({ ...u, studentId: null }));
     }
 
-    const users = await usersByEmails(course.students.map((s) => s.email));
+    const students = course.enrollments
+      .map((e) => e.learner.user.studentProfile)
+      .filter((s): s is { id: string; email: string } => s != null);
+    const users = await usersByEmails(students.map((s) => s.email));
     return users.map((u) => ({
       ...u,
-      studentId:
-        course.students.find((s) => s.email.toLowerCase() === u.email.toLowerCase())?.id ??
-        null,
+      studentId: students.find((s) => s.email.toLowerCase() === u.email.toLowerCase())?.id ?? null,
     }));
   }
 

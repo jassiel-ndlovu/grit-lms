@@ -22,6 +22,7 @@ import { NextResponse } from "next/server";
 import type { HandleUploadBody } from "@vercel/blob/client";
 
 import { auth } from "@/lib/auth";
+import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { BlobKind } from "@/lib/blob/paths";
 import { issueUploadToken, type ClientPayload } from "@/lib/blob/server";
@@ -47,12 +48,9 @@ export async function POST(request: Request): Promise<NextResponse> {
           const submissionId = pathname.split("/")[1];
           const existing = await prisma.submission.findUnique({
             where: { id: submissionId },
-            select: { course: { select: { tutor: { select: { email: true } } } } },
+            select: { course: { select: { staff: staffFor(session.user.email) } } },
           });
-          if (
-            existing &&
-            existing.course.tutor.email.toLowerCase() !== session.user.email.toLowerCase()
-          ) {
+          if (existing && existing.course.staff.length === 0) {
             throw new Error("Cannot upload a brief to another tutor's assignment");
           }
         }

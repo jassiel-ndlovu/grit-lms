@@ -13,18 +13,33 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+import type { Prisma } from "@/generated/prisma";
+import { enrolledStudent, taughtBy } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { forbidden, requireApiSession, visibleCoursesWhere } from "@/lib/api-guard";
 
+// Teacher and students come from the tenancy tables (issue #93); the
+// response keeps the old `tutor` and `students` fields for CourseContext.
 const fullInclude = {
-  tutor: true,
-  students: true,
+  ownerMembership: { select: { user: { select: { tutorProfile: true } } } },
+  enrollments: { where: { endedAt: null }, select: { learner: { select: { user: { select: { studentProfile: true } } } } } },
   lessons: { include: { attachmentUrls: true } },
   quizzes: true,
   tests: true,
   submissions: true,
   courseEvents: true,
 } as const;
+
+type WithLinks = Prisma.CourseGetPayload<{ include: typeof fullInclude }>;
+
+/** The old response shape: `tutor` (Tutor profile) and `students` (Student profiles). */
+function legacyShape(courses: WithLinks[]) {
+  return courses.map(({ ownerMembership, enrollments, ...course }) => ({
+    ...course,
+    tutor: ownerMembership?.user.tutorProfile ?? null,
+    students: enrollments.map((e) => e.learner.user.studentProfile).filter((s) => s != null),
+  }));
+}
 
 export async function GET(req: NextRequest) {
   const guard = await requireApiSession();
@@ -39,18 +54,18 @@ export async function GET(req: NextRequest) {
 
   if (tutorId) {
     const courses = await prisma.course.findMany({
-      where: { tutorId, AND: [visible] },
+      where: { ...taughtBy(tutorId), AND: [visible] },
       include: fullInclude,
     });
-    return NextResponse.json(courses);
+    return NextResponse.json(legacyShape(courses));
   }
 
   if (studentId) {
     const courses = await prisma.course.findMany({
-      where: { students: { some: { id: studentId } }, AND: [visible] },
+      where: { ...enrolledStudent(studentId), AND: [visible] },
       include: fullInclude,
     });
-    return NextResponse.json(courses);
+    return NextResponse.json(legacyShape(courses));
   }
 
   if (courseIds) {
@@ -59,12 +74,12 @@ export async function GET(req: NextRequest) {
       where: { id: { in: ids }, AND: [visible] },
       include: fullInclude,
     });
-    return NextResponse.json(courses);
+    return NextResponse.json(legacyShape(courses));
   }
 
   const courses = await prisma.course.findMany({
     where: visible,
     include: fullInclude,
   });
-  return NextResponse.json(courses);
+  return NextResponse.json(legacyShape(courses));
 }

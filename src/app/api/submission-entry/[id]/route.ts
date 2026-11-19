@@ -16,6 +16,7 @@
 
 import { NextResponse } from "next/server";
 
+import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { forbidden, gone, requireApiRole } from "@/lib/api-guard";
 
@@ -75,10 +76,10 @@ export async function DELETE(
   const existing = await prisma.submissionEntry.findUnique({
     where: { id },
     select: {
-      submission: { select: { course: { select: { tutor: { select: { email: true } } } } } },
+      submission: { select: { course: { select: { staff: staffFor(guard.session.user.email) } } } },
     },
   });
-  if (existing?.submission.course.tutor.email !== guard.session.user.email) {
+  if (!existing || existing.submission.course.staff.length === 0) {
     return forbidden("You don't own this assignment");
   }
 

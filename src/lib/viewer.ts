@@ -16,6 +16,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 
 import { auth } from "@/lib/auth";
+import { enrolledStudent, taughtByEmail } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 
 import {
@@ -206,7 +207,7 @@ async function isCourseStaff(viewer: Viewer, courseId: string, mustTeach: boolea
   if (!viewer.workspace || !viewer.membership) return false;
   if (isLegacy(viewer)) {
     const course = await prisma.course.findFirst({
-      where: { id: courseId, tutor: { email: { equals: viewer.user.email, mode: "insensitive" } } },
+      where: { id: courseId, ...taughtByEmail(viewer.user.email) },
       select: { id: true },
     });
     return course != null;
@@ -234,7 +235,7 @@ async function isEnrolled(viewer: Viewer, courseId: string): Promise<boolean> {
   if (enrolment) return true;
   // Phase 0 bridge: learner.id is the Student profile id.
   const legacy = await prisma.course.findFirst({
-    where: { id: courseId, students: { some: { id: viewer.learner.id } } },
+    where: { id: courseId, ...enrolledStudent(viewer.learner.id) },
     select: { id: true },
   });
   return legacy != null;

@@ -10,16 +10,18 @@
 import { NextResponse } from "next/server";
 import type { Session } from "next-auth";
 
+import { taughtByEmail } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { emitNotification } from "@/features/notifications/server";
 import { forbidden, requireApiRole } from "@/lib/api-guard";
 
 async function tutorOwnsSubmission(session: Session, id: string) {
-  const existing = await prisma.submission.findUnique({
-    where: { id },
-    select: { course: { select: { tutor: { select: { email: true } } } } },
+  // Teaching is read from CourseStaff, not Course.tutorId (issue #93).
+  const existing = await prisma.submission.findFirst({
+    where: { id, course: taughtByEmail(session.user.email) },
+    select: { id: true },
   });
-  return existing?.course.tutor.email === session.user.email;
+  return existing != null;
 }
 
 export async function PUT(

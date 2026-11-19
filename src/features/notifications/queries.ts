@@ -18,6 +18,7 @@ import "server-only";
 import { cache } from "react";
 
 import type { Prisma } from "@/generated/prisma";
+import { enrolledStudent } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 
 /* ------------------------------------------------------------------------- */
@@ -54,7 +55,7 @@ export function getNotificationViewer(user: { id: string; email: string; role: s
  */
 export const getStudentEnrolledCourseIds = cache(async (studentId: string) => {
   const courses = await prisma.course.findMany({
-    where: { students: { some: { id: studentId } } },
+    where: enrolledStudent(studentId),
     select: { id: true },
   });
   return courses.map((c) => c.id);
