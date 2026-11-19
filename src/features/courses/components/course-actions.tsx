@@ -75,7 +75,7 @@ export function CourseActions({ courseId, courseName }: CourseActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem asChild>
-            <Link href={`/dashboard/manage-courses/${courseId}`}>
+            <Link href={`/dashboard/manage-courses/${courseId}/settings`}>
               <Pencil className="size-4" /> Edit
             </Link>
           </DropdownMenuItem>

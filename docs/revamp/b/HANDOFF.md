@@ -3,6 +3,39 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Course page and lesson editor restyle (Phase 1), `revamp/b-course-lesson`
+
+Done:
+- The tutor's course pages follow the UI draft "Course page". They share
+  `CourseFrame`: one `PageHeader` (Courses › course › view) and a ribbon
+  with **Overview**, **Lessons** and **Settings**, each its own route.
+  - **Overview** (`/dashboard/manage-courses/[id]`): a course tile and
+    title, then properties (students, lessons, assessments, schedule from
+    repeating events, next session). It also has the numbered lesson
+    outline and the course's tests and assignments with Open, Draft or
+    Closed chips.
+  - **Lessons** (`/dashboard/manage-courses/lessons/[id]`, URL kept):
+    the tree beside the editor. `LessonForm` has a `layout="document"`
+    mode here: a large title, the content under it, the other fields in a
+    Details box, and a sticky save bar. The create dialog keeps the
+    stacked layout.
+  - **Settings** (`/dashboard/manage-courses/[id]/settings`, new): the
+    existing `CourseForm`. The course card's "Edit" now opens it.
+- The loading and ownership check is shared in
+  `src/features/courses/tutor-course.ts`; it still uses `tutorId` (#93).
+  The markup lives in `CourseOverview` and `LessonsWorkspace`, so the
+  pages only load data.
+- Pure helpers are in `src/features/courses/lib/course-overview.ts`,
+  checked by `npx tsx scripts/check-course-overview.ts`.
+- The local dev server reads the shared production database, so I checked
+  the pages with sample data on a temporary page, not by signing in.
+
+Not done: on phones the lesson tree sits above the editor; it may later
+fold away once a lesson is open. The student course page is unchanged.
+
+Owner check: on Preview as a tutor, open a course and try Overview,
+Lessons (edit and save a lesson) and Settings.
+
 ## 2026-11-19 Tutor home restyle (Phase 1), `revamp/b-tutor-home`
 
 Done:

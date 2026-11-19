@@ -91,6 +91,12 @@ export interface LessonFormProps {
    * excludes the lesson itself and its descendants.
    */
   parentOptions?: Array<{ id: string; label: string; title: string; depth: number }>;
+  /**
+   * "stack" (default): every field in order, for the create dialog.
+   * "document": the lessons page; a large title, the content under it,
+   * the other settings in a Details box and a sticky save bar.
+   */
+  layout?: "stack" | "document";
 }
 
 const TOP_LEVEL = "__top__";
@@ -102,6 +108,7 @@ export function LessonForm({
   onSuccess,
   className,
   parentOptions = [],
+  layout = "stack",
 }: LessonFormProps) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -187,222 +194,268 @@ export function LessonForm({
     }
   }
 
+  const doc = layout === "document";
+
+  // Each block once; the layout only changes their order and grouping.
+  const kindAndParent = (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kind</FormLabel>
+                  <FormControl>
+                    <div className="border-border inline-flex w-fit rounded-md border p-0.5" role="radiogroup">
+                      {(
+                        [
+                          ["CONTENT", "Lesson"],
+                          ["NONE", "Group (no content)"],
+                        ] as const
+                      ).map(([v, name]) => (
+                        <button
+                          key={v}
+                          type="button"
+                          role="radio"
+                          aria-checked={field.value === v}
+                          onClick={() => field.onChange(v)}
+                          className={cn(
+                            "rounded px-3 py-1 text-xs transition-colors",
+                            field.value === v
+                              ? "bg-brand-terracotta text-brand-terracotta-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    A group is a heading that holds other lessons.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="parentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Inside</FormLabel>
+                  <Select
+                    value={field.value ?? TOP_LEVEL}
+                    onValueChange={(v) => field.onChange(v === TOP_LEVEL ? null : v)}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={TOP_LEVEL}>Top level</SelectItem>
+                      {parentOptions.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span style={{ paddingLeft: p.depth * 12 }} className="tabular-nums">
+                            {p.label} · {p.title}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>Nest this under a group or another lesson.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+  );
+  const content = (
+    <>
+          {!isGroup && (
+          <FormField
+            control={form.control}
+            name="descriptionJson"
+            render={({ field }) => (
+              <FormItem>
+                {/* The editor names itself (aria-label); this is the visible label. */}
+                <p className="text-sm leading-none font-medium">Content</p>
+                <RichEditor
+                  label="Lesson content"
+                  // Read once on mount; field.value keeps edits across a
+                  // switch to "Group" and back.
+                  value={field.value ?? defaultValues?.descriptionJson}
+                  fallbackMarkdown={defaultValues?.description}
+                  onChange={field.onChange}
+                  placeholder="Write the lesson. Type / for blocks, $ for maths"
+                  className="[&_.rich-editor-surface]:min-h-64"
+                />
+                <FormDescription>
+                  Headings, lists, tables, code and maths. Type / for the block
+                  menu.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          )}
+    </>
+  );
+  const orderAndDuration = (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="order"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Order</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={field.value ?? 0}
+                      onChange={(e) =>
+                        field.onChange(Number.parseInt(e.target.value, 10) || 0)
+                      }
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Position among its siblings — lower comes first. Rearrange
+                    in the sidebar for drag-and-drop.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {!isGroup && (
+            <FormField
+              control={form.control}
+              name="duration"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duration (minutes)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={field.value ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        field.onChange(v === "" ? null : Number.parseInt(v, 10));
+                      }}
+                      placeholder="Optional"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            )}
+          </div>
+  );
+  const media = (
+    <>
+          {!isGroup && (
+          <>
+          <FormField
+            control={form.control}
+            name="videoUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Videos</FormLabel>
+                <FormControl>
+                  <VideoUrlList
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormDescription>
+                  YouTube URLs render as embedded players for students.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="attachments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Attachments</FormLabel>
+                <FormControl>
+                  <AttachmentManager
+                    courseId={courseId}
+                    lessonId={pseudoId}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          </>
+          )}
+    </>
+  );
+
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn(className, "space-y-6")}
+        className={cn(className, doc ? "space-y-8" : "space-y-6")}
       >
         <FormField
           control={form.control}
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Title</FormLabel>
+              <FormLabel className={doc ? "sr-only" : undefined}>Title</FormLabel>
               <FormControl>
-                <Input placeholder="Introduction to limits" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Kind</FormLabel>
-                <FormControl>
-                  <div className="border-border inline-flex w-fit rounded-md border p-0.5" role="radiogroup">
-                    {(
-                      [
-                        ["CONTENT", "Lesson"],
-                        ["NONE", "Group (no content)"],
-                      ] as const
-                    ).map(([v, name]) => (
-                      <button
-                        key={v}
-                        type="button"
-                        role="radio"
-                        aria-checked={field.value === v}
-                        onClick={() => field.onChange(v)}
-                        className={cn(
-                          "rounded px-3 py-1 text-xs transition-colors",
-                          field.value === v
-                            ? "bg-brand-terracotta text-brand-terracotta-foreground"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                </FormControl>
-                <FormDescription>
-                  A group is a heading that holds other lessons.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="parentId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Inside</FormLabel>
-                <Select
-                  value={field.value ?? TOP_LEVEL}
-                  onValueChange={(v) => field.onChange(v === TOP_LEVEL ? null : v)}
-                >
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value={TOP_LEVEL}>Top level</SelectItem>
-                    {parentOptions.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        <span style={{ paddingLeft: p.depth * 12 }} className="tabular-nums">
-                          {p.label} · {p.title}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>Nest this under a group or another lesson.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {!isGroup && (
-        <FormField
-          control={form.control}
-          name="descriptionJson"
-          render={({ field }) => (
-            <FormItem>
-              {/* The editor names itself (aria-label); this is the visible label. */}
-              <p className="text-sm leading-none font-medium">Content</p>
-              <RichEditor
-                label="Lesson content"
-                // Read once on mount; field.value keeps edits across a
-                // switch to "Group" and back.
-                value={field.value ?? defaultValues?.descriptionJson}
-                fallbackMarkdown={defaultValues?.description}
-                onChange={field.onChange}
-                placeholder="Write the lesson. Type / for blocks, $ for maths"
-                className="[&_.rich-editor-surface]:min-h-64"
-              />
-              <FormDescription>
-                Headings, lists, tables, code and maths. Type / for the block
-                menu.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        )}
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="order"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Order</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={field.value ?? 0}
-                    onChange={(e) =>
-                      field.onChange(Number.parseInt(e.target.value, 10) || 0)
-                    }
-                  />
-                </FormControl>
-                <FormDescription>
-                  Position among its siblings — lower comes first. Rearrange
-                  in the sidebar for drag-and-drop.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {!isGroup && (
-          <FormField
-            control={form.control}
-            name="duration"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Duration (minutes)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={field.value ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      field.onChange(v === "" ? null : Number.parseInt(v, 10));
-                    }}
-                    placeholder="Optional"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          )}
-        </div>
-
-        {!isGroup && (
-        <>
-        <FormField
-          control={form.control}
-          name="videoUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Videos</FormLabel>
-              <FormControl>
-                <VideoUrlList
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                />
-              </FormControl>
-              <FormDescription>
-                YouTube URLs render as embedded players for students.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="attachments"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Attachments</FormLabel>
-              <FormControl>
-                <AttachmentManager
-                  courseId={courseId}
-                  lessonId={pseudoId}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
+                <Input
+                  placeholder={doc ? "Untitled lesson" : "Introduction to limits"}
+                  className={
+                    doc
+                      ? "font-display h-auto border-transparent bg-transparent px-1 py-1 text-2xl tracking-tight shadow-none hover:bg-muted/40 focus-visible:bg-muted/40 md:text-3xl dark:bg-transparent"
+                      : undefined
+                  }
+                  {...field}
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        </>
+
+        {doc ? (
+          <>
+            {content}
+            <section aria-labelledby={`details-${pseudoId}`} className="border-border space-y-6 rounded-lg border p-4 sm:p-5">
+              <h2 id={`details-${pseudoId}`} className="text-foreground text-sm font-semibold">
+                Details
+              </h2>
+              {kindAndParent}
+              {orderAndDuration}
+              {media}
+            </section>
+          </>
+        ) : (
+          <>
+            {kindAndParent}
+            {content}
+            {orderAndDuration}
+            {media}
+          </>
         )}
 
-        <div className="flex justify-end gap-2">
+        <div
+          className={cn(
+            "flex justify-end gap-2",
+            doc && "bg-background/95 border-border sticky bottom-0 z-10 border-t py-3 backdrop-blur",
+          )}
+        >
           <Button type="submit" disabled={pending}>
             {pending && <Loader2 className="size-4 animate-spin" />}
             {isEdit ? "Save changes" : isGroup ? "Create group" : "Create lesson"}
