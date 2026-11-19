@@ -5,6 +5,7 @@
 
 import "server-only";
 
+import { deleteWorkspaceData, planRetention, retentionDeletesEnabled } from "@/features/billing/retention";
 import { lifetimeVolume } from "@/features/payments/reconcile";
 import { prisma } from "@/lib/db";
 import { requireViewer, type BillingState } from "@/lib/viewer";
@@ -83,4 +84,30 @@ export async function adminGetPaymentVolume() {
   await requireViewer({ permission: "admin.console" });
   const v = await lifetimeVolume();
   return { lifetimeCents: v.lifetimeCents, capCents: v.capCents, percent: Math.round(v.usedBps) / 100 };
+}
+
+/**
+ * Workspaces past their retention date, with exactly what deleting each
+ * would remove (a dry run: nothing changes). Read this before switching on
+ * RETENTION_DELETES. Ids and counts only.
+ */
+export async function adminRetentionPreview() {
+  await requireViewer({ permission: "admin.console" });
+  return retentionPreviewFor(new Date());
+}
+
+export async function retentionPreviewFor(now: Date) {
+  const plan = await planRetention(now);
+  const items = [];
+  for (const p of plan) {
+    const ws = await prisma.workspace.findUnique({ where: { id: p.workspaceId }, select: { name: true, subscription: { select: { deleteAfter: true, lastPaidAt: true } } } });
+    items.push({
+      workspaceId: p.workspaceId,
+      name: ws?.name ?? "",
+      deleteAfter: ws?.subscription?.deleteAfter?.toISOString() ?? null,
+      lastPaidAt: ws?.subscription?.lastPaidAt?.toISOString() ?? null,
+      counts: await deleteWorkspaceData(p.workspaceId, { dryRun: true, now }),
+    });
+  }
+  return { deletesEnabled: retentionDeletesEnabled(), items };
 }

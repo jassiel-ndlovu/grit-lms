@@ -478,8 +478,8 @@ export async function listPlatformInvoicesFor(workspaceId: string, input: { curs
 }
 
 /**
- * One invoice with its lines and payments. `pdfUrl` is null until invoice
- * PDFs are built; B can render the invoice from the lines meanwhile.
+ * One invoice with its lines and payments. `pdfUrl` is the PDF route
+ * (/api/billing/invoices/[id]/pdf), rendered on request.
  */
 export async function getPlatformInvoice(input: { id: string }) {
   const { workspace } = await workspaceViewer("billing.view");
@@ -519,7 +519,7 @@ export async function getPlatformInvoiceFor(workspaceId: string, input: { id: st
     creditCents: inv.creditCents,
     vatCents: inv.vatCents,
     payments,
-    pdfUrl: null as string | null,
+    pdfUrl: `/api/billing/invoices/${inv.id}/pdf` as string | null,
   };
 }
 

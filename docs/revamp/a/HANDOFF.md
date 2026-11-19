@@ -3,6 +3,25 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Retention deletes (switched off) and invoice PDFs, `revamp/a-retention`
+
+Done:
+- **Retention deletes** (owner approved the policy), in `billing/retention.ts` `deleteWorkspaceData`:
+  - Each course goes in its own transaction: B's `deleteCourseContent` (#119), then the course's notifications, then the Course, which takes its staff, enrolments and billing settings with it.
+  - Then learners, memberships, usage rows and the logo.
+  - Files are deleted after each commit, and only links on our Blob store.
+  - Kept: the Workspace row (renamed to its legal name or "Deleted workspace"), Subscription, invoices and lines, seat charges, payments, refunds and AuditLog, plus user accounts.
+  - Refused: `ws_nexa_legacy`, and any workspace that isn't READ_ONLY or CANCELLED past its `deleteAfter`.
+- **Switched off by default.** The billing job deletes only with `RETENTION_DELETES=1` (at most 3 workspaces per run); otherwise it reports the plan. `adminRetentionPreview()` lists every due workspace with exact counts (a dry run).
+  - Today there are no subscriptions in production, so nothing is due.
+- **Invoice PDFs:** `GET /api/billing/invoices/[id]/pdf` renders the invoice from its stored lines with `pdf-lib` (new dependency, 1.17.1). It says "TAX INVOICE" only when VAT is charged. `getPlatformInvoice().pdfUrl` points to it.
+- **Checks:**
+  - `check-invoice-pdf.ts`: 7 checks.
+  - A one-off end-to-end run on the preview DB: 14 checks covering the guards, preview counts, the dry run changing nothing, the delete, what's kept, only our 5 Blob files deleted and never the outside link, and the workspace not listed again. File deletion was stubbed, and the test rows were removed.
+
+Questions for the owner:
+- Switch on `RETENTION_DELETES=1` in Production when you're ready. Look at `adminRetentionPreview()` (or ask A for the list) first.
+
 ## 2026-11-19 Nexa admin billing, `revamp/a-admin-billing`
 
 Done:
