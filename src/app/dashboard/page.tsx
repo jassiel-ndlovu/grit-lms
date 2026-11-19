@@ -3,7 +3,7 @@
  *
  * Server Component that branches on role:
  *   - STUDENT: editorial home with progress, up-next deadlines, recent grades
- *   - TUTOR: quick-link tiles into the tutor management surfaces
+ *   - TUTOR: TutorHome (what needs marking, what is due, drafts, the week)
  *   - ADMIN / PARENT: placeholder landings (features/admin, features/parents)
  *
  * Replaces the legacy client /dashboard/home/* split. All data comes from
@@ -51,6 +51,9 @@ import { ParentDashboard } from "@/features/parents/components/parent-dashboard"
 import { DEFAULT_TIME_ZONE, formatDate, greetingFor, resolveLocale } from "@/lib/datetime";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { TutorHome } from "@/features/activity/components/tutor-home";
+import { parseAttentionFilter } from "@/features/activity/lib/attention";
+import { getTutorHome } from "@/features/activity/tutor-home";
 
 export const metadata = { title: "Dashboard" };
 
@@ -59,14 +62,28 @@ function pct(score: number, outOf: number) {
   return Math.round((score / outOf) * 100);
 }
 
-export default async function DashboardLanding() {
+export default async function DashboardLanding({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
   if (!session?.user) redirect("/");
 
-  if (session.user.role === "TUTOR") {
-    return <TutorDashboard />;
-  }
   const userFirstName = (session.user.name ?? "").split(" ")[0] || "there";
+  if (session.user.role === "TUTOR") {
+    const tutor = await prisma.tutor.findUnique({ where: { email: session.user.email }, select: { id: true } });
+    if (!tutor) {
+      return <div className="text-muted-foreground p-8 text-sm">No tutor profile found for this account.</div>;
+    }
+    const [prefs, { show }] = await Promise.all([getUserPreferences(session.user.id), searchParams]);
+    const dateCtx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
+    const now = new Date();
+    const data = await getTutorHome(tutor.id, now, dateCtx.timeZone);
+    return (
+      <TutorHome firstName={userFirstName} data={data} filter={parseAttentionFilter(show)} now={now} dateCtx={dateCtx} />
+    );
+  }
   if (session.user.role === "ADMIN") {
     return <AdminDashboard firstName={userFirstName} />;
   }
@@ -351,47 +368,6 @@ function SectionHeader({ title, href, label }: { title: string; href: string; la
           <ArrowRight className="size-3" />
         </Link>
       </Button>
-    </div>
-  );
-}
-
-function TutorDashboard() {
-  return (
-    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <header>
-        <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">Welcome back, tutor.</h1>
-        <p className="text-muted-foreground mt-1.5 text-sm">Manage your courses, schedule, and assessments from one place.</p>
-      </header>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card className="p-6">
-          <Link href="/dashboard/manage-courses" className="block space-y-2">
-            <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 items-center justify-center rounded-md"><BookOpen className="size-5" /></div>
-            <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">Manage courses</h2>
-            <p className="text-muted-foreground text-sm">Edit content, manage enrolment, and add lessons.</p>
-          </Link>
-        </Card>
-        <Card className="p-6">
-          <Link href="/dashboard/calendar" className="block space-y-2">
-            <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 items-center justify-center rounded-md"><CalendarDays className="size-5" /></div>
-            <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">Schedule</h2>
-            <p className="text-muted-foreground text-sm">Lectures, exams, and meetings across your courses.</p>
-          </Link>
-        </Card>
-        <Card className="p-6">
-          <Link href={assignmentRoutes.index} className="block space-y-2">
-            <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 items-center justify-center rounded-md"><Pencil className="size-5" /></div>
-            <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">Assignments</h2>
-            <p className="text-muted-foreground text-sm">Review and grade student submissions.</p>
-          </Link>
-        </Card>
-        <Card className="p-6">
-          <Link href="/dashboard/tutor-tests" className="block space-y-2">
-            <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 items-center justify-center rounded-md"><Target className="size-5" /></div>
-            <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">Tests &amp; quizzes</h2>
-            <p className="text-muted-foreground text-sm">Author assessments and review submissions.</p>
-          </Link>
-        </Card>
-      </div>
     </div>
   );
 }

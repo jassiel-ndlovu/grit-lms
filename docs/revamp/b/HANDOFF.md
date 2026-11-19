@@ -3,6 +3,33 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Tutor home restyle (Phase 1), `revamp/b-tutor-home`
+
+Done:
+- The tutor's `/dashboard` now follows the UI draft "Main":
+  - a greeting and a one-line summary ("N to mark · M due this week");
+  - one primary action, "New ▾" (course, test, assignment, event);
+  - a "Needs your attention" table with To mark, Due (next 7 days) and
+    Draft rows, filtered by `?show=mark|due|draft`, with an empty state;
+  - "This week" numbers and the next 5 sessions ("Coming up"),
+    recurring events expanded.
+- Rules live in `src/features/activity/lib/attention.ts` (pure, checked
+  by `npx tsx scripts/check-tutor-attention.ts`); data in
+  `src/features/activity/tutor-home.ts`. The old tutor tiles are gone.
+- Queries still use `Course.tutorId` and the implicit enrolment join;
+  they move with the rest after #93.
+- A agreed the #93 order and is writing step 1
+  (`setUpCourseTenancy`, `setCourseEnrollment` in
+  `src/features/workspaces/tenancy.ts`). B starts step 2 (dual writes in
+  `createCourse`/`updateCourse`) once A posts the merged PR.
+
+Deferred: the draft's billing rows (Phase 2) and setup checklist
+(onboarding wizard).
+
+Owner check: sign in as a tutor on Preview and open Home.
+
+Blocked on the other agent: A's step 1 PR on #93.
+
 ## 2026-11-19 Messaging across computers, `revamp/b-agent-messaging`
 
 Done:
