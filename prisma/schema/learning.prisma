@@ -34,6 +34,13 @@ model Course {
   staff             CourseStaff[]
   enrollments       Enrollment[]
 
+  // Billing back-relations only (Agent A, billing.prisma, Phase 2). No
+  // columns on Course; noted for B's review in a/HANDOFF.md.
+  services     CourseService[]
+  tierHolds    CourseTierHold[]
+  tierOverride CourseTierOverride?
+  feeSchedules FeeSchedule[]
+
   @@index([workspaceId])
 }
 

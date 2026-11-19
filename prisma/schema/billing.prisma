@@ -1,5 +1,818 @@
 // billing.prisma — owned by Agent A (docs/revamp/AGENTS.md, section 2).
 // Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
+//
+// Phase 2 billing and payments. Designs: docs/revamp/a/design/03-billing.md
+// (Gate 1, the workspace pays Nexa) and 04-payments.md (provider, Gate 2,
+// parents pay tutors). Contracts: docs/revamp/contracts/billing.md and
+// services.md. All money is integer ZAR cents.
+//
+// Money records (PlatformInvoice, Payment, Invoice, Refund, OffsitePayment)
+// are kept for tax after a workspace's data is deleted, so they restrict
+// workspace deletion and keep course and learner ids as plain strings with
+// title snapshots. Configuration rows cascade with their workspace or course.
 
-// Tier, Service, CourseService, Subscription, BillingPeriod, invoices and payments
-// arrive here in Phase 2 (docs/revamp/a/design/03-billing.md, 04-payments.md).
+/**
+ * -------------------------------------------------------------------------
+ */
+/**
+ * Enums
+ */
+/**
+ * -------------------------------------------------------------------------
+ */
+
+enum TierKey {
+  CORE
+  PLUS
+  PRO
+}
+
+enum ServiceKind {
+  BASIC
+  PREMIUM
+  ADDON
+}
+
+/// ACTIVE = v1. PARKED and LATER keys exist so keys stay stable but can never
+/// be switched on. RETIRED keys are never reused (services.md).
+enum ServiceStatus {
+  ACTIVE
+  PARKED
+  LATER
+  HIDDEN
+  RETIRED
+}
+
+enum Meter {
+  ACTIVE_STUDENTS
+  AI_MARKS
+  LIVE_ROOM_MINUTES
+  STORAGE_MB
+  API_REQUESTS
+}
+
+enum PaymentProviderId {
+  PAYSTACK
+  PAYFAST
+}
+
+enum SubscriptionStatus {
+  NONE
+  AUTHORISED
+  FAILED
+  REVOKED
+}
+
+enum BillingPeriodStatus {
+  OPEN
+  CLOSED
+}
+
+enum SeatChargeKind {
+  ADVANCE
+  CATCH_UP
+}
+
+enum UsageSource {
+  NIGHTLY
+  EVENT
+  ADMIN
+}
+
+enum UsageCapSource {
+  TUTOR
+  TRIAL
+  ADMIN
+}
+
+enum PlatformInvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  PAST_DUE
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum PlatformPaidVia {
+  CARD
+  OFFSITE
+  CREDIT
+  COMPED
+}
+
+enum DunningStage {
+  NONE
+  DAY0
+  DAY3
+  DAY7
+  LOCKED
+}
+
+enum PlatformInvoiceLineKind {
+  ADVANCE
+  CATCH_UP
+  TIER_UPGRADE
+  ADDON
+  PASS_THROUGH
+  DISCOUNT
+  CREDIT
+  COMP
+  VAT
+}
+
+enum CreditNoteStatus {
+  OPEN
+  APPLIED
+  VOID
+}
+
+enum DiscountKind {
+  PERCENT
+  FIXED
+}
+
+enum DiscountScope {
+  WORKSPACE_BILL
+  TIER
+  ADDON
+  PARENT_INVOICE
+}
+
+enum ProviderOwnerType {
+  WORKSPACE
+  USER
+}
+
+enum PayoutMode {
+  WORKSPACE
+  PER_TUTOR
+}
+
+enum PayoutAccountStatus {
+  PENDING
+  ACTIVE
+  DISABLED
+}
+
+enum FeeScheduleKind {
+  MONTHLY
+  LESSON_PACK
+  ONCE_OFF
+}
+
+enum FeeInvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum FeeInvoicePaidVia {
+  ONLINE
+  OFFSITE
+}
+
+enum PaymentPurpose {
+  CARD_AUTHORISATION
+  PLATFORM_INVOICE
+  PARENT_CHECKOUT
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  ABANDONED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentEventStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+enum OffsiteMethod {
+  CASH
+  EFT
+  OTHER
+}
+
+enum OffsiteMarkedAs {
+  TUTOR
+  WORKSPACE_ADMIN
+  NEXA_ADMIN
+}
+
+/**
+ * -------------------------------------------------------------------------
+ */
+/**
+ * Catalogue and configuration (design 03, sections 1 and 2)
+ */
+/**
+ * -------------------------------------------------------------------------
+ */
+
+/// A tier price. A price change adds a new row; invoices snapshot the price.
+model Tier {
+  id                String    @id @default(cuid())
+  key               TierKey
+  rank              Int
+  name              String
+  priceCents        Int
+  aiMarksPerStudent Int       @default(0)
+  activeFrom        DateTime
+  activeTo          DateTime?
+
+  @@unique([key, activeFrom])
+}
+
+/// A service key from contracts/services.md. Seeded by scripts/seed-billing.ts.
+model Service {
+  key            String        @id
+  name           String
+  kind           ServiceKind
+  tier           TierKey
+  status         ServiceStatus
+  meter          Meter?
+  unitPriceCents Int?
+
+  courseServices CourseService[]
+}
+
+/// Platform config, one row (id "singleton"). Read by getBillingConfig().
+model BillingConfig {
+  id                              String    @id @default("singleton")
+  vatRegistered                   Boolean   @default(false)
+  vatNumber                       String?
+  vatRateBps                      Int       @default(1500)
+  vatEffectiveFrom                DateTime? @db.Date
+  /// Price = cost ÷ (apiMarginBps / 10000); 8000 = divide by 0.8.
+  apiMarginBps                    Int       @default(8000)
+  trialDays                       Int       @default(14)
+  periodDays                      Int       @default(30)
+  retentionMonthsAfterLastPayment Int       @default(2)
+  updatedAt                       DateTime  @updatedAt
+}
+
+/**
+ * -------------------------------------------------------------------------
+ */
+/**
+ * Per-course services and tiers
+ */
+/**
+ * -------------------------------------------------------------------------
+ */
+
+/// Premium keys only; basic keys are always on.
+model CourseService {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  courseId        String
+  serviceKey      String
+  enabled         Boolean
+  changedAt       DateTime @default(now())
+  changedByUserId String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  service   Service   @relation(fields: [serviceKey], references: [key])
+
+  @@unique([courseId, serviceKey])
+  @@index([workspaceId])
+}
+
+/// Written when a course's derived tier goes up; billed at that tier until holdUntil.
+model CourseTierHold {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  courseId       String
+  tierKey        TierKey
+  raisedAt       DateTime
+  holdUntil      DateTime
+  raisedByUserId String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, holdUntil])
+  @@index([workspaceId])
+}
+
+/// Admin only. Replaces the billed tier; does not change hasService.
+model CourseTierOverride {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  courseId        String    @unique
+  tierKey         TierKey
+  until           DateTime?
+  reason          String
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+/**
+ * -------------------------------------------------------------------------
+ */
+/**
+ * Gate 1: subscription, periods, seats, usage, platform invoices
+ */
+/**
+ * -------------------------------------------------------------------------
+ */
+
+/// One per workspace. Card details are the saved Paystack authorisation.
+model Subscription {
+  id                   String             @id @default(cuid())
+  workspaceId          String             @unique
+  provider             PaymentProviderId  @default(PAYSTACK)
+  providerCustomerCode String?
+  /// AES-GCM ciphertext of the reusable authorisation code. Never plain.
+  authorizationCodeEnc String?
+  cardBrand            String?
+  cardLast4            String?
+  cardExpMonth         Int?
+  cardExpYear          Int?
+  status               SubscriptionStatus @default(NONE)
+  currentPeriodStart   DateTime?
+  /// Exclusive.
+  currentPeriodEnd     DateTime?
+  renewsAt             DateTime?
+  lastPaidAt           DateTime?
+  deleteAfter          DateTime?
+  billingEmail         String
+  legalName            String?
+  customerVatNumber    String?
+  compedUntil          DateTime?
+  readOnlySince        DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  cancelledAt          DateTime?
+  trialEmailDay        Int?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+
+  @@index([renewsAt])
+}
+
+/// A 30-day period [start, end). Periods never overlap; a late payment can leave a gap.
+model BillingPeriod {
+  id                String              @id @default(cuid())
+  workspaceId       String
+  start             DateTime
+  end               DateTime
+  status            BillingPeriodStatus @default(OPEN)
+  openedByInvoiceId String
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  seatCharges SeatCharge[]
+
+  @@unique([workspaceId, start])
+}
+
+/// Which seat was billed at which tier in a period, so catch-ups never double-charge.
+model SeatCharge {
+  id              String         @id @default(cuid())
+  workspaceId     String
+  billingPeriodId String
+  courseId        String
+  learnerId       String
+  tierKey         TierKey
+  kind            SeatChargeKind
+  invoiceId       String
+
+  billingPeriod BillingPeriod   @relation(fields: [billingPeriodId], references: [id], onDelete: Cascade)
+  invoice       PlatformInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([billingPeriodId, courseId, learnerId])
+  @@index([workspaceId])
+  @@index([invoiceId])
+}
+
+/// Daily usage per meter and scope. Always written by upsert, recomputed from source.
+model UsageRecord {
+  id                     String      @id @default(cuid())
+  workspaceId            String
+  meter                  Meter
+  /// A courseId, or "" for workspace-wide.
+  scopeKey               String      @default("")
+  day                    DateTime    @db.Date
+  quantity               Int
+  providerCostMilliCents Int         @default(0)
+  source                 UsageSource
+  computedAt             DateTime    @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, meter, scopeKey, day])
+}
+
+/// A cap per meter per billing period.
+model UsageCap {
+  id                  String         @id @default(cuid())
+  workspaceId         String
+  meter               Meter
+  limitQuantity       Int
+  hardStop            Boolean        @default(true)
+  source              UsageCapSource
+  notifiedPeriodStart DateTime?
+  notifiedLevel       Int            @default(0)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, meter, source])
+}
+
+/// Nexa to workspace. Not the parent `Invoice` below.
+model PlatformInvoice {
+  id               String                @id @default(cuid())
+  /// NX-2027-000123
+  number           String                @unique
+  workspaceId      String
+  opensPeriodStart DateTime
+  /// The period billed in arrears, if any.
+  closesPeriodId   String?
+  status           PlatformInvoiceStatus @default(DRAFT)
+  subtotalCents    Int                   @default(0)
+  discountCents    Int                   @default(0)
+  creditCents      Int                   @default(0)
+  vatRateBps       Int?
+  vatCents         Int                   @default(0)
+  totalCents       Int                   @default(0)
+  issuedAt         DateTime              @default(now())
+  dueAt            DateTime
+  paidAt           DateTime?
+  paidVia          PlatformPaidVia?
+  attemptCount     Int                   @default(0)
+  nextAttemptAt    DateTime?
+  dunningStage     DunningStage          @default(NONE)
+
+  workspace       Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  lines           PlatformInvoiceLine[]
+  seatCharges     SeatCharge[]
+  payments        Payment[]
+  offsitePayments OffsitePayment[]
+
+  @@unique([workspaceId, closesPeriodId])
+  @@index([workspaceId, issuedAt])
+  @@index([status, nextAttemptAt])
+}
+
+model PlatformInvoiceLine {
+  id             String                  @id @default(cuid())
+  invoiceId      String
+  kind           PlatformInvoiceLineKind
+  courseId       String?
+  /// Snapshot, so the line reads correctly after the course is gone.
+  courseTitle    String?
+  tierKey        TierKey?
+  serviceKey     String?
+  description    String
+  quantity       Int
+  unitPriceCents Int
+  /// Negative for discounts and credits.
+  amountCents    Int
+  discountCodeId String?
+  creditNoteId   String?
+
+  invoice PlatformInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+/// Admin only. Applied as a CREDIT line on the next invoice.
+model CreditNote {
+  id                 String           @id @default(cuid())
+  workspaceId        String
+  amountCents        Int
+  reason             String
+  status             CreditNoteStatus @default(OPEN)
+  appliedToInvoiceId String?
+  createdByUserId    String
+  createdAt          DateTime         @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+
+  @@index([workspaceId, status])
+}
+
+/// "First N months" is stored as N periods (durationPeriods).
+model DiscountCode {
+  id                String        @id @default(cuid())
+  /// Upper case.
+  code              String        @unique
+  /// Null = issued by Nexa. Workspace codes may only have PARENT_INVOICE scope.
+  issuerWorkspaceId String?
+  description       String
+  kind              DiscountKind
+  percentBps        Int?
+  amountCents       Int?
+  scope             DiscountScope
+  scopeTierKey      TierKey?
+  scopeServiceKey   String?
+  startsAt          DateTime
+  endsAt            DateTime?
+  maxRedemptions    Int?
+  redemptionCount   Int           @default(0)
+  durationPeriods   Int?
+  active            Boolean       @default(true)
+  createdByUserId   String
+  createdAt         DateTime      @default(now())
+
+  redemptions Redemption[]
+}
+
+model Redemption {
+  id             String    @id @default(cuid())
+  discountCodeId String
+  /// ws:<id> or user:<id>:learner:<id>
+  redeemerKey    String
+  workspaceId    String?
+  payerUserId    String?
+  learnerId      String?
+  redeemedAt     DateTime  @default(now())
+  periodsApplied Int       @default(0)
+  exhaustedAt    DateTime?
+
+  discountCode DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Restrict)
+
+  @@unique([discountCodeId, redeemerKey])
+  @@index([workspaceId])
+}
+
+/**
+ * -------------------------------------------------------------------------
+ */
+/**
+ * Payments (design 04)
+ */
+/**
+ * -------------------------------------------------------------------------
+ */
+
+/// Gate 1 customer is the workspace; Gate 2 customer is the paying user.
+model ProviderCustomer {
+  id           String            @id @default(cuid())
+  provider     PaymentProviderId
+  ownerType    ProviderOwnerType
+  workspaceId  String?
+  userId       String?
+  customerCode String
+  email        String
+  createdAt    DateTime          @default(now())
+
+  @@unique([provider, ownerType, workspaceId, userId])
+  @@index([customerCode])
+}
+
+model PaymentSettings {
+  workspaceId         String     @id
+  payoutMode          PayoutMode @default(WORKSPACE)
+  defaultDueDays      Int        @default(7)
+  overdueReminders    Boolean    @default(true)
+  restrictOnOverdue   Boolean    @default(false)
+  offsiteInstructions String?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+/// A Paystack subaccount. The full account number goes to the provider and is never stored.
+model PayoutAccount {
+  id                 String              @id @default(cuid())
+  workspaceId        String
+  /// Set only in PER_TUTOR mode.
+  membershipId       String?
+  provider           PaymentProviderId   @default(PAYSTACK)
+  subaccountCode     String              @unique
+  businessName       String
+  bankCode           String
+  bankName           String
+  accountNumberLast4 String
+  accountName        String
+  status             PayoutAccountStatus @default(PENDING)
+  verifiedAt         DateTime?
+  createdByUserId    String
+  createdAt          DateTime            @default(now())
+
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  invoices    Invoice[]
+  allocations PaymentAllocation[]
+
+  @@unique([workspaceId, membershipId])
+}
+
+/// A tutor's fee. A learner row overrides the course default (learnerId null).
+model FeeSchedule {
+  id            String          @id @default(cuid())
+  workspaceId   String
+  courseId      String
+  learnerId     String?
+  kind          FeeScheduleKind
+  amountCents   Int
+  lessonsInPack Int?
+  description   String
+  /// 1-28, MONTHLY only.
+  billingDay    Int?
+  startsOn      DateTime        @db.Date
+  endsOn        DateTime?       @db.Date
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  learner   Learner?  @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, active])
+  @@index([courseId])
+  @@index([learnerId])
+}
+
+/// Payee to payer (Gate 2). One per child per payee per run.
+model Invoice {
+  id                String             @id @default(cuid())
+  /// Unique per workspace.
+  number            String
+  workspaceId       String
+  payoutAccountId   String
+  learnerId         String
+  studentUserId     String
+  status            FeeInvoiceStatus   @default(DRAFT)
+  issuedAt          DateTime           @default(now())
+  dueAt             DateTime
+  periodStart       DateTime?
+  periodEnd         DateTime?
+  subtotalCents     Int                @default(0)
+  discountCents     Int                @default(0)
+  totalCents        Int                @default(0)
+  paidAt            DateTime?
+  paidVia           FeeInvoicePaidVia?
+  payerUserId       String?
+  lockedByPaymentId String?
+  lockedUntil       DateTime?
+
+  workspace       Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  payoutAccount   PayoutAccount       @relation(fields: [payoutAccountId], references: [id], onDelete: Restrict)
+  lines           InvoiceLine[]
+  allocations     PaymentAllocation[]
+  offsitePayments OffsitePayment[]
+
+  @@unique([workspaceId, number])
+  @@index([studentUserId, status])
+  @@index([learnerId])
+}
+
+model InvoiceLine {
+  id              String  @id @default(cuid())
+  invoiceId       String
+  feeScheduleId   String?
+  courseId        String?
+  description     String
+  quantity        Int
+  unitAmountCents Int
+  amountCents     Int
+  discountCodeId  String?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+/// One provider transaction.
+model Payment {
+  id                String            @id @default(cuid())
+  provider          PaymentProviderId
+  /// Ours, sent to the provider. Unique.
+  reference         String            @unique
+  purpose           PaymentPurpose
+  /// Gate 1.
+  workspaceId       String?
+  /// Gate 2.
+  payerUserId       String?
+  platformInvoiceId String?
+  status            PaymentStatus     @default(PENDING)
+  amountCents       Int
+  commissionCents   Int               @default(0)
+  estimatedFeeCents Int               @default(0)
+  feeCents          Int?
+  channel           String?
+  splitSent         Json?
+  paidAt            DateTime?
+  createdAt         DateTime          @default(now())
+
+  platformInvoice PlatformInvoice?    @relation(fields: [platformInvoiceId], references: [id], onDelete: Restrict)
+  allocations     PaymentAllocation[]
+  refunds         Refund[]
+
+  @@index([workspaceId])
+  @@index([payerUserId])
+  @@index([status, createdAt])
+  @@index([platformInvoiceId])
+}
+
+/// Gate 2 only: one invoice inside a parent checkout.
+model PaymentAllocation {
+  id              String @id @default(cuid())
+  paymentId       String
+  invoiceId       String
+  payoutAccountId String
+  /// Invoice total.
+  amountCents     Int
+  /// Sent to the subaccount.
+  shareCents      Int
+  commissionCents Int
+  feeShareCents   Int    @default(0)
+
+  payment       Payment       @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  payoutAccount PayoutAccount @relation(fields: [payoutAccountId], references: [id], onDelete: Restrict)
+  refunds       Refund[]
+
+  @@unique([paymentId, invoiceId])
+  @@index([invoiceId])
+}
+
+/// Every webhook, stored before processing.
+model PaymentEvent {
+  id          String             @id @default(cuid())
+  provider    PaymentProviderId
+  /// paystack:<event>:<data.id>
+  dedupeKey   String             @unique
+  type        String
+  reference   String?
+  payload     Json
+  receivedAt  DateTime           @default(now())
+  status      PaymentEventStatus @default(RECEIVED)
+  attempts    Int                @default(0)
+  error       String?
+  processedAt DateTime?
+
+  @@index([status, receivedAt])
+  @@index([reference])
+}
+
+/// The id is the idempotency key sent to the provider.
+model Refund {
+  id                      String       @id @default(cuid())
+  paymentId               String
+  allocationId            String?
+  amountCents             Int
+  commissionReturnedCents Int          @default(0)
+  reason                  String
+  providerRefundId        String?
+  status                  RefundStatus @default(PENDING)
+  requestedByUserId       String
+  createdAt               DateTime     @default(now())
+  processedAt             DateTime?
+
+  payment    Payment            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  allocation PaymentAllocation? @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId])
+  @@index([status])
+}
+
+/// Exactly one of invoiceId and platformInvoiceId is set (checked in code).
+/// Nexa earns no commission on off-site payments.
+model OffsitePayment {
+  id                String          @id @default(cuid())
+  workspaceId       String
+  invoiceId         String?
+  platformInvoiceId String?
+  method            OffsiteMethod
+  amountCents       Int
+  receivedOn        DateTime        @db.Date
+  reference         String?
+  note              String
+  markedByUserId    String
+  markedAs          OffsiteMarkedAs
+  createdAt         DateTime        @default(now())
+  voidedAt          DateTime?
+  voidReason        String?
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  platformInvoice PlatformInvoice? @relation(fields: [platformInvoiceId], references: [id], onDelete: Restrict)
+
+  @@index([workspaceId])
+  @@index([invoiceId])
+  @@index([platformInvoiceId])
+}

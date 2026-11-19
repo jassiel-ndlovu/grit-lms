@@ -79,6 +79,22 @@ model Workspace {
   auditLogs   AuditLog[]
   courses     Course[]
   enrollments Enrollment[]
+
+  // Billing and payments (billing.prisma, Phase 2).
+  subscription        Subscription?
+  billingPeriods      BillingPeriod[]
+  courseServices      CourseService[]
+  courseTierHolds     CourseTierHold[]
+  courseTierOverrides CourseTierOverride[]
+  usageRecords        UsageRecord[]
+  usageCaps           UsageCap[]
+  platformInvoices    PlatformInvoice[]
+  creditNotes         CreditNote[]
+  paymentSettings     PaymentSettings?
+  payoutAccounts      PayoutAccount[]
+  feeSchedules        FeeSchedule[]
+  feeInvoices         Invoice[]
+  offsitePayments     OffsitePayment[]
 }
 
 /// Organisations only. A solo practice has no teams.
@@ -142,9 +158,10 @@ model Learner {
   consentAttestedBy String?
   createdAt         DateTime      @default(now())
 
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enrollments Enrollment[]
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments  Enrollment[]
+  feeSchedules FeeSchedule[]
 
   @@unique([workspaceId, userId])
   @@index([userId])
