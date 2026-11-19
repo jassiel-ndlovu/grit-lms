@@ -24,3 +24,20 @@ export async function requireBillingPage(): Promise<{ ctx: DateContext; canManag
     canManage: can(viewer, "billing.manage"),
   };
 }
+
+/**
+ * The Nexa admin billing pages: billing switched on, and the viewer is a
+ * Nexa admin with `admin.console`. `canOverride` (admin.override) shows the
+ * actions; A's actions check it again.
+ */
+export async function requireAdminBillingPage(): Promise<{ ctx: DateContext; canOverride: boolean }> {
+  if (!isBillingEnabled()) notFound();
+  const viewer = await getViewer();
+  if (!viewer) redirect("/auth");
+  if (viewer.persona !== "admin" || !can(viewer, "admin.console")) notFound();
+  const prefs = await getUserPreferences(viewer.user.id);
+  return {
+    ctx: { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) },
+    canOverride: can(viewer, "admin.override"),
+  };
+}

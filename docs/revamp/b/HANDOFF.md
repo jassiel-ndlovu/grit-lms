@@ -3,6 +3,54 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Nexa admin billing, part 1, `revamp/b-admin-billing`
+
+Built on A's billing contract section 4 (Draft 1.7, #118, #120). Pages are
+under `/dashboard/admin/billing` (AGENTS.md section 2: B builds A's admin
+pages under `src/app/dashboard/**`). The sidebar link (admin persona,
+Platform › Billing) needs `admin.console` and BILLING=1.
+
+Done:
+- **Workspaces** (`/dashboard/admin/billing`):
+  - The Paystack volume meter against the sole-proprietor limit. It turns
+    amber from 80%.
+  - Filters by name or slug and by state (a GET form), with paging.
+  - A table of workspaces: state chip, next date (renews, trial ends, or
+    the day data is deleted, in red), last period's total and overdue
+    amount.
+- **Row actions** (`admin.override`), each in a dialog that says what
+  happens and asks for the audit-log note:
+  - extend the trial (TRIAL or READ_ONLY);
+  - make the workspace complimentary, optionally until a date, or end it;
+  - issue a credit.
+
+  A's messages are shown as written. The page refreshes after each
+  action, because A's `revalidatePath("/admin")` doesn't reach it.
+- **Discount codes** (`/dashboard/admin/billing/discount-codes`): a
+  create form.
+  - Percentage or fixed amount.
+  - Applies to the whole bill, one plan, or one premium service.
+  - Start and end dates, number of uses, and how many payments it covers.
+- **Helpers** in `lib/admin-billing-ui.ts`: rand and percent parsing, the
+  note rule, code normalising, actions per state and error text.
+  `requireAdminBillingPage()` is in `billing-page.ts`.
+
+Checked:
+- `tsc` and `eslint` are clean. `check-admin-billing-ui` (new),
+  `check-shell-nav` (new admin cases) and `check-billing-ui` pass.
+- A temporary sample-data page showed the list, the menu, the Extend trial
+  dialog with its note check, and the code form with its checks. Every
+  field has a label. No console or server errors.
+- No action was sent: there is no admin account locally. Owner check on
+  Preview: sign in as a Nexa admin, open Platform › Billing, and try
+  Extend trial on a test workspace.
+
+Waiting on A (asked on #120):
+- `adminGetWorkspaceBilling`, for the workspace page: courses with tier
+  overrides, and invoices for void and mark-paid-offsite.
+- `adminGetPlatformInvoice` with payment ids, for refunds.
+- `adminListDiscountCodes`, for the code list and Deactivate.
+
 ## 2026-11-19 Billing usage and payments history, `revamp/b-billing-history`
 
 Built on A's billing contract Draft 1.6 (#116).
