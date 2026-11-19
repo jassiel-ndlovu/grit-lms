@@ -8,6 +8,7 @@
  */
 
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
@@ -19,6 +20,8 @@ import {
 } from "@/features/users/components/settings-form";
 import { getUserPreferences } from "@/features/users/preferences";
 import { resolveLocale } from "@/lib/datetime";
+import { isBillingEnabled } from "@/features/billing/errors";
+import { can, getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "Settings" };
 
@@ -32,7 +35,9 @@ export default async function SettingsPage() {
   });
   if (!user) redirect("/auth");
 
-  const prefs = await getUserPreferences(session.user.id);
+  const [prefs, viewer] = await Promise.all([getUserPreferences(session.user.id), getViewer()]);
+  // Billing (BILLING=1) is for people with billing.view in the active workspace.
+  const showBilling = isBillingEnabled() && viewer?.workspace != null && can(viewer, "billing.view");
   const defaults: SettingsFormValues = {
     emailNotifications: prefs.emailNotifications && prefs.notificationFrequency !== "NONE",
     notificationFrequency: prefs.notificationFrequency,
@@ -78,6 +83,19 @@ export default async function SettingsPage() {
           </div>
         </div>
       </section>
+
+      {showBilling ? (
+        <Link
+          href="/dashboard/settings/billing"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">Billing</span>
+            <span className="text-muted-foreground">Plans, the next payment and limits for this workspace.</span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
 
       <SettingsForm
         role={session.user.role}
