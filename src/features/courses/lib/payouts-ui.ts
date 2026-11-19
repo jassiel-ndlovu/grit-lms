@@ -40,3 +40,33 @@ export function payoutErrorMessage(serverError: string | null | undefined): stri
   if (code === "BILLING_DISABLED") return "Payments aren't switched on yet.";
   return detail;
 }
+
+export type FeeStatus = "DRAFT" | "OPEN" | "PAID" | "VOID" | "REFUNDED" | "PARTIALLY_REFUNDED";
+
+/** Statuses the fees list filters by, in the order its links show them. */
+export const FEE_FILTERS = [
+  { key: "OPEN", label: "Open" },
+  { key: "PAID", label: "Paid" },
+  { key: "ALL", label: "All" },
+] as const;
+
+/**
+ * A fee's chip. OPEN past its due day (`today` is YYYY-MM-DD in the
+ * viewer's zone, `dueDay` likewise) reads "Overdue"; PAID says how.
+ */
+export function feeChip(status: FeeStatus, paidVia: "ONLINE" | "OFFSITE" | null, dueDay: string, today: string): { label: string; tone: Tone } {
+  switch (status) {
+    case "OPEN":
+      return dueDay < today ? { label: "Overdue", tone: "danger" } : { label: "Open", tone: "warning" };
+    case "PAID":
+      return { label: paidVia === "OFFSITE" ? "Paid off-site" : paidVia === "ONLINE" ? "Paid online" : "Paid", tone: "success" };
+    case "VOID":
+      return { label: "Cancelled", tone: "neutral" };
+    case "REFUNDED":
+      return { label: "Refunded", tone: "neutral" };
+    case "PARTIALLY_REFUNDED":
+      return { label: "Partly refunded", tone: "neutral" };
+    default:
+      return { label: "Draft", tone: "neutral" };
+  }
+}

@@ -3,6 +3,45 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Fees, part 1, `revamp/b-fees`
+
+Built on A's billing contract section 3 (#125).
+
+Done:
+- **Fees** (`/dashboard/fees`, ux/04 §6), behind BILLING=1 and
+  `fees.manage`. In the staff nav under Workspace, before Billing.
+  - Filters: Open (default), Paid, All, and a course picker when there is
+    more than one course. Paging with Newest / Older.
+  - Table: student, number, paid to, fee, due, status. Status chips:
+    Open, Overdue (past the due day in the viewer's zone), Paid online,
+    Paid off-site, Cancelled.
+  - **New fee:** course, student (open enrolments), description, amount,
+    due day. Calls `issueInvoice` with one line.
+  - Open rows have a menu: **Mark paid off-site** (cash, EFT or other,
+    the full fee, received day, reference, note; `fees.markOffsite`) and
+    **Cancel fee** (a reason; `voidInvoice`).
+  - A banner links to Set up payouts when the account fees are paid into
+    is missing (the workspace's, or in per-tutor mode the viewer's own).
+- `features/courses/fee-courses.ts`: the courses a viewer may charge
+  fees on, with their learners. Scoped tutors get the courses they own or
+  teach, matching `listFeeInvoices`.
+- `feeChip` and `FEE_FILTERS` in `lib/payouts-ui.ts`.
+
+Checked:
+- `tsc` and `eslint` are clean; `check-payouts-ui` and `check-shell-nav`
+  pass with the new cases.
+- A temporary sample-data page showed the table with every status, the
+  empty state, the New fee check ("Choose the student."), both row dialogs
+  and the mobile width. Nothing was submitted.
+- Owner check on Preview: create a fee, mark one paid off-site, cancel one.
+
+Not done (waits on #125):
+- Course fee settings (`upsertFeeSchedule` needs `listFeeSchedules`).
+- The one-fee panel (needs `getFeeInvoice`), and voiding an off-site
+  payment from it.
+- The table can't show each fee's course or link to the student until the
+  list items carry `courseNames` and `learnerId`.
+
 ## 2026-11-20 Payouts settings, `revamp/b-fees-payouts`
 
 Built on A's billing contract section 3 (Draft 1.9, #124, #125).
