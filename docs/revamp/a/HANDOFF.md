@@ -3,6 +3,27 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Parent checkout; owner admin account; Prisma engine fix; test admin, `revamp/a-gate2-checkout`
+
+Done:
+- **The owner's Nexa admin account** (`platformRole NEXA_ADMIN`, `role ADMIN`) on production, at the owner's request. It was created with a random password nobody knows; the owner sets their own through the new reset link.
+- **A production bug fixed (#127):** the first reset request failed with "Prisma Client could not locate the Query Engine". Next's file tracing hadn't copied the engine from `src/generated/prisma` into that route's function. `outputFileTracingIncludes` now adds it to every route. After the fix the reset email was delivered (Resend: delivered).
+- **Test admin for the agents** (owner's request), on the **preview** DB only: `test-admin@example.com`, Nexa admin. The password is in the owner's git-ignored `.env.test-admin`, for passing to B privately (#129).
+  - Vercel Preview variables are forced to "sensitive" on this project, so `vercel env pull` can't hand them to an agent.
+  - Two stale variables, `E2E_ADMIN_EMAIL` and `E2E_ADMIN_PASSWORD`, are left on Preview because Vercel needs the owner's approval to remove them. They're harmless; the password they hold was rotated.
+- **Gate 2 checkout** (contract section 2, Draft 1.10): `listPayableInvoices`, `startCheckout`, `getCheckoutStatus` (`src/features/payments/checkout*.ts`).
+  - The split is `planCheckout`: Nexa's 2% is grossed up so it still nets 2% after Paystack's proportional fee, and payee shares use largest remainder.
+  - Locking is all-or-nothing, for 30 minutes.
+  - `settlePayment` now handles PARENT_CHECKOUT: invoices are paid online and the fee is shared across invoices. An invoice paid another way meanwhile is flagged (`fees.checkout.unapplied`) for a refund by hand.
+  - Reconciliation now includes parent checkouts.
+- **Design 04 correction:** the worked example's tutor shares were a cent off its own rule. They are 140,040 and 117,516 (257,556 × 143,000 ÷ 263,000 = 140,039.95).
+- **Checks:**
+  - `check-payments.ts` now covers the split.
+  - A one-off end-to-end run on the preview DB, with Paystack stubbed because subaccounts need real bank details: 15 checks, rows removed.
+
+Next:
+- The `fees-daily` job (monthly invoices from schedules, overdue reminders), `requestRefund`, payer receipts, and parent-invoice discount codes.
+
 ## 2026-11-20 Password reset; Nexa admin account for the owner, `revamp/a-password-reset`
 
 Done:

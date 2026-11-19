@@ -155,7 +155,7 @@ sequenceDiagram
 4. With `all-proportional`, every party bears the fee in proportion to its share. To keep Nexa's net at `C`, Nexa's gross share is `S_N = ceil(C × T / (T − F))`. Payee shares split `T − S_N` in proportion to their invoice totals (largest remainder, so they add up exactly).
 5. Create one `Payment` (`PARENT_CHECKOUT`) with a `PaymentAllocation` per invoice, lock the invoices for 30 minutes (`lockedByPaymentId`), and call `initializeCheckout` with one split entry per payee subaccount (invoices for the same payee are summed into one entry).
 
-Example: invoice A R1,430 to tutor X, invoice B R1,200 to tutor Y. `T` = 263 000, `C` = 2 860 + 2 400 = 5 260, `F` = 8 886, `S_N` = 5 444. X's share 140 041 and Y's share 117 515. After Paystack's proportional fee, X nets about 135 310 and Y about 113 545, Nexa about 5 260. The actual fee from `verifyTransaction` is stored in `feeCents` and `feeShareCents`.
+Example: invoice A R1,430 to tutor X, invoice B R1,200 to tutor Y. `T` = 263 000, `C` = 2 860 + 2 400 = 5 260, `F` = 8 886, `S_N` = 5 444. X's share 140 040 and Y's share 117 516 (corrected 2026-11-20: 257 556 × 143 000 ÷ 263 000 = 140 039.95). After Paystack's proportional fee, X nets about 135 310 and Y about 113 545, Nexa about 5 260. The actual fee from `verifyTransaction` is stored in `feeCents` and `feeShareCents`.
 
 **Decision taken here:** gross-up Nexa's share so it nets the full 2%. Alternative: accept Nexa bearing about 2% of the fee (R1.78 here). **Open question:** confirm in Paystack test mode that `all-proportional` with a multi-split behaves this way.
 
@@ -171,7 +171,7 @@ sequenceDiagram
   G->>N: startCheckout([invoice A (child 1, tutor X), invoice B (child 2, tutor Y)])
   N->>N: check access, payees ACTIVE, apply code, compute shares
   N->>N: Payment(PARENT_CHECKOUT) + 2 allocations, lock invoices 30 min
-  N->>P: initializeCheckout(T, splits [X: 140041, Y: 117515], all-proportional)
+  N->>P: initializeCheckout(T, splits [X: 140040, Y: 117516], all-proportional)
   P-->>N: authorizationUrl
   N-->>G: redirect
   G->>P: pays R2,630 by card

@@ -47,7 +47,7 @@ export async function runReconcile(opts: { provider?: PaymentProvider; now?: Dat
 
   // 1. Stale PENDING payments.
   const stale = await prisma.payment.findMany({
-    where: { status: "PENDING", purpose: { not: "PARENT_CHECKOUT" }, createdAt: { lt: new Date(now.getTime() - 30 * MIN) } },
+    where: { status: "PENDING", createdAt: { lt: new Date(now.getTime() - 30 * MIN) } },
     select: { reference: true, createdAt: true },
     orderBy: { createdAt: "asc" },
     take: 200,

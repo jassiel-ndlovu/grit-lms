@@ -7,6 +7,7 @@
 
 import { randomBytes } from "node:crypto";
 
+import { planCheckout, proportional } from "../src/features/payments/checkout-math";
 import { decryptSecret, encryptSecret } from "../src/features/payments/secrets";
 import {
   addCalendarMonths,
@@ -92,6 +93,22 @@ check("day 14: lock", dunningStep("DAY7", due, at(14)).action, "lock");
 check("late job on day 15 at DAY0 still locks", dunningStep("DAY0", due, at(15)).action, "lock");
 check("locked stays locked", dunningStep("LOCKED", due, at(40)).action, "none");
 check("first retry is day 3", firstRetryAt(due).toISOString(), at(3).toISOString());
+
+// Parent checkout split: the worked example in design 04, section 5.
+const plan = planCheckout([
+  { invoiceId: "A", payoutAccountId: "px", subaccountCode: "ACCT_x", totalCents: 143000 },
+  { invoiceId: "B", payoutAccountId: "py", subaccountCode: "ACCT_y", totalCents: 120000 },
+]);
+check("example: T, C, F, Nexa's gross share", [plan.totalCents, plan.commissionCents, plan.estimatedFeeCents, plan.nexaShareCents], [263000, 5260, 8886, 5444]);
+check("example: X gets 140040, Y 117516 (design 04 corrected)", plan.splits, [{ subaccountCode: "ACCT_x", shareCents: 140040 }, { subaccountCode: "ACCT_y", shareCents: 117516 }]);
+check("shares + Nexa = total", plan.splits.reduce((n, x) => n + x.shareCents, 0) + plan.nexaShareCents, plan.totalCents);
+const same = planCheckout([
+  { invoiceId: "A", payoutAccountId: "px", subaccountCode: "ACCT_x", totalCents: 50000 },
+  { invoiceId: "B", payoutAccountId: "px", subaccountCode: "ACCT_x", totalCents: 70000 },
+]);
+check("two invoices for one tutor: one split entry", same.splits.length === 1 && same.allocations.length === 2, true);
+check("largest remainder adds up exactly", proportional(100, [1, 1, 1]), [34, 33, 33]);
+check("Nexa nets its 2% after a proportional fee", Math.round(plan.nexaShareCents * (1 - plan.estimatedFeeCents / plan.totalCents)) >= plan.commissionCents, true);
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

@@ -5,8 +5,8 @@
  * applies the result in one transaction. Idempotent: the status change is a
  * conditional update, so two callers racing apply it once.
  *
- * Built: PLATFORM_INVOICE and CARD_AUTHORISATION (Gate 1). PARENT_CHECKOUT is
- * left alone until its flow exists.
+ * Built: PLATFORM_INVOICE and CARD_AUTHORISATION (Gate 1), PARENT_CHECKOUT
+ * (Gate 2, ./checkout.ts).
  */
 
 import "server-only";
@@ -17,6 +17,7 @@ import { dayLabel, queueBillingEmail } from "@/features/billing/emails";
 import { periodFromPayment } from "@/features/billing/pricing";
 import { prisma } from "@/lib/db";
 
+import { applyCheckoutPayment } from "./checkout";
 import { getProvider, type PaymentProvider } from "./provider";
 import { encryptSecret } from "./secrets";
 import { addCalendarMonths, decideSettlement, seatsAt } from "./settlement-rules";
@@ -46,7 +47,8 @@ export async function settlePayment(
   // FAILED and ABANDONED are not final: Paystack lets the payer retry a
   // declined card on the same reference, so a later verified success wins.
   if (!(OPEN_STATUSES as string[]).includes(payment.status)) return { status: payment.status, applied: false };
-  if (payment.purpose === "PARENT_CHECKOUT") return { status: payment.status, applied: false };
+  // A failed parent checkout keeps its invoice locks until they expire (30
+  // minutes): Paystack lets the payer retry on the same reference.
 
   const provider = opts.provider ?? getProvider();
   const v = await provider.verifyTransaction(reference);
@@ -81,6 +83,10 @@ export async function settlePayment(
       if (won.count === 0) return null;
       if (payment.purpose === "PLATFORM_INVOICE") {
         await applyPlatformInvoicePayment(tx, { paymentId: payment.id, paidAt, card, periodDays: config.periodDays });
+        return { refundId: null };
+      }
+      if (payment.purpose === "PARENT_CHECKOUT") {
+        await applyCheckoutPayment(tx, { paymentId: payment.id, paidAt, feeCents: v.feeCents ?? null });
         return { refundId: null };
       }
       // CARD_AUTHORISATION: keep the card, give the verification charge back.
