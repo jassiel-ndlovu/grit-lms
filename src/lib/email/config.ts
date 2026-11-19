@@ -1,18 +1,12 @@
 /**
  * Email configuration — the one place to change who mail comes from.
  *
- * There is no custom domain yet, so mail goes out from Resend's shared dev
- * sender. Resend only delivers dev-sender mail to the address that owns the
+ * Production sets EMAIL_FROM="Nexa LMS <noreply@notify.nexa-lms.co.za>"
+ * (the subdomain is verified in Resend; docs/revamp/a/ops/domain-dns.md).
+ *
+ * Where EMAIL_FROM is unset (Preview, local), mail goes out from Resend's
+ * shared dev sender, which only delivers to the address that owns the
  * Resend account; sends to anyone else are rejected (we log and move on).
- *
- * The planned sender is the `notify.nexa-lms.co.za` subdomain of
- * `nexa-lms.co.za` (not yet bought or verified). Once Resend has verified
- * it, set EMAIL_FROM in the environment, e.g.
- *
- *   EMAIL_FROM="Nexa LMS <noreply@notify.nexa-lms.co.za>"
- *
- * Nothing else needs to change. Until then, leave EMAIL_FROM unset so the
- * dev sender below keeps working.
  */
 
 import "server-only";
