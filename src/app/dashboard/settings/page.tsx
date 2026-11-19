@@ -38,6 +38,9 @@ export default async function SettingsPage() {
   const [prefs, viewer] = await Promise.all([getUserPreferences(session.user.id), getViewer()]);
   // Billing (BILLING=1) is for people with billing.view in the active workspace.
   const showBilling = isBillingEnabled() && viewer?.workspace != null && can(viewer, "billing.view");
+  // Payouts: whoever connects the account, or manages fees (tutors in per-tutor mode).
+  const showPayouts =
+    isBillingEnabled() && viewer?.workspace != null && (can(viewer, "payouts.connect") || can(viewer, "fees.manage"));
   const defaults: SettingsFormValues = {
     emailNotifications: prefs.emailNotifications && prefs.notificationFrequency !== "NONE",
     notificationFrequency: prefs.notificationFrequency,
@@ -92,6 +95,19 @@ export default async function SettingsPage() {
           <span>
             <span className="text-foreground block font-semibold">Billing</span>
             <span className="text-muted-foreground">Plans, the next payment and limits for this workspace.</span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
+
+      {showPayouts ? (
+        <Link
+          href="/dashboard/settings/payouts"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">Payouts</span>
+            <span className="text-muted-foreground">The bank account parents&apos; fee payments go to.</span>
           </span>
           <span aria-hidden className="text-muted-foreground">→</span>
         </Link>
