@@ -20,8 +20,7 @@ import { getPreferencesForUsers } from "@/features/users/preferences";
 import { enrolledStudent, taughtByEmail } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { DEFAULT_TIME_ZONE, hourInZone } from "@/lib/datetime";
-import { sendEmail } from "@/lib/email/send";
-import { digestEmail } from "@/lib/email/templates";
+import { drainEmailQueue } from "@/lib/email/queue";
 
 import { assignmentRoutes } from "@/features/assignments/routes";
 
@@ -325,15 +324,25 @@ export async function emailDigests(now: Date) {
     const items = rows.filter((r) => wantsEmail(r.type, s.user.role));
     if (items.length === 0) continue;
 
-    const result = await sendEmail(
-      digestEmail({ to: s.user.email, period: weekly ? "weekly" : "daily", items }),
-    );
-    if (!result.ok) continue;
-
+    // Queued (the queue retries and marks the notifications emailed once
+    // sent); lastDigestSentAt moves now so the next run doesn't queue it again.
     await prisma.$transaction([
-      prisma.notification.updateMany({
-        where: { id: { in: items.map((i) => i.id) } },
-        data: { emailedAt: now },
+      prisma.outboundEmail.upsert({
+        where: { idempotencyKey: `digest:${s.userId}:${now.toISOString().slice(0, 13)}` },
+        create: {
+          idempotencyKey: `digest:${s.userId}:${now.toISOString().slice(0, 13)}`,
+          template: "digest",
+          toEmail: s.user.email,
+          userId: s.userId,
+          category: "DIGEST",
+          priority: "DIGEST",
+          data: {
+            period: weekly ? "weekly" : "daily",
+            items: items.map((i) => ({ title: i.title, message: i.message, link: i.link })),
+            notificationIds: items.map((i) => i.id),
+          },
+        },
+        update: {},
       }),
       prisma.userPreferences.update({
         where: { userId: s.userId },
@@ -360,5 +369,7 @@ export async function runNotificationJobs(now = new Date()) {
     await run("gradingReminders", gradingReminders),
     // Last, so this run's reminders make it into this morning's digest.
     await run("emailDigests", emailDigests),
+    // Sends what is queued (digests just now, plus retries of any email).
+    await run("emailQueueSent", async (at) => (await drainEmailQueue({ limit: 80, now: at })).sent),
   ]);
 }

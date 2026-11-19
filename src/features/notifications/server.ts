@@ -27,8 +27,7 @@ import {
   type ResolvedPreferences,
 } from "@/features/users/preferences";
 import { prisma } from "@/lib/db";
-import { sendEmail } from "@/lib/email/send";
-import { notificationEmail } from "@/lib/email/templates";
+import { enqueueEmail, sendQueuedNow } from "@/lib/email/queue";
 
 import {
   CreateNotificationInputSchema,
@@ -283,19 +282,22 @@ async function deliverImmediateEmails(
   sends: { notificationId: string; to: string }[],
   item: { title: string; message: string; link: string | null },
 ) {
-  const results = await Promise.all(
-    sends.map(async (s) => ({
-      ...s,
-      result: await sendEmail(notificationEmail({ to: s.to, item })),
-    })),
-  );
-  const sent = results.filter((r) => r.result.ok).map((r) => r.notificationId);
-  if (sent.length > 0) {
-    await prisma.notification.updateMany({
-      where: { id: { in: sent } },
-      data: { emailedAt: new Date() },
+  // Through the send queue, one row per notification, tried at once; the
+  // queue marks Notification.emailedAt when it is sent and retries failures.
+  const keys: string[] = [];
+  for (const s of sends) {
+    const key = `notif:${s.notificationId}`;
+    await enqueueEmail(prisma, {
+      key,
+      template: "notification",
+      to: s.to,
+      category: "NOTIFICATION",
+      priority: "NORMAL",
+      data: { item, notificationIds: [s.notificationId] },
     });
+    keys.push(key);
   }
+  await sendQueuedNow(keys);
 }
 
 /**

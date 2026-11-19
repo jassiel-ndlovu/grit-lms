@@ -17,6 +17,7 @@ export type BillingTemplateData = {
   dunning: { workspaceName: string; day: 0 | 3 | 7; invoiceNumber: string; totalCents: number; readOnlyOn: string };
   "read-only": { workspaceName: string; invoiceNumber: string; totalCents: number };
   receipt: { workspaceName: string; invoiceNumber: string; totalCents: number; paidOn: string; renewsOn: string; cardLast4: string | null };
+  "deletion-warning": { workspaceName: string; daysLeft: number; deleteOn: string };
 };
 
 export type BillingTemplate = keyof BillingTemplateData;
@@ -101,6 +102,17 @@ export function renderBillingEmail<T extends BillingTemplate>(template: T, data:
           `This pays for 30 days. The next renewal is on ${d.renewsOn}.`,
         ],
         "View billing",
+      );
+    }
+    case "deletion-warning": {
+      const d = data as BillingTemplateData["deletion-warning"];
+      return render(
+        `${d.workspaceName} will be deleted on ${d.deleteOn}`,
+        [
+          `${d.workspaceName} has had no payment for almost two months, so its courses, content and student records will be deleted on ${d.deleteOn} (${d.daysLeft} days from now).`,
+          "Pay any time before then and everything stays as it is. Invoices and payment records are kept, as the law requires.",
+        ],
+        "Pay and keep the workspace",
       );
     }
     default:
