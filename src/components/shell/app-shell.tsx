@@ -22,7 +22,7 @@ import { signOut } from "next-auth/react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Award, BarChart3, BookOpen, Calendar, ChevronsUpDown, ClipboardList, FileText,
-  GraduationCap, HelpCircle, Home, Inbox, LogOut, Menu, Search, Settings, User,
+  CreditCard, GraduationCap, HelpCircle, Home, Inbox, LogOut, Menu, Search, Settings, User,
   Users, X, type LucideIcon,
 } from "lucide-react";
 
@@ -44,7 +44,7 @@ import { FOOTER_LINKS, activeHref, type NavIcon, type NavSection } from "./nav-c
 const ICONS: Record<NavIcon, LucideIcon> = {
   home: Home, book: BookOpen, calendar: Calendar, test: FileText, assignment: ClipboardList,
   grades: Award, gradebook: GraduationCap, analytics: BarChart3, users: Users,
-  settings: Settings, help: HelpCircle, inbox: Inbox,
+  settings: Settings, help: HelpCircle, inbox: Inbox, billing: CreditCard,
 };
 
 /** What the shells show of the viewer. Built once in the dashboard layout. */

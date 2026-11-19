@@ -19,6 +19,7 @@ import type { ReactNode } from "react";
 import { PreferencesProvider } from "@/components/preferences-provider";
 import { AppShell, type ShellUser } from "@/components/shell/app-shell";
 import { navSectionsFor } from "@/components/shell/nav-config";
+import { isBillingEnabled } from "@/features/billing/errors";
 import { getUserPreferences } from "@/features/users/preferences";
 import { AccountBanners } from "@/features/workspaces/components/account-banners";
 import { auth } from "@/lib/auth";
@@ -51,7 +52,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <LegacyProviders mathjax={mathJaxVersion()}>
       <AppShell
         user={user ?? { name: "", email: "", role }}
-        sections={navSectionsFor(viewer)}
+        sections={navSectionsFor(viewer, { billing: isBillingEnabled() })}
         banner={viewer ? <AccountBanners viewer={viewer} /> : null}
       >
         {children}

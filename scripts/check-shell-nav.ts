@@ -46,6 +46,15 @@ check(
   navSectionsFor({ persona: "admin", permissions: [] }).map((s) => s.label ?? ""),
   [""],
 );
+const owner = { persona: "staff" as const, permissions: ["billing.view" as const] };
+check("billing off: no Billing link", hrefsOf(navSectionsFor(owner)).includes("/dashboard/settings/billing"), false);
+check("billing on, billing.view: Billing link", hrefsOf(navSectionsFor(owner, { billing: true })).includes("/dashboard/settings/billing"), true);
+check(
+  "billing on, no billing.view: no Billing link",
+  hrefsOf(navSectionsFor({ persona: "staff", permissions: ["courses.edit"] }, { billing: true })).includes("/dashboard/settings/billing"),
+  false,
+);
+check("billing page lights Billing, not Settings", activeHref("/dashboard/settings/billing", ["/dashboard/settings", "/dashboard/settings/billing"]), "/dashboard/settings/billing");
 
 for (const role of Object.keys(BEFORE) as LegacyRole[]) {
   const all = [...hrefsOf(navSectionsFor(viewerFor(role))), ...FOOTER_LINKS.map((l) => l.href)];

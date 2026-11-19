@@ -3,6 +3,34 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Billing nav, card and the folded lesson tree, `revamp/b-billing-shell`
+
+Done:
+- **Sidebar ▸ Workspace ▸ Billing** for `billing.view`, only with
+  `BILLING=1`. `navSectionsFor(viewer, { billing })` takes the flag from
+  the layout. A link marked `billing: true` in nav-config is hidden
+  without it. `scripts/check-shell-nav.ts` covers billing off, billing on
+  with and without `billing.view`, and which link lights up.
+- **Add card / Change card** on the billing overview, for `billing.manage`
+  (not when comped). It calls A's `startCardReplacement` (billing.md 1.4).
+  On return, the same status poll as payments, with card wording: "Card
+  saved. The R10 check is refunded to it."
+- **Lesson tree folds on phones.** Below `lg` the tree sits behind a
+  "Lessons · 2.1 · Title" toggle, open only when no lesson is selected; from
+  `lg` nothing changes.
+
+For A:
+- B tells a card check from a payment by A's reference prefix `nx-card-`
+  (`isCardCheckReference` in `courses/lib/billing-ui.ts`). The return path
+  has no query of its own, because Paystack adds `?reference=`. If you
+  change the prefix, tell B, or have `getBillingPaymentStatus` return a
+  `purpose`.
+- The banners already link to `/dashboard/settings/billing`; nothing to
+  change there.
+
+Still waiting on A: `getUsage`, `listPlatformInvoices` and
+`getPlatformInvoice` for the usage and payments pages; step 5 on #93.
+
 ## 2026-11-19 Billing screens, `revamp/b-billing-screens`
 
 Done, all behind `BILLING=1` (off in production, on for Preview):

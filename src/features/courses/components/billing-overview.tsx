@@ -13,7 +13,7 @@ import type { getBillingOverview, getCourseTiers } from "@/features/billing/quer
 import { formatDate, type DateContext } from "@/lib/datetime";
 
 import { STATE_CHIP, TIER_LABEL, capLabel, capTone, formatRand } from "../lib/billing-ui";
-import { PayButton, PaymentReturn } from "./billing-pay";
+import { CardButton, PayButton, PaymentReturn } from "./billing-pay";
 import { courseRoutes } from "./course-frame";
 
 export type BillingOverviewData = Awaited<ReturnType<typeof getBillingOverview>>;
@@ -38,7 +38,7 @@ export function BillingOverview({
   /** billing.manage: may pay. */
   canManage: boolean;
   /** Back from Paystack (`reference`) or a saved-card charge (`paid`). */
-  payment: { reference: string | null; paid: boolean } | null;
+  payment: { reference: string | null; paid: boolean; purpose: "payment" | "card" } | null;
 }) {
   const day = (iso: string | Date, year = true) =>
     formatDate(new Date(iso), ctx, year ? { day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short" });
@@ -51,7 +51,7 @@ export function BillingOverview({
 
   return (
     <BillingFrame status={<StatusChip tone={chip.tone}>{chip.label}</StatusChip>}>
-      {payment ? <PaymentReturn reference={payment.reference} /> : null}
+      {payment ? <PaymentReturn reference={payment.reference} purpose={payment.purpose} /> : null}
 
       {overdue ? (
         <section role="alert" className="border-destructive/40 bg-destructive/5 space-y-1 rounded-lg border p-4 text-sm">
@@ -93,7 +93,14 @@ export function BillingOverview({
           <span className={comped ? "line-through" : "text-foreground font-medium"}>{formatRand(o.nextRenewalEstimateCents)}</span>
         </PropertyRow>
         <PropertyRow label="Card">
-          {o.card ? `${o.card.brand} •• ${o.card.last4}` : "No card yet"}
+          <span className="inline-flex flex-wrap items-center gap-3">
+            <span>
+              {o.card
+                ? `${o.card.brand} •• ${o.card.last4} · expires ${String(o.card.expMonth).padStart(2, "0")}/${String(o.card.expYear).slice(-2)}`
+                : "No card yet"}
+            </span>
+            {canManage && !comped ? <CardButton hasCard={o.card != null} /> : null}
+          </span>
         </PropertyRow>
       </PropertyList>
 

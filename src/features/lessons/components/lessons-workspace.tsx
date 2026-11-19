@@ -14,6 +14,7 @@ import { CreateLessonButton } from "./create-lesson-button";
 import { LessonActions } from "./lesson-actions";
 import { LessonForm } from "./lesson-form";
 import { LessonSidebar } from "./lesson-sidebar";
+import { LessonTreeFold } from "./lesson-tree-fold";
 import { LessonTreeTools } from "./lesson-tree-tools";
 import {
   buildLessonTree,
@@ -56,6 +57,12 @@ export function LessonsWorkspace({ course, lessons, selectedLesson }: LessonsWor
           aria-label="Lesson tree"
           className="lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto lg:pr-6"
         >
+          {/* Folded on phones once a lesson is open (lesson-tree-fold.tsx). */}
+          <LessonTreeFold
+            key={selectedLessonId ?? "none"}
+            defaultOpen={!selectedLesson}
+            summary={selectedLesson ? [selectedLabel, selectedLesson.title].filter(Boolean).join(" · ") : ""}
+          >
           <LessonSidebar
             courseId={courseId}
             lessons={lessons}
@@ -82,6 +89,7 @@ export function LessonsWorkspace({ course, lessons, selectedLesson }: LessonsWor
               />
             }
           />
+          </LessonTreeFold>
         </aside>
 
         <section aria-label="Lesson editor" className="border-border min-w-0 lg:min-h-[60vh] lg:border-l lg:pl-8">

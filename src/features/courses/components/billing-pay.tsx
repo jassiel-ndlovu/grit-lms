@@ -13,11 +13,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { getBillingPaymentStatus, payPlatformInvoice, startFirstPayment } from "@/features/billing/actions";
+import {
+  getBillingPaymentStatus,
+  payPlatformInvoice,
+  startCardReplacement,
+  startFirstPayment,
+} from "@/features/billing/actions";
 
 import { billingErrorMessage } from "../lib/billing-ui";
 
 export const BILLING_RETURN_PATH = "/dashboard/settings/billing";
+
 const POLL_MS = 2500;
 const POLL_FOR_MS = 60_000;
 
@@ -64,9 +70,42 @@ export function PayButton({ invoiceId, label }: { invoiceId: string | null; labe
   );
 }
 
+/**
+ * Adds or replaces the card used for renewals: Paystack runs a R10 check
+ * that A refunds at once (billing.md 1.4). The return page tells it from a
+ * payment by its reference (isCardCheckReference in lib/billing-ui).
+ */
+export function CardButton({ hasCard }: { hasCard: boolean }) {
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function go() {
+    setBusy(true);
+    setError(null);
+    const res = await startCardReplacement({ returnPath: BILLING_RETURN_PATH });
+    if (res?.data) return window.location.assign(res.data.authorizationUrl);
+    setError(billingErrorMessage(res?.serverError));
+    setBusy(false);
+  }
+
+  return (
+    <span className="inline-flex flex-col items-start gap-1">
+      <Button variant="outline" size="sm" onClick={go} disabled={busy}>
+        {busy ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
+        {hasCard ? "Change card" : "Add card"}
+      </Button>
+      {error ? (
+        <span role="alert" className="text-destructive text-xs">
+          {error}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 type Phase = "checking" | "slow" | "succeeded" | "failed" | "unknown";
 
-export function PaymentReturn({ reference }: { reference: string | null }) {
+export function PaymentReturn({ reference, purpose = "payment" }: { reference: string | null; purpose?: "payment" | "card" }) {
   const router = useRouter();
   const pathname = usePathname();
   const [phase, setPhase] = React.useState<Phase>(reference ? "checking" : "succeeded");
@@ -118,7 +157,7 @@ export function PaymentReturn({ reference }: { reference: string | null }) {
     return (
       <div role="status" className={`${box} border-border`}>
         <span className="inline-flex items-center gap-2">
-          <Loader2 aria-hidden className="size-4 animate-spin" /> Checking your payment…
+          <Loader2 aria-hidden className="size-4 animate-spin" /> {purpose === "card" ? "Checking your card…" : "Checking your payment…"}
         </span>
       </div>
     );
@@ -146,7 +185,11 @@ export function PaymentReturn({ reference }: { reference: string | null }) {
   if (phase === "failed") {
     return (
       <div role="alert" className={`${box} border-destructive/40 bg-destructive/5`}>
-        <span>Your payment didn&apos;t go through. Nothing was charged; you can try again.</span>
+        <span>
+          {purpose === "card"
+            ? "The card check didn't go through, so your card wasn't changed. You can try again."
+            : "Your payment didn't go through. Nothing was charged; you can try again."}
+        </span>
         <Button variant="outline" size="sm" onClick={dismiss}>
           Close
         </Button>
@@ -155,7 +198,9 @@ export function PaymentReturn({ reference }: { reference: string | null }) {
   }
   return (
     <div role="status" className={`${box} border-emerald-600/30 bg-emerald-600/5`}>
-      <span>Payment received. Thank you.</span>
+      <span>
+        {purpose === "card" ? "Card saved. The R10 check is refunded to it." : "Payment received. Thank you."}
+      </span>
       <Button variant="outline" size="sm" onClick={dismiss}>
         Close
       </Button>

@@ -119,3 +119,12 @@ export function capTone(percent: number | null): Tone {
   if (percent == null) return "neutral";
   return percent >= 100 ? "danger" : percent >= 80 ? "warning" : "neutral";
 }
+
+/**
+ * A's card checks use references starting "nx-card-" (startCardReplacement).
+ * The return path carries no query of its own, because Paystack adds
+ * ?reference= to it.
+ */
+export function isCardCheckReference(reference: string | null): boolean {
+  return reference?.startsWith("nx-card-") ?? false;
+}
