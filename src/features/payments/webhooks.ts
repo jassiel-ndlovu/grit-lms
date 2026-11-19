@@ -100,5 +100,5 @@ async function applyRefundEvent(reference: string, status: "PROCESSED" | "FAILED
     }
     if (status === "PROCESSED") await markRefunded(tx, payment.id);
     return targets.length;
-  });
+  }, { timeout: 30_000 });
 }

@@ -15,6 +15,7 @@ import {
   aiUsageByCourse,
   getBillingConfig,
   getTierPrices,
+  loadInvoiceAdjustments,
   loadOpenPeriod,
   loadWorkspaceCourses,
   overlappingLearnersByCourse,
@@ -36,7 +37,7 @@ async function withInvoiceNumber<T>(at: Date, write: (tx: Tx, number: string) =>
           select: { number: true },
         });
         return write(tx, nextInvoiceNumber(year, last?.number ?? null));
-      });
+      }, { timeout: 30_000 });
     } catch (e) {
       const clash = e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
       if (!clash || attempt >= 4) throw e;
@@ -51,13 +52,16 @@ async function withInvoiceNumber<T>(at: Date, write: (tx: Tx, number: string) =>
  * first invoice so only one is open. Status OPEN, due now.
  */
 export async function createFirstInvoice(workspaceId: string, now = new Date()) {
-  const [config, courses, { prices, aiMarksPerStudent }] = await Promise.all([
+  const [config, courses, { prices, aiMarksPerStudent }, adj] = await Promise.all([
     getBillingConfig(),
     loadWorkspaceCourses(workspaceId),
     getTierPrices(now),
+    loadInvoiceAdjustments(workspaceId, now),
   ]);
   const seats = await activeSeatsByCourse(courses.map((c) => c.courseId));
   const draft = buildPeriodInvoice({
+    discount: adj.discount,
+    creditAvailableCents: adj.creditAvailableCents,
     prices,
     aiMarksPerStudent,
     apiMarginBps: config.apiMarginBps,
@@ -91,6 +95,7 @@ export async function createFirstInvoice(workspaceId: string, now = new Date()) 
         dueAt: now,
         lines: {
           create: draft.lines.map((l) => ({
+            discountCodeId: l.kind === "DISCOUNT" ? adj.discount?.discountCodeId ?? null : null,
             kind: l.kind,
             courseId: l.courseId,
             courseTitle: l.courseTitle,
@@ -117,10 +122,14 @@ export async function createFirstInvoice(workspaceId: string, now = new Date()) 
  * (unique workspaceId + closesPeriodId); a second call returns the first.
  *
  * Writes P's CATCH_UP seat charges and tier upgrades now, so a later
- * catch-up never bills a seat twice. Not yet applied here: discount codes
- * and credit notes (no redemption flow yet).
+ * catch-up never bills a seat twice. The workspace's discount code and
+ * open credit are applied; markInvoicePaid uses them up on payment.
  */
-export async function buildRenewalInvoice(workspaceId: string, at: Date, opts: { comped?: boolean; now?: Date } = {}) {
+export async function buildRenewalInvoice(
+  workspaceId: string,
+  at: Date,
+  opts: { comped?: boolean; now?: Date; /** Final invoice on cancel: no seats for a next period. */ arrearsOnly?: boolean } = {},
+) {
   const now = opts.now ?? new Date();
   const p = await prisma.billingPeriod.findFirst({ where: { workspaceId }, orderBy: { end: "desc" }, select: { id: true, end: true } });
   if (!p) throw new Error(`Workspace ${workspaceId} has no billing period to renew`);
@@ -131,10 +140,11 @@ export async function buildRenewalInvoice(workspaceId: string, at: Date, opts: {
   if (existing) return { ...existing, created: false };
 
   const period = (await loadOpenPeriod(workspaceId, new Date(p.end.getTime() - 1)))!;
-  const [config, courses, { prices, aiMarksPerStudent }] = await Promise.all([
+  const [config, courses, { prices, aiMarksPerStudent }, adj] = await Promise.all([
     getBillingConfig(),
     loadWorkspaceCourses(workspaceId),
     getTierPrices(at),
+    loadInvoiceAdjustments(workspaceId, at),
   ]);
   const courseIds = courses.map((c) => c.courseId);
   const [seats, overlap, ai] = await Promise.all([
@@ -146,7 +156,9 @@ export async function buildRenewalInvoice(workspaceId: string, at: Date, opts: {
     prices,
     aiMarksPerStudent,
     apiMarginBps: config.apiMarginBps,
-    advance: courses.map((c) => ({
+    discount: adj.discount,
+    creditAvailableCents: adj.creditAvailableCents,
+    advance: opts.arrearsOnly ? [] : courses.map((c) => ({
       courseId: c.courseId,
       title: c.title,
       tier: billedTier({ derived: derivedTier(c.enabledKeys), holds: c.holds, override: c.override, at }),
@@ -188,7 +200,12 @@ export async function buildRenewalInvoice(workspaceId: string, at: Date, opts: {
         totalCents: total,
         issuedAt: now,
         dueAt: at,
-        lines: { create: lines.map(({ kind, courseId, courseTitle, tierKey, serviceKey, description, quantity, unitPriceCents, amountCents }) => ({ kind, courseId, courseTitle, tierKey, serviceKey, description, quantity, unitPriceCents, amountCents })) },
+        lines: {
+          create: lines.map(({ kind, courseId, courseTitle, tierKey, serviceKey, description, quantity, unitPriceCents, amountCents }) => ({
+            kind, courseId, courseTitle, tierKey, serviceKey, description, quantity, unitPriceCents, amountCents,
+            discountCodeId: kind === "DISCOUNT" ? adj.discount?.discountCodeId ?? null : null,
+          })),
+        },
       },
       select: { id: true, number: true, totalCents: true, attemptCount: true, status: true },
     });

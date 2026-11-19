@@ -65,3 +65,46 @@ enum NotificationPriority {
   HIGH
   URGENT
 }
+
+// Send queue for transactional email (design 05, section 6). One row per
+// email; idempotencyKey makes "send once" hold even after Resend's own
+// 24-hour key expires. No relations: rows outlive users and workspaces.
+model OutboundEmail {
+  id                String                @id @default(cuid())
+  /// e.g. billing:dunning-day-3:<invoiceId>:<userId>. Also Resend's Idempotency-Key.
+  idempotencyKey    String                @unique @db.VarChar(256)
+  userId            String?
+  toEmail           String
+  workspaceId       String?
+  template          String
+  category          String
+  priority          OutboundEmailPriority @default(NORMAL)
+  /// Template input; rendered at send time. No secrets.
+  data              Json
+  status            OutboundEmailStatus   @default(QUEUED)
+  attempts          Int                   @default(0)
+  nextAttemptAt     DateTime              @default(now())
+  lockedUntil       DateTime?
+  lastError         String?
+  providerMessageId String?
+  sentAt            DateTime?
+  createdAt         DateTime              @default(now())
+
+  @@index([status, priority, nextAttemptAt])
+  @@index([workspaceId, createdAt])
+}
+
+enum OutboundEmailPriority {
+  AUTH
+  BILLING
+  NORMAL
+  DIGEST
+}
+
+enum OutboundEmailStatus {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  SUPPRESSED
+}

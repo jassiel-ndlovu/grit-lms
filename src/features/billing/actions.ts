@@ -282,3 +282,44 @@ export const startCardReplacement = viewerActionClient
       throw e;
     }
   });
+
+/**
+ * Applies a Nexa discount code to the workspace's bills (design 03,
+ * section 8). One WORKSPACE_BILL code at a time; each code once per
+ * workspace. It is used from the next invoice; a period is counted when
+ * an invoice that used it is paid.
+ */
+export const redeemDiscountCode = viewerActionClient
+  .schema(z.object({ code: z.string().trim().min(1).max(64) }))
+  .action(async ({ parsedInput }) => {
+    const { workspace } = await billingManager();
+    const now = new Date();
+    const code = await prisma.discountCode.findUnique({ where: { code: parsedInput.code.toUpperCase() } });
+    if (!code || !code.active || code.issuerWorkspaceId || code.scope === "PARENT_INVOICE") {
+      throw new BillingError("CODE_INVALID", "That code isn't valid for Nexa bills");
+    }
+    if (code.startsAt > now || (code.endsAt && code.endsAt <= now)) throw new BillingError("CODE_EXPIRED", "That code has expired");
+    const redeemerKey = `ws:${workspace.id}`;
+    if (await prisma.redemption.findUnique({ where: { discountCodeId_redeemerKey: { discountCodeId: code.id, redeemerKey } } })) {
+      throw new BillingError("CODE_USED", "This workspace has already used that code");
+    }
+    if (code.scope === "WORKSPACE_BILL") {
+      const other = await prisma.redemption.count({
+        where: { workspaceId: workspace.id, exhaustedAt: null, discountCode: { scope: "WORKSPACE_BILL", active: true } },
+      });
+      if (other > 0) throw new BillingError("CODE_USED", "Another whole-bill discount is already running");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Counts the redemption only while there is room, so two workspaces
+      // racing for the last use can't both get it.
+      const room = await tx.discountCode.updateMany({
+        where: { id: code.id, ...(code.maxRedemptions != null ? { redemptionCount: { lt: code.maxRedemptions } } : {}) },
+        data: { redemptionCount: { increment: 1 } },
+      });
+      if (room.count === 0) throw new BillingError("CODE_USED", "That code has been used up");
+      await tx.redemption.create({ data: { discountCodeId: code.id, redeemerKey, workspaceId: workspace.id } });
+    });
+    revalidatePath("/dashboard", "layout");
+    return { description: code.description, scope: code.scope, periodsLeft: code.durationPeriods };
+  });

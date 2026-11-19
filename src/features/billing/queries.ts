@@ -20,6 +20,7 @@ import {
   aiUsageByCourse,
   getBillingConfig,
   getTierPrices,
+  loadInvoiceAdjustments,
   loadCourseBilling,
   loadOpenPeriod,
   loadWorkspaceCourses,
@@ -164,10 +165,11 @@ export async function getBillingOverview() {
       aiMarks: ai.get(c.courseId),
     }));
   }
-  const credit = await prisma.creditNote.aggregate({ where: { workspaceId: workspace.id, status: "OPEN" }, _sum: { amountCents: true } });
+  const adj = await loadInvoiceAdjustments(workspace.id, renewAt);
   const draft = buildPeriodInvoice({
     prices, advance, closing, aiMarksPerStudent, apiMarginBps: config.apiMarginBps,
-    creditAvailableCents: credit._sum.amountCents ?? 0,
+    discount: adj.discount,
+    creditAvailableCents: adj.creditAvailableCents,
     vatRateBps: config.vatRegistered ? config.vatRateBps : null,
   });
 

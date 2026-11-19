@@ -6,9 +6,10 @@
  *      Still unpaid after 24 hours: ABANDONED.
  *   2. Webhook events left FAILED: reprocess, up to 5 attempts, then alert.
  *   3. Refunds not yet sent to Paystack (the call failed): send them.
- *   4. The sole-proprietor lifetime limit: warn at 70% and 90%.
- *
- * Not yet: comparing Paystack's transaction list with our Payment rows.
+ *   4. Paystack's own list of the last two days: a successful Nexa
+ *      transaction we hold as unpaid is settled; one we have no row for is
+ *      reported to Sentry.
+ *   5. The sole-proprietor lifetime limit: warn at 70% and 90%.
  */
 
 import "server-only";
@@ -30,13 +31,16 @@ export type ReconcileResult = {
   eventsRetried: number;
   eventsGaveUp: number;
   refundsSent: number;
+  providerListed: number;
+  providerFixed: number;
+  providerUnknown: number;
   lifetimeUsedBps: number;
   errors: number;
 };
 
 export async function runReconcile(opts: { provider?: PaymentProvider; now?: Date } = {}): Promise<ReconcileResult> {
   const now = opts.now ?? new Date();
-  const r: ReconcileResult = { checked: 0, settled: 0, abandoned: 0, eventsRetried: 0, eventsGaveUp: 0, refundsSent: 0, lifetimeUsedBps: 0, errors: 0 };
+  const r: ReconcileResult = { checked: 0, settled: 0, abandoned: 0, eventsRetried: 0, eventsGaveUp: 0, refundsSent: 0, providerListed: 0, providerFixed: 0, providerUnknown: 0, lifetimeUsedBps: 0, errors: 0 };
   const lazyProvider = () => opts.provider ?? getProvider();
 
   // 1. Stale PENDING payments.
@@ -99,7 +103,36 @@ export async function runReconcile(opts: { provider?: PaymentProvider; now?: Dat
     }
   }
 
-  // 4. Lifetime collection limit of the sole-proprietor Paystack account.
+  // 4. Paystack's list against ours. Only our references (nx-...); other
+  // integrations on the same Paystack account are not ours to judge.
+  try {
+    const listed = await lazyProvider().listTransactions({ from: new Date(now.getTime() - 48 * 60 * MIN), to: now });
+    const ours = listed.filter((t) => t.reference.startsWith("nx-") && t.status === "success");
+    r.providerListed = ours.length;
+    const rows = await prisma.payment.findMany({ where: { reference: { in: ours.map((t) => t.reference) } }, select: { reference: true, status: true } });
+    const byRef = new Map(rows.map((p) => [p.reference, p.status]));
+    for (const t of ours) {
+      const status = byRef.get(t.reference);
+      if (!status) {
+        r.providerUnknown++;
+        Sentry.captureMessage(`Paystack has a paid transaction ${t.reference} with no Payment row`, { level: "error", tags: { job: "payments-reconcile" } });
+        continue;
+      }
+      if (status === "SUCCEEDED" || status === "REFUNDED" || status === "PARTIALLY_REFUNDED") continue;
+      try {
+        const s = await settlePayment(t.reference, { provider: lazyProvider() });
+        if (s.applied) r.providerFixed++;
+      } catch (e) {
+        r.errors++;
+        console.error("[reconcile] provider list", t.reference, (e as Error).message);
+      }
+    }
+  } catch (e) {
+    r.errors++;
+    console.error("[reconcile] could not list Paystack transactions:", (e as Error).message);
+  }
+
+  // 5. Lifetime collection limit of the sole-proprietor Paystack account.
   const cap = Number(process.env.PAYSTACK_LIFETIME_CAP_CENTS ?? 100_000_000);
   const alertBps = Number(process.env.PAYSTACK_CAP_ALERT_BPS ?? 7_000);
   const [paid, refunded] = await Promise.all([
