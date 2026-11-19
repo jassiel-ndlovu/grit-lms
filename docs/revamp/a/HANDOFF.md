@@ -3,6 +3,44 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Renewals, dunning, card replacement and reconciliation, `revamp/a-billing-jobs`
+
+Done (all behind `BILLING=1`, so they do nothing in production yet):
+- **`buildRenewalInvoice(workspaceId, at)`** in `billing/invoice.ts`:
+  - Bills seats in advance, catch-up seats for learners who joined during the closing period, tier upgrades, and AI marks above the Pro pool.
+  - It is idempotent per closed period.
+  - It writes the closing period's CATCH_UP seat charges and tier upgrades when the invoice is built.
+  - A COMPED workspace gets a COMP line that brings the total to zero.
+- **`/api/cron/billing`** (hourly, `billing/daily.ts`):
+  - Unpaid trials go READ_ONLY.
+  - Renewals due are invoiced and charged to the saved card. A zero total is marked paid without a charge.
+  - If the charge fails, or there is no saved card, dunning starts: PAST_DUE on day 0, retries on day 3 and day 7, READ_ONLY (LOCKED) on day 14.
+  - Owners who cancelled go CANCELLED.
+  - The rules are in `dunningStep` (pure).
+- **`startCardReplacement`**: a R10 card check that saves the new card and is refunded straight away. The refund is retried by reconciliation if the provider call fails; Paystack refuses a second full refund, so retrying is safe. Refund webhooks (`refund.processed` / `refund.failed`) now update `Refund` and `Payment`.
+- **`/api/cron/payments-reconcile`** (daily, `payments/reconcile.ts`):
+  - Pending payments older than 30 minutes are checked with Paystack; after 24 hours they become ABANDONED.
+  - FAILED webhook events are retried up to 5 times, then reported to Sentry.
+  - Refunds that never reached Paystack are sent.
+  - A Sentry warning fires at 70% and 90% of the Paystack lifetime limit.
+- **Refactors:**
+  - `markInvoicePaid` in `settle.ts` is shared by card, comp and credit payments. It sets `deleteAfter` to 2 calendar months after payment, and a COMPED workspace stays COMPED.
+  - `chargeSavedCard` and `createInvoicePayment` are in `billing/charge.ts`.
+- **Registry and workflow:** both jobs are in the registry and the backup workflow. QStash schedules are re-synced after the merge.
+- **Checks:**
+  - `check-payments.ts`: 34 checks.
+  - `check-jobs.ts` passes.
+  - A one-off end-to-end run on the preview DB: 22 checks covering an on-time renewal with a catch-up seat, a second run doing nothing, the day 0 → day 3 → day 7 dunning path, the day 14 lock, card replacement with its refund, abandoning stale checkouts, and sending an unsent refund. The test rows were removed.
+
+Not yet:
+- Usage metering (needs B's AI-marking rows).
+- Cap emails, trial emails and dunning emails.
+- The final arrears invoice when an owner cancels.
+- Ending comps.
+- Discount codes and credit notes on invoices.
+- Comparing Paystack's transaction list with our payments.
+- Retention deletes (owner-only).
+
 ## 2026-11-19 Gate 1 payments in Paystack test mode; DMARC and support@, `revamp/a-next`
 
 Done:

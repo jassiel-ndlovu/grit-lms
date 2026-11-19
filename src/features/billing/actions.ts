@@ -3,7 +3,7 @@
 /**
  * Billing actions (docs/revamp/contracts/billing.md, section 1). Behind the
  * BILLING flag. Built here: setCourseServices, startFirstPayment,
- * payPlatformInvoice, getBillingPaymentStatus.
+ * payPlatformInvoice, getBillingPaymentStatus, startCardReplacement.
  */
 
 import { revalidatePath } from "next/cache";
@@ -11,13 +11,13 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { getProvider } from "@/features/payments/provider";
-import { decryptSecret } from "@/features/payments/secrets";
 import { settlePayment } from "@/features/payments/settle";
-import { platformPaymentReference, safeReturnPath } from "@/features/payments/settlement-rules";
+import { safeReturnPath } from "@/features/payments/settlement-rules";
 import { prisma } from "@/lib/db";
 import { viewerActionClient } from "@/lib/safe-action";
 import { requireViewer } from "@/lib/viewer";
 
+import { chargeSavedCard, createInvoicePayment } from "./charge";
 import { assertBillingEnabled, BillingError } from "./errors";
 import { createFirstInvoice } from "./invoice";
 import { addDays, applyServiceChange, billedTier, derivedTier, holdUntilFor, tierAbove } from "./pricing";
@@ -124,24 +124,6 @@ async function ensureProviderCustomer(workspaceId: string, email: string, name: 
   return customerCode;
 }
 
-/** A new attempt on the invoice: its Payment row and reference. */
-async function newInvoicePayment(input: { invoice: { id: string; totalCents: number }; workspaceId: string; userId: string }) {
-  const { attemptCount } = await prisma.platformInvoice.update({
-    where: { id: input.invoice.id },
-    data: { attemptCount: { increment: 1 } },
-    select: { attemptCount: true },
-  });
-  const reference = platformPaymentReference(input.invoice.id, attemptCount);
-  await prisma.payment.create({
-    data: {
-      provider: "PAYSTACK", reference, purpose: "PLATFORM_INVOICE", workspaceId: input.workspaceId,
-      // The person paying. For Gate 1 that is the owner or an admin.
-      payerUserId: input.userId, platformInvoiceId: input.invoice.id, amountCents: input.invoice.totalCents,
-    },
-  });
-  return reference;
-}
-
 /** Payment row plus Paystack checkout for an open invoice; card only. */
 async function checkoutInvoice(input: {
   invoice: { id: string; totalCents: number };
@@ -150,7 +132,7 @@ async function checkoutInvoice(input: {
   email: string;
   returnPath: string;
 }) {
-  const reference = await newInvoicePayment(input);
+  const reference = await createInvoicePayment(input);
   try {
     const { authorizationUrl } = await getProvider().initializeCheckout({
       reference,
@@ -214,32 +196,14 @@ export const payPlatformInvoice = viewerActionClient
     if (!invoice) throw new BillingError("NOT_FOUND", "No open invoice with that id");
     if (invoice.totalCents <= 0) throw new BillingError("NOTHING_TO_BILL", "The invoice total is zero");
 
-    const sub = await prisma.subscription.findUnique({
-      where: { workspaceId: workspace.id },
-      select: { status: true, authorizationCodeEnc: true, billingEmail: true },
-    });
-    if (sub?.status === "AUTHORISED" && sub.authorizationCodeEnc) {
-      const reference = await newInvoicePayment({ invoice, workspaceId: workspace.id, userId: viewer.user.id });
-      const charge = await getProvider().chargeAuthorization({
-        authorizationCode: decryptSecret(sub.authorizationCodeEnc),
-        email: sub.billingEmail,
-        amountCents: invoice.totalCents,
-        reference,
-        metadata: { workspaceId: workspace.id, invoiceId: invoice.id, purpose: "PLATFORM_INVOICE" },
-      });
-      if (charge.status !== "FAILED") {
-        const settled = await settlePayment(reference);
-        if (settled.status === "SUCCEEDED") {
-          revalidatePath("/dashboard", "layout");
-          return { status: "CHARGED" as const };
-        }
-        // Still processing: the return page polls this reference.
-        if (settled.status === "PENDING") return { status: "PENDING" as const, reference };
-      } else {
-        await prisma.payment.updateMany({ where: { reference, status: "PENDING" }, data: { status: "FAILED" } });
-      }
-      // The saved card was declined: fall through to checkout with a new card.
+    const charged = await chargeSavedCard({ invoice, workspaceId: workspace.id, userId: viewer.user.id });
+    if (charged.status === "SUCCEEDED") {
+      revalidatePath("/dashboard", "layout");
+      return { status: "CHARGED" as const };
     }
+    // Still processing: the return page polls this reference.
+    if (charged.status === "PENDING") return { status: "PENDING" as const, reference: charged.reference };
+    // No saved card, or it was declined: checkout with a new card.
 
     const { authorizationUrl, reference } = await checkoutInvoice({
       invoice, workspaceId: workspace.id, userId: viewer.user.id, email: viewer.user.email, returnPath,
@@ -270,8 +234,51 @@ export const getBillingPaymentStatus = viewerActionClient
         console.error("[billing] payment status check failed:", (e as Error).message);
       }
     }
-    if (status === "SUCCEEDED") revalidatePath("/dashboard", "layout");
+    // A card check is refunded straight after it succeeds; that still counts as success.
+    const succeeded = status === "SUCCEEDED" || status === "REFUNDED" || status === "PARTIALLY_REFUNDED";
+    if (succeeded) revalidatePath("/dashboard", "layout");
     return {
-      status: status === "SUCCEEDED" ? ("SUCCEEDED" as const) : status === "PENDING" ? ("PENDING" as const) : ("FAILED" as const),
+      status: succeeded ? ("SUCCEEDED" as const) : status === "PENDING" ? ("PENDING" as const) : ("FAILED" as const),
     };
+  });
+
+/** R10, refunded as soon as it succeeds (design 04, section 4). */
+const CARD_CHECK_CENTS = 1_000;
+
+/**
+ * Saves a new card without paying an invoice: a R10 card check through
+ * Paystack checkout, refunded once it succeeds. Poll getBillingPaymentStatus
+ * on the return page as for a payment.
+ */
+export const startCardReplacement = viewerActionClient
+  .schema(z.object({ returnPath: returnPathSchema }))
+  .action(async ({ parsedInput: { returnPath } }) => {
+    const { viewer, workspace } = await billingManager();
+    const customerCode = await ensureProviderCustomer(workspace.id, viewer.user.email, workspace.name);
+    await prisma.subscription.upsert({
+      where: { workspaceId: workspace.id },
+      create: { workspaceId: workspace.id, billingEmail: viewer.user.email, providerCustomerCode: customerCode },
+      update: { providerCustomerCode: customerCode },
+    });
+    const reference = `nx-card-${workspace.id}-${Date.now().toString(36)}`;
+    await prisma.payment.create({
+      data: {
+        provider: "PAYSTACK", reference, purpose: "CARD_AUTHORISATION", workspaceId: workspace.id,
+        payerUserId: viewer.user.id, amountCents: CARD_CHECK_CENTS,
+      },
+    });
+    try {
+      const { authorizationUrl } = await getProvider().initializeCheckout({
+        reference,
+        email: viewer.user.email,
+        amountCents: CARD_CHECK_CENTS,
+        callbackUrl: `${await requestOrigin()}${returnPath}`,
+        channels: ["card"],
+        metadata: { workspaceId: workspace.id, purpose: "CARD_AUTHORISATION" },
+      });
+      return { authorizationUrl, reference };
+    } catch (e) {
+      await prisma.payment.update({ where: { reference }, data: { status: "FAILED" } });
+      throw e;
+    }
   });

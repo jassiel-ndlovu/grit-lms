@@ -11,7 +11,7 @@ import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
 
 import { getProvider, InvalidSignatureError, type NormalisedEvent, type PaymentProvider } from "./provider";
-import { settlePayment } from "./settle";
+import { markRefunded, settlePayment } from "./settle";
 
 export type WebhookResult = { httpStatus: 200 | 401 | 400 | 500; outcome: string };
 
@@ -47,6 +47,15 @@ export async function handlePaystackWebhook(
     if (row.status === "PROCESSED" || row.status === "IGNORED") return { httpStatus: 200, outcome: "duplicate" };
   }
 
+  if ((event.type === "refund.processed" || event.type === "refund.failed") && event.reference) {
+    const n = await applyRefundEvent(event.reference, event.type === "refund.processed" ? "PROCESSED" : "FAILED", event.raw);
+    await prisma.paymentEvent.update({
+      where: { id: row.id },
+      data: { status: n > 0 ? "PROCESSED" : "IGNORED", processedAt: new Date(), attempts: { increment: 1 } },
+    });
+    return { httpStatus: 200, outcome: `refund ${n}` };
+  }
+
   const isCharge = event.type === "charge.succeeded" || event.type === "charge.failed";
   if (!isCharge || !event.reference) {
     await prisma.paymentEvent.update({ where: { id: row.id }, data: { status: "IGNORED", processedAt: new Date() } });
@@ -71,4 +80,25 @@ export async function handlePaystackWebhook(
     });
     return { httpStatus: 500, outcome: "failed" };
   }
+}
+
+/**
+ * Closes our PENDING refunds on the payment with this reference. Matches the
+ * provider's refund id when the event carries one. Returns how many changed.
+ */
+async function applyRefundEvent(reference: string, status: "PROCESSED" | "FAILED", raw: unknown): Promise<number> {
+  const payment = await prisma.payment.findUnique({ where: { reference }, select: { id: true } });
+  if (!payment) return 0;
+  const data = ((raw as { data?: Record<string, unknown> })?.data ?? {}) as Record<string, unknown>;
+  const providerId = data.id != null ? String(data.id) : null;
+  return prisma.$transaction(async (tx) => {
+    const pending = await tx.refund.findMany({ where: { paymentId: payment.id, status: "PENDING" }, select: { id: true, providerRefundId: true } });
+    const exact = providerId ? pending.filter((r) => r.providerRefundId === providerId) : [];
+    const targets = exact.length ? exact : pending;
+    for (const r of targets) {
+      await tx.refund.update({ where: { id: r.id }, data: { status, processedAt: new Date(), providerRefundId: r.providerRefundId ?? providerId } });
+    }
+    if (status === "PROCESSED") await markRefunded(tx, payment.id);
+    return targets.length;
+  });
 }
