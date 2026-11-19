@@ -120,12 +120,12 @@ export function LessonSidebar({
                   className={cn(
                     "hover:bg-muted/60 flex items-center gap-2 rounded-md py-2 pr-2 text-sm transition-colors",
                     isActive && "bg-muted text-foreground",
-                    isGroup && "text-muted-foreground font-medium",
+                    isGroup && "font-semibold",
                   )}
                 >
                   <span
                     className={cn(
-                      "flex min-w-5 shrink-0 items-center justify-center text-xs tabular-nums",
+                      "flex min-w-6 shrink-0 items-center font-mono text-xs tabular-nums",
                       isActive ? "text-brand-terracotta" : "text-muted-foreground",
                     )}
                   >

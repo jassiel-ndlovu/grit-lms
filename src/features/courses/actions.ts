@@ -118,6 +118,7 @@ export const updateCourse = tutorActionClient
     }
 
     revalidatePath(`/dashboard/manage-courses/${updated.id}`);
+    revalidatePath(`/dashboard/manage-courses/${updated.id}/settings`);
     revalidatePath("/dashboard/manage-courses");
     revalidatePath("/dashboard/courses");
     revalidatePath("/dashboard/browse-courses");
