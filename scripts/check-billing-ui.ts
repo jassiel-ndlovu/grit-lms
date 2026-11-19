@@ -11,6 +11,7 @@ import {
   capTone,
   formatDelta,
   formatRand,
+  isCardCheckReference,
   groupServices,
   needsConfirm,
   type ServiceRow,
@@ -64,6 +65,7 @@ check("cap storage", capLabel({ meter: "storage-gb", used: 3, limit: 5 }), { nam
 check("cap rand", capLabel({ meter: "api-pass-through", used: 12000, limit: 50000 }), { name: "Usage above allowances", amount: "R120 of R500" });
 check("cap no limit", capLabel({ meter: "ai-marks", used: 7, limit: null }), { name: "AI-marked answers", amount: "7" });
 check("cap tones", [capTone(null), capTone(79), capTone(80), capTone(100)], ["neutral", "neutral", "warning", "danger"]);
+check("card check reference", [isCardCheckReference("nx-card-ws1-abc"), isCardCheckReference("nx-inv-1"), isCardCheckReference(null)], [true, false, false]);
 
 console.log(failures ? `\n${failures} failed` : "\nAll passed");
 process.exit(failures ? 1 : 0);

@@ -16,7 +16,7 @@ import { assignmentRoutes } from "@/features/assignments/routes";
 
 export type NavIcon =
   | "home" | "book" | "calendar" | "test" | "assignment" | "grades"
-  | "gradebook" | "analytics" | "users" | "settings" | "help" | "inbox";
+  | "gradebook" | "analytics" | "users" | "settings" | "help" | "inbox" | "billing";
 
 export interface NavLink {
   label: string;
@@ -26,6 +26,8 @@ export interface NavLink {
   keywords?: string[];
   /** Shown only when the viewer holds this permission. */
   requires?: Permission;
+  /** Shown only with billing on (BILLING=1). */
+  billing?: boolean;
 }
 
 export interface NavSection {
@@ -66,6 +68,10 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       ],
     },
     { label: "People", items: [{ label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["students", "accounts"], requires: "learners.invite" }] },
+    {
+      label: "Workspace",
+      items: [{ label: "Billing", href: "/dashboard/settings/billing", icon: "billing", keywords: ["plan", "payment", "invoice", "card"], requires: "billing.view", billing: true }],
+    },
   ],
   admin: [
     { items: [HOME, INBOX] },
@@ -85,12 +91,19 @@ export const FOOTER_LINKS: NavLink[] = [
 /** The parts of the viewer the nav reads; the whole Viewer also fits. */
 export type NavViewer = Pick<Viewer, "persona" | "permissions">;
 
-/** The viewer's sections, with links they lack the permission for removed. */
-export function navSectionsFor(viewer: NavViewer | null): NavSection[] {
+/**
+ * The viewer's sections, with links they lack the permission for removed.
+ * Billing links show only when `opts.billing` is true (the layout passes
+ * isBillingEnabled()).
+ */
+export function navSectionsFor(viewer: NavViewer | null, opts: { billing?: boolean } = {}): NavSection[] {
   const persona = viewer?.persona ?? "none";
   const held = new Set(viewer?.permissions ?? []);
   return (BY_PERSONA[persona] ?? BY_PERSONA.none)
-    .map((s) => ({ ...s, items: s.items.filter((l) => !l.requires || held.has(l.requires)) }))
+    .map((s) => ({
+      ...s,
+      items: s.items.filter((l) => (!l.requires || held.has(l.requires)) && (!l.billing || opts.billing === true)),
+    }))
     .filter((s) => s.items.length > 0);
 }
 

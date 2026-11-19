@@ -12,7 +12,7 @@ import { notFound, redirect } from "next/navigation";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { getBillingOverview, getCourseTiers } from "@/features/billing/queries";
 import { BillingFrame, BillingOverview } from "@/features/courses/components/billing-overview";
-import { billingErrorMessage } from "@/features/courses/lib/billing-ui";
+import { billingErrorMessage, isCardCheckReference } from "@/features/courses/lib/billing-ui";
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, resolveLocale } from "@/lib/datetime";
 import { can, getViewer } from "@/lib/viewer";
@@ -31,7 +31,7 @@ export default async function BillingOverviewPage({ searchParams }: PageProps) {
 
   const [prefs, sp] = await Promise.all([getUserPreferences(viewer.user.id), searchParams]);
   const reference = typeof sp.reference === "string" && sp.reference.length <= 128 ? sp.reference : null;
-  const payment = reference || sp.paid === "1" ? { reference, paid: sp.paid === "1" } : null;
+  const payment = reference || sp.paid === "1" ? { reference, paid: sp.paid === "1", purpose: isCardCheckReference(reference) ? ("card" as const) : ("payment" as const) } : null;
   const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
 
   try {
