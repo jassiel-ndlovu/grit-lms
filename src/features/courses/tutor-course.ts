@@ -4,8 +4,8 @@ import "server-only";
  * Loads a course for the tutor's course pages (overview, lessons,
  * settings) and checks the signed-in tutor owns it.
  *
- * Ownership is still `Course.tutorId`; it moves to CourseStaff with the
- * rest of B's queries (issue #93).
+ * Ownership comes from CourseStaff via `courseBelongsToTutor` (issue #93,
+ * step 4).
  */
 
 import { notFound, redirect } from "next/navigation";

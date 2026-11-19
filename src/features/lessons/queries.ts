@@ -22,6 +22,7 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
+import { ownerTutor, taughtBy } from "@/features/courses/lib/tenancy-where";
 
 /* ------------------------------------------------------------------------- */
 /* List queries                                                              */
@@ -63,7 +64,7 @@ const detailInclude = {
     select: {
       id: true,
       name: true,
-      tutor: { select: { id: true, fullName: true, email: true } },
+      ownerMembership: ownerTutor,
     },
   },
 } as const;
@@ -93,11 +94,8 @@ export const getLessonDetailById = cache(async (id: string) => {
  */
 export const lessonBelongsToTutor = cache(
   async (lessonId: string, tutorId: string) => {
-    const l = await prisma.lesson.findUnique({
-      where: { id: lessonId },
-      select: { course: { select: { tutorId: true } } },
-    });
-    return l?.course.tutorId === tutorId;
+    const n = await prisma.lesson.count({ where: { id: lessonId, course: taughtBy(tutorId) } });
+    return n > 0;
   },
 );
 

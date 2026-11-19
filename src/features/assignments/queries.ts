@@ -17,6 +17,7 @@ import { cache } from "react";
 import type { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
+import { enrolledStudent, ownerTutor, taughtBy } from "@/features/courses/lib/tenancy-where";
 
 const submissionListInclude = {
   course: { select: { id: true, name: true } },
@@ -36,7 +37,7 @@ export type SubmissionListItem = Awaited<
  */
 export const listSubmissionsByTutorId = cache(async (tutorId: string) => {
   return prisma.submission.findMany({
-    where: { course: { tutorId } },
+    where: { course: taughtBy(tutorId) },
     orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
     include: submissionListInclude,
   });
@@ -61,7 +62,7 @@ export const listActiveSubmissionsForStudent = cache(
     return prisma.submission.findMany({
       where: {
         isActive: true,
-        course: { students: { some: { id: studentId } } },
+        course: enrolledStudent(studentId),
       },
       orderBy: { dueDate: "asc" },
       include: submissionListInclude,
@@ -78,7 +79,7 @@ const submissionDetailInclude = {
     select: {
       id: true,
       name: true,
-      tutor: { select: { id: true, fullName: true, email: true } },
+      ownerMembership: ownerTutor,
     },
   },
 } satisfies Prisma.SubmissionInclude;
@@ -155,25 +156,16 @@ export const listEntriesForStudentInCourse = cache(
 
 export const submissionBelongsToTutor = cache(
   async (submissionId: string, tutorId: string) => {
-    const s = await prisma.submission.findUnique({
-      where: { id: submissionId },
-      select: { course: { select: { tutorId: true } } },
-    });
-    return s?.course.tutorId === tutorId;
+    const n = await prisma.submission.count({ where: { id: submissionId, course: taughtBy(tutorId) } });
+    return n > 0;
   },
 );
 
 export const studentCanAccessSubmission = cache(
   async (submissionId: string, studentId: string) => {
-    const s = await prisma.submission.findUnique({
-      where: { id: submissionId },
-      select: {
-        isActive: true,
-        course: { select: { students: { where: { id: studentId } } } },
-      },
+    const n = await prisma.submission.count({
+      where: { id: submissionId, isActive: true, course: enrolledStudent(studentId) },
     });
-    if (!s) return false;
-    if (!s.isActive) return false;
-    return s.course.students.length > 0;
+    return n > 0;
   },
 );

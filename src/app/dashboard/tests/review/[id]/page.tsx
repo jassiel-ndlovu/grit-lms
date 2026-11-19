@@ -36,6 +36,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { toFileAnswers, toFileUploadMemo } from "@/features/assessments/lib/file-answers";
 import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import { isManuallyMarked } from "@/features/assessments/lib/auto-grade";
@@ -212,7 +213,7 @@ export default async function TestReviewPage({ params }: PageProps) {
       {/* ───── Hero header ───── */}
       <header className="space-y-2">
         <p className="text-muted-foreground text-xs">
-          {test.course.name} · with {test.course.tutor.fullName}
+          {test.course.name} · with {tutorOf(test.course)?.fullName ?? "your tutor"}
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">

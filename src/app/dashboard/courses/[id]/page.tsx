@@ -24,6 +24,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -180,7 +181,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
             )}
             <div className="flex-1 space-y-4">
               <div>
-                <p className="text-primary-foreground/70 text-sm">with {course.tutor.fullName}</p>
+                <p className="text-primary-foreground/70 text-sm">with {tutorOf(course)?.fullName ?? "your tutor"}</p>
                 <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
                   {course.name}
                 </h1>

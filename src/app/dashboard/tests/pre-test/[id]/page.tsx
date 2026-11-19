@@ -20,6 +20,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -119,7 +120,7 @@ export default async function PreTestPage({ params }: PageProps) {
       <div className="mx-auto max-w-3xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
         <header className="space-y-2">
           <p className="text-muted-foreground text-xs">
-            {test.course.name} - with {test.course.tutor.fullName}
+            {test.course.name} - with {tutorOf(test.course)?.fullName ?? "your tutor"}
           </p>
           <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             {test.title}

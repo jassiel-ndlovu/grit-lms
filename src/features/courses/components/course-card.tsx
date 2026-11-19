@@ -6,6 +6,7 @@
  */
 
 import Image from "next/image";
+import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import Link from "next/link";
 import { BookOpen, Users } from "lucide-react";
 
@@ -28,7 +29,7 @@ export function CourseCard({
   actions,
   className,
 }: CourseCardProps) {
-  const tutorName = course.tutor.fullName ?? "Unknown tutor";
+  const tutorName = tutorOf(course)?.fullName ?? "Unknown tutor";
 
   return (
     <Card
@@ -76,7 +77,7 @@ export function CourseCard({
             </span>
             <span className="inline-flex items-center gap-1">
               <Users className="size-3" />
-              {course._count.students} students
+              {course._count.enrollments} students
             </span>
           </div>
         </div>

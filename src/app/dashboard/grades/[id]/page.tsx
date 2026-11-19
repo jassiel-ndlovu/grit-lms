@@ -24,6 +24,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { toFileAnswers } from "@/features/assessments/lib/file-answers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,7 +110,7 @@ export default async function GradeDetailPage({ params }: PageProps) {
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-muted-foreground text-xs">
               {grade.course.name}
-              {grade.course.tutor.fullName ? ` - with ${grade.course.tutor.fullName}` : ""}
+              {tutorOf(grade.course)?.fullName ? ` - with ${tutorOf(grade.course)?.fullName}` : ""}
             </p>
             <Badge variant="secondary">
               {isTest ? "Test" : "Assignment"}

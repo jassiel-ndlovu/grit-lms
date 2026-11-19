@@ -27,6 +27,7 @@ import { cache } from "react";
 import type { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
+import { enrolledStudent, ownerTutor, taughtBy } from "@/features/courses/lib/tenancy-where";
 
 /* ------------------------------------------------------------------------- */
 /* List queries                                                              */
@@ -47,7 +48,7 @@ export type TestListItem = Awaited<
  */
 export const listTestsByTutorId = cache(async (tutorId: string) => {
   return prisma.test.findMany({
-    where: { course: { tutorId } },
+    where: { course: taughtBy(tutorId) },
     orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
     include: tutorListInclude,
   });
@@ -76,7 +77,7 @@ export const listActiveTestsForStudent = cache(async (studentId: string) => {
   return prisma.test.findMany({
     where: {
       isActive: true,
-      course: { students: { some: { id: studentId } } },
+      course: enrolledStudent(studentId),
     },
     orderBy: { dueDate: "asc" },
     include: {
@@ -95,7 +96,7 @@ const detailInclude = {
     select: {
       id: true,
       name: true,
-      tutor: { select: { id: true, fullName: true, email: true } },
+      ownerMembership: ownerTutor,
     },
   },
   questions: {
@@ -193,11 +194,8 @@ export const listSubmissionsForStudentInCourse = cache(
  */
 export const testBelongsToTutor = cache(
   async (testId: string, tutorId: string) => {
-    const t = await prisma.test.findUnique({
-      where: { id: testId },
-      select: { course: { select: { tutorId: true } } },
-    });
-    return t?.course.tutorId === tutorId;
+    const n = await prisma.test.count({ where: { id: testId, course: taughtBy(tutorId) } });
+    return n > 0;
   },
 );
 
@@ -208,15 +206,9 @@ export const testBelongsToTutor = cache(
  */
 export const studentCanAccessTest = cache(
   async (testId: string, studentId: string) => {
-    const t = await prisma.test.findUnique({
-      where: { id: testId },
-      select: {
-        isActive: true,
-        course: { select: { students: { where: { id: studentId } } } },
-      },
+    const n = await prisma.test.count({
+      where: { id: testId, isActive: true, course: enrolledStudent(studentId) },
     });
-    if (!t) return false;
-    if (!t.isActive) return false;
-    return t.course.students.length > 0;
+    return n > 0;
   },
 );

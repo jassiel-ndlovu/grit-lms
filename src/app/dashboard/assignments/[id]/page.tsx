@@ -24,6 +24,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { enrolledStudent, taughtBy, tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -91,7 +92,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     const enrolled = await prisma.course.findFirst({
       where: {
         id: submission.courseId,
-        students: { some: { id: student.id } },
+        ...enrolledStudent(student.id),
       },
       select: { id: true },
     });
@@ -117,7 +118,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
 
         <header className="space-y-2">
           <p className="text-muted-foreground text-xs">
-            {submission.course.name} · with {submission.course.tutor.fullName}
+            {submission.course.name} · with {tutorOf(submission.course)?.fullName ?? "your tutor"}
           </p>
           <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
             {submission.title}
@@ -373,7 +374,8 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
       );
     }
 
-    if (submission.course.tutor.email !== session.user.email) {
+    const teaches = await prisma.course.count({ where: { id: submission.courseId, ...taughtBy(tutor.id) } });
+    if (teaches === 0) {
       return (
         <div className="text-muted-foreground p-8 text-sm">
           You don&apos;t own this assignment.

@@ -19,6 +19,7 @@ import "server-only";
 import type { Session } from "next-auth";
 
 import { prisma } from "@/lib/db";
+import { enrolledStudent, openEnrollmentCount, ownerTutor, taughtBy, tutorOf } from "@/features/courses/lib/tenancy-where";
 
 import type { SearchGroup, SearchHit } from "./schemas";
 import { assignmentRoutes } from "@/features/assignments/routes";
@@ -58,12 +59,12 @@ async function searchAsStudent(email: string, q: string): Promise<SearchGroup[]>
   });
   if (!student) return [];
 
-  const enrolled = { students: { some: { id: student.id } } };
+  const enrolled = enrolledStudent(student.id);
 
   const [courses, lessons, tests, assignments, events] = await Promise.all([
     prisma.course.findMany({
       where: { ...enrolled, OR: [{ name: ci(q) }, { description: ci(q) }] },
-      select: { id: true, name: true, tutor: { select: { fullName: true } } },
+      select: { id: true, name: true, ownerMembership: ownerTutor },
       orderBy: { name: "asc" },
       take: PER_GROUP,
     }),
@@ -110,7 +111,7 @@ async function searchAsStudent(email: string, q: string): Promise<SearchGroup[]>
     group("courses", "Courses", courses.map((c) => ({
       id: c.id,
       title: c.name,
-      subtitle: c.tutor.fullName,
+      subtitle: tutorOf(c)?.fullName ?? "",
       href: `/dashboard/courses/${c.id}`,
     }))),
     group("lessons", "Lessons", lessons.map((l) => ({
@@ -152,12 +153,12 @@ async function searchAsTutor(email: string, q: string): Promise<SearchGroup[]> {
   });
   if (!tutor) return [];
 
-  const owned = { tutorId: tutor.id };
+  const owned = taughtBy(tutor.id);
 
   const [courses, lessons, tests, assignments, events] = await Promise.all([
     prisma.course.findMany({
       where: { ...owned, OR: [{ name: ci(q) }, { description: ci(q) }] },
-      select: { id: true, name: true, _count: { select: { students: true } } },
+      select: { id: true, name: true, _count: { select: openEnrollmentCount } },
       orderBy: { name: "asc" },
       take: PER_GROUP,
     }),
@@ -186,7 +187,7 @@ async function searchAsTutor(email: string, q: string): Promise<SearchGroup[]> {
     group("courses", "Courses", courses.map((c) => ({
       id: c.id,
       title: c.name,
-      subtitle: `${c._count.students} student${c._count.students === 1 ? "" : "s"}`,
+      subtitle: `${c._count.enrollments} student${c._count.enrollments === 1 ? "" : "s"}`,
       href: `/dashboard/manage-courses/${c.id}`,
     }))),
     group("lessons", "Lessons", lessons.map((l) => ({

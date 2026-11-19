@@ -14,6 +14,7 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
+import { taughtBy, studentsOf, openEnrollmentCount } from "@/features/courses/lib/tenancy-where";
 
 import type {
   AssessmentKind,
@@ -59,17 +60,14 @@ export interface CourseGradebook {
  */
 export const getCourseGradebook = cache(
   async (courseId: string): Promise<CourseGradebook | null> => {
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
-      select: {
-        id: true,
-        name: true,
-        students: {
-          select: { id: true, fullName: true, email: true, imageUrl: true },
-          orderBy: { fullName: "asc" },
-        },
-      },
-    });
+    const [course, students] = await Promise.all([
+      prisma.course.findUnique({ where: { id: courseId }, select: { id: true, name: true } }),
+      prisma.student.findMany({
+        where: studentsOf(courseId),
+        select: { id: true, fullName: true, email: true, imageUrl: true },
+        orderBy: { fullName: "asc" },
+      }),
+    ]);
     if (!course) return null;
 
     const [tests, submissions, grades] = await Promise.all([
@@ -127,7 +125,7 @@ export const getCourseGradebook = cache(
     ].sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 
     const resultsByStudent = new Map<string, StudentResult[]>();
-    for (const student of course.students) resultsByStudent.set(student.id, []);
+    for (const student of students) resultsByStudent.set(student.id, []);
 
     for (const g of grades) {
       // A Grade row points at exactly one of the two; anything else is a
@@ -149,7 +147,7 @@ export const getCourseGradebook = cache(
 
     return {
       course: { id: course.id, name: course.name },
-      students: course.students,
+      students,
       assessments,
       resultsByStudent,
     };
@@ -159,12 +157,12 @@ export const getCourseGradebook = cache(
 /** Courses owned by a tutor, with enough for the gradebook index cards. */
 export const listGradebookCoursesForTutor = cache(async (tutorId: string) => {
   return prisma.course.findMany({
-    where: { tutorId },
+    where: taughtBy(tutorId),
     select: {
       id: true,
       name: true,
       imageUrl: true,
-      _count: { select: { students: true, tests: true, submissions: true } },
+      _count: { select: { ...openEnrollmentCount, tests: true, submissions: true } },
     },
     orderBy: { name: "asc" },
   });
@@ -173,10 +171,7 @@ export const listGradebookCoursesForTutor = cache(async (tutorId: string) => {
 /** Ownership gate for the gradebook pages and the weights action. */
 export const courseBelongsToTutor = cache(
   async (courseId: string, tutorId: string) => {
-    const c = await prisma.course.findUnique({
-      where: { id: courseId },
-      select: { tutorId: true },
-    });
-    return c?.tutorId === tutorId;
+    const n = await prisma.course.count({ where: { id: courseId, ...taughtBy(tutorId) } });
+    return n > 0;
   },
 );

@@ -24,6 +24,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { tutorActionClient } from "@/lib/safe-action";
 import { getViewer } from "@/lib/viewer";
 import { setCourseEnrollment, setUpCourseTenancy } from "@/features/workspaces/tenancy";
@@ -102,13 +103,13 @@ export const updateCourse = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.course.findUnique({
       where: { id: parsedInput.id },
-      include: { tutor: { select: { email: true } } },
+      include: { staff: staffFor(ctx.session.user.email) },
     });
 
     if (!existing) {
       throw new Error("Course not found");
     }
-    if (existing.tutor.email !== ctx.session.user.email) {
+    if (existing.staff.length === 0) {
       throw new Error("You don't own this course");
     }
 
@@ -169,13 +170,13 @@ export const deleteCourse = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.course.findUnique({
       where: { id: parsedInput.id },
-      include: { tutor: { select: { email: true } } },
+      include: { staff: staffFor(ctx.session.user.email) },
     });
 
     if (!existing) {
       throw new Error("Course not found");
     }
-    if (existing.tutor.email !== ctx.session.user.email) {
+    if (existing.staff.length === 0) {
       throw new Error("You don't own this course");
     }
 

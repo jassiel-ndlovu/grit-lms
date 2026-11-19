@@ -22,6 +22,7 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
+import { enrolledStudent, openEnrollmentCount, ownerTutor, taughtBy } from "@/features/courses/lib/tenancy-where";
 
 /* ------------------------------------------------------------------------- */
 /* List queries                                                              */
@@ -29,15 +30,15 @@ import { prisma } from "@/lib/db";
 
 /**
  * Compact include shape used by all list queries — enough to render a
- * course card (cover, tutor name, lesson count) without dragging along
+ * course card (cover, tutor name via the owner membership, lesson count) without dragging along
  * every relation.
  */
 const listInclude = {
-  tutor: true,
+  ownerMembership: ownerTutor,
   _count: {
     select: {
       lessons: true,
-      students: true,
+      ...openEnrollmentCount,
       quizzes: true,
       tests: true,
     },
@@ -61,7 +62,7 @@ export const listAllCourses = cache(async () => {
  */
 export const listCoursesByTutorId = cache(async (tutorId: string) => {
   return prisma.course.findMany({
-    where: { tutorId },
+    where: taughtBy(tutorId),
     orderBy: { createdAt: "desc" },
     include: listInclude,
   });
@@ -72,7 +73,7 @@ export const listCoursesByTutorId = cache(async (tutorId: string) => {
  */
 export const listCoursesByStudentId = cache(async (studentId: string) => {
   return prisma.course.findMany({
-    where: { students: { some: { id: studentId } } },
+    where: enrolledStudent(studentId),
     orderBy: { createdAt: "desc" },
     include: listInclude,
   });
@@ -96,8 +97,13 @@ export const listCoursesByIds = cache(async (ids: string[]) => {
 /* ------------------------------------------------------------------------- */
 
 const detailInclude = {
-  tutor: true,
-  students: true,
+  ownerMembership: ownerTutor,
+  // Enrolled students come from open Enrollments (issue #93); flattened
+  // into `students` below so callers keep their shape.
+  enrollments: {
+    where: { endedAt: null },
+    select: { learner: { select: { user: { select: { studentProfile: true } } } } },
+  },
   lessons: {
     orderBy: { order: "asc" },
     include: {
@@ -120,10 +126,17 @@ export type CourseDetail = NonNullable<
  * `notFound()` from there).
  */
 export const getCourseDetailById = cache(async (id: string) => {
-  return prisma.course.findUnique({
+  const course = await prisma.course.findUnique({
     where: { id },
     include: detailInclude,
   });
+  if (!course) return null;
+  const { enrollments, ...rest } = course;
+  const students = enrollments
+    .map((e) => e.learner.user.studentProfile)
+    .filter((s): s is NonNullable<typeof s> => s != null)
+    .sort((a, b) => (a.fullName ?? "").localeCompare(b.fullName ?? ""));
+  return { ...rest, students };
 });
 
 /**
@@ -132,10 +145,7 @@ export const getCourseDetailById = cache(async (id: string) => {
  */
 export const courseBelongsToTutor = cache(
   async (courseId: string, tutorId: string) => {
-    const c = await prisma.course.findUnique({
-      where: { id: courseId },
-      select: { tutorId: true },
-    });
-    return c?.tutorId === tutorId;
+    const n = await prisma.course.count({ where: { id: courseId, ...taughtBy(tutorId) } });
+    return n > 0;
   },
 );

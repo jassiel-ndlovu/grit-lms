@@ -24,6 +24,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
+import { staffFor, enrollmentFor } from "@/features/courses/lib/tenancy-where";
 import {
   studentActionClient,
   tutorActionClient,
@@ -213,10 +214,10 @@ export const createTest = tutorActionClient
     // Ownership: the tutor must own the course this test is for.
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, tutor: { select: { email: true } } },
+      select: { id: true, staff: staffFor(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
-    if (course.tutor.email !== ctx.session.user.email) {
+    if (course.staff.length === 0) {
       throw new Error("You don't own this course");
     }
 
@@ -279,10 +280,10 @@ export const updateTest = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.test.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, tutor: { select: { email: true } } } } },
+      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Test not found");
-    if (existing.course.tutor.email !== ctx.session.user.email) {
+    if (existing.course.staff.length === 0) {
       throw new Error("You don't own this test");
     }
 
@@ -369,10 +370,10 @@ export const deleteTest = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.test.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, tutor: { select: { email: true } } } } },
+      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Test not found");
-    if (existing.course.tutor.email !== ctx.session.user.email) {
+    if (existing.course.staff.length === 0) {
       throw new Error("You don't own this test");
     }
 
@@ -424,12 +425,12 @@ export const startTestSubmission = studentActionClient
       select: {
         id: true,
         isActive: true,
-        course: { select: { students: { where: { id: student.id }, select: { id: true } } } },
+        course: { select: { enrollments: enrollmentFor(student.id) } },
       },
     });
     if (!test) throw new Error("Test not found");
     if (!test.isActive) throw new Error("Test is not currently available");
-    if (test.course.students.length === 0) {
+    if (test.course.enrollments.length === 0) {
       throw new Error("You're not enrolled in this course");
     }
 
@@ -647,13 +648,13 @@ export const gradeTestSubmission = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { tutor: { select: { email: true } } } },
+            course: { select: { staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!submission) throw new Error("Submission not found");
-    if (submission.test.course.tutor.email !== ctx.session.user.email) {
+    if (submission.test.course.staff.length === 0) {
       throw new Error("You don't own this test");
     }
 
@@ -846,13 +847,13 @@ export const deleteTestSubmission = tutorActionClient
           select: {
             id: true,
             courseId: true,
-            course: { select: { tutor: { select: { email: true } } } },
+            course: { select: { staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!submission) throw new Error("Submission not found");
-    if (submission.test.course.tutor.email !== ctx.session.user.email) {
+    if (submission.test.course.staff.length === 0) {
       throw new Error("You don't own this test");
     }
 
@@ -895,13 +896,13 @@ export const updateTestSubmissionStatus = tutorActionClient
           select: {
             id: true,
             courseId: true,
-            course: { select: { tutor: { select: { email: true } } } },
+            course: { select: { staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!submission) throw new Error("Submission not found");
-    if (submission.test.course.tutor.email !== ctx.session.user.email) {
+    if (submission.test.course.staff.length === 0) {
       throw new Error("You don't own this test");
     }
 
@@ -942,13 +943,13 @@ export const autoGradeSubmissionAction = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { tutor: { select: { email: true } } } },
+            course: { select: { staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!submission) throw new Error("Submission not found");
-    if (submission.test.course.tutor.email !== ctx.session.user.email) {
+    if (submission.test.course.staff.length === 0) {
       throw new Error("You don't own this test");
     }
 
