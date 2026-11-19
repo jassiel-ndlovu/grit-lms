@@ -31,6 +31,8 @@ export type ReconcileResult = {
   eventsRetried: number;
   eventsGaveUp: number;
   refundsSent: number;
+  /** Partial refunds left for a person to check (never resent automatically). */
+  refundsHeld: number;
   providerListed: number;
   providerFixed: number;
   providerUnknown: number;
@@ -40,7 +42,7 @@ export type ReconcileResult = {
 
 export async function runReconcile(opts: { provider?: PaymentProvider; now?: Date } = {}): Promise<ReconcileResult> {
   const now = opts.now ?? new Date();
-  const r: ReconcileResult = { checked: 0, settled: 0, abandoned: 0, eventsRetried: 0, eventsGaveUp: 0, refundsSent: 0, providerListed: 0, providerFixed: 0, providerUnknown: 0, lifetimeUsedBps: 0, errors: 0 };
+  const r: ReconcileResult = { checked: 0, settled: 0, abandoned: 0, eventsRetried: 0, eventsGaveUp: 0, refundsSent: 0, refundsHeld: 0, providerListed: 0, providerFixed: 0, providerUnknown: 0, lifetimeUsedBps: 0, errors: 0 };
   const lazyProvider = () => opts.provider ?? getProvider();
 
   // 1. Stale PENDING payments.
@@ -87,13 +89,20 @@ export async function runReconcile(opts: { provider?: PaymentProvider; now?: Dat
     }
   }
 
-  // 3. Refunds whose provider call never went through.
+  // 3. Refunds whose provider call never went through. Only full refunds
+  // are resent: Paystack refuses a second full refund, but a timed-out
+  // partial one may have gone through, and resending it could pay twice.
   const unsent = await prisma.refund.findMany({
     where: { status: "PENDING", providerRefundId: null, createdAt: { lt: new Date(now.getTime() - 5 * MIN) } },
-    select: { id: true },
+    select: { id: true, amountCents: true, payment: { select: { amountCents: true } } },
     take: 50,
   });
   for (const rf of unsent) {
+    if (rf.amountCents < rf.payment.amountCents) {
+      r.refundsHeld++;
+      Sentry.captureMessage(`Partial refund ${rf.id} not confirmed by Paystack; check it by hand`, { level: "warning", tags: { job: "payments-reconcile" } });
+      continue;
+    }
     try {
       await issueRefund(rf.id, lazyProvider());
       r.refundsSent++;
@@ -133,14 +142,8 @@ export async function runReconcile(opts: { provider?: PaymentProvider; now?: Dat
   }
 
   // 5. Lifetime collection limit of the sole-proprietor Paystack account.
-  const cap = Number(process.env.PAYSTACK_LIFETIME_CAP_CENTS ?? 100_000_000);
   const alertBps = Number(process.env.PAYSTACK_CAP_ALERT_BPS ?? 7_000);
-  const [paid, refunded] = await Promise.all([
-    prisma.payment.aggregate({ where: { status: { in: ["SUCCEEDED", "REFUNDED", "PARTIALLY_REFUNDED"] } }, _sum: { amountCents: true } }),
-    prisma.refund.aggregate({ where: { status: "PROCESSED" }, _sum: { amountCents: true } }),
-  ]);
-  const collected = (paid._sum.amountCents ?? 0) - (refunded._sum.amountCents ?? 0);
-  r.lifetimeUsedBps = cap > 0 ? Math.floor((collected / cap) * 10_000) : 0;
+  r.lifetimeUsedBps = (await lifetimeVolume()).usedBps;
   if (r.lifetimeUsedBps >= alertBps) {
     Sentry.captureMessage(`Paystack lifetime limit at ${(r.lifetimeUsedBps / 100).toFixed(1)}%`, {
       level: r.lifetimeUsedBps >= 9_000 ? "error" : "warning",
@@ -148,4 +151,18 @@ export async function runReconcile(opts: { provider?: PaymentProvider; now?: Dat
     });
   }
   return r;
+}
+
+/**
+ * Money collected through Paystack so far (payments less processed refunds)
+ * against the sole-proprietor lifetime limit (design 04, section 3).
+ */
+export async function lifetimeVolume(): Promise<{ lifetimeCents: number; capCents: number; usedBps: number }> {
+  const capCents = Number(process.env.PAYSTACK_LIFETIME_CAP_CENTS ?? 100_000_000);
+  const [paid, refunded] = await Promise.all([
+    prisma.payment.aggregate({ where: { status: { in: ["SUCCEEDED", "REFUNDED", "PARTIALLY_REFUNDED"] } }, _sum: { amountCents: true } }),
+    prisma.refund.aggregate({ where: { status: "PROCESSED" }, _sum: { amountCents: true } }),
+  ]);
+  const lifetimeCents = (paid._sum.amountCents ?? 0) - (refunded._sum.amountCents ?? 0);
+  return { lifetimeCents, capCents, usedBps: capCents > 0 ? Math.floor((lifetimeCents / capCents) * 10_000) : 0 };
 }

@@ -129,6 +129,8 @@ Account numbers never come back in full; only `accountNumberLast4`. B shows card
 
 Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
+**Built (2026-11-19):** all of section 4. Queries in `src/features/admin/billing-queries.ts`, actions in `src/features/admin/billing-actions.ts` (Nexa admin persona plus `admin.override`). Rules worth knowing for the screens: `adminMarkPaidOffsite` takes the full invoice total only (no part payments) and opens the period from `receivedOn`; `adminVoidPlatformInvoice` refuses an invoice with a payment taken or in progress (refund instead); `adminRefundPayment` sends a partial refund once, and if Paystack's answer is lost it stays `PENDING` for a person to check; `adminExtendTrial` reopens an expired, never-paid trial from today; ending a comp makes a never-paid workspace `READ_ONLY`. `adminListWorkspaceBilling` also takes `limit` (1 to 200, default 50); `q` matches name or slug.
+
 ## Rules for B
 
 1. Show prices and totals only from these calls. Never multiply seats by a price on the client.
@@ -147,6 +149,7 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
 | Date | Change |
 | --- | --- |
+| 2026-11-19 | Draft 1.7. Section 4 (Nexa admin) built; rules under the table |
 | 2026-11-19 | Draft 1.6. `getUsage`, `listPlatformInvoices` and `getPlatformInvoice` built. `getBillingPaymentStatus` also returns `purpose: "CARD" | "INVOICE"` (use it instead of the `nx-card-` prefix; the prefix stays stable too). `payPlatformInvoice`'s default `returnPath` is now `/dashboard/settings/billing`, and billing emails link there. Invoice `status` shows `PAST_DUE` as `OPEN`; `pdfUrl` is `null` until invoice PDFs exist. `getUsage` for `active-students`: `days[].quantity` is distinct learners enrolled that day, `totalQuantity` distinct learners in the period, `estimatedCents` the period's seat charges so far (advance plus catch-ups and upgrades); in a trial, what the first 30 days would cost now. `ai-marks`: `estimatedCents` is the pass-through above the Pro pools so far. Other meters: 0 until those features record usage |
 | 2026-11-19 | Draft 1.5. `redeemDiscountCode` built (`CODE_INVALID`, `CODE_EXPIRED`, `CODE_USED`); `periodsLeft` is the code's `durationPeriods` (null = no limit). Invoices and `getBillingOverview` apply the workspace's discount and open credit. Billing emails (trial ending and ended, dunning days 0, 3 and 7, read-only, receipt) go to owners, admins and the billing email; B builds no email screens |
 | 2026-11-19 | Draft 1.4. `startCardReplacement` built: a R10 card check, refunded as soon as it succeeds. Poll `getBillingPaymentStatus` as for a payment; `SUCCEEDED` means the new card is saved. Renewals, dunning (`PAST_DUE` on day 0, `READ_ONLY` on day 14) and trial ends now run hourly in `/api/cron/billing` |

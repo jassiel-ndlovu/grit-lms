@@ -206,7 +206,7 @@ export async function markInvoicePaid(
   input: {
     invoiceId: string;
     paidAt: Date;
-    paidVia: "CARD" | "COMPED" | "CREDIT";
+    paidVia: "CARD" | "COMPED" | "CREDIT" | "OFFSITE";
     card?: Card | null;
     periodDays: number;
     actorUserId?: string | null;
