@@ -89,8 +89,8 @@ export default async function PayoutsPage() {
           </PropertyList>
         ) : (
           <p className="text-muted-foreground text-sm">
-            No account connected yet, so parents can&apos;t pay online. Fees still work: mark them paid when you collect cash
-            or EFT.
+            No account connected yet. Fees can be sent to parents once it is, and then paid online or marked paid when you
+            collect cash or EFT.
           </p>
         )}
         {mine?.status === "ACTIVE" ? (
@@ -138,7 +138,7 @@ export default async function PayoutsPage() {
               </table>
             </div>
           )}
-          <p className="text-muted-foreground text-xs">A course&apos;s fees go to its lead tutor&apos;s account. Until it is connected, mark those fees paid off-site.</p>
+          <p className="text-muted-foreground text-xs">A course&apos;s fees go to its lead tutor&apos;s account; its fees can be sent once that account is connected.</p>
         </section>
       ) : null}
     </>,
