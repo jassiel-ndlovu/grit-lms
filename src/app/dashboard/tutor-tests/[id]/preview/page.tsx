@@ -15,14 +15,11 @@
  * Server Component, tutor-only, ownership-gated.
  */
 
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { TestFrame } from "@/features/assessments/components/test-frame";
 
 import {
   getTestDetailById,
@@ -89,29 +86,15 @@ export default async function PreviewTestPage({ params }: PageProps) {
   const answerable = test.questions.filter((q) => q.type !== "NONE").length;
 
   return (
-    <div className="bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex h-14 flex-wrap items-center justify-between gap-3">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href="/dashboard/tutor-tests">
-                <ArrowLeft className="size-4" /> Back to tests
-              </Link>
-            </Button>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="tabular-nums">
-                {keyed} of {answerable} answered
-              </Badge>
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/dashboard/tutor-tests/${test.id}/edit`}>
-                  <Pencil className="size-4" /> Edit test
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <TestFrame
+      test={test}
+      page="Preview"
+      actions={
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {keyed} of {answerable} answered
+        </span>
+      }
+    >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
         <TestRunner
           mode="preview"
@@ -127,6 +110,6 @@ export default async function PreviewTestPage({ params }: PageProps) {
           startedAt={new Date()}
         />
       </div>
-    </div>
+    </TestFrame>
   );
 }

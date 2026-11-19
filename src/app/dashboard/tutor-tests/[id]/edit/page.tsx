@@ -7,13 +7,10 @@
  * then renders <TestForm> in edit mode.
  */
 
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Button } from "@/components/ui/button";
 
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import {
@@ -24,6 +21,7 @@ import {
 import { TestForm } from "@/features/assessments/components/test-form";
 import { loadTestFingerprint } from "@/features/assessments/lib/test-fingerprint";
 import { ExportTestButton } from "@/features/assessments/components/export-test-button";
+import { TestFrame } from "@/features/assessments/components/test-frame";
 import type {
   EditorQuestion,
   EditorQuestionType,
@@ -115,34 +113,11 @@ export default async function EditTestPage({ params }: PageProps) {
   const editorQuestions = buildEditorTree(test.questions);
 
   return (
-    <div className="bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="flex h-14 items-center">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href="/dashboard/tutor-tests">
-                <ArrowLeft className="size-4" /> Back to tests
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-muted-foreground text-xs">{test.course.name}</p>
-            <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-              Edit test
-            </h1>
-          </div>
-          {/* "Preview as student" lives in the form's save bar: it saves
-              first, so the preview always shows the latest edits. */}
-          <div className="flex items-center gap-2">
-            <ExportTestButton testId={test.id} />
-          </div>
-        </header>
-
+    <TestFrame test={test} page="Questions" actions={<ExportTestButton testId={test.id} />}>
+      {/* "Preview as student" lives in the form's save bar: it saves
+          first, so the preview always shows the latest edits. */}
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
+        <h1 className="sr-only">Edit {test.title}</h1>
         <TestForm
           courses={courses.map((c) => ({ id: c.id, name: c.name }))}
           defaultValues={{
@@ -164,6 +139,6 @@ export default async function EditTestPage({ params }: PageProps) {
           }}
         />
       </div>
-    </div>
+    </TestFrame>
   );
 }

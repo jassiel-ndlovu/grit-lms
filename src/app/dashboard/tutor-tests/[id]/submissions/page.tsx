@@ -11,14 +11,10 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, FileText, GraduationCap } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { StatusChip } from "@/components/shell/status-chip";
 
 import {
   getTestDetailById,
@@ -26,6 +22,7 @@ import {
   testBelongsToTutor,
 } from "@/features/assessments/queries";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { TestFrame } from "@/features/assessments/components/test-frame";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -85,127 +82,71 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
   const submitted = submissions.filter((s) => s.status === "SUBMITTED").length;
   const inProgress = submissions.filter((s) => s.status === "IN_PROGRESS").length;
 
-  return (
-    <div className="bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="flex h-14 items-center">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href="/dashboard/tutor-tests">
-                <ArrowLeft className="size-4" /> All tests
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
+  const chip = (status: string) =>
+    status === "GRADED"
+      ? { tone: "success" as const, label: "Graded" }
+      : status === "SUBMITTED"
+        ? { tone: "info" as const, label: "To mark" }
+        : { tone: "neutral" as const, label: "In progress" };
 
-      <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-        <header className="space-y-2">
-          <p className="text-muted-foreground text-xs">{test.course.name}</p>
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
+  return (
+    <TestFrame test={test} page="Submissions">
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
+        <header className="space-y-1">
+          <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">
             {test.title}
           </h1>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-sm">
-            <span>Due {dateFmt.format(test.dueDate)}</span>
-            <span>·</span>
-            <span>{test.totalPoints} points</span>
-            <span>·</span>
-            <span>
-              {submissions.length}{" "}
-              {submissions.length === 1 ? "submission" : "submissions"}
-              {" "}({graded} graded, {submitted} awaiting, {inProgress} in progress)
-            </span>
-          </div>
+          <p className="text-muted-foreground text-sm">
+            Due {dateFmt.format(test.dueDate)} · {test.totalPoints} points · {submissions.length}{" "}
+            {submissions.length === 1 ? "submission" : "submissions"} ({graded} graded, {submitted} to mark,{" "}
+            {inProgress} in progress)
+          </p>
         </header>
 
-        <Card className="overflow-hidden p-0">
-          <div className="flex items-baseline justify-between gap-3 px-5 py-4">
-            <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-              Submissions
-            </h2>
-            <span className="text-muted-foreground text-xs tabular-nums">
-              {submissions.length} total
-            </span>
-          </div>
-          <Separator />
-          {submissions.length === 0 ? (
-            <EmptyState
-              compact
-              illustration={<Scene name="nothing-to-grade" />}
-              title="No one has started this test yet"
-              description="Attempts show up here as students start them."
-            />
-          ) : (
-            <ul className="divide-border divide-y">
-              {submissions.map((s) => {
-                const itemPct =
-                  s.grade != null ? pct(s.grade.score, s.grade.outOf) : null;
-                return (
-                  <li key={s.id}>
-                    <Link
-                      href={`/dashboard/tutor-tests/submissions/${test.id}/${s.studentId}`}
-                      className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 transition-colors"
-                    >
-                      <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
-                        <FileText className="size-4" />
-                      </div>
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {s.student.fullName}
-                        </p>
-                        <p className="text-muted-foreground truncate text-xs">
-                          {s.student.email}
-                          {s.submittedAt
-                            ? ` · submitted ${dateFmt.format(s.submittedAt)}`
-                            : ` · started ${dateFmt.format(s.startedAt)}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <Badge
-                          variant={
-                            s.status === "GRADED"
-                              ? "brand"
-                              : s.status === "SUBMITTED"
-                                ? "soft"
-                                : "secondary"
-                          }
-                        >
-                          {s.status === "GRADED"
-                            ? "Graded"
-                            : s.status === "SUBMITTED"
-                              ? "Awaiting grade"
-                              : "In progress"}
-                        </Badge>
-                        {s.grade && itemPct != null && (
-                          <span className="font-display tabular-nums text-foreground text-sm">
-                            {s.grade.score}
-                            <span className="text-muted-foreground">
-                              {" "}
-                              / {s.grade.outOf}
-                            </span>
-                            <span className="text-muted-foreground text-xs">
-                              {" "}
-                              ({itemPct}%)
-                            </span>
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
-
-        <div className="flex justify-end">
-          <Button asChild variant="outline">
-            <Link href={`/dashboard/manage-courses/${test.courseId}`}>
-              <GraduationCap className="size-4" /> Manage course
-            </Link>
-          </Button>
-        </div>
+        {submissions.length === 0 ? (
+          <EmptyState
+            compact
+            illustration={<Scene name="nothing-to-grade" />}
+            title="No one has started this test yet"
+            description="Attempts show up here as students start them."
+          />
+        ) : (
+          <ul className="divide-border border-border divide-y border-y">
+            {submissions.map((s) => {
+              const itemPct = s.grade != null ? pct(s.grade.score, s.grade.outOf) : null;
+              const c = chip(s.status);
+              return (
+                <li key={s.id}>
+                  <Link
+                    href={`/dashboard/tutor-tests/submissions/${test.id}/${s.studentId}`}
+                    className="hover:bg-muted/40 flex items-center gap-3 px-2 py-3 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <p className="text-foreground truncate text-sm font-medium">{s.student.fullName}</p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {s.student.email}
+                        {s.submittedAt
+                          ? ` · submitted ${dateFmt.format(s.submittedAt)}`
+                          : ` · started ${dateFmt.format(s.startedAt)}`}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <StatusChip tone={c.tone}>{c.label}</StatusChip>
+                      {s.grade && itemPct != null ? (
+                        <span className="text-foreground text-sm tabular-nums">
+                          {s.grade.score}
+                          <span className="text-muted-foreground"> / {s.grade.outOf}</span>
+                          <span className="text-muted-foreground text-xs"> ({itemPct}%)</span>
+                        </span>
+                      ) : null}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
-    </div>
+    </TestFrame>
   );
 }
