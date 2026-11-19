@@ -6,6 +6,7 @@ the "Nexa LMS: Platform revamp plan" doc, revision 2 (16 November 2026).
 | File | What it is |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | Branches, worktrees, file ownership, contracts, and what needs the owner's approval |
+| [MESSAGING.md](MESSAGING.md) | How the agents message each other across computers (GitHub issues) |
 | [prompts/agent-a-platform.md](prompts/agent-a-platform.md) | Starting prompt for Agent A (Platform and business) |
 | [prompts/agent-b-product.md](prompts/agent-b-product.md) | Starting prompt for Agent B (Product and learning) |
 | [contracts/](contracts/) | The interfaces the two agents build against |
