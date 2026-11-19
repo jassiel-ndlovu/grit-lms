@@ -2,6 +2,13 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The Prisma client is generated into src/generated/prisma, and Next's
+  // file tracing doesn't always copy its query engine into every function
+  // (production /forgot-password failed with "could not locate the Query
+  // Engine"). Include it in every route explicitly.
+  outputFileTracingIncludes: {
+    "/**/*": ["./src/generated/prisma/*.node"],
+  },
   images: {
     // Vercel Blob serves files from this hostname pattern. Required for
     // next/image to load remote covers/avatars produced by the blob client.
