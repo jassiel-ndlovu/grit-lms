@@ -3,6 +3,50 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Legacy course links dropped (#93 step 5), `revamp/b-drop-legacy-course-links`
+
+Owner's approval, quoted on #93: "We can proceed with step 5. You have my
+approval for it." A's OK for its paths is on #93 too.
+
+Done:
+- **Schema:** `Course.tutorId`, `Course.tutor` and `Course.students` are
+  gone from `learning.prisma`; `Student.courses` and `Tutor.courses` are
+  gone from `core.prisma` (A's OK). Migration
+  `10_drop_legacy_course_links` drops the foreign keys, the `tutorId`
+  column and the `_CourseEnrollments` table. Its SQL is what `prisma
+  migrate diff` gave against both production and Preview; both diffs were
+  the same and showed no drift.
+- **Writes:** `createCourse`/`updateCourse` no longer write the old
+  columns. CourseStaff and Enrollment (through A's tenancy helpers) are
+  the only record.
+- **Scripts:**
+  - `seed-fake` creates the workspace, owner membership, learners,
+    CourseStaff and Enrollment rows, and its wipe clears them first.
+  - `backfill-tenancy` loses its course part, which already ran on both
+    databases (A's OK).
+  - `check-answer-key-roundtrip` no longer reads the course's tutor.
+- **`check-tenancy-parity.ts`** now checks integrity of the new tables
+  alone: workspace, owner in that workspace, LEAD staff, owner has a Tutor
+  profile, enrolments in the right workspace, no duplicate open
+  enrolments.
+
+Before the drop (read-only):
+- The last old-vs-new parity run, from `main`, was clean on Preview
+  (2 courses, 11 enrolments) and production (6 courses, 12 enrolments).
+- The new integrity check was clean on both.
+
+Applying (see the PR for the order and where each step stands):
+1. A Neon backup branch of production, `backup-legacy-course-links-20261119`.
+2. `migrate deploy` on Preview, then check this branch's Preview deployment.
+3. Merge.
+4. Once the production deployment is live, `migrate deploy` on production.
+   Between those two, creating or editing a course fails, because
+   `tutorId` is still a required column with no value.
+
+For A: Preview deployments of branches made before this merge select
+`Course.tutorId` and fail on course pages once Preview has the
+migration. Merge `main` into them.
+
 ## 2026-11-19 Tutor test pages in the new frame (Phase 1), `revamp/b-next`
 
 Done:

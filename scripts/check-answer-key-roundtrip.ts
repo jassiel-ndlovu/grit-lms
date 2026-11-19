@@ -40,10 +40,10 @@ const SCRATCH_TITLE = "ZZ scratch — answer key round trip (safe to delete)";
 
 async function main() {
   const course = await prisma.course.findFirst({
-    select: { id: true, name: true, tutor: { select: { id: true, email: true } } },
+    select: { id: true },
   });
   if (!course) throw new Error("No course in the database to attach a test to");
-  console.log(`Using course "${course.name}" (tutor ${course.tutor.email})\n`);
+  console.log(`Using course ${course.id}\n`);
 
   // Clean up anything a previous interrupted run left behind.
   await prisma.test.deleteMany({ where: { title: SCRATCH_TITLE } });
