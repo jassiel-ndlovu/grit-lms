@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Nexa admin billing, `revamp/a-admin-billing`
+
+Done:
+- **Contract section 4, in full** (Draft 1.7):
+  - `adminListWorkspaceBilling` and `adminGetPaymentVolume`.
+  - `adminExtendTrial`, `adminSetComp`, `adminOverrideCourseTier`, `adminIssueCreditNote`, `adminVoidPlatformInvoice`, `adminMarkPaidOffsite`, `adminRefundPayment`, `adminCreateDiscountCode`, `adminDeactivateDiscountCode`.
+  - The logic is in `src/features/admin/billing-overrides.ts`; it takes the acting admin, so scripts can test it. Every override writes an AuditLog row in the same transaction.
+- **Safety:**
+  - An off-site payment must be the full invoice total.
+  - Void refuses an invoice with a payment taken or in progress.
+  - Reconciliation no longer resends a partial refund. Paystack has no idempotency key, so a lost answer to a partial refund could pay out twice; such refunds stay PENDING with a Sentry warning.
+  - `lifetimeVolume()` is shared by reconciliation and the admin console.
+- **#93 step 5:** B merged #115 and applied the migration to production (status: up to date). The backup branch is `backup-legacy-course-links-20261119`.
+- **Checks:**
+  - tsc and lint pass.
+  - A one-off end-to-end run on the preview DB: 20 checks covering every override, the audit rows and the admin list. The test rows were removed.
+
+For B:
+- The admin billing screens can be built against contract section 4 (rules under the table).
+
 ## 2026-11-19 Usage and invoice queries; answers for B; drop backup, `revamp/a-billing-queries`
 
 Done:
