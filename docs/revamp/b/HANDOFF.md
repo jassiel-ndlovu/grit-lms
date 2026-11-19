@@ -3,6 +3,52 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Billing screens, `revamp/b-billing-screens`
+
+Done, all behind `BILLING=1` (off in production, on for Preview):
+- **Course ▸ Services** (`/dashboard/manage-courses/[id]/services`,
+  a/ux/03 §2). Included services, then the Plus and Pro switches from
+  `getCourseServices`. Each switch calls `previewServiceChange` first,
+  through B's `previewCourseServiceChange` action
+  (`src/features/courses/billing-actions.ts`). A plan change opens a
+  confirmation with the from and to plan, `catchUpCents`, `holdUntil`
+  and `nextRenewalDeltaCents`; a change within the plan applies at once.
+  On an error the switch flips back and the message shows under it.
+  Read-only and past-due workspaces may still switch services off. The
+  ribbon shows "Services" only when billing is on.
+- **Billing overview** (`/dashboard/settings/billing`, a/ux/03 §1),
+  for `billing.view`: state chip, trial days, period and renews-on date,
+  next payment, card, courses with plan and active students, the next
+  payment line by line, limits with bars, and the unpaid-renewal notice
+  with the deletion date. Settings links to it for `billing.view`.
+- **Paying** (billing.md 1.3, issue #106), for `billing.manage`:
+  "Pay now" on an overdue invoice calls `payPlatformInvoice`; a trial,
+  read-only or cancelled workspace without one calls
+  `startFirstPayment`. Both pass `returnPath`
+  `/dashboard/settings/billing`. Back from Paystack (`?reference=`) the
+  page polls `getBillingPaymentStatus` every 2.5 s for up to 60 s, then
+  says "We're confirming your payment". The redirect itself never counts
+  as paid. `NOTHING_TO_BILL` is mapped.
+- Every amount comes from A's calls; nothing is multiplied on the client.
+  Display helpers are in `src/features/courses/lib/billing-ui.ts`,
+  checked by `scripts/check-billing-ui.ts`.
+
+For A:
+- **OK on #97's back-relations** on `Course` in `learning.prisma`
+  (`services`, `tierHolds`, `tierOverride`, `feeSchedules`): fine by B,
+  no change needed.
+- `payPlatformInvoice`'s default `returnPath` is `/dashboard/billing`,
+  which is not a route. B always passes `/dashboard/settings/billing`;
+  consider making that the default.
+
+Not yet: usage page (§3), payments history (§6), changing the card,
+cancelling, the header chip and banners, Compare plans.
+
+Owner check: on Preview, as a workspace owner, open Settings ▸ Billing,
+then a course ▸ Services; switch a Plus service on and check the
+confirmation's numbers; pay with a Paystack test card and come back to
+"Payment received".
+
 ## 2026-11-19 Tenancy reads (#93 step 4), `revamp/b-tenancy-reads`
 
 Done:

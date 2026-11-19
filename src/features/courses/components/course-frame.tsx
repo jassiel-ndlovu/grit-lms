@@ -1,13 +1,14 @@
 /**
  * The frame of a tutor's course pages (UI draft "Course page"): one
- * PageHeader and a ribbon with the course's views. Overview, Lessons and
- * Settings are separate routes, so each view has its own URL.
+ * PageHeader and a ribbon with the course's views. Overview, Lessons,
+ * Services (billing on) and Settings are separate routes, so each view has its own URL.
  *
  * Server component; RibbonNav (client) lights the current view.
  */
 
 import { PageHeader, type Crumb } from "@/components/shell/page-header";
 import { Ribbon, RibbonNav } from "@/components/shell/ribbon";
+import { isBillingEnabled } from "@/features/billing/errors";
 
 export const courseRoutes = {
   list: "/dashboard/manage-courses",
@@ -15,6 +16,7 @@ export const courseRoutes = {
   lessons: (id: string, lessonId?: string) =>
     `/dashboard/manage-courses/lessons/${id}${lessonId ? `?lesson=${lessonId}` : ""}`,
   settings: (id: string) => `/dashboard/manage-courses/${id}/settings`,
+  services: (id: string) => `/dashboard/manage-courses/${id}/services`,
 };
 
 export function CourseFrame({
@@ -44,6 +46,8 @@ export function CourseFrame({
           links={[
             { label: "Overview", href: courseRoutes.overview(course.id) },
             { label: "Lessons", href: courseRoutes.lessons(course.id) },
+            // Premium services exist only with billing on (BILLING=1).
+            ...(isBillingEnabled() ? [{ label: "Services", href: courseRoutes.services(course.id) }] : []),
             { label: "Settings", href: courseRoutes.settings(course.id) },
           ]}
         />
