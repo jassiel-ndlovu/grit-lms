@@ -1,155 +1,82 @@
 /**
- * Tenancy parity (issue #93, step 3): do the new tables say the same as
- * the old columns? Read-only; safe on production.
+ * Tenancy integrity for courses. Read-only; safe on production.
  *
  *   npx tsx scripts/check-tenancy-parity.ts
  *
- * For every course it compares:
- *   - workspace:  Course.workspaceId is set;
- *   - owner:      Course.ownerMembershipId is the tutor's membership in that
- *                 workspace, and that membership has a LEAD CourseStaff row;
- *   - enrolments: the students in the implicit `_CourseEnrollments` join,
- *                 mapped Student → User → Learner (in the course's
- *                 workspace), equal the learners with an open Enrollment.
- *
- * Reads (step 4): the filters in src/features/courses/lib/tenancy-where.ts
- * must return what the old ones did, for every tutor, student and course:
- *   - taughtBy(tutor)          vs  { tutorId }
- *   - enrolledStudent(student) vs  { students: { some: { id } } }
- *   - studentsOf(course)       vs  course.students
- *   - tutorOf(course).id       vs  course.tutorId
+ * Until issue #93 step 5 this compared the new tables with the old
+ * `Course.tutorId` column and the implicit `_CourseEnrollments` join. Its
+ * last run, before those were dropped (10_drop_legacy_course_links), was
+ * clean on production and Preview. Now that CourseStaff and Enrollment are
+ * the only record, it checks that they are whole. For every course:
+ *   - noWorkspace:        Course.workspaceId is set;
+ *   - noOwner:            Course.ownerMembershipId is set, and that membership
+ *                         is in the course's workspace;
+ *   - noLeadStaff:        the owner has a LEAD CourseStaff row;
+ *   - ownerNotTutor:      the owner's user has a Tutor profile, so tutorOf()
+ *                         names a teacher on student pages;
+ *   - enrolmentElsewhere: every open Enrollment is in the course's workspace,
+ *                         for a learner of that workspace;
+ *   - duplicateOpen:      no learner has two open Enrollments in one course.
  *
  * Prints counts and ids only, never names or emails. Exits 1 when anything
- * differs.
+ * is wrong.
  */
 
 import { PrismaClient } from "../src/generated/prisma";
-import { enrolledStudent, enrollmentFor, ownerTutor, staffFor, studentsOf, taughtBy, tutorOf } from "../src/features/courses/lib/tenancy-where";
+import { ownerTutor, tutorOf } from "../src/features/courses/lib/tenancy-where";
 
 const url = process.env.DATABASE_URL ?? "";
 if (!url) throw new Error("DATABASE_URL is not set");
 const prisma = new PrismaClient({ datasourceUrl: url });
-const lower = (s: string) => s.trim().toLowerCase();
 
 async function main() {
-  const [courses, users, memberships, learners, staff, openEnrollments] = await Promise.all([
+  const [courses, memberships, learners, leads, openEnrollments] = await Promise.all([
     prisma.course.findMany({
-      select: {
-        id: true,
-        workspaceId: true,
-        ownerMembershipId: true,
-        tutor: { select: { userId: true, email: true } },
-        students: { select: { id: true, userId: true, email: true } },
-      },
+      select: { id: true, workspaceId: true, ownerMembershipId: true, ownerMembership: ownerTutor },
     }),
-    prisma.user.findMany({ select: { id: true, email: true } }),
-    prisma.membership.findMany({ select: { id: true, workspaceId: true, userId: true } }),
-    prisma.learner.findMany({ select: { id: true, workspaceId: true, userId: true } }),
+    prisma.membership.findMany({ select: { id: true, workspaceId: true } }),
+    prisma.learner.findMany({ select: { id: true, workspaceId: true } }),
     prisma.courseStaff.findMany({ where: { role: "LEAD" }, select: { courseId: true, membershipId: true } }),
-    prisma.enrollment.findMany({ where: { endedAt: null }, select: { courseId: true, learnerId: true } }),
+    prisma.enrollment.findMany({ where: { endedAt: null }, select: { courseId: true, learnerId: true, workspaceId: true } }),
   ]);
 
-  const userByEmail = new Map(users.map((u) => [lower(u.email), u.id]));
-  const userOf = (p: { userId: string | null; email: string }) => p.userId ?? userByEmail.get(lower(p.email)) ?? null;
-  const membershipOf = new Map(memberships.map((m) => [`${m.workspaceId}:${m.userId}`, m.id]));
-  const learnerOf = new Map(learners.map((l) => [`${l.workspaceId}:${l.userId}`, l.id]));
-  const leads = new Set(staff.map((s) => `${s.courseId}:${s.membershipId}`));
-  const openByCourse = new Map<string, string[]>();
-  for (const e of openEnrollments) openByCourse.set(e.courseId, [...(openByCourse.get(e.courseId) ?? []), e.learnerId]);
+  const membershipWs = new Map(memberships.map((m) => [m.id, m.workspaceId]));
+  const learnerWs = new Map(learners.map((l) => [l.id, l.workspaceId]));
+  const leadSet = new Set(leads.map((s) => `${s.courseId}:${s.membershipId}`));
+  const openByCourse = new Map<string, typeof openEnrollments>();
+  for (const e of openEnrollments) openByCourse.set(e.courseId, [...(openByCourse.get(e.courseId) ?? []), e]);
 
-  const totals = { courses: courses.length, oldEnrolments: 0, openEnrollments: openEnrollments.length };
   const problems = {
     noWorkspace: [] as string[],
-    ownerMismatch: [] as string[],
+    noOwner: [] as string[],
     noLeadStaff: [] as string[],
-    studentWithoutLearner: [] as string[],
-    missingEnrollment: [] as string[],
-    extraEnrollment: [] as string[],
+    ownerNotTutor: [] as string[],
+    enrolmentElsewhere: [] as string[],
     duplicateOpen: [] as string[],
   };
 
   for (const c of courses) {
-    totals.oldEnrolments += c.students.length;
     if (!c.workspaceId) {
       problems.noWorkspace.push(c.id);
       continue;
     }
     const ws = c.workspaceId;
+    if (!c.ownerMembershipId || membershipWs.get(c.ownerMembershipId) !== ws) problems.noOwner.push(c.id);
+    if (!c.ownerMembershipId || !leadSet.has(`${c.id}:${c.ownerMembershipId}`)) problems.noLeadStaff.push(c.id);
+    if (!tutorOf(c)) problems.ownerNotTutor.push(c.id);
 
-    const tutorUser = userOf(c.tutor);
-    const tutorMembership = tutorUser ? membershipOf.get(`${ws}:${tutorUser}`) ?? null : null;
-    if (!tutorMembership || c.ownerMembershipId !== tutorMembership) problems.ownerMismatch.push(c.id);
-    if (!c.ownerMembershipId || !leads.has(`${c.id}:${c.ownerMembershipId}`)) problems.noLeadStaff.push(c.id);
-
-    const expected = new Set<string>();
-    for (const s of c.students) {
-      const u = userOf(s);
-      const learner = u ? learnerOf.get(`${ws}:${u}`) : undefined;
-      if (learner) expected.add(learner);
-      else problems.studentWithoutLearner.push(c.id);
-    }
     const open = openByCourse.get(c.id) ?? [];
-    const openSet = new Set(open);
-    if (openSet.size !== open.length) problems.duplicateOpen.push(c.id);
-    if ([...expected].some((l) => !openSet.has(l))) problems.missingEnrollment.push(c.id);
-    if ([...openSet].some((l) => !expected.has(l))) problems.extraEnrollment.push(c.id);
+    if (open.some((e) => e.workspaceId !== ws || learnerWs.get(e.learnerId) !== ws)) problems.enrolmentElsewhere.push(c.id);
+    if (new Set(open.map((e) => e.learnerId)).size !== open.length) problems.duplicateOpen.push(c.id);
   }
 
-  // Reads: the new filters against the old ones.
-  const sameSet = (a: string[], b: string[]) => a.length === b.length && new Set([...a, ...b]).size === a.length;
-  const reads = { tutorCourses: [] as string[], studentCourses: [] as string[], courseStudents: [] as string[], courseTutor: [] as string[], actionChecks: [] as string[] };
-  const [tutors, studentProfiles] = await Promise.all([
-    prisma.tutor.findMany({ select: { id: true } }),
-    prisma.student.findMany({ select: { id: true } }),
-  ]);
-  for (const t of tutors) {
-    const [oldC, newC] = await Promise.all([
-      prisma.course.findMany({ where: { tutorId: t.id }, select: { id: true } }),
-      prisma.course.findMany({ where: taughtBy(t.id), select: { id: true } }),
-    ]);
-    if (!sameSet(oldC.map((c) => c.id), newC.map((c) => c.id))) reads.tutorCourses.push(t.id);
-  }
-  for (const st of studentProfiles) {
-    const [oldC, newC] = await Promise.all([
-      prisma.course.findMany({ where: { students: { some: { id: st.id } } }, select: { id: true } }),
-      prisma.course.findMany({ where: enrolledStudent(st.id), select: { id: true } }),
-    ]);
-    if (!sameSet(oldC.map((c) => c.id), newC.map((c) => c.id))) reads.studentCourses.push(st.id);
-  }
-  for (const c of courses) {
-    const [newS, owner] = await Promise.all([
-      prisma.student.findMany({ where: studentsOf(c.id), select: { id: true } }),
-      prisma.course.findUniqueOrThrow({ where: { id: c.id }, select: { tutorId: true, ownerMembership: ownerTutor } }),
-    ]);
-    if (!sameSet(c.students.map((x) => x.id), newS.map((x) => x.id))) reads.courseStudents.push(c.id);
-    if (tutorOf(owner)?.id !== owner.tutorId) reads.courseTutor.push(c.id);
-
-    // The actions' nested checks: the course's tutor passes staffFor, and
-    // each old-join student passes enrollmentFor.
-    const checks = await prisma.course.findUniqueOrThrow({ where: { id: c.id }, select: { staff: staffFor(c.tutor.email) } });
-    const tutorOk = checks.staff.length > 0;
-    const studentOk = await Promise.all(
-      c.students.map((st) =>
-        prisma.course
-          .findUniqueOrThrow({ where: { id: c.id }, select: { enrollments: enrollmentFor(st.id) } })
-          .then((x) => x.enrollments.length > 0),
-      ),
-    );
-    if (!tutorOk || studentOk.includes(false)) reads.actionChecks.push(c.id);
-  }
-
-  console.log(`courses ${totals.courses}, old enrolments ${totals.oldEnrolments}, open Enrollment rows ${totals.openEnrollments}`);
+  console.log(`courses ${courses.length}, open Enrollment rows ${openEnrollments.length}`);
   let bad = 0;
   for (const [name, ids] of Object.entries(problems)) {
-    const unique = [...new Set(ids)];
-    bad += unique.length;
-    console.log(`${unique.length ? "DIFF" : "OK  "}  ${name}: ${unique.length}${unique.length ? `  (${unique.join(", ")})` : ""}`);
-  }
-  for (const [name, ids] of Object.entries(reads)) {
     bad += ids.length;
-    console.log(`${ids.length ? "DIFF" : "OK  "}  reads.${name}: ${ids.length}${ids.length ? `  (${ids.join(", ")})` : ""}`);
+    console.log(`${ids.length ? "BAD " : "OK  "}  ${name}: ${ids.length}${ids.length ? `  (${ids.join(", ")})` : ""}`);
   }
-  console.log(bad ? "\nThe new tables differ from the old columns." : "\nParity: the new tables match the old columns.");
+  console.log(bad ? "\nSome courses' tenancy rows are incomplete." : "\nEvery course has a workspace, an owner who teaches it and consistent enrolments.");
   return bad;
 }
 

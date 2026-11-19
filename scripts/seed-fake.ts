@@ -29,6 +29,7 @@ import { PrismaClient } from "../src/generated/prisma";
 const PRODUCTION_ENDPOINTS = ["ep-aged-scene-a4fhpg0t"];
 const PREVIEW_ENDPOINT = "ep-wandering-sea-a4bvyaiw";
 const FAKE_DOMAIN = "@example.test";
+const WORKSPACE_ID = "ws_nexa_legacy";
 
 export function checkTarget(
   url: string | undefined,
@@ -78,7 +79,13 @@ async function wipe(prisma: PrismaClient) {
   await prisma.resource.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.activityLog.deleteMany();
+  // Tenancy rows that point at courses, users and profiles. The workspace
+  // itself stays: billing rows may reference it.
+  await prisma.enrollment.deleteMany();
+  await prisma.courseStaff.deleteMany();
   await prisma.course.deleteMany();
+  await prisma.learner.deleteMany();
+  await prisma.membership.deleteMany();
   await prisma.student.deleteMany();
   await prisma.tutor.deleteMany();
   await prisma.emailVerificationToken.deleteMany();
@@ -90,21 +97,38 @@ async function seed(prisma: PrismaClient, password: string) {
   const hash = await bcrypt.hash(password, 10);
   const verified = new Date();
 
+  // Tenancy (issue #93): the legacy workspace, the tutor as its owner, each
+  // student as a learner. Courses then get CourseStaff and Enrollment rows.
+  const workspace = await prisma.workspace.upsert({
+    where: { id: WORKSPACE_ID },
+    create: { id: WORKSPACE_ID, kind: "ORGANISATION", name: "Nexa", slug: "nexa", billingState: "COMPED" },
+    update: {},
+    select: { id: true },
+  });
+
   const tutorEmail = `test.tutor${FAKE_DOMAIN}`;
-  await prisma.user.create({
+  const tutorUser = await prisma.user.create({
     data: { name: "Test Tutor", email: tutorEmail, password: hash, role: "TUTOR", emailVerified: verified },
   });
-  const tutor = await prisma.tutor.create({
-    data: { fullName: "Test Tutor", email: tutorEmail, bio: "Fake tutor for preview deployments." },
+  await prisma.tutor.create({
+    data: { fullName: "Test Tutor", email: tutorEmail, bio: "Fake tutor for preview deployments.", userId: tutorUser.id },
+  });
+  const membership = await prisma.membership.create({
+    data: { workspaceId: workspace.id, userId: tutorUser.id, role: "OWNER" },
+    select: { id: true },
   });
 
   const students = [];
+  const learnerOf = new Map<string, string>();
   for (let i = 1; i <= 8; i++) {
     const email = `test.student${i}${FAKE_DOMAIN}`;
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: { name: `Test Student ${i}`, email, password: hash, role: "STUDENT", emailVerified: verified },
     });
-    students.push(await prisma.student.create({ data: { fullName: `Test Student ${i}`, email } }));
+    const student = await prisma.student.create({ data: { fullName: `Test Student ${i}`, email, userId: user.id } });
+    const learner = await prisma.learner.create({ data: { workspaceId: workspace.id, userId: user.id }, select: { id: true } });
+    learnerOf.set(student.id, learner.id);
+    students.push(student);
   }
 
   const courseSpecs = [
@@ -118,8 +142,17 @@ async function seed(prisma: PrismaClient, password: string) {
         name: spec.name,
         description: "Fake course for preview deployments. Not real content.",
         imageUrl: "",
-        tutorId: tutor.id,
-        students: { connect: spec.enrol.map((s) => ({ id: s.id })) },
+        workspaceId: workspace.id,
+        ownerMembershipId: membership.id,
+        staff: { create: { membershipId: membership.id, role: "LEAD" } },
+        enrollments: {
+          create: spec.enrol.map((s) => ({
+            workspaceId: workspace.id,
+            learnerId: learnerOf.get(s.id)!,
+            status: "ACTIVE" as const,
+            startedAt: at(-30),
+          })),
+        },
       },
     });
 

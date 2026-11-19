@@ -8,11 +8,11 @@
  *   4. Calls revalidatePath on affected routes so RSC pages re-fetch
  *   5. Returns a typed result the form can consume
  *
- * Tenancy (issue #93, step 2): createCourse and updateCourse write the old
- * columns (`tutorId`, the implicit `students` join) and the new tables
- * (workspace, owner, CourseStaff, Enrollment) in one transaction, through
- * A's helpers in features/workspaces/tenancy. Reads still use the old
- * columns until step 4; scripts/check-tenancy-parity.ts compares the two.
+ * Tenancy (issue #93): who teaches a course is its CourseStaff rows and who
+ * takes it is its open Enrollment rows. createCourse and updateCourse write
+ * them through A's helpers in features/workspaces/tenancy, in the same
+ * transaction as the course. The old `tutorId` column and implicit
+ * enrolment join were dropped in step 5.
  *
  * Cover image uploads are handled out-of-band: the browser uploads to Blob
  * via /api/blob/upload-token first, then submits the resulting public URL
@@ -39,12 +39,12 @@ import {
 
 /**
  * Create a course.
- * Tutor is inferred from the session (joined to the Tutor row by email).
+ * The signed-in tutor becomes the owner and LEAD staff (setUpCourseTenancy).
  * Auto-creates a COURSE_UPDATE notification — preserves legacy side-effect.
  */
 export const createCourse = tutorActionClient
   .schema(CreateCourseSchema)
-  .action(async ({ parsedInput, ctx }) => {
+  .action(async ({ parsedInput }) => {
     const viewer = await getViewer();
     if (!viewer) throw new Error("Not signed in");
     const studentIds = parsedInput.studentIds ?? [];
@@ -56,8 +56,6 @@ export const createCourse = tutorActionClient
             name: parsedInput.name,
             description: parsedInput.description,
             imageUrl: parsedInput.imageUrl,
-            tutor: { connect: { email: ctx.session.user.email } },
-            students: { connect: studentIds.map((id) => ({ id })) },
           },
           select: { id: true, name: true },
         });
@@ -94,7 +92,7 @@ export const createCourse = tutorActionClient
 
 /**
  * Update a course. Only the tutor that owns the course may update it.
- * `studentIds`, when supplied, replaces the enrolment set (`set:`).
+ * `studentIds`, when supplied, replaces the open enrolments.
  * If `imageUrl` is supplied AND differs from the existing cover, the old
  * blob is deleted to avoid orphaned uploads.
  */
@@ -118,9 +116,6 @@ export const updateCourse = tutorActionClient
     if (parsedInput.description !== undefined)
       data.description = parsedInput.description;
     if (parsedInput.imageUrl !== undefined) data.imageUrl = parsedInput.imageUrl;
-    if (parsedInput.studentIds !== undefined) {
-      data.students = { set: parsedInput.studentIds.map((id) => ({ id })) };
-    }
 
     const viewer = await getViewer();
     if (!viewer) throw new Error("Not signed in");

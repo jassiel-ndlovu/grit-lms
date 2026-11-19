@@ -6,9 +6,7 @@ model Course {
   name              String
   description       String?
   imageUrl          String
-  tutorId           String
   createdAt         DateTime       @default(now())
-  tutor             Tutor          @relation(fields: [tutorId], references: [id])
   courseEvents      CourseEvent[]
   Grade             Grade[]
   lessons           Lesson[]
@@ -16,15 +14,16 @@ model Course {
   quizzes           Quiz[]
   submissions       Submission[]
   tests             Test[]
-  students          Student[]      @relation("CourseEnrollments")
   // enumitem-style label template per lesson nesting level, e.g.
   // ["\arabic*", "\arabic{enumi}.\arabic*"]. Empty = the default
   // scheme. See src/lib/enum-labels.ts.
   lessonLabelScheme String[]       @default([])
 
   // Tenancy (Agent A, design 01; added in A's tenancy part 2 with the
-  // owner's go-ahead, for B to review). Nullable until the backfill has
-  // run everywhere; `tutorId` and `students` stay until the app reads these.
+  // owner's go-ahead, for B to review). Nullable until a later migration
+  // makes them required. Teaching is CourseStaff and enrolment is
+  // Enrollment; `tutorId` and the implicit join were dropped in
+  // 10_drop_legacy_course_links (issue #93, step 5).
   workspaceId       String?
   teamId            String?
   ownerMembershipId String?
