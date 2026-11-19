@@ -54,6 +54,9 @@ check(
   hrefsOf(navSectionsFor({ persona: "staff", permissions: ["courses.edit"] }, { billing: true })).includes("/dashboard/settings/billing"),
   false,
 );
+const nexaAdmin = { persona: "admin" as const, permissions: ["admin.console" as const] };
+check("admin, billing off: no billing admin link", hrefsOf(navSectionsFor(nexaAdmin)).includes("/dashboard/admin/billing"), false);
+check("admin, billing on: billing admin link", hrefsOf(navSectionsFor(nexaAdmin, { billing: true })).includes("/dashboard/admin/billing"), true);
 check("billing page lights Billing, not Settings", activeHref("/dashboard/settings/billing", ["/dashboard/settings", "/dashboard/settings/billing"]), "/dashboard/settings/billing");
 
 for (const role of Object.keys(BEFORE) as LegacyRole[]) {

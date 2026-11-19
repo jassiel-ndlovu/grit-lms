@@ -75,7 +75,13 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
   ],
   admin: [
     { items: [HOME, INBOX] },
-    { label: "Platform", items: [{ label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["accounts"], requires: "admin.console" }] },
+    {
+      label: "Platform",
+      items: [
+        { label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["accounts"], requires: "admin.console" },
+        { label: "Billing", href: "/dashboard/admin/billing", icon: "billing", keywords: ["workspaces", "trial", "comp", "discount", "paystack"], requires: "admin.console", billing: true },
+      ],
+    },
   ],
   // Guardians get their children's pages in Phase 1 (viewer.children).
   guardian: [{ items: [HOME, INBOX] }],
