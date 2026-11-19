@@ -87,7 +87,7 @@ export async function requireCourseServicesAccess(courseId: string): Promise<{ v
 /* Shared helpers                                                             */
 /* ------------------------------------------------------------------------- */
 
-function courseTierAtStart(c: CourseBillingRow, period: OpenPeriod): TierKey {
+export function courseTierAtStart(c: CourseBillingRow, period: OpenPeriod): TierKey {
   const charged = period.charged.get(c.courseId) ?? [];
   if (charged.length > 0) return maxTier(...charged.map((s) => s.tierKey));
   return billedTier({ derived: derivedTier(c.enabledKeys), holds: c.holds, override: c.override, at: period.start });

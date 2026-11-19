@@ -19,15 +19,15 @@ name: Scheduled jobs
 on:
   # Must match src/lib/jobs/registry.ts (scripts/check-jobs.ts compares them).
   schedule:
-    - cron: "0 * * * *"        # on the hour: auto-submit + notification jobs
+    - cron: "0 * * * *"        # on the hour: auto-submit + notification jobs + billing
     - cron: "5-55/5 * * * *"   # every other 5 minutes: auto-submit only
-    - cron: "30 0 * * *"       # daily 00:30 UTC: housekeeping
+    - cron: "30 0 * * *"       # daily 00:30 UTC: housekeeping + payments reconcile
   workflow_dispatch:
     inputs:
       job:
         description: Which job to run
         type: choice
-        options: [auto-submit, notifications, housekeeping, both]
+        options: [auto-submit, notifications, housekeeping, billing, payments-reconcile, both]
         default: both
 
 permissions: {}
@@ -75,4 +75,20 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 60 \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/housekeeping"
+          echo
+
+      - name: Billing (trials, renewals, dunning)
+        if: env.JOB == 'billing' || env.JOB == 'both'
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/billing"
+          echo
+
+      - name: Payments reconcile
+        if: env.JOB == 'housekeeping' || env.JOB == 'payments-reconcile'
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/payments-reconcile"
           echo

@@ -80,7 +80,7 @@ type PaymentStatus = "PENDING" | "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALL
 
 The first payment ends the trial and starts the first 30-day period. There is no day-pass action in v1.
 
-**Built (2026-11-19):** `startFirstPayment`, `payPlatformInvoice`, `getBillingPaymentStatus`. The return page sends the payer back to `returnPath` with `?reference=…&trxref=…` added by Paystack; poll `getBillingPaymentStatus({ reference })` every 2 to 3 seconds until it is not `PENDING`. The poll asks Paystack itself, so it settles even when the webhook is late. A `FAILED` checkout can still be retried on Paystack's page.
+**Built (2026-11-19):** `startFirstPayment`, `payPlatformInvoice`, `getBillingPaymentStatus`, `startCardReplacement`. The return page sends the payer back to `returnPath` with `?reference=…&trxref=…` added by Paystack; poll `getBillingPaymentStatus({ reference })` every 2 to 3 seconds until it is not `PENDING`. The poll asks Paystack itself, so it settles even when the webhook is late. A `FAILED` checkout can still be retried on Paystack's page.
 
 ## 2. Parent and adult-student payments (Gate 2: payers pay tutors)
 
@@ -147,6 +147,7 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
 | Date | Change |
 | --- | --- |
+| 2026-11-19 | Draft 1.4. `startCardReplacement` built: a R10 card check, refunded as soon as it succeeds. Poll `getBillingPaymentStatus` as for a payment; `SUCCEEDED` means the new card is saved. Renewals, dunning (`PAST_DUE` on day 0, `READ_ONLY` on day 14) and trial ends now run hourly in `/api/cron/billing` |
 | 2026-11-19 | Draft 1.3. `startFirstPayment`, `payPlatformInvoice` and `getBillingPaymentStatus` built, plus `POST /api/webhooks/paystack`. New code `NOTHING_TO_BILL` (first payment with no enrolled learners). `payPlatformInvoice` takes an optional `returnPath` (default `/dashboard/billing`) and may also return `{ status: "PENDING", reference }` when a saved-card charge is still processing: poll it like a redirect |
 | 2026-11-19 | Draft 1.2. Section 1 queries and `setCourseServices` built. Added `PAST_DUE`, `BILLING_DISABLED` and `NOT_FOUND` codes, the `active-students` and `live-room-minutes` meters, and the `VAT` estimate line; defined `catchUpCents`, `nextRenewalDeltaCents` and `holdUntil` in `previewServiceChange` |
 | 2026-11-16 | Draft 1.1. Renewal rules confirmed by the owner |

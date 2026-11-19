@@ -9,7 +9,10 @@ import { randomBytes } from "node:crypto";
 
 import { decryptSecret, encryptSecret } from "../src/features/payments/secrets";
 import {
+  addCalendarMonths,
   decideSettlement,
+  dunningStep,
+  firstRetryAt,
   nextInvoiceNumber,
   platformPaymentReference,
   safeReturnPath,
@@ -72,6 +75,23 @@ check("two seals differ (random IV)", encryptSecret("AUTH_abc123", key) === seal
 throws("wrong key fails", () => decryptSecret(sealed, randomBytes(32).toString("base64")));
 throws("tampered ciphertext fails", () => decryptSecret(sealed.slice(0, -2) + (sealed.endsWith("A") ? "BB" : "AA"), key));
 throws("short key refused", () => encryptSecret("x", Buffer.alloc(16).toString("base64")));
+
+// Retention dates
+check("2 months after 3 Feb is 3 Apr", addCalendarMonths(new Date(Date.UTC(2027, 1, 3, 9)), 2).toISOString(), "2027-04-03T09:00:00.000Z");
+check("31 Dec + 2 months clamps to 29 Feb in a leap year", addCalendarMonths(new Date(Date.UTC(2027, 11, 31)), 2).toISOString(), "2028-02-29T00:00:00.000Z");
+
+// Dunning (day 0 = renewal date)
+const due = new Date(Date.UTC(2027, 2, 5));
+const at = (days: number) => new Date(due.getTime() + days * 864e5);
+check("day 2: nothing", dunningStep("DAY0", due, at(2)).action, "none");
+check("day 3: retry, then DAY3 with next try day 7", dunningStep("DAY0", due, at(3)), { action: "retry", stageIfFails: "DAY3", nextAttemptAt: at(7) });
+check("day 5 at DAY3: nothing", dunningStep("DAY3", due, at(5)).action, "none");
+check("day 7: retry, then DAY7 with next check day 14", dunningStep("DAY3", due, at(7)), { action: "retry", stageIfFails: "DAY7", nextAttemptAt: at(14) });
+check("day 13 at DAY7: nothing", dunningStep("DAY7", due, at(13)).action, "none");
+check("day 14: lock", dunningStep("DAY7", due, at(14)).action, "lock");
+check("late job on day 15 at DAY0 still locks", dunningStep("DAY0", due, at(15)).action, "lock");
+check("locked stays locked", dunningStep("LOCKED", due, at(40)).action, "none");
+check("first retry is day 3", firstRetryAt(due).toISOString(), at(3).toISOString());
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

@@ -1,12 +1,12 @@
 /**
  * settlePayment: the one place a Payment leaves PENDING (design 04, sections
- * 3, 4 and 6). The webhook, the return-page poll and reconciliation all call
- * it. It asks the provider (verifyTransaction) and applies the result in one
- * transaction. Idempotent: the status change is a conditional update, so two
- * callers racing apply it once.
+ * 3, 4 and 6). The webhook, the return-page poll, the renewal charge and
+ * reconciliation all call it. It asks the provider (verifyTransaction) and
+ * applies the result in one transaction. Idempotent: the status change is a
+ * conditional update, so two callers racing apply it once.
  *
- * Built: PLATFORM_INVOICE (Gate 1). CARD_AUTHORISATION and PARENT_CHECKOUT
- * are left PENDING until their flows exist.
+ * Built: PLATFORM_INVOICE and CARD_AUTHORISATION (Gate 1). PARENT_CHECKOUT is
+ * left alone until its flow exists.
  */
 
 import "server-only";
@@ -18,13 +18,17 @@ import { prisma } from "@/lib/db";
 
 import { getProvider, type PaymentProvider } from "./provider";
 import { encryptSecret } from "./secrets";
-import { decideSettlement, seatsAt } from "./settlement-rules";
+import { addCalendarMonths, decideSettlement, seatsAt } from "./settlement-rules";
 
 type Tx = Prisma.TransactionClient;
+type Verified = Awaited<ReturnType<PaymentProvider["verifyTransaction"]>>;
+type Card = NonNullable<Verified["authorization"]>;
 
 /** Statuses a verified success may still replace. */
 const OPEN_STATUSES: Array<"PENDING" | "FAILED" | "ABANDONED"> = ["PENDING", "FAILED", "ABANDONED"];
-type Verified = Awaited<ReturnType<PaymentProvider["verifyTransaction"]>>;
+
+/** Data is kept until this long after the last payment (design 03, section 5). */
+const RETENTION_MONTHS = 2;
 
 export type SettleResult = {
   status: "PENDING" | "SUCCEEDED" | "FAILED" | "ABANDONED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "UNKNOWN";
@@ -41,7 +45,7 @@ export async function settlePayment(
   // FAILED and ABANDONED are not final: Paystack lets the payer retry a
   // declined card on the same reference, so a later verified success wins.
   if (!(OPEN_STATUSES as string[]).includes(payment.status)) return { status: payment.status, applied: false };
-  if (payment.purpose !== "PLATFORM_INVOICE") return { status: payment.status, applied: false };
+  if (payment.purpose === "PARENT_CHECKOUT") return { status: payment.status, applied: false };
 
   const provider = opts.provider ?? getProvider();
   const v = await provider.verifyTransaction(reference);
@@ -66,43 +70,108 @@ export async function settlePayment(
 
   const config = await getBillingConfig();
   const paidAt = v.paidAt ?? opts.now ?? new Date();
-  const applied = await prisma.$transaction(
+  const card = v.authorization?.reusable ? v.authorization : null;
+  const outcome = await prisma.$transaction(
     async (tx) => {
       const won = await tx.payment.updateMany({
         where: { id: payment.id, status: { in: OPEN_STATUSES } },
         data: { status: "SUCCEEDED", paidAt, feeCents: v.feeCents ?? null, channel: v.channel ?? null },
       });
-      if (won.count === 0) return false;
-      await applyPlatformInvoicePayment(tx, { paymentId: payment.id, paidAt, verified: v, periodDays: config.periodDays });
-      return true;
+      if (won.count === 0) return null;
+      if (payment.purpose === "PLATFORM_INVOICE") {
+        await applyPlatformInvoicePayment(tx, { paymentId: payment.id, paidAt, card, periodDays: config.periodDays });
+        return { refundId: null };
+      }
+      // CARD_AUTHORISATION: keep the card, give the verification charge back.
+      if (payment.workspaceId && card) await saveCard(tx, payment.workspaceId, card);
+      const refund = await tx.refund.create({
+        data: {
+          paymentId: payment.id,
+          amountCents: payment.amountCents,
+          reason: "Card check for Nexa billing, refunded",
+          requestedByUserId: payment.payerUserId!,
+        },
+        select: { id: true },
+      });
+      if (payment.payerUserId) {
+        await tx.auditLog.create({
+          data: {
+            workspaceId: payment.workspaceId, actorUserId: payment.payerUserId, action: "billing.card.replace",
+            targetType: "Payment", targetId: payment.id, data: { cardSaved: card != null, last4: card?.last4 ?? null },
+          },
+        });
+      }
+      return { refundId: refund.id };
     },
     { timeout: 15_000 },
   );
-  return { status: "SUCCEEDED", applied };
+  // The refund is a provider call, so it runs after the commit. If it fails
+  // the Refund stays PENDING and reconciliation retries it.
+  if (outcome?.refundId) await issueRefund(outcome.refundId, provider).catch((e) => {
+    console.error("[payments] card-check refund not sent yet:", (e as Error).message);
+  });
+  return { status: "SUCCEEDED", applied: outcome != null };
 }
 
 /**
- * The invoice is paid: open the period from the payment time, record the
- * advance seats, save the card, end the trial (design 03, section 6).
+ * Sends a PENDING refund to the provider. Paystack has no idempotency key,
+ * but it refuses to refund more than is left on a transaction, so retrying
+ * a full refund cannot pay out twice.
  */
+export async function issueRefund(refundId: string, provider: PaymentProvider = getProvider()) {
+  const refund = await prisma.refund.findUniqueOrThrow({
+    where: { id: refundId },
+    select: { id: true, status: true, amountCents: true, reason: true, providerRefundId: true, payment: { select: { id: true, reference: true, amountCents: true } } },
+  });
+  if (refund.status !== "PENDING" || refund.providerRefundId) return refund.status;
+  const r = await provider.refund({
+    reference: refund.payment.reference,
+    amountCents: refund.amountCents,
+    reason: refund.reason,
+    idempotencyKey: refund.id,
+  });
+  await prisma.$transaction(async (tx) => {
+    await tx.refund.update({
+      where: { id: refund.id },
+      data: { providerRefundId: r.providerRefundId, status: r.status, processedAt: r.status === "PENDING" ? null : new Date() },
+    });
+    if (r.status === "PROCESSED") await markRefunded(tx, refund.payment.id);
+  });
+  return r.status;
+}
+
+/** Payment REFUNDED or PARTIALLY_REFUNDED from its processed refunds. */
+export async function markRefunded(tx: Tx, paymentId: string) {
+  const p = await tx.payment.findUniqueOrThrow({ where: { id: paymentId }, select: { amountCents: true } });
+  const done = await tx.refund.aggregate({ where: { paymentId, status: "PROCESSED" }, _sum: { amountCents: true } });
+  const sum = done._sum.amountCents ?? 0;
+  if (sum <= 0) return;
+  await tx.payment.update({ where: { id: paymentId }, data: { status: sum >= p.amountCents ? "REFUNDED" : "PARTIALLY_REFUNDED" } });
+}
+
+async function saveCard(tx: Tx, workspaceId: string, card: Card) {
+  await tx.subscription.update({
+    where: { workspaceId },
+    data: {
+      authorizationCodeEnc: encryptSecret(card.code),
+      cardBrand: card.brand,
+      cardLast4: card.last4,
+      cardExpMonth: card.expMonth,
+      cardExpYear: card.expYear,
+      status: "AUTHORISED",
+    },
+  });
+}
+
 async function applyPlatformInvoicePayment(
   tx: Tx,
-  { paymentId, paidAt, verified, periodDays }: { paymentId: string; paidAt: Date; verified: Verified; periodDays: number },
+  { paymentId, paidAt, card, periodDays }: { paymentId: string; paidAt: Date; card: Card | null; periodDays: number },
 ) {
   const payment = await tx.payment.findUniqueOrThrow({
     where: { id: paymentId },
-    select: {
-      id: true, reference: true, amountCents: true, payerUserId: true, workspaceId: true,
-      platformInvoice: {
-        select: {
-          id: true, workspaceId: true, status: true, issuedAt: true, closesPeriodId: true,
-          lines: { where: { kind: "ADVANCE" }, select: { courseId: true, tierKey: true, quantity: true } },
-        },
-      },
-    },
+    select: { id: true, reference: true, amountCents: true, payerUserId: true, workspaceId: true, platformInvoice: { select: { id: true, status: true } } },
   });
   const invoice = payment.platformInvoice;
-  const workspaceId = invoice?.workspaceId ?? payment.workspaceId;
   const actorUserId = payment.payerUserId;
 
   // Paid for an invoice that is no longer open (voided by a newer checkout,
@@ -112,28 +181,59 @@ async function applyPlatformInvoicePayment(
     if (actorUserId) {
       await tx.auditLog.create({
         data: {
-          workspaceId, actorUserId, action: "billing.payment.unapplied", targetType: "Payment", targetId: payment.id,
+          workspaceId: payment.workspaceId, actorUserId, action: "billing.payment.unapplied", targetType: "Payment", targetId: payment.id,
           data: { invoiceId: invoice?.id ?? null, invoiceStatus: invoice?.status ?? null, amountCents: payment.amountCents },
         },
       });
     }
     return;
   }
+  await markInvoicePaid(tx, {
+    invoiceId: invoice.id, paidAt, paidVia: "CARD", card, periodDays, actorUserId,
+    audit: { paymentId: payment.id, amountCents: payment.amountCents },
+  });
+}
+
+/**
+ * An invoice is paid (by card, or at zero because of a comp or credit): open
+ * the period from the payment time, record the advance seats, save the card
+ * if one came with it, and make the workspace ACTIVE (a COMPED one stays
+ * COMPED). Design 03, sections 3, 4 and 6.
+ */
+export async function markInvoicePaid(
+  tx: Tx,
+  input: {
+    invoiceId: string;
+    paidAt: Date;
+    paidVia: "CARD" | "COMPED" | "CREDIT";
+    card?: Card | null;
+    periodDays: number;
+    actorUserId?: string | null;
+    audit?: Record<string, unknown>;
+  },
+) {
+  const { paidAt, periodDays } = input;
+  const invoice = await tx.platformInvoice.findUniqueOrThrow({
+    where: { id: input.invoiceId },
+    select: {
+      id: true, workspaceId: true, issuedAt: true, totalCents: true,
+      lines: { where: { kind: "ADVANCE" }, select: { courseId: true, tierKey: true, quantity: true } },
+    },
+  });
+  const workspaceId = invoice.workspaceId;
 
   // The new period starts at the payment, or when the current one ends if
   // it was paid early. Periods never overlap.
-  const latest = await tx.billingPeriod.findFirst({ where: { workspaceId: invoice.workspaceId }, orderBy: { end: "desc" } });
+  const latest = await tx.billingPeriod.findFirst({ where: { workspaceId }, orderBy: { end: "desc" } });
   const start = latest && latest.end > paidAt ? latest.end : paidAt;
   const { end, renewsAt } = periodFromPayment(start, periodDays);
 
   await tx.platformInvoice.update({
     where: { id: invoice.id },
-    data: { status: "PAID", paidAt, paidVia: "CARD", opensPeriodStart: start, nextAttemptAt: null, dunningStage: "NONE" },
+    data: { status: "PAID", paidAt, paidVia: input.paidVia, opensPeriodStart: start, nextAttemptAt: null, dunningStage: "NONE" },
   });
-  await tx.billingPeriod.updateMany({ where: { workspaceId: invoice.workspaceId, status: "OPEN" }, data: { status: "CLOSED" } });
-  const period = await tx.billingPeriod.create({
-    data: { workspaceId: invoice.workspaceId, start, end, openedByInvoiceId: invoice.id },
-  });
+  await tx.billingPeriod.updateMany({ where: { workspaceId, status: "OPEN" }, data: { status: "CLOSED" } });
+  const period = await tx.billingPeriod.create({ data: { workspaceId, start, end, openedByInvoiceId: invoice.id } });
 
   // Advance seats: the learners the invoice counted, rebuilt from the
   // enrolment intervals at its issue time, capped at each line's quantity.
@@ -147,7 +247,7 @@ async function applyPlatformInvoicePayment(
     const data = invoice.lines.flatMap((l) =>
       l.courseId && l.tierKey
         ? (seats.get(l.courseId) ?? []).slice(0, l.quantity).map((learnerId) => ({
-            workspaceId: invoice.workspaceId, billingPeriodId: period.id, courseId: l.courseId!,
+            workspaceId, billingPeriodId: period.id, courseId: l.courseId!,
             learnerId, tierKey: l.tierKey!, kind: "ADVANCE" as const, invoiceId: invoice.id,
           }))
         : [],
@@ -155,39 +255,30 @@ async function applyPlatformInvoicePayment(
     if (data.length) await tx.seatCharge.createMany({ data, skipDuplicates: true });
   }
 
-  const card = verified.authorization?.reusable ? verified.authorization : null;
   await tx.subscription.update({
-    where: { workspaceId: invoice.workspaceId },
+    where: { workspaceId },
     data: {
       currentPeriodStart: start,
       currentPeriodEnd: end,
       renewsAt,
       lastPaidAt: paidAt,
-      deleteAfter: null,
+      deleteAfter: addCalendarMonths(paidAt, RETENTION_MONTHS),
       readOnlySince: null,
       cancelledAt: null,
-      ...(card
-        ? {
-            authorizationCodeEnc: encryptSecret(card.code),
-            cardBrand: card.brand,
-            cardLast4: card.last4,
-            cardExpMonth: card.expMonth,
-            cardExpYear: card.expYear,
-            status: "AUTHORISED" as const,
-          }
-        : {}),
     },
   });
-  await tx.workspace.update({ where: { id: invoice.workspaceId }, data: { billingState: "ACTIVE" } });
-  await tx.usageCap.deleteMany({ where: { workspaceId: invoice.workspaceId, source: "TRIAL" } });
+  if (input.card) await saveCard(tx, workspaceId, input.card);
+  const ws = await tx.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { billingState: true } });
+  if (ws.billingState !== "COMPED") await tx.workspace.update({ where: { id: workspaceId }, data: { billingState: "ACTIVE" } });
+  await tx.usageCap.deleteMany({ where: { workspaceId, source: "TRIAL" } });
 
-  if (actorUserId) {
+  if (input.actorUserId) {
     await tx.auditLog.create({
       data: {
-        workspaceId: invoice.workspaceId, actorUserId, action: "billing.invoice.paid", targetType: "PlatformInvoice",
+        workspaceId, actorUserId: input.actorUserId, action: "billing.invoice.paid", targetType: "PlatformInvoice",
         targetId: invoice.id,
-        data: { paymentId: payment.id, amountCents: payment.amountCents, periodStart: start.toISOString(), cardSaved: card != null },
-      },
+        data: { ...input.audit, paidVia: input.paidVia, periodStart: start.toISOString(), cardSaved: input.card != null },
+      } as Prisma.AuditLogUncheckedCreateInput,
     });
   }
 }
