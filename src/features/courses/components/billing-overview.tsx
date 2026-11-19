@@ -13,6 +13,7 @@ import type { getBillingOverview, getCourseTiers } from "@/features/billing/quer
 import { formatDate, type DateContext } from "@/lib/datetime";
 
 import { STATE_CHIP, TIER_LABEL, capLabel, capTone, formatRand } from "../lib/billing-ui";
+import { PayButton, PaymentReturn } from "./billing-pay";
 import { courseRoutes } from "./course-frame";
 
 export type BillingOverviewData = Awaited<ReturnType<typeof getBillingOverview>>;
@@ -24,15 +25,35 @@ const BAR: Record<string, string> = {
   danger: "bg-destructive",
 };
 
-export function BillingOverview({ overview: o, tiers, ctx }: { overview: BillingOverviewData; tiers: CourseTierRow[]; ctx: DateContext }) {
+export function BillingOverview({
+  overview: o,
+  tiers,
+  ctx,
+  canManage,
+  payment,
+}: {
+  overview: BillingOverviewData;
+  tiers: CourseTierRow[];
+  ctx: DateContext;
+  /** billing.manage: may pay. */
+  canManage: boolean;
+  /** Back from Paystack (`reference`) or a saved-card charge (`paid`). */
+  payment: { reference: string | null; paid: boolean } | null;
+}) {
   const day = (iso: string | Date, year = true) =>
     formatDate(new Date(iso), ctx, year ? { day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short" });
   const chip = STATE_CHIP[o.state];
   const comped = o.state === "COMPED";
+  const overdue = o.overdueInvoiceId != null && (o.state === "PAST_DUE" || o.state === "READ_ONLY");
+  // Paying starts a period: an overdue invoice is paid as it is; otherwise a
+  // trial, read-only or cancelled workspace starts its first payment.
+  const firstPayment = !overdue && (o.state === "TRIAL" || o.state === "READ_ONLY" || o.state === "CANCELLED");
 
   return (
     <BillingFrame status={<StatusChip tone={chip.tone}>{chip.label}</StatusChip>}>
-      {o.overdueInvoiceId && (o.state === "PAST_DUE" || o.state === "READ_ONLY") ? (
+      {payment ? <PaymentReturn reference={payment.reference} /> : null}
+
+      {overdue ? (
         <section role="alert" className="border-destructive/40 bg-destructive/5 space-y-1 rounded-lg border p-4 text-sm">
           <p className="text-foreground font-semibold">Unpaid renewal</p>
           <p className="text-muted-foreground">
@@ -41,6 +62,11 @@ export function BillingOverview({ overview: o, tiers, ctx }: { overview: Billing
               : "We couldn't take the last renewal. Update your card or pay to avoid interruptions."}
             {o.deleteAfter ? ` If nothing is paid, all data is deleted on ${day(o.deleteAfter)}.` : ""}
           </p>
+          {canManage ? (
+            <div className="pt-2">
+              <PayButton invoiceId={o.overdueInvoiceId} label="Pay now" />
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -70,6 +96,13 @@ export function BillingOverview({ overview: o, tiers, ctx }: { overview: Billing
           {o.card ? `${o.card.brand} •• ${o.card.last4}` : "No card yet"}
         </PropertyRow>
       </PropertyList>
+
+      {firstPayment && canManage ? (
+        <PayButton
+          invoiceId={null}
+          label={`Pay ${formatRand(o.nextRenewalEstimateCents)} for 30 days`}
+        />
+      ) : null}
 
       <section aria-labelledby="courses-heading" className="space-y-3">
         <h2 id="courses-heading" className="text-foreground text-sm font-semibold">

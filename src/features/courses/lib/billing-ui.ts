@@ -47,6 +47,7 @@ const ERRORS: Record<string, string> = {
   FORBIDDEN: "You don't have permission to change this course's services.",
   CARD_REQUIRED: "Add a card first.",
   PROVIDER_ERROR: "The payment provider didn't respond. Try again in a minute.",
+  NOTHING_TO_BILL: "Nothing to pay yet: no students are enrolled in a course.",
 };
 
 /** next-safe-action's `serverError` ("CODE: detail") → a sentence for the user. */

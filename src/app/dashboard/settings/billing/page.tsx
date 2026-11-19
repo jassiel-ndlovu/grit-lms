@@ -19,18 +19,32 @@ import { can, getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "Billing" };
 
-export default async function BillingOverviewPage() {
+interface PageProps {
+  searchParams: Promise<{ reference?: string; paid?: string }>;
+}
+
+export default async function BillingOverviewPage({ searchParams }: PageProps) {
   if (!isBillingEnabled()) notFound();
   const viewer = await getViewer();
   if (!viewer) redirect("/auth");
   if (!viewer.workspace || !can(viewer, "billing.view")) notFound();
 
-  const prefs = await getUserPreferences(viewer.user.id);
+  const [prefs, sp] = await Promise.all([getUserPreferences(viewer.user.id), searchParams]);
+  const reference = typeof sp.reference === "string" && sp.reference.length <= 128 ? sp.reference : null;
+  const payment = reference || sp.paid === "1" ? { reference, paid: sp.paid === "1" } : null;
   const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
 
   try {
     const [overview, tiers] = await Promise.all([getBillingOverview(), getCourseTiers()]);
-    return <BillingOverview overview={overview} tiers={tiers} ctx={ctx} />;
+    return (
+      <BillingOverview
+        overview={overview}
+        tiers={tiers}
+        ctx={ctx}
+        canManage={can(viewer, "billing.manage")}
+        payment={payment}
+      />
+    );
   } catch (e) {
     const code = (e as { code?: string }).code;
     return (
