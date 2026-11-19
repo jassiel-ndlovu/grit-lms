@@ -16,7 +16,7 @@ import { assignmentRoutes } from "@/features/assignments/routes";
 
 export type NavIcon =
   | "home" | "book" | "calendar" | "test" | "assignment" | "grades"
-  | "gradebook" | "analytics" | "users" | "settings" | "help" | "inbox" | "billing";
+  | "gradebook" | "analytics" | "users" | "settings" | "help" | "inbox" | "billing" | "fees";
 
 export interface NavLink {
   label: string;
@@ -70,7 +70,10 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
     { label: "People", items: [{ label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["students", "accounts"], requires: "learners.invite" }] },
     {
       label: "Workspace",
-      items: [{ label: "Billing", href: "/dashboard/settings/billing", icon: "billing", keywords: ["plan", "payment", "invoice", "card"], requires: "billing.view", billing: true }],
+      items: [
+        { label: "Fees", href: "/dashboard/fees", icon: "fees", keywords: ["parents", "invoices", "paid", "cash", "eft"], requires: "fees.manage", billing: true },
+        { label: "Billing", href: "/dashboard/settings/billing", icon: "billing", keywords: ["plan", "payment", "invoice", "card"], requires: "billing.view", billing: true },
+      ],
     },
   ],
   admin: [
