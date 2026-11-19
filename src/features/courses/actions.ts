@@ -8,6 +8,12 @@
  *   4. Calls revalidatePath on affected routes so RSC pages re-fetch
  *   5. Returns a typed result the form can consume
  *
+ * Tenancy (issue #93, step 2): createCourse and updateCourse write the old
+ * columns (`tutorId`, the implicit `students` join) and the new tables
+ * (workspace, owner, CourseStaff, Enrollment) in one transaction, through
+ * A's helpers in features/workspaces/tenancy. Reads still use the old
+ * columns until step 4; scripts/check-tenancy-parity.ts compares the two.
+ *
  * Cover image uploads are handled out-of-band: the browser uploads to Blob
  * via /api/blob/upload-token first, then submits the resulting public URL
  * as part of the form. This bypasses the 4.5 MB Vercel function body limit.
@@ -19,6 +25,8 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
 import { tutorActionClient } from "@/lib/safe-action";
+import { getViewer } from "@/lib/viewer";
+import { setCourseEnrollment, setUpCourseTenancy } from "@/features/workspaces/tenancy";
 import { deleteBlob } from "@/lib/blob/server";
 import { emitNotification } from "@/features/notifications/server";
 
@@ -36,18 +44,28 @@ import {
 export const createCourse = tutorActionClient
   .schema(CreateCourseSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const created = await prisma.course.create({
-      data: {
-        name: parsedInput.name,
-        description: parsedInput.description,
-        imageUrl: parsedInput.imageUrl,
-        tutor: { connect: { email: ctx.session.user.email } },
-        students: {
-          connect: (parsedInput.studentIds || []).map((id) => ({ id })),
-        },
+    const viewer = await getViewer();
+    if (!viewer) throw new Error("Not signed in");
+    const studentIds = parsedInput.studentIds ?? [];
+
+    const created = await prisma.$transaction(
+      async (tx) => {
+        const course = await tx.course.create({
+          data: {
+            name: parsedInput.name,
+            description: parsedInput.description,
+            imageUrl: parsedInput.imageUrl,
+            tutor: { connect: { email: ctx.session.user.email } },
+            students: { connect: studentIds.map((id) => ({ id })) },
+          },
+          select: { id: true, name: true },
+        });
+        await setUpCourseTenancy(tx, { courseId: course.id, viewer });
+        await setCourseEnrollment(tx, { courseId: course.id, studentIds });
+        return course;
       },
-      select: { id: true, name: true },
-    });
+      { timeout: 15_000 },
+    );
 
     // Single typed entry point — emitNotification handles persistence,
     // schema validation, and student/courses revalidation in one place.
@@ -103,11 +121,26 @@ export const updateCourse = tutorActionClient
       data.students = { set: parsedInput.studentIds.map((id) => ({ id })) };
     }
 
-    const updated = await prisma.course.update({
-      where: { id: parsedInput.id },
-      data,
-      select: { id: true },
-    });
+    const viewer = await getViewer();
+    if (!viewer) throw new Error("Not signed in");
+
+    const updated = await prisma.$transaction(
+      async (tx) => {
+        const course = await tx.course.update({
+          where: { id: parsedInput.id },
+          data,
+          select: { id: true },
+        });
+        // Idempotent: fills in the workspace, owner and LEAD staff row on a
+        // course made before the helpers existed, and changes nothing after.
+        await setUpCourseTenancy(tx, { courseId: course.id, viewer });
+        if (parsedInput.studentIds !== undefined) {
+          await setCourseEnrollment(tx, { courseId: course.id, studentIds: parsedInput.studentIds });
+        }
+        return course;
+      },
+      { timeout: 15_000 },
+    );
 
     // Best-effort cleanup of the previous cover blob.
     if (
