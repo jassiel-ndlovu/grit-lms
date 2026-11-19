@@ -3,6 +3,30 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 getViewer() on the tenancy tables, `revamp/a-viewer-tenancy`
+
+Done:
+- **Production migration under rule 4.1:** `7_course_workspace_restrict` applied on 2026-11-19, after backup branch `backup-course-restrict-20261119`. It ran cleanly on `preview` first (by the Preview build, which proved #79). `migrate diff` showed only that foreign key, and production now matches `main`.
+- **`getViewer()` reads the tenancy tables:**
+  - Active memberships (with teams), learner rows and guardianships.
+  - The active workspace comes from the `nexa_ws` cookie, ignored if the user doesn't belong to that workspace. The default is the first membership, then the first learner row.
+  - Persona: staff, then learner, then guardian, then Nexa admin. A Nexa admin who also teaches keeps the console permissions.
+  - `learner.paymentVisible` is never true for a minor. `fees.pay` is withheld when the learner has an active guardian.
+  - Users with no tenancy rows fall back to the Phase 0 bridge, unchanged.
+- **`canIn()`:** a course is always checked against the active workspace, owners and admins included. Before, owners and admins skipped the check, which would have crossed workspaces once there are several. Tutors must own the course or be on its staff. Learners need an open `Enrollment`, falling back to the legacy join during the bridge. Guardians need a child with an open enrolment.
+- **Pure parts:** `buildTenancyViewer()` and `hasTenancy()` in `viewer-core.ts`. `scripts/check-viewer.ts` has 47 checks.
+- **Exercised on preview's fake data:** the test tutor is staff and OWNER of `ws_nexa_legacy`, teaching both courses. The test student is a learner with 1 open enrolment and no billing access.
+
+Next:
+- `withWorkspace()`, the tenant-scoped data layer (design 01 §4), and `workspaceId` on the remaining tenant tables.
+- Batch 4 deletions after the owner's test of B's Batch 3b.
+
+Blocked on the other agent:
+- For B: `viewer.learner.id` is now the `Learner` row id, not the `Student` profile id (nothing in `src` read it). `viewer.membership.id` is the `Membership` id. Owners now hold `billing.*` and `workspace.*` permissions, so the owner's nav may show more links once those pages exist.
+
+Questions for the owner:
+- None.
+
 ## 2026-11-19 New working rules: agents merge, apply additive migrations, talk directly, `revamp/a-agents-autonomy`
 
 Done:

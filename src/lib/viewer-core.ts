@@ -298,3 +298,152 @@ export function buildLegacyViewer(input: {
     impersonatedBy: null,
   };
 }
+
+/* ------------------------------------------------------------------------- */
+/* Phase 1: from the tenancy tables                                          */
+/* ------------------------------------------------------------------------- */
+
+export type TenancyWorkspaceRow = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: WorkspaceKind;
+  timezone: string;
+  logoUrl: string | null;
+  accentColor: string | null;
+  billingState: BillingState;
+  trialEndsAt: Date | null;
+};
+
+export type TenancyInput = {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    platformRole: PlatformRole;
+    imageUrl: string | null;
+  };
+  memberships: Array<{
+    id: string;
+    role: MembershipRole;
+    workspace: TenancyWorkspaceRow;
+    teams: Array<{ teamId: string; isLead: boolean }>;
+  }>;
+  learners: Array<{
+    id: string;
+    isMinor: boolean;
+    paymentVisible: boolean;
+    workspace: TenancyWorkspaceRow;
+  }>;
+  /** ACTIVE guardianships where this user is the guardian. */
+  children: Viewer["children"];
+  /** True when someone holds an ACTIVE guardianship over this user. */
+  hasActiveGuardian: boolean;
+  /** The `nexa_ws` cookie, if any. Ignored unless the user belongs there. */
+  activeWorkspaceId: string | null;
+};
+
+function toViewerWorkspace(w: TenancyWorkspaceRow): ViewerWorkspace {
+  return {
+    id: w.id,
+    slug: w.slug,
+    name: w.name,
+    kind: w.kind,
+    timezone: w.timezone,
+    logoUrl: w.logoUrl,
+    accentColor: w.accentColor,
+    billingState: w.billingState,
+    trialEndsAt: w.trialEndsAt ? w.trialEndsAt.toISOString() : null,
+    readOnly: w.billingState === "READ_ONLY" || w.billingState === "CANCELLED",
+  };
+}
+
+/** Builds a Viewer from the tenancy rows (design 01, section 5). Pure. */
+export function buildTenancyViewer(input: TenancyInput): Viewer {
+  const { user, memberships, learners } = input;
+
+  // The switcher lists each workspace once; staff wins over learner.
+  const summaries = new Map<string, WorkspaceSummary>();
+  for (const m of memberships) {
+    const w = m.workspace;
+    summaries.set(w.id, { id: w.id, slug: w.slug, name: w.name, kind: w.kind, logoUrl: w.logoUrl, as: "staff", role: m.role });
+  }
+  for (const l of learners) {
+    const w = l.workspace;
+    if (!summaries.has(w.id)) {
+      summaries.set(w.id, { id: w.id, slug: w.slug, name: w.name, kind: w.kind, logoUrl: w.logoUrl, as: "learner", role: null });
+    }
+  }
+  const workspaces = [...summaries.values()];
+
+  const activeId =
+    (input.activeWorkspaceId && summaries.has(input.activeWorkspaceId) ? input.activeWorkspaceId : null) ??
+    memberships[0]?.workspace.id ??
+    learners[0]?.workspace.id ??
+    null;
+
+  const m = activeId ? memberships.find((x) => x.workspace.id === activeId) : undefined;
+  const l = activeId && !m ? learners.find((x) => x.workspace.id === activeId) : undefined;
+
+  let persona: Persona = "none";
+  if (m) persona = "staff";
+  else if (l) persona = "learner";
+  else if (input.children.length > 0) persona = "guardian";
+  else if (user.platformRole === "NEXA_ADMIN") persona = "admin";
+
+  const workspaceRow = m?.workspace ?? l?.workspace ?? null;
+  const workspace = workspaceRow ? toViewerWorkspace(workspaceRow) : null;
+
+  const perms = new Set(
+    permissionsFor({
+      persona,
+      membershipRole: m?.role ?? null,
+      workspaceKind: workspace?.kind ?? null,
+      learnerPaymentVisible: l ? l.paymentVisible && !l.isMinor : false,
+      hasActiveGuardian: input.hasActiveGuardian,
+    }),
+  );
+  // A Nexa admin who also teaches keeps the console in every context.
+  if (user.platformRole === "NEXA_ADMIN" && persona !== "admin") {
+    permissionsFor({ persona: "admin", membershipRole: null, workspaceKind: null, learnerPaymentVisible: false, hasActiveGuardian: false })
+      .forEach((p) => perms.add(p));
+  }
+
+  return {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      imageUrl: user.imageUrl,
+      platformRole: user.platformRole,
+      emailVerified: user.emailVerified,
+      twoFactorEnabled: false,
+    },
+    workspaces,
+    workspace,
+    persona,
+    membership: m
+      ? {
+          id: m.id,
+          role: m.role,
+          teamIds: m.teams.map((t) => t.teamId),
+          leadTeamIds: m.teams.filter((t) => t.isLead).map((t) => t.teamId),
+        }
+      : null,
+    learner: l ? { id: l.id, isMinor: l.isMinor, paymentVisible: l.paymentVisible && !l.isMinor } : null,
+    children: input.children,
+    permissions: PERMISSIONS.filter((p) => perms.has(p)),
+    impersonatedBy: null,
+  };
+}
+
+/** True when the user has any tenancy row, so the Phase 0 bridge is not needed. */
+export function hasTenancy(input: Pick<TenancyInput, "memberships" | "learners" | "children" | "user">): boolean {
+  return (
+    input.memberships.length > 0 ||
+    input.learners.length > 0 ||
+    input.children.length > 0 ||
+    input.user.platformRole === "NEXA_ADMIN"
+  );
+}
