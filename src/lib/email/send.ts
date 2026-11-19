@@ -19,9 +19,21 @@ export interface EmailMessage {
 
 export type SendEmailResult =
   | { ok: true; id: string }
-  | { ok: false; error: string };
+  /** `httpStatus` is set when Resend answered; the queue retries 429, 409 and 5xx. */
+  | { ok: false; error: string; httpStatus?: number };
 
-export async function sendEmail(message: EmailMessage): Promise<SendEmailResult> {
+/**
+ * Outside production only addresses in EMAIL_ALLOWLIST (comma separated,
+ * set in the environment, never in the repo) may be mailed by the queue.
+ * Design 05, "Non-production guard".
+ */
+export function recipientAllowed(email: string, env: Record<string, string | undefined> = process.env): boolean {
+  if (env.VERCEL_ENV === "production") return true;
+  const allow = (env.EMAIL_ALLOWLIST ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  return allow.includes(email.trim().toLowerCase());
+}
+
+export async function sendEmail(message: EmailMessage, opts: { idempotencyKey?: string } = {}): Promise<SendEmailResult> {
   if (!RESEND_API_KEY) {
     console.warn("[email] RESEND_API_KEY is not set; skipping send to", message.to);
     return { ok: false, error: "Email is not configured" };
@@ -33,6 +45,7 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
+        ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}),
       },
       body: JSON.stringify({
         from: EMAIL_FROM,
@@ -53,7 +66,7 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
       // owner lands here with a 403.
       const error = body.message ?? `Resend responded ${res.status}`;
       console.warn("[email] send failed:", message.to, error);
-      return { ok: false, error };
+      return { ok: false, error, httpStatus: res.status };
     }
     return { ok: true, id: body.id };
   } catch (e) {

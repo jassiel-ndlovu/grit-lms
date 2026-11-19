@@ -17,7 +17,7 @@ const TERRACOTTA = "#C16E48";
 const TAUPE = "#6B5B3A";
 const SAND = "#E8E0CE";
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -25,7 +25,7 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function layout(opts: { heading: string; bodyHtml: string; footer: string }) {
+export function layout(opts: { heading: string; bodyHtml: string; footer: string }) {
   return `<!doctype html>
 <html><body style="margin:0;padding:24px;background:${PARCHMENT};font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:${SLATE};">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid ${SAND};border-radius:10px;overflow:hidden;">
@@ -39,7 +39,7 @@ function layout(opts: { heading: string; bodyHtml: string; footer: string }) {
 </body></html>`;
 }
 
-function button(href: string, label: string) {
+export function button(href: string, label: string) {
   return `<p style="margin:20px 0 4px;"><a href="${escapeHtml(href)}" style="display:inline-block;background:${TERRACOTTA};color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;">${escapeHtml(label)}</a></p>`;
 }
 

@@ -3,6 +3,38 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Email queue, billing emails, discounts, credit, cancel and comp end, `revamp/a-billing-emails`
+
+Done:
+- **Email send queue** (design 05, section 6):
+  - The `OutboundEmail` table, added by migration `9_outbound_email` (additive).
+  - `enqueueEmail` in `src/lib/email/queue.ts` upserts on a unique idempotency key, which is also sent to Resend as `Idempotency-Key`.
+  - `drainEmailQueue` claims rows with `FOR UPDATE SKIP LOCKED` and retries after 1 min, 5 min, 30 min, 2 h and 12 h (429, 409 and 5xx only). It keeps a daily budget (`EMAIL_DAILY_BUDGET`, default 90); once it is used up, only AUTH and BILLING mail goes out.
+  - **Non-production guard:** off production, only `EMAIL_ALLOWLIST` addresses are mailed; everyone else is SUPPRESSED. It is set on Preview to the owner's address.
+  - For now the billing job drains the queue hourly. Existing `sendEmail` callers are unchanged.
+- **Billing emails** (`src/lib/email/billing-templates.ts`, `billing/emails.ts`):
+  - Trial ending (4 days and 1 day left) and trial ended.
+  - Dunning on day 0, 3 and 7, and read-only on day 14.
+  - A receipt for every card payment.
+  - Recipients are the active owners and admins plus the billing email. Each event goes to each person once.
+- **Discount codes and credit:**
+  - `redeemDiscountCode` lets a workspace use one whole-bill code at a time, each code once, and counts a use only while the code still has room.
+  - Invoices and the billing overview's estimate apply the code and any open credit.
+  - On payment, one period of the code is counted (it is exhausted at `durationPeriods`) and credit notes are used oldest first, with a remainder note for a partly used one.
+- **Cancel at period end:** the workspace goes CANCELLED and gets a final invoice for the closing period's arrears only, charged to the saved card. Paying it opens no new period.
+- **Comps ending at `compedUntil`:** the workspace goes back to ACTIVE, or to READ_ONLY if it never paid.
+- **Reconciliation:** compares Paystack's transaction list for the last 2 days with our payments. A paid Nexa transaction that we hold as unpaid is settled; one with no Payment row is reported to Sentry.
+- Transactions run by jobs and webhooks now have a 30 s limit; Prisma's default is 5 s.
+- **Checks:**
+  - `check-email-queue.ts`: 21 checks.
+  - `check-payments.ts` and `check-jobs.ts` pass.
+  - A one-off end-to-end run on the preview DB: 19 checks, covering discount and credit on a renewal, the receipt to two people, trial emails, comp end, every email suppressed off production, the day-0 email sent once over two runs, the code exhausted after its second paid period, and cancel with a final invoice. The test rows were removed.
+
+Not yet:
+- Usage metering and cap emails (they need B's AI-marking rows).
+- Retention deletes and their warnings (owner-only).
+- A 5-minute email trigger, and moving other mail onto the queue.
+
 ## 2026-11-19 Renewals, dunning, card replacement and reconciliation, `revamp/a-billing-jobs`
 
 Done (all behind `BILLING=1`, so they do nothing in production yet):

@@ -13,6 +13,7 @@ import "server-only";
 
 import type { Prisma } from "@/generated/prisma";
 import { getBillingConfig } from "@/features/billing/data";
+import { dayLabel, queueBillingEmail } from "@/features/billing/emails";
 import { periodFromPayment } from "@/features/billing/pricing";
 import { prisma } from "@/lib/db";
 
@@ -103,7 +104,7 @@ export async function settlePayment(
       }
       return { refundId: refund.id };
     },
-    { timeout: 15_000 },
+    { timeout: 30_000 },
   );
   // The refund is a provider call, so it runs after the commit. If it fails
   // the Refund stays PENDING and reconciliation retries it.
@@ -136,7 +137,7 @@ export async function issueRefund(refundId: string, provider: PaymentProvider = 
       data: { providerRefundId: r.providerRefundId, status: r.status, processedAt: r.status === "PENDING" ? null : new Date() },
     });
     if (r.status === "PROCESSED") await markRefunded(tx, refund.payment.id);
-  });
+  }, { timeout: 30_000 });
   return r.status;
 }
 
@@ -216,11 +217,21 @@ export async function markInvoicePaid(
   const invoice = await tx.platformInvoice.findUniqueOrThrow({
     where: { id: input.invoiceId },
     select: {
-      id: true, workspaceId: true, issuedAt: true, totalCents: true,
+      id: true, number: true, workspaceId: true, issuedAt: true, totalCents: true, creditCents: true,
       lines: { where: { kind: "ADVANCE" }, select: { courseId: true, tierKey: true, quantity: true } },
     },
   });
   const workspaceId = invoice.workspaceId;
+  const ws = await tx.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { billingState: true, name: true, timezone: true } });
+
+  // The final arrears invoice of a cancelled workspace: paid, but it opens
+  // no new period and does not reactivate the workspace.
+  if (ws.billingState === "CANCELLED" && invoice.lines.length === 0) {
+    await tx.platformInvoice.update({ where: { id: invoice.id }, data: { status: "PAID", paidAt, paidVia: input.paidVia, nextAttemptAt: null, dunningStage: "NONE" } });
+    await tx.subscription.update({ where: { workspaceId }, data: { lastPaidAt: paidAt, deleteAfter: addCalendarMonths(paidAt, RETENTION_MONTHS) } });
+    await consumeInvoiceAdjustments(tx, invoice);
+    return;
+  }
 
   // The new period starts at the payment, or when the current one ends if
   // it was paid early. Periods never overlap.
@@ -232,6 +243,7 @@ export async function markInvoicePaid(
     where: { id: invoice.id },
     data: { status: "PAID", paidAt, paidVia: input.paidVia, opensPeriodStart: start, nextAttemptAt: null, dunningStage: "NONE" },
   });
+  await consumeInvoiceAdjustments(tx, invoice);
   await tx.billingPeriod.updateMany({ where: { workspaceId, status: "OPEN" }, data: { status: "CLOSED" } });
   const period = await tx.billingPeriod.create({ data: { workspaceId, start, end, openedByInvoiceId: invoice.id } });
 
@@ -268,9 +280,25 @@ export async function markInvoicePaid(
     },
   });
   if (input.card) await saveCard(tx, workspaceId, input.card);
-  const ws = await tx.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { billingState: true } });
   if (ws.billingState !== "COMPED") await tx.workspace.update({ where: { id: workspaceId }, data: { billingState: "ACTIVE" } });
   await tx.usageCap.deleteMany({ where: { workspaceId, source: "TRIAL" } });
+
+  if (input.paidVia === "CARD" && invoice.totalCents > 0) {
+    const sub = await tx.subscription.findUniqueOrThrow({ where: { workspaceId }, select: { cardLast4: true } });
+    await queueBillingEmail(tx, {
+      workspaceId,
+      template: "receipt",
+      event: invoice.id,
+      data: {
+        workspaceName: ws.name,
+        invoiceNumber: invoice.number,
+        totalCents: invoice.totalCents,
+        paidOn: dayLabel(paidAt, ws.timezone),
+        renewsOn: dayLabel(renewsAt, ws.timezone),
+        cardLast4: input.card?.last4 ?? sub.cardLast4,
+      },
+    });
+  }
 
   if (input.actorUserId) {
     await tx.auditLog.create({
@@ -280,5 +308,51 @@ export async function markInvoicePaid(
         data: { ...input.audit, paidVia: input.paidVia, periodStart: start.toISOString(), cardSaved: input.card != null },
       } as Prisma.AuditLogUncheckedCreateInput,
     });
+  }
+}
+
+/**
+ * A paid invoice uses up what it applied: one period of its discount code
+ * (exhausted at the code's durationPeriods) and its credit, oldest credit
+ * note first. A partly used note is closed and its remainder reissued.
+ */
+async function consumeInvoiceAdjustments(
+  tx: Tx,
+  invoice: { id: string; workspaceId: string; creditCents: number },
+) {
+  const discountLines = await tx.platformInvoiceLine.findMany({
+    where: { invoiceId: invoice.id, kind: "DISCOUNT", discountCodeId: { not: null } },
+    select: { discountCodeId: true },
+  });
+  for (const codeId of new Set(discountLines.map((l) => l.discountCodeId!))) {
+    const red = await tx.redemption.findUnique({
+      where: { discountCodeId_redeemerKey: { discountCodeId: codeId, redeemerKey: `ws:${invoice.workspaceId}` } },
+      select: { id: true, periodsApplied: true, discountCode: { select: { durationPeriods: true } } },
+    });
+    if (!red) continue;
+    const periods = red.periodsApplied + 1;
+    const limit = red.discountCode.durationPeriods;
+    await tx.redemption.update({
+      where: { id: red.id },
+      data: { periodsApplied: periods, exhaustedAt: limit != null && periods >= limit ? new Date() : null },
+    });
+  }
+
+  let left = invoice.creditCents;
+  if (left <= 0) return;
+  const notes = await tx.creditNote.findMany({ where: { workspaceId: invoice.workspaceId, status: "OPEN" }, orderBy: { createdAt: "asc" } });
+  for (const n of notes) {
+    if (left <= 0) break;
+    const use = Math.min(left, n.amountCents);
+    await tx.creditNote.update({ where: { id: n.id }, data: { status: "APPLIED", appliedToInvoiceId: invoice.id } });
+    if (use < n.amountCents) {
+      await tx.creditNote.create({
+        data: {
+          workspaceId: n.workspaceId, amountCents: n.amountCents - use, reason: `Remainder of credit ${n.id}`,
+          createdByUserId: n.createdByUserId,
+        },
+      });
+    }
+    left -= use;
   }
 }

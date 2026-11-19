@@ -11,7 +11,7 @@ import { prisma } from "@/lib/db";
 
 import { TIER_KEYS, type TierKey } from "./catalogue";
 import { BillingError } from "./errors";
-import type { Prices, TierHoldInput, TierOverrideInput } from "./pricing";
+import type { DiscountInput, Prices, TierHoldInput, TierOverrideInput } from "./pricing";
 
 export type BillingConfigValues = {
   vatRegistered: boolean;
@@ -168,4 +168,33 @@ export async function aiUsageByCourse(workspaceId: string, from: Date, to: Date)
     _sum: { quantity: true, providerCostMilliCents: true },
   });
   return new Map(rows.map((r) => [r.scopeKey, { marks: r._sum.quantity ?? 0, costMilliCents: r._sum.providerCostMilliCents ?? 0 }]));
+}
+
+/**
+ * The workspace's discount (one code: a WORKSPACE_BILL code first, else a
+ * scoped one) and its open credit, for the next invoice. Nothing is used up
+ * here; markInvoicePaid counts the period and consumes the credit.
+ */
+export async function loadInvoiceAdjustments(workspaceId: string, at: Date): Promise<{ discount: DiscountInput | null; creditAvailableCents: number }> {
+  const [redemptions, credit] = await Promise.all([
+    prisma.redemption.findMany({
+      where: { workspaceId, exhaustedAt: null, discountCode: { active: true, scope: { not: "PARENT_INVOICE" } } },
+      select: { discountCode: true },
+      orderBy: { redeemedAt: "asc" },
+    }),
+    prisma.creditNote.aggregate({ where: { workspaceId, status: "OPEN" }, _sum: { amountCents: true } }),
+  ]);
+  const usable = redemptions
+    .map((r) => r.discountCode)
+    .filter((c) => c.startsAt <= at && (!c.endsAt || c.endsAt > at));
+  const code = usable.find((c) => c.scope === "WORKSPACE_BILL") ?? usable[0] ?? null;
+  return {
+    discount: code
+      ? {
+          discountCodeId: code.id, code: code.code, kind: code.kind, percentBps: code.percentBps, amountCents: code.amountCents,
+          scope: code.scope as DiscountInput["scope"], scopeTierKey: code.scopeTierKey, scopeServiceKey: code.scopeServiceKey,
+        }
+      : null,
+    creditAvailableCents: credit._sum.amountCents ?? 0,
+  };
 }
