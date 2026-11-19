@@ -3,6 +3,32 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Tutor test pages in the new frame (Phase 1), `revamp/b-next`
+
+Done:
+- **`TestFrame`** (`src/features/assessments/components/test-frame.tsx`),
+  like `CourseFrame`. It shows the breadcrumb (Tests › course › test ›
+  view), a Published or Draft chip and a ribbon with Questions, Submissions
+  and Preview. `testRoutes` holds the URLs. The edit, submissions and
+  preview pages use it in place of their "Back to tests" bars. Export moved
+  to the header's actions on Questions. The answered count moved there
+  on Preview.
+- **Tests list:** PageHeader with Import and New test as actions, a flat
+  table and status chips. A published test opens on Submissions, a draft
+  on Questions. **New test** gets a PageHeader too.
+- **Submissions:** a flat list with chips: Graded, To mark, In progress.
+  The "Manage course" button is gone; the breadcrumb links to the course.
+- The question editor's move and remove buttons now name the question
+  ("Move question 2 up").
+
+Not checked with real data (sign-in needed). Owner check on Preview: Tests,
+open a draft and a published test, and move through the three tabs.
+
+Next in tests: restyle the grading view
+(`tutor-tests/submissions/[testId]/[studentId]`), then the student runner
+(one question per screen, owner decision 8) and extra time per student
+(decision 7, needs a schema field).
+
 ## 2026-11-19 Billing nav, card and the folded lesson tree, `revamp/b-billing-shell`
 
 Done:

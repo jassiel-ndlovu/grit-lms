@@ -12,6 +12,7 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shell/page-header";
 
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TestForm } from "@/features/assessments/components/test-form";
@@ -60,34 +61,18 @@ export default async function NewTestPage() {
   }
 
   return (
-    <div className="bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="flex h-14 items-center">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href="/dashboard/tutor-tests">
-                <ArrowLeft className="size-4" /> Back to tests
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
+    <>
+      <PageHeader breadcrumb={[{ label: "Tests", href: "/dashboard/tutor-tests" }, { label: "New test" }]} />
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
         <header>
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-            New test
-          </h1>
+          <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">New test</h1>
           <p className="text-muted-foreground mt-1.5 text-sm">
-            Draft first, publish when ready. Publishing sends a notification
-            to enrolled students.
+            Draft first, publish when ready. Publishing sends a notification to enrolled students.
           </p>
         </header>
 
-        <TestForm
-          courses={courses.map((c) => ({ id: c.id, name: c.name }))}
-        />
+        <TestForm courses={courses.map((c) => ({ id: c.id, name: c.name }))} />
       </div>
-    </div>
+    </>
   );
 }

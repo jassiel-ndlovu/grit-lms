@@ -301,7 +301,7 @@ export function TestQuestionEditor({
               size="icon"
               className="size-7"
               onClick={onMoveUp}
-              aria-label="Move up"
+              aria-label={`Move ${isContext ? "context" : "question"} ${label} up`}
             >
               <ChevronUp className="size-3.5" />
             </Button>
@@ -313,7 +313,7 @@ export function TestQuestionEditor({
               size="icon"
               className="size-7"
               onClick={onMoveDown}
-              aria-label="Move down"
+              aria-label={`Move ${isContext ? "context" : "question"} ${label} down`}
             >
               <ChevronDown className="size-3.5" />
             </Button>
@@ -324,7 +324,7 @@ export function TestQuestionEditor({
             size="icon"
             className="text-muted-foreground hover:text-destructive size-7"
             onClick={onRemove}
-            aria-label="Remove question"
+            aria-label={`Remove ${isContext ? "context" : "question"} ${label}`}
           >
             <Trash2 className="size-3.5" />
           </Button>
