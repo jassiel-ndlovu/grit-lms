@@ -1,33 +1,27 @@
-import Footer from "../dashboard/models/footer";
+/** /forgot-password: request a password reset link by email. */
+
+import { GraduationCap } from "lucide-react";
+
+import { Card } from "@/components/ui/card";
+import { APP_NAME } from "@/lib/branding";
+
+import { ForgotForm } from "./forgot-form";
+
+export const metadata = { title: "Forgot password" };
 
 export default function ForgotPasswordPage() {
   return (
-    <div className="h-screen flex flex-col">
-      <main className="h-full flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md p-6 bg-white border border-gray-200">
-          <h1 className="text-2xl font-bold mb-6 text-center">Forgot Password</h1>
-          <form className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-700 font-medium mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                className="w-full px-3 py-2 text-sm border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-blue-500 text-sm text-white px-4 py-2 hover:bg-blue-600 transition"
-            >
-              Reset Password
-            </button>
-          </form>
+    <main className="bg-background flex min-h-screen items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-md p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-md">
+            <GraduationCap className="size-5" />
+          </div>
+          <span className="font-display text-xl text-foreground">{APP_NAME}</span>
         </div>
-      </main>
-      <Footer />
-    </div>
+        <h1 className="font-display text-2xl leading-tight tracking-tight text-foreground">Forgot your password?</h1>
+        <ForgotForm />
+      </Card>
+    </main>
   );
 }

@@ -124,3 +124,28 @@ export function digestEmail(opts: {
       .join("\n")}\n\n${absoluteUrl("/dashboard/notifications")}`,
   };
 }
+
+export function passwordResetEmail(opts: { to: string; name: string; token: string }): EmailMessage {
+  const link = absoluteUrl(`/forgot-password/reset?token=${encodeURIComponent(opts.token)}`);
+  const first = opts.name.split(" ")[0] || "there";
+  const heading = "Choose a new password";
+  return {
+    to: opts.to,
+    subject: `Reset your ${APP_NAME} password`,
+    html: layout({
+      heading,
+      bodyHtml:
+        `<p style="font-size:14px;line-height:1.6;margin:0 0 12px;">Hi ${escapeHtml(first)}, someone asked to reset the password for this ${escapeHtml(APP_NAME)} account. If it was you, choose a new password with the button below. The link works once, for one hour.</p>` +
+        button(link, "Choose a new password") +
+        `<p style="font-size:13px;line-height:1.6;margin:16px 0 0;color:${TAUPE};">If you didn't ask for this, ignore this email; your password stays the same.</p>`,
+      footer: `You're receiving this because a password reset was requested for your ${escapeHtml(APP_NAME)} account.`,
+    }),
+    text: `Hi ${first},
+
+Someone asked to reset the password for this ${APP_NAME} account. If it was you, choose a new password here (works once, for one hour):
+${link}
+
+If you didn't ask for this, ignore this email; your password stays the same.
+`,
+  };
+}
