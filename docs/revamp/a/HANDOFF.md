@@ -3,6 +3,17 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Domain on Cloudflare; email from notify.nexa-lms.co.za, `revamp/a-domain`
+
+Done (details in `ops/domain-dns.md`):
+- **DNS moved to Cloudflare.** The nameservers at xneelo are now Cloudflare's. The records Cloudflare imported were proxied, which breaks Vercel's certificates, so I set the apex, www and `_domainconnect` to DNS-only and deleted the imported wildcard. www serves 200 and the apex redirects 308 to www.
+- **QStash 401s fixed.** The owner had changed `APP_URL` to the bare apex while the schedules targeted the old vercel.app host. I set `APP_URL=https://www.nexa-lms.co.za` on Production, re-synced the schedules and redeployed. `/api/health` shows all three jobs ok.
+- **Resend:** `notify.nexa-lms.co.za` (eu-west-1) is verified, with DKIM, the return-path CNAMEs and DMARC `p=none` added in Cloudflare. `EMAIL_FROM="Nexa LMS <noreply@notify.nexa-lms.co.za>"` is set on Production and redeployed. A test email to the owner was delivered.
+
+For B: nothing changes in code. Mail to students and tutors now leaves Production from the real domain; Preview still uses the dev sender (owner-only delivery).
+
+Next: DMARC to `p=quarantine` after a few clean weeks; a support inbox and `EMAIL_REPLY_TO`.
+
 ## 2026-11-19 Tenancy writes for B; billing and Sentry live, `revamp/a-tenancy-writes`
 
 Done:
