@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { requireViewer, ViewerError } from "@/lib/viewer";
 import { can, needsScope } from "@/lib/viewer-core";
 
+import { listPayableInvoicesFor } from "./checkout";
 import { listFeeInvoicesFor, payoutSettingsFor } from "./fees";
 import { getProvider } from "./provider";
 
@@ -42,4 +43,14 @@ export async function listFeeInvoices(input: { courseId?: string; learnerId?: st
     if (input.courseId && !courseIds.includes(input.courseId)) throw new ViewerError("FORBIDDEN");
   }
   return listFeeInvoicesFor(viewer.workspace!.id, { ...input, courseIds });
+}
+
+/** Invoices a guardian (their children's) or an adult student (their own) may pay. */
+export async function listPayableInvoices(input: { status?: "OPEN" | "PAID" } = {}) {
+  assertBillingEnabled();
+  const viewer = await requireViewer();
+  const childUserIds = can(viewer, "fees.pay") ? viewer.children.map((c) => c.userId) : [];
+  const selfVisible = viewer.learner?.paymentVisible === true;
+  if (childUserIds.length === 0 && !selfVisible) throw new ViewerError("FORBIDDEN");
+  return listPayableInvoicesFor({ userId: viewer.user.id, email: viewer.user.email, childUserIds, selfVisible }, input);
 }

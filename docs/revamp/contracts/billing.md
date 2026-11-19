@@ -90,7 +90,9 @@ The first payment ends the trial and starts the first 30-day period. There is no
 | `startCheckout` | action | `fees.pay` | `{ invoiceIds: string[], discountCode?: string }` | `{ authorizationUrl, reference, totalCents, discountCents }` |
 | `getCheckoutStatus` | query | the payer | `{ reference }` | `{ status: PaymentStatus, invoices: Array<{ id, status: InvoiceStatus }> }` |
 
-One checkout may hold invoices for several children and several tutors. `lockedUntil` is set while an invoice is in a pending checkout, so it cannot be paid twice.
+One checkout may hold invoices for several children and several tutors.
+
+**Built (2026-11-20):** all of section 2. `listPayableInvoices` in `src/features/payments/fee-queries.ts`; `startCheckout` and `getCheckoutStatus` in `checkout-actions.ts` (actions, so the return page can poll `getCheckoutStatus`; it asks Paystack while the payment is pending). `startCheckout` also takes `returnPath` (default `/dashboard/fees/return`); Paystack adds `?reference=`. `discountCode` answers `CODE_INVALID` until parent-invoice codes exist. A failed card keeps the invoices locked until the 30 minutes run out (the payer can retry on Paystack's page). `lockedUntil` is set while an invoice is in a pending checkout, so it cannot be paid twice.
 
 ## 3. Tutor fees and payouts
 
@@ -151,6 +153,7 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.10. Section 2 built (parent checkout); rules under the table |
 | 2026-11-19 | Draft 1.9. Section 3 built (payouts, fee schedules, fee invoices; `requestRefund` later); rules under the table |
 | 2026-11-19 | Draft 1.8. `getPlatformInvoice().pdfUrl` is now `/api/billing/invoices/<id>/pdf` (a PDF rendered on request; staff with `billing.view` for their own workspace, Nexa admins for any). New admin query `adminRetentionPreview()`: workspaces past their retention date and what deleting each would remove (a dry run), plus `deletesEnabled` |
 | 2026-11-19 | Draft 1.7. Section 4 (Nexa admin) built; rules under the table |
