@@ -3,6 +3,29 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Gate 2, slice 1: payouts and fee invoices; retention switched on, `revamp/a-gate2-payouts`
+
+Done:
+- **Retention:** the dry run on production listed nothing due. The only workspace is `ws_nexa_legacy` (COMPED, protected). With the owner's OK, `RETENTION_DELETES=1` is set on Production; it has no effect while `BILLING` is off there.
+- **Gate 2 tutor side** (contract section 3, Draft 1.9), in `src/features/payments/fees.ts`, `fee-actions.ts` and `fee-queries.ts`:
+  - Payout accounts are Paystack subaccounts. The bank checks the account first; only the last 4 digits are stored. Connecting again replaces the account.
+  - Payout mode is WORKSPACE or PER_TUTOR, and `resolvePayee` picks the course lead's account in PER_TUTOR mode.
+  - Fee schedules.
+  - `issueInvoice` gives one payee per invoice, numbered `INV-<year>-<6 digits>`.
+  - `voidInvoice`, `markInvoicePaidOffsite` and `voidOffsitePayment` are refused while a checkout holds the invoice.
+  - `listFeeInvoices`: tutors are scoped to the courses they teach.
+  - Every money action is audited.
+- **Checks:**
+  - The real Paystack test-mode bank list works (33 banks).
+  - Account resolution can't be tried in test mode without real bank details, so the one-off end-to-end run on the preview DB stubbed the account check and subaccount creation. It passed 21 checks, and the test rows were removed.
+
+Next (Gate 2, slice 2):
+- `listPayableInvoices`, `startCheckout` (multi-split, Nexa's 2% grossed up, 30-minute locks), `getCheckoutStatus`, and `PARENT_CHECKOUT` in `settlePayment` and the webhook.
+- The `fees-daily` job (monthly invoices, overdue reminders), `requestRefund`, and receipts.
+
+Questions for the owner:
+- Before live payouts, try one real subaccount in Paystack test mode with your own bank details (design 04, open question 1: multi-split on a South African account).
+
 ## 2026-11-19 Retention deletes (switched off) and invoice PDFs, `revamp/a-retention`
 
 Done:

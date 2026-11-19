@@ -109,6 +109,8 @@ One checkout may hold invoices for several children and several tutors. `lockedU
 | `voidOffsitePayment` | action | `fees.markOffsite` | `{ offsitePaymentId, reason }` | `{ invoiceStatus }` |
 | `requestRefund` | action | `fees.manage` | `{ invoiceId, amountCents?, reason }` | `{ refundId, status }` |
 
+**Built (2026-11-19):** all of section 3 except `requestRefund` (it comes with checkout). Actions in `src/features/payments/fee-actions.ts`, queries in `fee-queries.ts`, behind `BILLING=1`. Rules for the screens: `resolvePayoutAccount` first and show the `accountName`, then `connectPayoutAccount`; an account is `ACTIVE` at once (Paystack holds the first payout until it has verified it). In `PER_TUTOR` mode `connectPayoutAccount` connects the caller's own account, and tutors may call it. `issueInvoice` refuses lines paid to different tutors (one invoice per payee) and needs a connected payee; invoice numbers are `INV-<year>-<6 digits>` per workspace. `markInvoicePaidOffsite` takes the full total only. `voidInvoice` and the off-site mark are refused while a checkout holds the invoice. A tutor sees and manages only invoices for courses they teach.
+
 Account numbers never come back in full; only `accountNumberLast4`. B shows card and bank fees as their own line, because the tutor bears them (2% Nexa commission plus the provider fee).
 
 ## 4. Nexa admin
@@ -149,6 +151,7 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
 | Date | Change |
 | --- | --- |
+| 2026-11-19 | Draft 1.9. Section 3 built (payouts, fee schedules, fee invoices; `requestRefund` later); rules under the table |
 | 2026-11-19 | Draft 1.8. `getPlatformInvoice().pdfUrl` is now `/api/billing/invoices/<id>/pdf` (a PDF rendered on request; staff with `billing.view` for their own workspace, Nexa admins for any). New admin query `adminRetentionPreview()`: workspaces past their retention date and what deleting each would remove (a dry run), plus `deletesEnabled` |
 | 2026-11-19 | Draft 1.7. Section 4 (Nexa admin) built; rules under the table |
 | 2026-11-19 | Draft 1.6. `getUsage`, `listPlatformInvoices` and `getPlatformInvoice` built. `getBillingPaymentStatus` also returns `purpose: "CARD" | "INVOICE"` (use it instead of the `nx-card-` prefix; the prefix stays stable too). `payPlatformInvoice`'s default `returnPath` is now `/dashboard/settings/billing`, and billing emails link there. Invoice `status` shows `PAST_DUE` as `OPEN`; `pdfUrl` is `null` until invoice PDFs exist. `getUsage` for `active-students`: `days[].quantity` is distinct learners enrolled that day, `totalQuantity` distinct learners in the period, `estimatedCents` the period's seat charges so far (advance plus catch-ups and upgrades); in a trial, what the first 30 days would cost now. `ai-marks`: `estimatedCents` is the pass-through above the Pro pools so far. Other meters: 0 until those features record usage |
