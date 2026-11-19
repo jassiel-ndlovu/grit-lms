@@ -20,15 +20,21 @@ export const testRoutes = {
   preview: (id: string) => `/dashboard/tutor-tests/${id}/preview`,
 };
 
+type TestView = "questions" | "submissions" | "preview";
+const VIEW_LABEL: Record<TestView, string> = { questions: "Questions", submissions: "Submissions", preview: "Preview" };
+
 export function TestFrame({
   test,
   page,
+  view,
   actions,
   children,
 }: {
   test: { id: string; title: string; isActive: boolean | null; courseId: string; course: { name: string } };
-  /** The view's name, the last crumb: "Questions", "Submissions" or "Preview". */
+  /** The last crumb: the view's name, or a page inside a view (a student's name). */
   page: string;
+  /** Set for a page inside a view: adds that view's crumb and lights its tab. */
+  view?: TestView;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -36,8 +42,9 @@ export function TestFrame({
     { label: "Tests", href: testRoutes.list },
     { label: test.course.name, href: courseRoutes.overview(test.courseId) },
     { label: test.title, href: testRoutes.questions(test.id) },
-    { label: page },
   ];
+  if (view) crumbs.push({ label: VIEW_LABEL[view], href: testRoutes[view](test.id) });
+  crumbs.push({ label: page });
 
   return (
     <>
@@ -49,6 +56,7 @@ export function TestFrame({
       <Ribbon>
         <RibbonNav
           label="Test"
+          current={view ? testRoutes[view](test.id) : undefined}
           links={[
             { label: "Questions", href: testRoutes.questions(test.id) },
             { label: "Submissions", href: testRoutes.submissions(test.id) },

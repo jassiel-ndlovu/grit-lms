@@ -17,11 +17,8 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, ExternalLink, FileText, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { MarkdownTextarea } from "@/components/markdown-textarea";
 import {
   DraftStatus,
@@ -292,8 +289,9 @@ export function GradingForm({
   /* ─── Render ─── */
 
   return (
-    <div className="space-y-6 pb-40">
+    <div className="space-y-6">
       <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this grade" />
+      <div className="divide-border border-border divide-y border-y">
       {rows.map((r) => (
         <QuestionCard
           key={r.q.id}
@@ -306,10 +304,11 @@ export function GradingForm({
           onAssignFull={assignFull}
         />
       ))}
+      </div>
 
-      <Card className="space-y-3 p-6">
+      <section aria-labelledby="overall-feedback" className="space-y-3">
         <div>
-          <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
+          <h2 id="overall-feedback" className="text-foreground text-sm font-semibold">
             Overall feedback
           </h2>
           <p className="text-muted-foreground text-sm">
@@ -323,11 +322,12 @@ export function GradingForm({
           placeholder="Nice work overall. A few notes..."
           previewTitle="Overall feedback preview"
         />
-      </Card>
+      </section>
 
-      {/* Sticky save bar */}
-      <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6 py-4">
+      {/* Save bar: sticks to the bottom of the content column (not the
+          window), so it never covers the sidebar. */}
+      <div className="bg-background/95 border-border sticky bottom-0 z-10 -mx-4 border-t px-4 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 py-3">
           <div className="flex items-center gap-4">
             <div>
               <p className="text-muted-foreground text-xs">Overall</p>
@@ -343,12 +343,7 @@ export function GradingForm({
                   / {outOfTotal}
                 </span>
                 {outOfTotal > 0 && (
-                  <Badge
-                    variant={overallPct >= 50 ? "soft" : "secondary"}
-                    className="tabular-nums"
-                  >
-                    {overallPct}%
-                  </Badge>
+                  <span className="text-muted-foreground text-sm tabular-nums">({overallPct}%)</span>
                 )}
               </div>
             </div>
@@ -420,11 +415,9 @@ const QuestionCard = React.memo(function QuestionCard({
   const isContext = !gradable;
 
   return (
-    <Card
-      className={cn(
-        "space-y-4 p-6",
-        depth > 0 && "border-brand-terracotta/30 ml-6",
-      )}
+    <section
+      aria-label={isContext ? `Context ${path}` : `Question ${path}`}
+      className={cn("space-y-4 py-6", depth > 0 && "border-brand-terracotta/30 ml-2 border-l-2 pl-4 sm:ml-4")}
     >
       <div className="space-y-2">
         <p
@@ -444,24 +437,18 @@ const QuestionCard = React.memo(function QuestionCard({
         <>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-600">
-                Student answer
-              </p>
-              <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-muted-foreground mb-2 text-xs font-medium">Student answer</p>
+              <div className="border-border bg-muted/40 rounded-md border p-3">
                 <AnswerView type={q.type} value={answer} />
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-emerald-700">
-                Correct answer
-              </p>
-              <div className="rounded-md border border-emerald-200 bg-emerald-50/60 p-3">
+              <p className="text-success mb-2 text-xs font-medium">Correct answer</p>
+              <div className="border-success/30 bg-success/5 rounded-md border p-3">
                 <CorrectAnswerView q={q} />
               </div>
             </div>
           </div>
-
-          <Separator />
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr]">
             <div className="space-y-1.5">
@@ -509,7 +496,7 @@ const QuestionCard = React.memo(function QuestionCard({
           </div>
         </>
       )}
-    </Card>
+    </section>
   );
 });
 
