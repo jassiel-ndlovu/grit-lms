@@ -3,6 +3,56 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Student test runner, `revamp/b-test-runner`
+
+Owner decision 8 (one question per screen), b/research/05 "Test runner"
+and 06 §3.
+
+Done:
+- **Focus layout:** with REVAMP_UI, `/dashboard/tests/<id>` shows without
+  the sidebar, top bar or search (`isFocusRoute` in nav-config, used by
+  AppShell). Pre-test and review keep the shell. "Back to course" is
+  replaced by **Save and exit** in the header.
+- **One header:** title, offline and save status, the clock, Save and exit,
+  Save, Submit. It sticks to the top with the question strip under it.
+  The legacy shell gets `top-14 lg:top-20` so it sits under its header.
+- **Question strip** (replaces the side list): a button per question.
+  Answered is solid, partly answered half filled, a failed save adds a red
+  border and an icon, a flag a corner mark, the current one a ring. Each
+  name spells the state out: "Question 2, partly answered, 1 of 2 parts,
+  not saved, flagged". The current one scrolls into view.
+- **Flag for review:** a button above the question, belongs to the
+  student, kept in the browser (`localStorage`, per attempt, cleared on
+  submit). No schema change, so tutors don't see flags.
+- **Per-question save state:** a failed save marks the questions whose
+  answers it carried; the next good save clears them.
+- **Submit summary:** lists unanswered questions (parts too) and flagged
+  ones as buttons that jump there, and warns when the last save failed.
+- **Clock:** a polite live region says "5 minutes left." and "1 minute
+  left." once each, not every second. Monospaced digits.
+- **Shortcuts:** Alt+↑/↓ previous and next, Alt+F flag, Ctrl/Cmd+S save.
+  Shown under the question on wider screens.
+- Pure rules in `features/assessments/lib/runner-state.ts`; checks in
+  `scripts/check-runner-state.ts` (new). Tutor preview uses the same
+  runner, with the header not sticky inside the test frame.
+
+Checked:
+- `tsc` and `eslint` are clean; `check-runner-state` and `check-shell-nav`
+  pass.
+- A temporary sample-data page (24 questions, one with two parts) showed
+  the strip states, flags kept across a reload, the "not saved" mark (the
+  page wasn't signed in, so every save failed and nothing was written),
+  the 5-minute announcement, the summary's jump links and the phone width.
+  Nothing was submitted.
+- Owner check on Preview: sit a timed test as a student, flag a question,
+  go offline and back, open Submit, then Save and exit and come back.
+
+Not done:
+- Extra time per student (decision 7) needs a schema field; ask the owner.
+- Flags are per browser. Showing them to the tutor needs a field on the
+  submission.
+- Pressing Alt+↓ twice while a save is running moves one question.
+
 ## 2026-11-20 Fees, part 1, `revamp/b-fees`
 
 Built on A's billing contract section 3 (#125).

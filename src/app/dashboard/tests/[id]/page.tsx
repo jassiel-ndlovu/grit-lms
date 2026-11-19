@@ -1,5 +1,7 @@
 /**
- * /dashboard/tests/[id] - student test runner.
+ * /dashboard/tests/[id] - student test runner. The revamp shell shows it
+ * without the sidebar (nav-config isFocusRoute); "Save and exit" is the
+ * way out.
  *
  * Server Component shell that resolves the student's submission state and
  * either loads the in-progress runner or routes to the pre-test landing
@@ -10,12 +12,10 @@
  */
 
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Button } from "@/components/ui/button";
+import { isRevampUi } from "@/lib/ui-flags";
 
 import {
   getTestDetailById,
@@ -84,33 +84,26 @@ export default async function TestRunnerPage({ params }: PageProps) {
       ? (submission.answers as Record<string, unknown>)
       : {};
 
-  return (
-    <div className="bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex h-14 items-center">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href={`/dashboard/courses/${test.courseId}`}>
-                <ArrowLeft className="size-4" /> Back to course
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
+  // The revamp shell shows this route alone (isFocusRoute), so the
+  // runner's header sticks to the top. The legacy shell keeps its own
+  // sticky header (h-14, lg:h-20) above it.
+  const stickyTop = isRevampUi() ? "top-0" : "top-14 lg:top-20";
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
-        <TestRunner
-          testId={test.id}
-          submissionId={submission.id}
-          title={test.title}
-          questions={treeQuestions}
-          initialAnswers={initialAnswers}
-          timeLimit={test.timeLimit}
-          labelScheme={test.labelScheme}
-          startedAt={submission.startedAt}
-          dueDate={test.dueDate}
-        />
-      </div>
+  return (
+    <div className="bg-background mx-auto max-w-3xl px-4 pb-10 sm:px-6">
+      <TestRunner
+        testId={test.id}
+        submissionId={submission.id}
+        title={test.title}
+        questions={treeQuestions}
+        initialAnswers={initialAnswers}
+        timeLimit={test.timeLimit}
+        labelScheme={test.labelScheme}
+        startedAt={submission.startedAt}
+        dueDate={test.dueDate}
+        exitHref={`/dashboard/courses/${test.courseId}`}
+        stickyTop={stickyTop}
+      />
     </div>
   );
 }

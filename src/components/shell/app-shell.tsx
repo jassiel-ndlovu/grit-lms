@@ -39,7 +39,7 @@ import { switchWorkspace } from "@/features/workspaces/actions";
 import { APP_SHORT_NAME } from "@/lib/branding";
 import { toast } from "sonner";
 
-import { FOOTER_LINKS, activeHref, type NavIcon, type NavSection } from "./nav-config";
+import { FOOTER_LINKS, activeHref, isFocusRoute, type NavIcon, type NavSection } from "./nav-config";
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   home: Home, book: BookOpen, calendar: Calendar, test: FileText, assignment: ClipboardList,
@@ -251,6 +251,7 @@ export function AppShell({ user, sections, children, search = true, notification
   const closingToSearch = React.useRef(false);
   useCommandPaletteShortcut(setPaletteOpen);
   const remote = usePaletteSearch(search);
+  const focus = isFocusRoute(usePathname() ?? "");
 
   const pageGroup: CommandGroup = {
     label: "Go to",
@@ -264,6 +265,16 @@ export function AppShell({ user, sections, children, search = true, notification
     setDrawerOpen(false);
     setPaletteOpen(true);
   };
+
+  // The test runner: the page alone, so a sitting is not left by accident.
+  if (focus) {
+    return (
+      <div className="bg-background text-foreground min-h-screen">
+        {banner ? <div data-slot="account-banner">{banner}</div> : null}
+        <main>{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background text-foreground flex min-h-screen">
