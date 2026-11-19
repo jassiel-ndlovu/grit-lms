@@ -22,6 +22,7 @@ import { revalidatePath } from "next/cache";
 
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { richColumnsFromInput } from "@/lib/content/columns";
 import { deleteBlob } from "@/lib/blob/server";
 import {
@@ -116,12 +117,12 @@ export const createLesson = tutorActionClient
     // Ownership check — the tutor must own the course this lesson is for.
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, tutor: { select: { email: true } } },
+      select: { id: true, staff: staffFor(ctx.session.user.email) },
     });
     if (!course) {
       throw new Error("Course not found");
     }
-    if (course.tutor.email !== ctx.session.user.email) {
+    if (course.staff.length === 0) {
       throw new Error("You don't own this course");
     }
     if (parsedInput.parentId) {
@@ -200,14 +201,14 @@ export const updateLesson = tutorActionClient
       where: { id: parsedInput.id },
       include: {
         attachmentUrls: { select: { url: true } },
-        course: { select: { id: true, tutor: { select: { email: true } } } },
+        course: { select: { id: true, staff: staffFor(ctx.session.user.email) } },
       },
     });
 
     if (!existing) {
       throw new Error("Lesson not found");
     }
-    if (existing.course.tutor.email !== ctx.session.user.email) {
+    if (existing.course.staff.length === 0) {
       throw new Error("You don't own this lesson");
     }
 
@@ -306,14 +307,14 @@ export const deleteLesson = tutorActionClient
       where: { id: parsedInput.id },
       include: {
         attachmentUrls: { select: { url: true } },
-        course: { select: { id: true, tutor: { select: { email: true } } } },
+        course: { select: { id: true, staff: staffFor(ctx.session.user.email) } },
       },
     });
 
     if (!existing) {
       throw new Error("Lesson not found");
     }
-    if (existing.course.tutor.email !== ctx.session.user.email) {
+    if (existing.course.staff.length === 0) {
       throw new Error("You don't own this lesson");
     }
 
@@ -369,10 +370,10 @@ export const reorderLessons = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { tutor: { select: { email: true } }, lessons: { select: { id: true } } },
+      select: { staff: staffFor(ctx.session.user.email), lessons: { select: { id: true } } },
     });
     if (!course) throw new Error("Course not found");
-    if (course.tutor.email !== ctx.session.user.email) {
+    if (course.staff.length === 0) {
       throw new Error("You don't own this course");
     }
 
@@ -412,10 +413,10 @@ export const updateLessonLabelScheme = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { tutor: { select: { email: true } } },
+      select: { staff: staffFor(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
-    if (course.tutor.email !== ctx.session.user.email) {
+    if (course.staff.length === 0) {
       throw new Error("You don't own this course");
     }
     await prisma.course.update({

@@ -16,6 +16,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -135,7 +136,7 @@ export default async function CourseLessonsPage({
             {course.name}
           </h1>
           <p className="text-muted-foreground text-xs">
-            with {course.tutor.fullName}
+            with {tutorOf(course)?.fullName ?? "your tutor"}
           </p>
         </div>
         <div className="bg-muted/50 space-y-2 rounded-md p-3">

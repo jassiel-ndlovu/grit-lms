@@ -13,6 +13,7 @@ import type { Prisma } from "@/generated/prisma";
 
 import { emitNotification } from "@/features/notifications/server";
 import { prisma } from "@/lib/db";
+import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { tutorActionClient } from "@/lib/safe-action";
 
 import { eventChangeNotification } from "./notify";
@@ -32,10 +33,10 @@ export const createCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { tutor: { select: { email: true } } },
+      select: { staff: staffFor(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
-    if (course.tutor.email !== ctx.session.user.email) {
+    if (course.staff.length === 0) {
       throw new Error("You don't own this course");
     }
 
@@ -72,10 +73,10 @@ export const updateCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.courseEvent.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, tutor: { select: { email: true } } } } },
+      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Event not found");
-    if (existing.course.tutor.email !== ctx.session.user.email) {
+    if (existing.course.staff.length === 0) {
       throw new Error("You don't own this event");
     }
 
@@ -118,10 +119,10 @@ export const deleteCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.courseEvent.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, tutor: { select: { email: true } } } } },
+      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Event not found");
-    if (existing.course.tutor.email !== ctx.session.user.email) {
+    if (existing.course.staff.length === 0) {
       throw new Error("You don't own this event");
     }
 

@@ -4,12 +4,12 @@ import "server-only";
  * Data for the tutor home (UI draft, Main): what needs marking, what is due
  * or still a draft, this week's numbers and the next sessions.
  *
- * Courses are found by `tutorId` and students by the implicit enrolment
- * join, like the rest of B's queries today. Both move to CourseStaff and
- * Enrollment together with the other queries (issue #93).
+ * Courses are the ones the tutor teaches (CourseStaff) and students are
+ * open Enrollments (issue #93, step 4).
  */
 
 import { prisma } from "@/lib/db";
+import { taughtBy } from "@/features/courses/lib/tenancy-where";
 import { occurrencesOf } from "@/features/events/lib/recurrence";
 
 import { attentionRows, type AttentionRow, type AttentionSource } from "./lib/attention";
@@ -26,11 +26,11 @@ export interface TutorHomeData {
 export async function getTutorHome(tutorId: string, now: Date, timeZone: string): Promise<TutorHomeData> {
   const [courses, tests, assignments, events] = await Promise.all([
     prisma.course.findMany({
-      where: { tutorId },
-      select: { id: true, students: { select: { id: true } } },
+      where: taughtBy(tutorId),
+      select: { id: true, enrollments: { where: { endedAt: null }, select: { learnerId: true } } },
     }),
     prisma.test.findMany({
-      where: { course: { tutorId } },
+      where: { course: taughtBy(tutorId) },
       select: {
         id: true,
         title: true,
@@ -41,7 +41,7 @@ export async function getTutorHome(tutorId: string, now: Date, timeZone: string)
       },
     }),
     prisma.submission.findMany({
-      where: { course: { tutorId } },
+      where: { course: taughtBy(tutorId) },
       select: {
         id: true,
         title: true,
@@ -52,7 +52,7 @@ export async function getTutorHome(tutorId: string, now: Date, timeZone: string)
       },
     }),
     prisma.courseEvent.findMany({
-      where: { course: { tutorId } },
+      where: { course: taughtBy(tutorId) },
       select: {
         id: true,
         title: true,
@@ -106,7 +106,7 @@ export async function getTutorHome(tutorId: string, now: Date, timeZone: string)
     rows,
     stats: {
       courses: courses.length,
-      students: new Set(courses.flatMap((c) => c.students.map((s) => s.id))).size,
+      students: new Set(courses.flatMap((c) => c.enrollments.map((e) => e.learnerId))).size,
       toMark: sources.reduce((n, s) => n + s.toMark, 0),
       dueThisWeek: rows.filter((r) => r.bucket === "due").length,
     },

@@ -23,6 +23,7 @@ import { Prisma } from "@/generated/prisma";
 
 import { richColumnsFromInput } from "@/lib/content/columns";
 import { prisma } from "@/lib/db";
+import { staffFor, enrollmentFor } from "@/features/courses/lib/tenancy-where";
 import {
   studentActionClient,
   tutorActionClient,
@@ -53,10 +54,10 @@ export const createSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, tutor: { select: { email: true } } },
+      select: { id: true, staff: staffFor(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
-    if (course.tutor.email !== ctx.session.user.email) {
+    if (course.staff.length === 0) {
       throw new Error("You don't own this course");
     }
 
@@ -115,10 +116,10 @@ export const updateSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.submission.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, tutor: { select: { email: true } } } } },
+      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Assignment not found");
-    if (existing.course.tutor.email !== ctx.session.user.email) {
+    if (existing.course.staff.length === 0) {
       throw new Error("You don't own this assignment");
     }
 
@@ -188,10 +189,10 @@ export const deleteSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.submission.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, tutor: { select: { email: true } } } } },
+      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Assignment not found");
-    if (existing.course.tutor.email !== ctx.session.user.email) {
+    if (existing.course.staff.length === 0) {
       throw new Error("You don't own this assignment");
     }
 
@@ -237,11 +238,11 @@ export const deleteEntry = tutorActionClient
       select: {
         id: true,
         studentId: true,
-        submission: { select: { id: true, course: { select: { id: true, tutor: { select: { email: true } } } } } },
+        submission: { select: { id: true, course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } } },
       },
     });
     if (!entry) throw new Error("Hand-in not found");
-    if (entry.submission.course.tutor.email !== ctx.session.user.email) {
+    if (entry.submission.course.staff.length === 0) {
       throw new Error("You don't own this assignment");
     }
 
@@ -282,13 +283,13 @@ export const submitEntry = studentActionClient
         maxAttempts: true,
         isActive: true,
         course: {
-          select: { students: { where: { id: student.id }, select: { id: true } } },
+          select: { enrollments: enrollmentFor(student.id) },
         },
       },
     });
     if (!submission) throw new Error("Assignment not found");
     if (!submission.isActive) throw new Error("Assignment is not currently open");
-    if (submission.course.students.length === 0) {
+    if (submission.course.enrollments.length === 0) {
       throw new Error("You're not enrolled in this course");
     }
 
@@ -374,13 +375,13 @@ export const gradeEntry = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { tutor: { select: { email: true } } } },
+            course: { select: { staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!entry) throw new Error("Entry not found");
-    if (entry.submission.course.tutor.email !== ctx.session.user.email) {
+    if (entry.submission.course.staff.length === 0) {
       throw new Error("You don't own this assignment");
     }
 
@@ -462,13 +463,13 @@ export const gradeEntryWithSections = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { tutor: { select: { email: true } } } },
+            course: { select: { staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!entry) throw new Error("Entry not found");
-    if (entry.submission.course.tutor.email !== ctx.session.user.email) {
+    if (entry.submission.course.staff.length === 0) {
       throw new Error("You don't own this assignment");
     }
 

@@ -16,6 +16,7 @@ import { cache } from "react";
 import type { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
+import { ownerTutor } from "@/features/courses/lib/tenancy-where";
 
 const gradeInclude = {
   course: { select: { id: true, name: true } },
@@ -130,7 +131,7 @@ const detailInclude = {
     select: {
       id: true,
       name: true,
-      tutor: { select: { id: true, fullName: true, email: true } },
+      ownerMembership: ownerTutor,
     },
   },
   testSubmission: {

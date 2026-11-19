@@ -3,6 +3,44 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Tenancy reads (#93 step 4), `revamp/b-tenancy-reads`
+
+Done:
+- B's code no longer reads `Course.tutorId`, `Course.tutor` or the
+  implicit enrolment join; only `createCourse`/`updateCourse` still write
+  them (dual write, until step 5). Everything goes through
+  `src/features/courses/lib/tenancy-where.ts`:
+  - `taughtBy(tutorId)` and `staffFor(email)`: an active `CourseStaff`
+    membership (any role).
+  - `enrolledStudent(studentId)`, `enrollmentFor(studentId)`,
+    `studentsOf(courseId)`, `openEnrollmentCount`: an open
+    `Enrollment`.
+  - `ownerTutor` and `tutorOf(course)`: the teacher's name through
+    `ownerMembership`.
+  - They take the same Tutor and Student profile ids as before, so the
+    call sites kept their signatures.
+- This covers the list, detail and ownership queries for courses,
+  lessons, tests, assignments, events, the gradebook, tutor Home and
+  search. It also covers every action's "do you teach this" and "are you
+  enrolled" check, and the "with {tutor}" lines on student pages.
+- `_count.students` is now `_count.enrollments` (open only), and
+  `getCourseDetailById` still returns `students`, built from open
+  enrolments.
+- `scripts/check-tenancy-parity.ts` gained a reads section. It runs each
+  new filter against the old one for every tutor, student and course,
+  plus the actions' nested checks. It is clean on production and Preview.
+- Not `canIn` yet: with one workspace the staff and enrolment filters
+  are the whole check. Workspace scoping comes with workspace switching.
+
+Still reading the old columns, in A's paths (listed on #93): the
+notifications fan-out and queries, `src/app/api/**` routes,
+`src/lib/api-guard.ts`. Step 5 (dropping `tutorId` and the join) waits
+for those and the owner's approval.
+
+Owner check: on Preview, sign in as a tutor (courses, Home counts,
+gradebook) and as a student (My courses, a lesson, a test, an
+assignment); both should look exactly as before.
+
 ## 2026-11-19 Tenancy dual writes and parity (#93 steps 2 and 3), `revamp/b-tenancy-writes`
 
 Done:

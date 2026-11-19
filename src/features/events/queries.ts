@@ -10,6 +10,7 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
+import { enrolledStudent, ownerTutor, taughtBy } from "@/features/courses/lib/tenancy-where";
 
 /**
  * A repeating event's `date` column holds only the FIRST occurrence, so a
@@ -44,7 +45,7 @@ export const listEventsByCourseId = cache(async (courseId: string) => {
         select: {
           id: true,
           name: true,
-          tutor: { select: { id: true, fullName: true } },
+          ownerMembership: ownerTutor,
         },
       },
     },
@@ -59,7 +60,7 @@ export const listUpcomingEventsForStudent = cache(async (studentId: string) => {
   return prisma.courseEvent.findMany({
     where: {
       ...upcomingOrRecurring(new Date()),
-      course: { students: { some: { id: studentId } } },
+      course: enrolledStudent(studentId),
     },
     orderBy: { date: "asc" },
     include: {
@@ -67,7 +68,7 @@ export const listUpcomingEventsForStudent = cache(async (studentId: string) => {
         select: {
           id: true,
           name: true,
-          tutor: { select: { id: true, fullName: true } },
+          ownerMembership: ownerTutor,
         },
       },
     },
@@ -79,7 +80,7 @@ export const listUpcomingEventsForTutor = cache(async (tutorId: string) => {
   return prisma.courseEvent.findMany({
     where: {
       ...upcomingOrRecurring(new Date()),
-      course: { tutorId },
+      course: taughtBy(tutorId),
     },
     orderBy: { date: "asc" },
     include: {
@@ -87,7 +88,7 @@ export const listUpcomingEventsForTutor = cache(async (tutorId: string) => {
         select: {
           id: true,
           name: true,
-          tutor: { select: { id: true, fullName: true } },
+          ownerMembership: ownerTutor,
         },
       },
     },
@@ -97,10 +98,7 @@ export const listUpcomingEventsForTutor = cache(async (tutorId: string) => {
 /** Ownership: does the event live under a course owned by this tutor? */
 export const eventBelongsToTutor = cache(
   async (eventId: string, tutorId: string) => {
-    const e = await prisma.courseEvent.findUnique({
-      where: { id: eventId },
-      select: { course: { select: { tutorId: true } } },
-    });
-    return e?.course.tutorId === tutorId;
+    const n = await prisma.courseEvent.count({ where: { id: eventId, course: taughtBy(tutorId) } });
+    return n > 0;
   },
 );

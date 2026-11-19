@@ -84,7 +84,7 @@ export default async function GradebookIndexPage() {
                     <p className="text-muted-foreground mt-0.5 flex items-center gap-3 text-xs">
                       <span className="inline-flex items-center gap-1">
                         <Users className="size-3" />
-                        {c._count.students}
+                        {c._count.enrollments}
                       </span>
                       <span className="tabular-nums">
                         {c._count.tests + c._count.submissions} assessments

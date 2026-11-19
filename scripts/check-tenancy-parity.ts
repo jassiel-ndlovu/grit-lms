@@ -12,11 +12,19 @@
  *                 mapped Student → User → Learner (in the course's
  *                 workspace), equal the learners with an open Enrollment.
  *
- * Prints counts and course ids only, never names or emails. Exits 1 when
- * any course differs, so it can gate step 4 (moving the reads).
+ * Reads (step 4): the filters in src/features/courses/lib/tenancy-where.ts
+ * must return what the old ones did, for every tutor, student and course:
+ *   - taughtBy(tutor)          vs  { tutorId }
+ *   - enrolledStudent(student) vs  { students: { some: { id } } }
+ *   - studentsOf(course)       vs  course.students
+ *   - tutorOf(course).id       vs  course.tutorId
+ *
+ * Prints counts and ids only, never names or emails. Exits 1 when anything
+ * differs.
  */
 
 import { PrismaClient } from "../src/generated/prisma";
+import { enrolledStudent, enrollmentFor, ownerTutor, staffFor, studentsOf, taughtBy, tutorOf } from "../src/features/courses/lib/tenancy-where";
 
 const url = process.env.DATABASE_URL ?? "";
 if (!url) throw new Error("DATABASE_URL is not set");
@@ -87,12 +95,59 @@ async function main() {
     if ([...openSet].some((l) => !expected.has(l))) problems.extraEnrollment.push(c.id);
   }
 
+  // Reads: the new filters against the old ones.
+  const sameSet = (a: string[], b: string[]) => a.length === b.length && new Set([...a, ...b]).size === a.length;
+  const reads = { tutorCourses: [] as string[], studentCourses: [] as string[], courseStudents: [] as string[], courseTutor: [] as string[], actionChecks: [] as string[] };
+  const [tutors, studentProfiles] = await Promise.all([
+    prisma.tutor.findMany({ select: { id: true } }),
+    prisma.student.findMany({ select: { id: true } }),
+  ]);
+  for (const t of tutors) {
+    const [oldC, newC] = await Promise.all([
+      prisma.course.findMany({ where: { tutorId: t.id }, select: { id: true } }),
+      prisma.course.findMany({ where: taughtBy(t.id), select: { id: true } }),
+    ]);
+    if (!sameSet(oldC.map((c) => c.id), newC.map((c) => c.id))) reads.tutorCourses.push(t.id);
+  }
+  for (const st of studentProfiles) {
+    const [oldC, newC] = await Promise.all([
+      prisma.course.findMany({ where: { students: { some: { id: st.id } } }, select: { id: true } }),
+      prisma.course.findMany({ where: enrolledStudent(st.id), select: { id: true } }),
+    ]);
+    if (!sameSet(oldC.map((c) => c.id), newC.map((c) => c.id))) reads.studentCourses.push(st.id);
+  }
+  for (const c of courses) {
+    const [newS, owner] = await Promise.all([
+      prisma.student.findMany({ where: studentsOf(c.id), select: { id: true } }),
+      prisma.course.findUniqueOrThrow({ where: { id: c.id }, select: { tutorId: true, ownerMembership: ownerTutor } }),
+    ]);
+    if (!sameSet(c.students.map((x) => x.id), newS.map((x) => x.id))) reads.courseStudents.push(c.id);
+    if (tutorOf(owner)?.id !== owner.tutorId) reads.courseTutor.push(c.id);
+
+    // The actions' nested checks: the course's tutor passes staffFor, and
+    // each old-join student passes enrollmentFor.
+    const checks = await prisma.course.findUniqueOrThrow({ where: { id: c.id }, select: { staff: staffFor(c.tutor.email) } });
+    const tutorOk = checks.staff.length > 0;
+    const studentOk = await Promise.all(
+      c.students.map((st) =>
+        prisma.course
+          .findUniqueOrThrow({ where: { id: c.id }, select: { enrollments: enrollmentFor(st.id) } })
+          .then((x) => x.enrollments.length > 0),
+      ),
+    );
+    if (!tutorOk || studentOk.includes(false)) reads.actionChecks.push(c.id);
+  }
+
   console.log(`courses ${totals.courses}, old enrolments ${totals.oldEnrolments}, open Enrollment rows ${totals.openEnrollments}`);
   let bad = 0;
   for (const [name, ids] of Object.entries(problems)) {
     const unique = [...new Set(ids)];
     bad += unique.length;
     console.log(`${unique.length ? "DIFF" : "OK  "}  ${name}: ${unique.length}${unique.length ? `  (${unique.join(", ")})` : ""}`);
+  }
+  for (const [name, ids] of Object.entries(reads)) {
+    bad += ids.length;
+    console.log(`${ids.length ? "DIFF" : "OK  "}  reads.${name}: ${ids.length}${ids.length ? `  (${ids.join(", ")})` : ""}`);
   }
   console.log(bad ? "\nThe new tables differ from the old columns." : "\nParity: the new tables match the old columns.");
   return bad;

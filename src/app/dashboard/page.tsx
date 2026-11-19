@@ -26,6 +26,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -232,7 +233,7 @@ export default async function DashboardLanding({
               <Card key={course.id} className="group flex flex-col gap-3 p-5 transition-shadow hover:shadow-md">
                 <Link href={`/dashboard/courses/${course.id}`} className="flex flex-1 flex-col gap-3">
                   <div className="space-y-1">
-                    <p className="text-muted-foreground text-xs">{course.tutor.fullName ?? "Course"}</p>
+                    <p className="text-muted-foreground text-xs">{tutorOf(course)?.fullName ?? "Course"}</p>
                     <h3 className="font-display line-clamp-2 text-lg leading-tight tracking-tight text-foreground">{course.name}</h3>
                   </div>
                   <div className="text-muted-foreground flex items-center gap-3 text-xs">
@@ -242,7 +243,7 @@ export default async function DashboardLanding({
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <Users className="size-3" />
-                      {course._count.students} students
+                      {course._count.enrollments} students
                     </span>
                   </div>
                   <div className="mt-auto space-y-1.5">
