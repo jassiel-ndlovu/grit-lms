@@ -2,17 +2,24 @@
 
 /**
  * Billing actions (docs/revamp/contracts/billing.md, section 1). Behind the
- * BILLING flag. Built here: setCourseServices. The payment actions follow
- * once Paystack test keys exist.
+ * BILLING flag. Built here: setCourseServices, startFirstPayment,
+ * payPlatformInvoice, getBillingPaymentStatus.
  */
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 
+import { getProvider } from "@/features/payments/provider";
+import { decryptSecret } from "@/features/payments/secrets";
+import { settlePayment } from "@/features/payments/settle";
+import { platformPaymentReference, safeReturnPath } from "@/features/payments/settlement-rules";
 import { prisma } from "@/lib/db";
 import { viewerActionClient } from "@/lib/safe-action";
+import { requireViewer } from "@/lib/viewer";
 
-import { BillingError } from "./errors";
+import { assertBillingEnabled, BillingError } from "./errors";
+import { createFirstInvoice } from "./invoice";
 import { addDays, applyServiceChange, billedTier, derivedTier, holdUntilFor, tierAbove } from "./pricing";
 import { assertSwitchable, loadServiceChangeContext, requireCourseServicesAccess } from "./queries";
 
@@ -81,5 +88,190 @@ export const setCourseServices = viewerActionClient
       derivedTierKey: after,
       billedTierKey: billed,
       holdUntil: holdUntilFor({ billed, holds, at: now })?.toISOString() ?? null,
+    };
+  });
+
+/* ------------------------------------------------------------------------- */
+/* Payments (Gate 1): design 04, section 4                                    */
+/* ------------------------------------------------------------------------- */
+
+async function billingManager() {
+  assertBillingEnabled();
+  const viewer = await requireViewer({ permission: "billing.manage", workspace: true });
+  return { viewer, workspace: viewer.workspace! };
+}
+
+/** This deployment's origin, for Paystack's callback (Preview URLs differ per deploy). */
+async function requestOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  if (!host) throw new BillingError("PROVIDER_ERROR", "No host header");
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+/** The workspace's Paystack customer, created on first use. */
+async function ensureProviderCustomer(workspaceId: string, email: string, name: string): Promise<string> {
+  const existing = await prisma.providerCustomer.findFirst({
+    where: { provider: "PAYSTACK", ownerType: "WORKSPACE", workspaceId, userId: null },
+    select: { customerCode: true },
+  });
+  if (existing) return existing.customerCode;
+  const { customerCode } = await getProvider().createCustomer({ email, name, metadata: { workspaceId } });
+  await prisma.providerCustomer.create({
+    data: { provider: "PAYSTACK", ownerType: "WORKSPACE", workspaceId, customerCode, email },
+  });
+  return customerCode;
+}
+
+/** A new attempt on the invoice: its Payment row and reference. */
+async function newInvoicePayment(input: { invoice: { id: string; totalCents: number }; workspaceId: string; userId: string }) {
+  const { attemptCount } = await prisma.platformInvoice.update({
+    where: { id: input.invoice.id },
+    data: { attemptCount: { increment: 1 } },
+    select: { attemptCount: true },
+  });
+  const reference = platformPaymentReference(input.invoice.id, attemptCount);
+  await prisma.payment.create({
+    data: {
+      provider: "PAYSTACK", reference, purpose: "PLATFORM_INVOICE", workspaceId: input.workspaceId,
+      // The person paying. For Gate 1 that is the owner or an admin.
+      payerUserId: input.userId, platformInvoiceId: input.invoice.id, amountCents: input.invoice.totalCents,
+    },
+  });
+  return reference;
+}
+
+/** Payment row plus Paystack checkout for an open invoice; card only. */
+async function checkoutInvoice(input: {
+  invoice: { id: string; totalCents: number };
+  workspaceId: string;
+  userId: string;
+  email: string;
+  returnPath: string;
+}) {
+  const reference = await newInvoicePayment(input);
+  try {
+    const { authorizationUrl } = await getProvider().initializeCheckout({
+      reference,
+      email: input.email,
+      amountCents: input.invoice.totalCents,
+      callbackUrl: `${await requestOrigin()}${input.returnPath}`,
+      channels: ["card"],
+      metadata: { workspaceId: input.workspaceId, invoiceId: input.invoice.id, purpose: "PLATFORM_INVOICE" },
+    });
+    return { authorizationUrl, reference };
+  } catch (e) {
+    await prisma.payment.update({ where: { reference }, data: { status: "FAILED" } });
+    throw e;
+  }
+}
+
+const returnPathSchema = z.string().min(1).max(512).refine((p) => safeReturnPath(p) !== null, "Must be a same-site path");
+
+/**
+ * Ends the trial (or a READ_ONLY or CANCELLED spell): invoices 30 days of
+ * seats in advance and sends the owner to Paystack. The webhook, or the
+ * return page's status poll, applies the payment.
+ */
+export const startFirstPayment = viewerActionClient
+  .schema(z.object({ returnPath: returnPathSchema }))
+  .action(async ({ parsedInput: { returnPath } }) => {
+    const { viewer, workspace } = await billingManager();
+    if (!["TRIAL", "READ_ONLY", "CANCELLED"].includes(workspace.billingState)) {
+      throw new BillingError("FORBIDDEN", `No first payment in state ${workspace.billingState}`);
+    }
+    const customerCode = await ensureProviderCustomer(workspace.id, viewer.user.email, workspace.name);
+    await prisma.subscription.upsert({
+      where: { workspaceId: workspace.id },
+      create: { workspaceId: workspace.id, billingEmail: viewer.user.email, providerCustomerCode: customerCode },
+      update: { providerCustomerCode: customerCode },
+    });
+
+    const invoice = await createFirstInvoice(workspace.id);
+    if (invoice.totalCents <= 0) {
+      await prisma.platformInvoice.update({ where: { id: invoice.id }, data: { status: "VOID" } });
+      throw new BillingError("NOTHING_TO_BILL", "No learners are enrolled yet");
+    }
+    const { authorizationUrl, reference } = await checkoutInvoice({
+      invoice, workspaceId: workspace.id, userId: viewer.user.id, email: viewer.user.email, returnPath,
+    });
+    return { authorizationUrl, reference, amountCents: invoice.totalCents };
+  });
+
+/**
+ * Pays an open or overdue invoice: with the saved card if there is one,
+ * otherwise through Paystack checkout (the new card is then saved).
+ */
+export const payPlatformInvoice = viewerActionClient
+  .schema(z.object({ invoiceId: z.string().min(1), returnPath: returnPathSchema.default("/dashboard/billing") }))
+  .action(async ({ parsedInput: { invoiceId, returnPath } }) => {
+    const { viewer, workspace } = await billingManager();
+    const invoice = await prisma.platformInvoice.findFirst({
+      where: { id: invoiceId, workspaceId: workspace.id, status: { in: ["OPEN", "PAST_DUE"] } },
+      select: { id: true, totalCents: true },
+    });
+    if (!invoice) throw new BillingError("NOT_FOUND", "No open invoice with that id");
+    if (invoice.totalCents <= 0) throw new BillingError("NOTHING_TO_BILL", "The invoice total is zero");
+
+    const sub = await prisma.subscription.findUnique({
+      where: { workspaceId: workspace.id },
+      select: { status: true, authorizationCodeEnc: true, billingEmail: true },
+    });
+    if (sub?.status === "AUTHORISED" && sub.authorizationCodeEnc) {
+      const reference = await newInvoicePayment({ invoice, workspaceId: workspace.id, userId: viewer.user.id });
+      const charge = await getProvider().chargeAuthorization({
+        authorizationCode: decryptSecret(sub.authorizationCodeEnc),
+        email: sub.billingEmail,
+        amountCents: invoice.totalCents,
+        reference,
+        metadata: { workspaceId: workspace.id, invoiceId: invoice.id, purpose: "PLATFORM_INVOICE" },
+      });
+      if (charge.status !== "FAILED") {
+        const settled = await settlePayment(reference);
+        if (settled.status === "SUCCEEDED") {
+          revalidatePath("/dashboard", "layout");
+          return { status: "CHARGED" as const };
+        }
+        // Still processing: the return page polls this reference.
+        if (settled.status === "PENDING") return { status: "PENDING" as const, reference };
+      } else {
+        await prisma.payment.updateMany({ where: { reference, status: "PENDING" }, data: { status: "FAILED" } });
+      }
+      // The saved card was declined: fall through to checkout with a new card.
+    }
+
+    const { authorizationUrl, reference } = await checkoutInvoice({
+      invoice, workspaceId: workspace.id, userId: viewer.user.id, email: viewer.user.email, returnPath,
+    });
+    return { status: "REDIRECT" as const, authorizationUrl, reference };
+  });
+
+/**
+ * For the return page's poll. Asks Paystack directly while the payment is
+ * pending, so the page settles even if the webhook is late or (on Preview)
+ * points at another deployment.
+ */
+export const getBillingPaymentStatus = viewerActionClient
+  .schema(z.object({ reference: z.string().min(1).max(128) }))
+  .action(async ({ parsedInput: { reference } }) => {
+    const { workspace } = await billingManager();
+    const payment = await prisma.payment.findFirst({
+      where: { reference, workspaceId: workspace.id },
+      select: { status: true },
+    });
+    if (!payment) throw new BillingError("NOT_FOUND", "No payment with that reference");
+
+    let status: string = payment.status;
+    if (status === "PENDING") {
+      try {
+        status = (await settlePayment(reference)).status;
+      } catch (e) {
+        console.error("[billing] payment status check failed:", (e as Error).message);
+      }
+    }
+    if (status === "SUCCEEDED") revalidatePath("/dashboard", "layout");
+    return {
+      status: status === "SUCCEEDED" ? ("SUCCEEDED" as const) : status === "PENDING" ? ("PENDING" as const) : ("FAILED" as const),
     };
   });
