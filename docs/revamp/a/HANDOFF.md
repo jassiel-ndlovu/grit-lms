@@ -3,6 +3,41 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Gate 1 payments in Paystack test mode; DMARC and support@, `revamp/a-next`
+
+Done:
+- **Workspace payments (Gate 1)**, behind `BILLING=1`:
+  - Actions in `src/features/billing/actions.ts`: `startFirstPayment`, `payPlatformInvoice` and `getBillingPaymentStatus`.
+  - The first invoice is built in `billing/invoice.ts`.
+  - `settlePayment` in `payments/settle.ts` is the only code that moves a payment out of PENDING. The webhook route `POST /api/webhooks/paystack` (`payments/webhooks.ts`) calls it.
+  - A payment counts only when Paystack's `verifyTransaction` confirms status, amount and currency.
+  - On success it marks the invoice PAID, opens a 30-day period from the payment and writes the ADVANCE seats. It saves the card, encrypted, sets the workspace ACTIVE and removes the trial caps.
+  - The seats are the learners enrolled when the invoice was issued, rebuilt from the enrolment intervals.
+- **Two Paystack behaviours handled:**
+  - An unpaid checkout reports "abandoned", so ABANDONED never closes a payment.
+  - A payer can retry a declined card on the same reference, so a verified success replaces FAILED.
+- **Checks:**
+  - `scripts/check-payments.ts`: 23 checks.
+  - A one-off end-to-end run on the preview DB with the Paystack test key: 21 checks, covering a real test checkout, bad signature → 401, signed success, redelivery, a short payment refused, and cleanup.
+- `PAYMENT_ENC_KEY` (AES-256-GCM, generated) is on Vercel Preview only. Production needs its own key before billing goes live there.
+- **Email:**
+  - DMARC is `p=quarantine` in both Cloudflare and Vercel DNS.
+  - The Resend records are copied into Vercel DNS.
+  - The Email Routing rule `support@` → owner exists and is waiting for the zone to activate. See `ops/domain-dns.md`.
+
+For B:
+- Billing contract Draft 1.3: build the pay button and return page against `startFirstPayment` / `payPlatformInvoice`. The return page polls `getBillingPaymentStatus`.
+- Map the new code `NOTHING_TO_BILL`.
+- `payPlatformInvoice` can also return `PENDING` with a `reference`; poll it the same way.
+
+Next:
+- `startCardReplacement`, and nightly reconciliation (`payments-reconcile`: PENDING over 24 h → ABANDONED, FAILED events retried).
+- `buildRenewalInvoice` and the daily billing job.
+
+Questions for the owner:
+- **At xneelo:** remove `ns1.vercel-dns.com` and `ns2.vercel-dns.com` from the nameservers and keep only Cloudflare's two. Cloudflare can't activate the zone until then, and `support@` waits on that.
+- **Paystack test webhook URL:** set it to `https://www.nexa-lms.co.za/api/webhooks/paystack` for live later. Preview deployments sit behind Vercel's login, so test webhooks can't reach them. On Preview the return-page poll settles payments instead.
+
 ## 2026-11-19 Domain on Cloudflare; email from notify.nexa-lms.co.za, `revamp/a-domain`
 
 Done (details in `ops/domain-dns.md`):

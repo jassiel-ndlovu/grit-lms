@@ -19,7 +19,7 @@ and www start failing TLS.
 | `resend._domainkey.notify` | TXT | DKIM key from Resend | Resend signing |
 | `send.notify` | CNAME | `send.forge.rmta.net` | Resend return path (SPF) |
 | `rsend.notify` | CNAME | `rsend-euw1.forge.rmta.net` | Resend return path (SPF) |
-| `_dmarc` | TXT | `v=DMARC1; p=none;` | DMARC, monitor only |
+| `_dmarc` | TXT | `v=DMARC1; p=quarantine; pct=100; adkim=r; aspf=r;` | DMARC: mail failing DKIM/SPF alignment goes to spam |
 
 The Cloudflare import also brought a proxied wildcard `*` A record; it was
 deleted because nothing uses other subdomains.
@@ -34,9 +34,12 @@ CLI, signed in as the owner). Edits take a JSON `--body`; deletes need `--force`
 - `EMAIL_FROM="Nexa LMS <noreply@notify.nexa-lms.co.za>"` on Vercel Production
   (`src/lib/email/config.ts`). Preview and local keep Resend's dev sender, which
   only delivers to the Resend account owner.
-- Later: tighten DMARC to `p=quarantine` once a few weeks of sends look clean,
-  and set `EMAIL_REPLY_TO` when a support inbox exists (for example Cloudflare
-  Email Routing for `support@nexa-lms.co.za`).
+- DMARC is `p=quarantine` (owner's call, 2026-11-19). Only Resend sends as
+  the domain; anything else that should, needs DKIM for its own subdomain first.
+- **support@nexa-lms.co.za:** Cloudflare Email Routing rule "support to owner"
+  forwards to the owner's verified address. It starts working when the zone is
+  active (Cloudflare then adds its MX and SPF records at the apex). After that,
+  set `EMAIL_REPLY_TO=support@nexa-lms.co.za` on Production and redeploy.
 
 ## Canonical URL
 

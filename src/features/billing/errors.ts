@@ -15,7 +15,9 @@ export type BillingErrorCode =
   | "PROVIDER_ERROR"
   | "FORBIDDEN"
   | "BILLING_DISABLED"
-  | "NOT_FOUND";
+  | "NOT_FOUND"
+  /** First payment with no enrolled learners: nothing to charge yet. */
+  | "NOTHING_TO_BILL";
 
 export class BillingError extends Error {
   constructor(public readonly code: BillingErrorCode, message?: string) {
