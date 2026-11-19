@@ -16,6 +16,7 @@
 
 import "server-only";
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db";
@@ -60,6 +61,9 @@ export function defineJob(name: JobName, run: () => Promise<JobResult>) {
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       console.error(`[jobs] ${name} failed:`, e);
+      // No-op unless SENTRY_DSN is set; the event is scrubbed in beforeSend.
+      Sentry.captureException(e, { tags: { job: name } });
+      await Sentry.flush(2000).catch(() => false);
       if (row) {
         await record("finish JobRun", () =>
           prisma.jobRun.update({

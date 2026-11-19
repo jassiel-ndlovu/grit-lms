@@ -289,6 +289,22 @@ Blocked on the other agent:
 Questions for the owner:
 - See `design/README.md`, "Owner questions" (renewal date rule, late payments, the security fix, backups, uptime checker, 2FA timing, Resend Pro).
 
+## 2026-11-19 Sentry, `revamp/a-sentry`
+
+Done:
+- `@sentry/nextjs` 10.77.1 (pinned, Next 15 supported). `src/instrumentation.ts`, `src/instrumentation-client.ts`, `withSentryConfig` in `next.config.ts`. All off unless `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` is set; source maps upload only when `SENTRY_AUTH_TOKEN` is set.
+- Privacy in `src/lib/sentry/scrub.ts` (`beforeSend`): no PII, bodies, cookies or auth headers; no replay; traces 0.1; environment from `VERCEL_ENV`. Check: `scripts/check-sentry-scrub.ts`.
+- `defineJob` failures are captured, tagged with the job name. Owner steps: `ops/sentry-setup.md`.
+
+Next:
+- Capture errors in the Paystack webhook route when it exists (`Sentry.captureException(e, { tags: { route: "paystack-webhook" } })`).
+
+Blocked on the other agent:
+- For B (optional, no change made): an App Router `src/app/global-error.tsx` that calls `Sentry.captureException(error)` would also catch root-layout render errors. Route-level errors are already captured through `onRequestError`.
+
+Questions for the owner:
+- Create the Sentry project and set the variables (see `ops/sentry-setup.md`). Nothing happens until you do.
+
 ## 2026-11-16 Cron fix, `revamp/a-cron-scheduler`
 
 Done:
