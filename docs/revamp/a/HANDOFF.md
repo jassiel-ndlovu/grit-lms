@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Usage and invoice queries; answers for B; drop backup, `revamp/a-billing-queries`
+
+Done:
+- **Queries B was waiting for** (contract Draft 1.6), each with a `…For(workspace)` core for scripts and the admin console:
+  - `listPlatformInvoices` pages with a cursor, newest first.
+  - `getPlatformInvoice` returns the lines, card and off-site payments, and `pdfUrl: null` for now.
+  - `getUsage` covers active students (counted from the enrolment intervals) and AI marks (from the usage meter), with an estimate built by the same invoice builder as the renewal.
+- **`getBillingPaymentStatus` returns `purpose`** (`CARD` or `INVOICE`), so B no longer has to rely on the `nx-card-` prefix.
+- **A bug fixed:** `payPlatformInvoice`'s default return path and every billing email linked to `/dashboard/billing`, which doesn't exist. Both now use `/dashboard/settings/billing`.
+- **#93 step 5 (B's #115):**
+  - Took the production backup branch `backup-legacy-course-links-20261119`.
+  - My code compiles with B's drop merged in.
+  - The queries' end-to-end run passed on the preview DB, which already has the drop (11 checks, test rows removed).
+- **Checks:** tsc, lint, `check-email-queue.ts`.
+
+Next:
+- Invoice PDFs (`pdfUrl`).
+- Usage metering for AI marks once B's AI marking records rows.
+- The retention deletes after #113.
+
 ## 2026-11-19 All email through the queue; retention warnings, `revamp/a-email-queue-all`
 
 Done:
