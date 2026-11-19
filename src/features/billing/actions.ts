@@ -186,7 +186,7 @@ export const startFirstPayment = viewerActionClient
  * otherwise through Paystack checkout (the new card is then saved).
  */
 export const payPlatformInvoice = viewerActionClient
-  .schema(z.object({ invoiceId: z.string().min(1), returnPath: returnPathSchema.default("/dashboard/billing") }))
+  .schema(z.object({ invoiceId: z.string().min(1), returnPath: returnPathSchema.default("/dashboard/settings/billing") }))
   .action(async ({ parsedInput: { invoiceId, returnPath } }) => {
     const { viewer, workspace } = await billingManager();
     const invoice = await prisma.platformInvoice.findFirst({
@@ -222,9 +222,11 @@ export const getBillingPaymentStatus = viewerActionClient
     const { workspace } = await billingManager();
     const payment = await prisma.payment.findFirst({
       where: { reference, workspaceId: workspace.id },
-      select: { status: true },
+      select: { status: true, purpose: true },
     });
     if (!payment) throw new BillingError("NOT_FOUND", "No payment with that reference");
+    // CARD (a refunded R10 card check) or INVOICE, so the return page can word it.
+    const purpose = payment.purpose === "CARD_AUTHORISATION" ? ("CARD" as const) : ("INVOICE" as const);
 
     let status: string = payment.status;
     if (status === "PENDING") {
@@ -239,6 +241,7 @@ export const getBillingPaymentStatus = viewerActionClient
     if (succeeded) revalidatePath("/dashboard", "layout");
     return {
       status: succeeded ? ("SUCCEEDED" as const) : status === "PENDING" ? ("PENDING" as const) : ("FAILED" as const),
+      purpose,
     };
   });
 

@@ -28,7 +28,7 @@ export function rands(cents: number): string {
   return `R${r[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${r[1]}`;
 }
 
-const BILLING_PATH = "/dashboard/billing";
+const BILLING_PATH = "/dashboard/settings/billing";
 const footer = () =>
   `You're receiving this because you manage billing for this ${escapeHtml("Nexa")} workspace. Billing emails can't be switched off.`;
 
