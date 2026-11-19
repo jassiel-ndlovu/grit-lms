@@ -3,6 +3,18 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Password reset; Nexa admin account for the owner, `revamp/a-password-reset`
+
+Done:
+- **Password reset.** `/forgot-password` was a form with nothing behind it; it now works.
+  - `src/features/auth/password-reset.ts`: a token stored as a SHA-256 hash, valid for one hour and usable once.
+  - The answer is the same whether or not the email has an account. Requests are throttled to one per account every 2 minutes.
+  - The link goes through the send queue at AUTH priority, with the token sealed in the row and removed once sent.
+  - Resetting spends every other outstanding link for that account. Passwords need at least 10 characters, mixing letters with numbers or symbols.
+  - Pages: `/forgot-password` and `/forgot-password/reset`.
+  - Migration `11_password_reset_token` (additive).
+- **Checks:** tsc, lint, and a one-off end-to-end run on the preview DB with 12 checks, covering the request, throttle, unknown email, rules, reset, single use, expiry and the email. The test rows were removed.
+
 ## 2026-11-19 Gate 2, slice 1: payouts and fee invoices; retention switched on, `revamp/a-gate2-payouts`
 
 Done:

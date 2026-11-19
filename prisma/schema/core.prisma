@@ -34,6 +34,7 @@ model User {
   activities              ActivityLog[]
   notifications           Notification[]
   emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
 
   // Tenancy (tenancy.prisma)
   memberships        Membership[]
@@ -184,4 +185,19 @@ model JobRun {
   error      String?
 
   @@index([job, startedAt])
+}
+
+/// One-time password reset links (src/features/auth/password-reset.ts).
+/// Only a SHA-256 of the token is stored; the link expires after an hour.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

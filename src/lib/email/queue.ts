@@ -24,7 +24,7 @@ import { decryptSecret, encryptSecret } from "@/features/payments/secrets";
 
 import { renderBillingEmail, type BillingTemplate, type BillingTemplateData, type Rendered } from "./billing-templates";
 import { recipientAllowed, sendEmail } from "./send";
-import { digestEmail, notificationEmail, verificationEmail, type EmailNotificationItem } from "./templates";
+import { digestEmail, notificationEmail, passwordResetEmail, verificationEmail, type EmailNotificationItem } from "./templates";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -102,6 +102,11 @@ function renderRow(template: string, to: string, data: unknown): Rendered {
     if (!d.tokenSealed) throw new Error("Verification token already removed");
     return verificationEmail({ to, name: d.name, token: unseal(d.tokenSealed) });
   }
+  if (template === "auth:reset") {
+    const d = data as VerifyData;
+    if (!d.tokenSealed) throw new Error("Reset token already removed");
+    return passwordResetEmail({ to, name: d.name, token: unseal(d.tokenSealed) });
+  }
   if (template === "notification") return notificationEmail({ to, item: (data as NotificationData).item });
   if (template === "digest") {
     const d = data as DigestData;
@@ -112,7 +117,7 @@ function renderRow(template: string, to: string, data: unknown): Rendered {
 
 /** What a template does once its row is SENT, or finished without sending. */
 async function afterRow(template: string, data: unknown, sent: boolean): Promise<{ data?: Prisma.InputJsonValue }> {
-  if (template === "auth:verify") {
+  if (template === "auth:verify" || template === "auth:reset") {
     // Drop the sealed token whatever happened; a new request mints a new one.
     const { name } = data as VerifyData;
     return { data: { name } };
