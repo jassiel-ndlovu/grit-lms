@@ -46,7 +46,7 @@ check("trial ending tomorrow", renderBillingEmail("trial-ending", { workspaceNam
 check("trial ending in 4 days", renderBillingEmail("trial-ending", { workspaceName: "W", daysLeft: 4, trialEndsOn: "3 Feb 2027" }).subject, "Your Nexa trial ends in 4 days");
 const rec = renderBillingEmail("receipt", { workspaceName: "W", invoiceNumber: "NX-2027-000001", totalCents: 19800, paidOn: "3 Feb 2027", renewsOn: "5 Mar 2027", cardLast4: "4081" });
 check("receipt names card and renewal", rec.text.includes("ending 4081") && rec.text.includes("5 Mar 2027"), true);
-check("every template links to billing", ["trial-ended", "read-only"].every((t) => renderBillingEmail(t as "trial-ended", { workspaceName: "W", invoiceNumber: "N", totalCents: 1 } as never).text.includes("/dashboard/billing")), true);
+check("every template links to billing", ["trial-ended", "read-only"].every((t) => renderBillingEmail(t as "trial-ended", { workspaceName: "W", invoiceNumber: "N", totalCents: 1 } as never).text.includes("/dashboard/settings/billing")), true);
 
 // Retention warnings: 30 days, then 7 days, none once due
 check("warning thresholds", [45, 30, 20, 8, 7, 1, 0].map(retentionWarningDue), [null, 30, 30, 30, 7, 7, null]);

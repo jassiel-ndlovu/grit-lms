@@ -5,8 +5,7 @@
  * arithmetic is in ./pricing.ts.
  *
  * Built here: getBillingOverview, getCourseTiers, getCourseServices,
- * previewServiceChange. getUsage, listPlatformInvoices and
- * getPlatformInvoice follow with invoicing.
+ * previewServiceChange, getUsage, listPlatformInvoices, getPlatformInvoice.
  */
 
 import "server-only";
@@ -124,6 +123,38 @@ async function distinctActiveLearners(workspaceId: string): Promise<number> {
   return rows.length;
 }
 
+/** Usage against each cap, counted from `windowStart` (the period or the trial). */
+async function capStatuses(workspaceId: string, windowStart: Date, meter?: string): Promise<CapStatus[]> {
+  const capRows = await prisma.usageCap.findMany({ where: { workspaceId, ...(meter ? { meter: meter as never } : {}) } });
+  const caps: CapStatus[] = [];
+  for (const cap of capRows) {
+    let used: number;
+    if (cap.meter === "ACTIVE_STUDENTS") {
+      used = await distinctActiveLearners(workspaceId);
+    } else {
+      const s = await prisma.usageRecord.aggregate({
+        where: { workspaceId, meter: cap.meter, day: { gte: windowStart } },
+        _sum: { quantity: true },
+      });
+      used = s._sum.quantity ?? 0;
+    }
+    let limit = cap.limitQuantity;
+    if (cap.meter === "STORAGE_MB") {
+      used = Math.ceil(used / 1024);
+      limit = Math.ceil(limit / 1024);
+    }
+    caps.push({
+      meter: METER_OUT[cap.meter],
+      used,
+      limit,
+      percent: limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : null,
+      hardStop: cap.hardStop,
+      source: cap.source,
+    });
+  }
+  return caps;
+}
+
 /* ------------------------------------------------------------------------- */
 /* getBillingOverview                                                         */
 /* ------------------------------------------------------------------------- */
@@ -176,33 +207,7 @@ export async function getBillingOverview() {
   // Caps, counted over the current period (or the trial).
   const windowStart = period?.start
     ?? (workspace.trialEndsAt ? addDays(new Date(workspace.trialEndsAt), -config.trialDays) : addDays(now, -config.periodDays));
-  const capRows = await prisma.usageCap.findMany({ where: { workspaceId: workspace.id } });
-  const caps: CapStatus[] = [];
-  for (const cap of capRows) {
-    let used: number;
-    if (cap.meter === "ACTIVE_STUDENTS") {
-      used = await distinctActiveLearners(workspace.id);
-    } else {
-      const s = await prisma.usageRecord.aggregate({
-        where: { workspaceId: workspace.id, meter: cap.meter, day: { gte: windowStart } },
-        _sum: { quantity: true },
-      });
-      used = s._sum.quantity ?? 0;
-    }
-    let limit = cap.limitQuantity;
-    if (cap.meter === "STORAGE_MB") {
-      used = Math.ceil(used / 1024);
-      limit = Math.ceil(limit / 1024);
-    }
-    caps.push({
-      meter: METER_OUT[cap.meter],
-      used,
-      limit,
-      percent: limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : null,
-      hardStop: cap.hardStop,
-      source: cap.source,
-    });
-  }
+  const caps = await capStatuses(workspace.id, windowStart);
 
   const overdue = await prisma.platformInvoice.findFirst({
     where: { workspaceId: workspace.id, OR: [{ status: "PAST_DUE" }, { status: "OPEN", dueAt: { lt: now } }] },
@@ -389,5 +394,278 @@ export async function previewServiceChange(input: { courseId: string; enable: st
     catchUpCents: r.catchUpCents,
     nextRenewalDeltaCents: r.nextRenewalDeltaCents,
     holdUntil: r.holdUntil?.toISOString() ?? null,
+  };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Invoices                                                                   */
+/* ------------------------------------------------------------------------- */
+
+export type InvoiceSummary = {
+  id: string;
+  number: string;
+  periodStart: string;
+  periodEnd: string;
+  status: "DRAFT" | "OPEN" | "PAID" | "VOID" | "UNCOLLECTIBLE";
+  totalCents: number;
+  issuedAt: string;
+  paidAt: string | null;
+};
+
+type InvoiceRow = {
+  id: string; number: string; status: string; totalCents: number; issuedAt: Date; paidAt: Date | null;
+  opensPeriodStart: Date; closesPeriodId: string | null;
+};
+
+/**
+ * The period an invoice pays for: the one it opened (paid), else the one it
+ * closes (a final invoice after cancel), else the 30 days it would open.
+ * PAST_DUE shows as OPEN, as in the contract's InvoiceStatus.
+ */
+async function summarise(rows: InvoiceRow[], periodDays: number): Promise<InvoiceSummary[]> {
+  const ids = rows.map((r) => r.id);
+  const closing = rows.map((r) => r.closesPeriodId).filter((x): x is string => x != null);
+  const periods = await prisma.billingPeriod.findMany({
+    where: { OR: [{ openedByInvoiceId: { in: ids } }, { id: { in: closing } }] },
+    select: { id: true, start: true, end: true, openedByInvoiceId: true },
+  });
+  return rows.map((r) => {
+    const opened = periods.find((p) => p.openedByInvoiceId === r.id);
+    const hasAdvance = opened != null;
+    const closed = !hasAdvance && r.closesPeriodId ? periods.find((p) => p.id === r.closesPeriodId) : undefined;
+    const start = opened?.start ?? closed?.start ?? r.opensPeriodStart;
+    const end = opened?.end ?? closed?.end ?? addDays(r.opensPeriodStart, periodDays);
+    return {
+      id: r.id,
+      number: r.number,
+      periodStart: start.toISOString(),
+      periodEnd: end.toISOString(),
+      status: (r.status === "PAST_DUE" ? "OPEN" : r.status) as InvoiceSummary["status"],
+      totalCents: r.totalCents,
+      issuedAt: r.issuedAt.toISOString(),
+      paidAt: r.paidAt?.toISOString() ?? null,
+    };
+  });
+}
+
+const invoiceRowSelect = {
+  id: true, number: true, status: true, totalCents: true, issuedAt: true, paidAt: true, opensPeriodStart: true, closesPeriodId: true,
+} as const;
+
+/** The workspace's invoices, newest first. Drafts are left out. `cursor` is the last id of the previous page. */
+export async function listPlatformInvoices(input: { cursor?: string; limit?: number } = {}) {
+  const { workspace } = await workspaceViewer("billing.view");
+  return listPlatformInvoicesFor(workspace.id, input);
+}
+
+/** listPlatformInvoices without the permission check (scripts, admin console). */
+export async function listPlatformInvoicesFor(workspaceId: string, input: { cursor?: string; limit?: number } = {}) {
+  const workspace = { id: workspaceId };
+  const limit = Math.min(Math.max(input.limit ?? 20, 1), 100);
+  const config = await getBillingConfig();
+  const rows = await prisma.platformInvoice.findMany({
+    where: { workspaceId: workspace.id, status: { not: "DRAFT" } },
+    orderBy: [{ issuedAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+    ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+    select: invoiceRowSelect,
+  });
+  const page = rows.slice(0, limit);
+  return {
+    items: await summarise(page, config.periodDays),
+    nextCursor: rows.length > limit ? page[page.length - 1].id : null,
+  };
+}
+
+/**
+ * One invoice with its lines and payments. `pdfUrl` is null until invoice
+ * PDFs are built; B can render the invoice from the lines meanwhile.
+ */
+export async function getPlatformInvoice(input: { id: string }) {
+  const { workspace } = await workspaceViewer("billing.view");
+  return getPlatformInvoiceFor(workspace.id, input);
+}
+
+/** getPlatformInvoice without the permission check (scripts, admin console). */
+export async function getPlatformInvoiceFor(workspaceId: string, input: { id: string }) {
+  const workspace = { id: workspaceId };
+  const inv = await prisma.platformInvoice.findFirst({
+    where: { id: input.id, workspaceId: workspace.id, status: { not: "DRAFT" } },
+    select: {
+      ...invoiceRowSelect,
+      subtotalCents: true, discountCents: true, creditCents: true, vatCents: true,
+      lines: { orderBy: { id: "asc" }, select: { kind: true, courseId: true, courseTitle: true, tierKey: true, serviceKey: true, description: true, quantity: true, unitPriceCents: true, amountCents: true } },
+      payments: { where: { status: { in: ["SUCCEEDED", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"] } }, orderBy: { createdAt: "asc" }, select: { createdAt: true, paidAt: true, amountCents: true, status: true } },
+      offsitePayments: { where: { voidedAt: null }, select: { receivedOn: true, amountCents: true } },
+    },
+  });
+  if (!inv) throw new BillingError("NOT_FOUND", "Invoice not found");
+  const config = await getBillingConfig();
+  const [summary] = await summarise([inv], config.periodDays);
+  const payments = [
+    ...inv.payments.map((p) => ({
+      at: (p.paidAt ?? p.createdAt).toISOString(),
+      amountCents: p.amountCents,
+      via: "CARD" as const,
+      status: p.status as "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED",
+    })),
+    ...inv.offsitePayments.map((o) => ({ at: o.receivedOn.toISOString(), amountCents: o.amountCents, via: "OFFSITE" as const, status: "SUCCEEDED" as const })),
+  ].sort((a, b) => a.at.localeCompare(b.at));
+  return {
+    ...summary,
+    lines: inv.lines.map((l) => toEstimateLine(l as InvoiceLineDraft)),
+    subtotalCents: inv.subtotalCents,
+    discountCents: inv.discountCents,
+    creditCents: inv.creditCents,
+    vatCents: inv.vatCents,
+    payments,
+    pdfUrl: null as string | null,
+  };
+}
+
+/* ------------------------------------------------------------------------- */
+/* getUsage                                                                   */
+/* ------------------------------------------------------------------------- */
+
+const METER_IN: Record<ContractMeter, "ACTIVE_STUDENTS" | "AI_MARKS" | "STORAGE_MB" | "API_REQUESTS" | "LIVE_ROOM_MINUTES"> = {
+  "active-students": "ACTIVE_STUDENTS",
+  "ai-marks": "AI_MARKS",
+  "storage-gb": "STORAGE_MB",
+  "api-pass-through": "API_REQUESTS",
+  "live-room-minutes": "LIVE_ROOM_MINUTES",
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+
+/**
+ * Usage of one meter over a billing period (default: the current one, or
+ * the trial). `days` runs from the period start to today or the period end.
+ *   - active-students: distinct learners with an open enrolment that day,
+ *     counted from the enrolment intervals; the total is distinct learners
+ *     in the period. `estimatedCents` is the period's seat charges so far:
+ *     seats paid in advance plus catch-ups and tier upgrades to date.
+ *   - ai-marks: marks per day from the usage meter; `estimatedCents` is the
+ *     pass-through above the Pro pools so far.
+ *   - storage-gb, api-pass-through, live-room-minutes: from the usage meter
+ *     (empty until those features record usage); not billed in v1, so 0.
+ */
+export async function getUsage(input: { meter: ContractMeter; periodStart?: string }) {
+  const { workspace } = await workspaceViewer("billing.view");
+  return getUsageFor({ id: workspace.id, trialEndsAt: workspace.trialEndsAt ?? null }, input);
+}
+
+/** getUsage without the permission check (scripts, admin console). */
+export async function getUsageFor(
+  workspace: { id: string; trialEndsAt: string | Date | null },
+  input: { meter: ContractMeter; periodStart?: string },
+) {
+  const meter = METER_IN[input.meter];
+  if (!meter) throw new BillingError("NOT_FOUND", "Unknown meter");
+  const now = new Date();
+  const config = await getBillingConfig();
+
+  // The period.
+  let period: { id: string | null; start: Date; end: Date };
+  if (input.periodStart) {
+    const p = await prisma.billingPeriod.findFirst({ where: { workspaceId: workspace.id, start: new Date(input.periodStart) }, select: { id: true, start: true, end: true } });
+    if (!p) throw new BillingError("NOT_FOUND", "No billing period starts then");
+    period = p;
+  } else {
+    const open = await loadOpenPeriod(workspace.id, now);
+    if (open) period = { id: open.id, start: open.start, end: open.end };
+    else {
+      const trialEnd = workspace.trialEndsAt ? new Date(workspace.trialEndsAt) : addDays(now, config.periodDays);
+      period = { id: null, start: addDays(trialEnd, -(workspace.trialEndsAt ? config.trialDays : config.periodDays)), end: trialEnd };
+    }
+  }
+  const until = new Date(Math.min(now.getTime(), period.end.getTime()));
+  const dayList: string[] = [];
+  for (let t = Date.UTC(period.start.getUTCFullYear(), period.start.getUTCMonth(), period.start.getUTCDate()); t < until.getTime(); t += DAY_MS) {
+    dayList.push(dayKey(new Date(t)));
+  }
+
+  let days: Array<{ day: string; quantity: number }>;
+  let totalQuantity: number;
+  if (meter === "ACTIVE_STUDENTS") {
+    const rows = await prisma.enrollment.findMany({
+      where: { workspaceId: workspace.id, startedAt: { lt: until }, OR: [{ endedAt: null }, { endedAt: { gt: period.start } }] },
+      select: { learnerId: true, startedAt: true, endedAt: true },
+    });
+    days = dayList.map((day) => {
+      const dayStart = new Date(`${day}T00:00:00.000Z`);
+      const dayEnd = new Date(dayStart.getTime() + DAY_MS);
+      const on = new Set(rows.filter((r) => r.startedAt < dayEnd && (!r.endedAt || r.endedAt > dayStart)).map((r) => r.learnerId));
+      return { day, quantity: on.size };
+    });
+    totalQuantity = new Set(rows.map((r) => r.learnerId)).size;
+  } else {
+    const grouped = await prisma.usageRecord.groupBy({
+      by: ["day"],
+      where: { workspaceId: workspace.id, meter, day: { gte: period.start, lt: period.end } },
+      _sum: { quantity: true },
+    });
+    const byDay = new Map(grouped.map((g) => [dayKey(g.day), g._sum.quantity ?? 0]));
+    const toGb = (n: number) => (meter === "STORAGE_MB" ? Math.ceil(n / 1024) : n);
+    days = dayList.map((day) => ({ day, quantity: toGb(byDay.get(day) ?? 0) }));
+    totalQuantity = meter === "STORAGE_MB" ? Math.max(0, ...days.map((d) => d.quantity)) : days.reduce((n, d) => n + d.quantity, 0);
+  }
+
+  // Estimate, from the same invoice builder as the renewal.
+  let estimatedCents = 0;
+  if (meter === "ACTIVE_STUDENTS" || meter === "AI_MARKS") {
+    const courses = await loadWorkspaceCourses(workspace.id);
+    const courseIds = courses.map((c) => c.courseId);
+    const { prices, aiMarksPerStudent } = await getTierPrices(now);
+    const open = period.id ? await loadOpenPeriod(workspace.id, new Date(period.end.getTime() - 1)) : null;
+    if (open) {
+      const [overlap, ai] = await Promise.all([
+        overlappingLearnersByCourse(courseIds, open.start, until),
+        aiUsageByCourse(workspace.id, open.start, open.end),
+      ]);
+      const draft = buildPeriodInvoice({
+        prices, aiMarksPerStudent, apiMarginBps: config.apiMarginBps, advance: [],
+        closing: courses.map((c) => ({
+          courseId: c.courseId,
+          title: c.title,
+          highestTier: highestTierDuring({ tierAtStart: courseTierAtStart(c, open), holds: c.holds, override: c.override, start: open.start, end: open.end }),
+          overlappingLearnerIds: overlap.get(c.courseId) ?? [],
+          charged: open.charged.get(c.courseId) ?? [],
+          aiMarks: ai.get(c.courseId),
+        })),
+      });
+      if (meter === "AI_MARKS") {
+        estimatedCents = draft.lines.filter((l) => l.kind === "PASS_THROUGH" && l.serviceKey === "ai-marking").reduce((n, l) => n + l.amountCents, 0);
+      } else {
+        const opener = await prisma.billingPeriod.findUniqueOrThrow({ where: { id: open.id }, select: { openedByInvoiceId: true } });
+        const advance = await prisma.platformInvoiceLine.aggregate({
+          where: { kind: "ADVANCE", invoiceId: opener.openedByInvoiceId },
+          _sum: { amountCents: true },
+        });
+        estimatedCents = (advance._sum.amountCents ?? 0)
+          + draft.lines.filter((l) => l.kind === "CATCH_UP" || l.kind === "TIER_UPGRADE").reduce((n, l) => n + l.amountCents, 0);
+      }
+    } else if (meter === "ACTIVE_STUDENTS") {
+      // Trial: what the first 30 days would cost now.
+      const seats = await activeSeatsByCourse(courseIds);
+      const draft = buildPeriodInvoice({
+        prices, aiMarksPerStudent, apiMarginBps: config.apiMarginBps,
+        advance: courses.map((c) => ({
+          courseId: c.courseId, title: c.title,
+          tier: billedTier({ derived: derivedTier(c.enabledKeys), holds: c.holds, override: c.override, at: now }),
+          learnerIds: seats.get(c.courseId) ?? [],
+        })),
+      });
+      estimatedCents = draft.subtotalCents;
+    }
+  }
+
+  const [cap] = await capStatuses(workspace.id, period.start, meter);
+  return {
+    period: { start: period.start.toISOString(), end: period.end.toISOString(), renewsAt: period.end.toISOString() },
+    days,
+    totalQuantity,
+    cap: cap ?? null,
+    estimatedCents,
   };
 }
