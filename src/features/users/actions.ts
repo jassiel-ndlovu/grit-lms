@@ -20,6 +20,7 @@ import { after } from "next/server";
 import { z } from "zod";
 
 import { sendVerificationEmail } from "@/features/auth/verification";
+import { ensureLearner, workspaceIdFor } from "@/features/workspaces/tenancy";
 import { prisma } from "@/lib/db";
 import {
   authActionClient,
@@ -47,7 +48,7 @@ function normalizeEmail(email: string): string {
  */
 export const createStudentUser = staffActionClient
   .schema(CreateStudentUserSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const email = normalizeEmail(parsedInput.email);
     const hashed = await bcrypt.hash(parsedInput.password, BCRYPT_ROUNDS);
 
@@ -64,8 +65,10 @@ export const createStudentUser = staffActionClient
       throw new Error(`A student profile with email ${email} already exists.`);
     }
 
-    const [user, student] = await prisma.$transaction([
-      prisma.user.create({
+    // The user, the profile (linked by userId, not email) and the Learner row
+    // in the creator's workspace (design 01; issue #93) in one transaction.
+    const { user, student } = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
         data: {
           name: parsedInput.fullName.trim(),
           email,
@@ -73,16 +76,19 @@ export const createStudentUser = staffActionClient
           role: "STUDENT",
         },
         select: { id: true, name: true, email: true },
-      }),
-      prisma.student.create({
+      });
+      const student = await tx.student.create({
         data: {
           fullName: parsedInput.fullName.trim(),
           email,
           imageUrl: parsedInput.imageUrl ?? null,
+          userId: user.id,
         },
         select: { id: true, fullName: true, email: true },
-      }),
-    ]);
+      });
+      await ensureLearner(tx, { workspaceId: workspaceIdFor(ctx.viewer), userId: user.id });
+      return { user, student };
+    });
 
     revalidatePath("/dashboard/manage-users");
 
