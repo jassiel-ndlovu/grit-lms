@@ -9,20 +9,29 @@
  *   context for its children (type === "NONE"). Sub-questions are always
  *   answerable.
  *
- *   Each navigable step in the runner is a TOP-LEVEL question. When the
- *   step has children we render them stacked inline beneath the parent,
- *   each with its own input. The student writes one answer per question
- *   regardless of nesting; the runner stores them in a flat record keyed
- *   by questionId.
+ *   Each navigable step in the runner is a TOP-LEVEL question, shown one per
+ *   screen (owner decision 8). When the step has children we render them
+ *   stacked inline beneath the parent, each with its own input. Answers are
+ *   a flat record keyed by questionId.
+ *
+ * Layout (b/research/05 "Test runner", 06 §3):
+ *   - One header: the title, save status, the clock, Save and Submit. In a
+ *     sitting it sticks to the top; the route has no sidebar (AppShell's
+ *     focus routes), so "Save and exit" is the only way out.
+ *   - Under it, the question strip: a button per step whose name spells
+ *     out its state ("Question 3, partly answered, 1 of 2 parts, flagged"),
+ *     drawn with fill, a corner flag and an error icon, not colour alone.
+ *   - Flag for review belongs to the student and is kept in this browser.
+ *   - Submit opens a summary listing unanswered and flagged questions.
+ *   - The clock reads out at 5 minutes and 1 minute left.
+ *   - Alt+↑/↓ move between questions, Alt+F flags, Ctrl/Cmd+S saves.
  *
  * Behaviour:
- *   - Owns answer state per questionId. Persists periodically via
- *     saveTestAnswersDraft (debounced ~3s) so refresh doesn't lose work.
- *   - Counts down to the earlier of `startedAt + timeLimit` and the due date. Auto-submits
- *     at zero (no user confirmation - legacy semantic).
- *   - Online/offline indicator next to the timer.
- *   - Sidebar lists top-level questions with a "X parts" subtitle when a
- *     parent has sub-questions. Click jumps directly to that step.
+ *   - Persists answers via saveTestAnswersDraft (debounced, with a max-wait
+ *     ceiling, flushed on navigation and when the tab is hidden). A failed
+ *     save marks the steps whose answers it carried as "not saved".
+ *   - Counts down to the earlier of `startedAt + timeLimit` and the due
+ *     date. Auto-submits at zero (no confirmation - legacy semantic).
  *
  * Modes:
  *   "student" (default) - the real sitting. Drafts autosave, the timer
@@ -31,19 +40,18 @@
  *     renderers, same layout, so what they see is what students get.
  *     Nothing autosaves; the timer counts down for realism but never
  *     submits; and the answers the tutor gives are saved as the test's
- *     ANSWER KEY rather than as an attempt. Running the preview through
- *     this component rather than a lookalike is the point - a separate
- *     preview would drift from the thing it claims to preview.
+ *     ANSWER KEY rather than as an attempt.
  */
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Eye, Loader2, Save, Wifi, WifiOff } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Eye, Flag, Loader2, LogOut, Save, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Kbd } from "@/components/ui/kbd";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,6 +73,15 @@ import {
 import { QuestionRenderer, type RendererQuestion } from "./question-renderer";
 import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import { attemptDeadline } from "../lib/attempt-deadline";
+import {
+  flagStorageKey,
+  runnerKey,
+  stepName,
+  summariseStep,
+  timerWarning,
+  unansweredLabels,
+  type StepSummary,
+} from "../lib/runner-state";
 
 /**
  * Question shape consumed by the runner. Top-level questions carry an
@@ -101,6 +118,11 @@ export interface TestRunnerProps {
   mode?: RunnerMode;
   /** The test's question numbering (Test.labelScheme); empty = default. */
   labelScheme?: string[];
+  /** Where "Save and exit" goes (a sitting only). Omit to hide the button. */
+  exitHref?: string;
+  /** Sticky offset classes for the header in a sitting. Default "top-0"
+   *  (the revamp shell has no top bar on this route). */
+  stickyTop?: string;
 }
 
 // Shorter debounce = quicker recovery from accidental refreshes.
@@ -122,23 +144,8 @@ function formatTime(seconds: number): string {
 /** Untimed tests only show the clock once the due date is this close. */
 const SHOW_DUE_CLOCK_WITHIN_S = 3 * 3600;
 
-function isAnswered(value: unknown): boolean {
-  if (value == null) return false;
-  if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === "string") return value.trim() !== "";
-  if (typeof value === "object") return Object.keys(value as object).length > 0;
-  return true;
-}
-
-/** Walk a top-level question + its sub-questions, calling f on each. */
-function forEachAnswerable(
-  q: RunnerQuestion,
-  f: (q: RunnerQuestion) => void,
-): void {
-  // NONE-typed questions don't accept an answer; skip them in counts.
-  if ((q.type as string) !== "NONE") f(q);
-  for (const child of q.subQuestions) forEachAnswerable(child, f);
-}
+/** How many unanswered labels the submit summary lists before "and N more". */
+const SUMMARY_LIMIT = 12;
 
 export function TestRunner({
   testId,
@@ -151,6 +158,8 @@ export function TestRunner({
   dueDate,
   mode = "student",
   labelScheme,
+  exitHref,
+  stickyTop = "top-0",
 }: TestRunnerProps) {
   const labels = React.useMemo(
     () => labelTree(questions, normalizeScheme(labelScheme), (q) => q.id, (q) => q.subQuestions),
@@ -168,6 +177,13 @@ export function TestRunner({
   // console.warn, so a student whose work wasn't persisting had no way to
   // know until they reloaded and found it gone.
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  // Question ids whose latest answer no save has stored yet, after a save
+  // failed. Drawn on the strip as "not saved".
+  const [unsavedIds, setUnsavedIds] = React.useState<ReadonlySet<string>>(() => new Set());
+  // Ids changed since the last save started.
+  const pendingRef = React.useRef<Set<string>>(new Set());
+  // Flagged top-level question ids (the student's own "come back to this").
+  const [flagged, setFlagged] = React.useState<ReadonlySet<string>>(() => new Set());
   // Preview-only: the tutor has changed an answer since the last explicit
   // save. Used to warn before navigating away, since nothing autosaves.
   const [dirty, setDirty] = React.useState(false);
@@ -210,6 +226,31 @@ export function TestRunner({
     };
   }, []);
 
+  /* ───── Flags, kept in this browser for this attempt ───── */
+  const flagsLoaded = React.useRef(false);
+  React.useEffect(() => {
+    if (preview || !submissionId) return;
+    try {
+      const raw = window.localStorage.getItem(flagStorageKey(submissionId));
+      const ids = raw ? (JSON.parse(raw) as unknown) : [];
+      if (Array.isArray(ids)) {
+        const known = new Set(questions.map((q) => q.id));
+        setFlagged(new Set(ids.filter((id): id is string => typeof id === "string" && known.has(id))));
+      }
+    } catch {
+      // Storage blocked or bad JSON: start with no flags.
+    }
+    flagsLoaded.current = true;
+  }, [preview, submissionId, questions]);
+  React.useEffect(() => {
+    if (preview || !submissionId || !flagsLoaded.current) return;
+    try {
+      window.localStorage.setItem(flagStorageKey(submissionId), JSON.stringify([...flagged]));
+    } catch {
+      // Flags are a convenience; losing them on a full or blocked store is fine.
+    }
+  }, [flagged, preview, submissionId]);
+
   /* ───── Draft persistence ─────
       Single writer used by the debounce, the nav flush, and the explicit
       Save button, so every path reports failures the same way. */
@@ -217,6 +258,15 @@ export function TestRunner({
     // Preview has no attempt to write to, and a half-typed memo shouldn't
     // reach the database on a timer - the tutor saves the key explicitly.
     if (preview || !submissionId) return;
+    // Every save sends the whole record, so success stores everything sent.
+    const sending = new Set(pendingRef.current);
+    pendingRef.current.clear();
+    const fail = (message: string) => {
+      console.warn("[TestRunner] draft save failed:", message);
+      setSaveError(message);
+      for (const id of sending) pendingRef.current.add(id);
+      setUnsavedIds((prev) => new Set([...prev, ...sending]));
+    };
     setSaving(true);
     try {
       const result = await saveTestAnswersDraft({
@@ -227,16 +277,14 @@ export function TestRunner({
         result?.serverError ??
         (result?.validationErrors ? "Answer format rejected by the server" : null);
       if (message) {
-        console.warn("[TestRunner] draft save failed:", message);
-        setSaveError(message);
+        fail(message);
       } else {
         lastSavedAtRef.current = Date.now();
         setSaveError(null);
+        setUnsavedIds(new Set());
       }
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Network error";
-      console.warn("[TestRunner] draft save failed:", message);
-      setSaveError(message);
+      fail(e instanceof Error ? e.message : "Network error");
     } finally {
       setSaving(false);
     }
@@ -352,6 +400,11 @@ export function TestRunner({
           answers: answersRef.current,
         });
         if (result?.serverError) throw new Error(result.serverError);
+        try {
+          window.localStorage.removeItem(flagStorageKey(submissionId));
+        } catch {
+          // Nothing to tidy if storage is blocked.
+        }
         toast.success(auto ? "Time up - submitted automatically" : "Test submitted");
         router.push(`/dashboard/tests/review/${testId}`);
       } catch (e) {
@@ -381,13 +434,56 @@ export function TestRunner({
 
   const updateAnswer = React.useCallback(
     (questionId: string, next: unknown) => {
+      pendingRef.current.add(questionId);
       setAnswers((prev) => ({ ...prev, [questionId]: next }));
       if (preview) setDirty(true);
     },
     [preview],
   );
 
-  if (questions.length === 0) {
+  /** Save, then show step `i`, optionally scrolled to one of its parts. */
+  const goTo = React.useCallback(
+    async (i: number, targetId?: string) => {
+      if (i < 0 || i >= questions.length) return;
+      // Flush first so the student never loses what they just typed.
+      await saveNow();
+      setCurrentIdx(i);
+      requestAnimationFrame(() => {
+        const el = targetId ? document.getElementById(questionAnchor(targetId)) : null;
+        if (el) el.scrollIntoView({ block: "start", behavior: "smooth" });
+        else window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    },
+    [questions.length, saveNow],
+  );
+
+  const current = questions[currentIdx];
+  const toggleFlag = React.useCallback(() => {
+    if (!current) return;
+    setFlagged((prev) => {
+      const next = new Set(prev);
+      if (next.has(current.id)) next.delete(current.id);
+      else next.add(current.id);
+      return next;
+    });
+  }, [current]);
+
+  /* ───── Shortcuts ───── */
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const k = runnerKey(e);
+      if (!k || submitting) return;
+      e.preventDefault();
+      if (k === "next") void goTo(currentIdx + 1);
+      else if (k === "prev") void goTo(currentIdx - 1);
+      else if (k === "flag") toggleFlag();
+      else if (k === "save" && !preview) void saveNow();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goTo, currentIdx, toggleFlag, saveNow, submitting, preview]);
+
+  if (!current) {
     return (
       <Card className="p-8 sm:p-12 text-center">
         <h2 className="font-display text-xl text-foreground">No questions yet</h2>
@@ -398,61 +494,57 @@ export function TestRunner({
     );
   }
 
-  const current = questions[currentIdx];
-
-  // Aggregate answered/total across the full tree (parents + sub-questions,
-  // skipping NONE-typed parents which don't take answers).
+  const steps = questions.map((q) => summariseStep(q, answers, flagged, unsavedIds));
   let totalAnswerable = 0;
   let totalAnswered = 0;
-  for (const q of questions) {
-    forEachAnswerable(q, (node) => {
-      totalAnswerable += 1;
-      if (isAnswered(answers[node.id])) totalAnswered += 1;
-    });
+  for (const s of steps) {
+    totalAnswerable += s.total;
+    totalAnswered += s.answered;
   }
+  const unanswered = unansweredLabels(questions, answers, labels);
+  const flaggedSteps = questions
+    .map((q, i) => ({ i, id: q.id, label: labels.get(q.id) ?? String(i + 1) }))
+    .filter((s) => flagged.has(s.id));
+  const currentLabel = labels.get(current.id) ?? String(currentIdx + 1);
+  const isFlagged = flagged.has(current.id);
+  const last = currentIdx === questions.length - 1;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-      {/* ───── Main pane ───── */}
-      <div className="space-y-4">
-        {preview && (
-          <div className="border-brand-terracotta/40 bg-brand-terracotta/8 flex flex-wrap items-start gap-2 rounded-md border p-3">
-            <Eye className="text-brand-terracotta mt-0.5 size-4 shrink-0" />
-            <p className="text-foreground text-xs leading-relaxed">
-              <span className="font-medium">Preview.</span> This is exactly
-              what students see. Answers you give here are saved as the
-              answer key for this test - the memo their work is marked
-              against. Nothing autosaves; press{" "}
-              <span className="font-medium">Save answer key</span> when
-              you&apos;re done.
-            </p>
-          </div>
-        )}
-        {/* Sticks BELOW the dashboard header (sticky at top-0, z-40, and
-            h-14 / lg:h-20 tall); z-30 keeps us above the question body but
-            below the header. On phones it stays one short row so it
-            doesn't eat the screen. */}
-        <div className="bg-background/90 sticky top-14 z-30 flex items-center justify-between gap-2 py-2 backdrop-blur sm:flex-wrap sm:gap-3 lg:top-20">
-          <div className="min-w-0">
-            <p className="text-muted-foreground text-xs">
-              Question {currentIdx + 1} of {questions.length}
-            </p>
-            <h1 className="font-display mt-0.5 truncate text-base leading-tight tracking-tight text-foreground sm:mt-1 sm:text-xl">
-              {title}
-            </h1>
-          </div>
+    <div className="space-y-5">
+      {preview && (
+        <div className="border-brand-terracotta/40 bg-brand-terracotta/8 flex flex-wrap items-start gap-2 rounded-md border p-3">
+          <Eye className="text-brand-terracotta mt-0.5 size-4 shrink-0" />
+          <p className="text-foreground text-xs leading-relaxed">
+            <span className="font-medium">Preview.</span> This is exactly
+            what students see. Answers you give here are saved as the
+            answer key for this test - the memo their work is marked
+            against. Nothing autosaves; press{" "}
+            <span className="font-medium">Save answer key</span> when
+            you&apos;re done.
+          </p>
+        </div>
+      )}
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {!preview && (
+      {/* The header and the question strip. In a sitting they stick to the
+          top of the window together. */}
+      <div
+        className={cn(
+          "bg-background/95 border-border z-20 -mx-4 border-b px-4 backdrop-blur sm:-mx-6 sm:px-6",
+          !preview && cn("sticky", stickyTop),
+        )}
+      >
+        <div className="flex min-h-12 flex-wrap items-center gap-x-2 gap-y-1 py-2">
+          <h1 className="font-display text-foreground min-w-0 basis-full truncate text-base leading-tight tracking-tight sm:flex-1 sm:basis-auto sm:text-lg">
+            {title}
+          </h1>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {!preview && !online && (
               <span
-                className={cn(
-                  "inline-flex items-center gap-1 text-xs",
-                  online ? "text-muted-foreground" : "text-destructive",
-                )}
-                title={online ? "Online" : "Offline - drafts will retry on reconnect"}
+                className="text-destructive inline-flex items-center gap-1 text-xs"
+                title="Offline - answers save again when you reconnect"
               >
-                {online ? <Wifi className="size-3" /> : <WifiOff className="size-3" />}
-                <span className="hidden sm:inline">{online ? "Online" : "Offline"}</span>
+                <WifiOff className="size-3" aria-hidden />
+                <span className="hidden sm:inline">Offline</span>
               </span>
             )}
             {preview && dirty && (
@@ -460,14 +552,14 @@ export function TestRunner({
             )}
             {saving ? (
               <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                <Save className="size-3" /> <span className="hidden sm:inline">Saving</span>
+                <Save className="size-3" aria-hidden /> <span className="hidden sm:inline">Saving</span>
               </span>
             ) : saveError ? (
               <span
                 className="text-destructive inline-flex items-center gap-1 text-xs"
                 title={`Last save failed: ${saveError}`}
               >
-                <AlertTriangle className="size-3" /> Not saved
+                <AlertTriangle className="size-3" aria-hidden /> Not saved
               </span>
             ) : null}
             {preview && timeLimit != null && (
@@ -487,9 +579,22 @@ export function TestRunner({
                 cutShort={end?.cutShort ?? false}
               />
             )}
-            {/* Ribbon-level Save + Submit. Save flushes the debounce so the
-                student can force a checkpoint before stepping away; Submit
-                fires the same onSubmit path the bottom-of-page button uses. */}
+            {!preview && exitHref && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={submitting || saving}
+                title="Save your answers and leave. The clock keeps running."
+                onClick={async () => {
+                  await saveNow();
+                  router.push(exitHref);
+                }}
+              >
+                <LogOut className="size-4" aria-hidden />
+                <span className="sr-only sm:not-sr-only">Save and exit</span>
+              </Button>
+            )}
             {!preview && (
               <Button
                 type="button"
@@ -497,9 +602,9 @@ export function TestRunner({
                 size="sm"
                 onClick={saveNow}
                 disabled={submitting || saving}
-                title="Save progress"
+                title="Save progress (Ctrl+S)"
               >
-                <Save className="size-4" />
+                <Save className="size-4" aria-hidden />
                 <span className="sr-only sm:not-sr-only">Save</span>
               </Button>
             )}
@@ -512,169 +617,104 @@ export function TestRunner({
               title={preview ? "Save these answers as the answer key" : "Submit test"}
             >
               {submitting ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" aria-hidden />
               ) : preview ? (
-                <Save className="size-4" />
+                <Save className="size-4" aria-hidden />
               ) : null}
               {preview ? "Save answer key" : "Submit"}
             </Button>
           </div>
         </div>
 
-        {/* No height cap — let the question consume as much vertical space
-            as it needs. Scrolling happens at the page level, so the sticky
-            top-of-page header and the sticky sidebar both stay pinned. */}
-        <QuestionView
-          question={current}
-          path={labels.get(current.id) ?? String(currentIdx + 1)}
-          labels={labels}
-          answers={answers}
-          onAnswer={updateAnswer}
-          disabled={submitting || expired}
-          testId={testId}
-          // Each attempt gets its own choice order. Preview has no attempt,
-          // so it uses a fixed seed and the tutor still sees shuffled choices.
-          shuffleSeed={submissionId ?? `preview:${testId}`}
+        <QuestionStrip
+          steps={steps}
+          labels={questions.map((q, i) => labels.get(q.id) ?? String(i + 1))}
+          currentIdx={currentIdx}
+          disabled={submitting}
+          onGo={(i) => void goTo(i)}
         />
-
-        <div className="flex items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={async () => {
-              // Flush any pending answer to the DB before navigating so the
-              // student never loses what they just typed on this question.
-              await saveNow();
-              setCurrentIdx((i) => Math.max(0, i - 1));
-            }}
-            disabled={submitting || currentIdx === 0}
-          >
-            ← Previous
-          </Button>
-
-          {currentIdx < questions.length - 1 ? (
-            <Button
-              type="button"
-              onClick={async () => {
-                await saveNow();
-                setCurrentIdx((i) => Math.min(questions.length - 1, i + 1));
-              }}
-              disabled={submitting}
-            >
-              Next →
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="brand"
-              onClick={requestSubmit}
-              disabled={submitting}
-            >
-              {submitting && <Loader2 className="size-4 animate-spin" />}
-              {preview ? "Save answer key" : "Submit test"}
-            </Button>
-          )}
-        </div>
       </div>
 
-      {/* ───── Sidebar (question list) ─────
-          Sticky + capped at viewport height so the list itself scrolls
-          rather than pushing the page down when there are many questions.
-          `top-24` clears the sticky page header + a little breathing room;
-          the inner <ul> owns the overflow so the "Questions" header and
-          the autosave footnote stay visible while the list scrolls. */}
-      <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:flex lg:flex-col lg:overflow-hidden">
-        <Card className="flex min-h-0 flex-col p-4">
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 className="font-display text-sm leading-tight text-foreground">
-              Questions
-            </h2>
-            <span className="text-muted-foreground text-xs tabular-nums">
-              {totalAnswered}/{totalAnswerable}
-            </span>
-          </div>
-          {/* Labels only ("1", "1.a") — the question text lives in the
-              main pane. Each top-level question is one row: its own chip,
-              then a chip per answerable part, so progress inside a long
-              multi-part question is visible at a glance. */}
-          <ul className="mt-3 space-y-1.5 overflow-y-auto pr-1">
-            {questions.map((q, i) => {
-              const active = i === currentIdx;
-              const parts: RunnerQuestion[] = [];
-              for (const child of q.subQuestions) forEachAnswerable(child, (n) => parts.push(n));
-              // A top-level row is "complete" when every answerable node in
-              // its sub-tree has an answer.
-              let groupTotal = 0;
-              let groupDone = 0;
-              forEachAnswerable(q, (node) => {
-                groupTotal += 1;
-                if (isAnswered(answers[node.id])) groupDone += 1;
-              });
-              const allDone = groupTotal > 0 && groupDone === groupTotal;
-              const label = labels.get(q.id) ?? String(i + 1);
-              const goTo = async (targetId?: string) => {
-                await saveNow();
-                setCurrentIdx(i);
-                if (targetId) {
-                  // Wait for the new question to render before scrolling.
-                  requestAnimationFrame(() =>
-                    document
-                      .getElementById(questionAnchor(targetId))
-                      ?.scrollIntoView({ block: "start", behavior: "smooth" }),
-                  );
-                }
-              };
-              return (
-                <li key={q.id} className="flex flex-wrap items-center gap-1">
-                  <LabelChip
-                    label={label}
-                    active={active}
-                    done={allDone}
-                    partial={!allDone && groupDone > 0}
-                    disabled={submitting}
-                    onClick={() => goTo()}
-                    aria-label={`Go to question ${label}${allDone ? " (complete)" : ""}`}
-                  />
-                  {parts.map((part) => {
-                    const partLabel = labels.get(part.id) ?? "";
-                    const done = isAnswered(answers[part.id]);
-                    return (
-                      <LabelChip
-                        key={part.id}
-                        small
-                        label={partLabel}
-                        active={false}
-                        done={done}
-                        disabled={submitting}
-                        onClick={() => goTo(part.id)}
-                        aria-label={`Go to question ${partLabel}${done ? " (answered)" : ""}`}
-                      />
-                    );
-                  })}
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs tabular-nums">
+          Question {currentIdx + 1} of {questions.length}
+          <span aria-hidden> · </span>
+          {totalAnswered} of {totalAnswerable} answered
+        </p>
+        <Button
+          type="button"
+          variant={isFlagged ? "outline" : "ghost"}
+          size="sm"
+          aria-pressed={isFlagged}
+          onClick={toggleFlag}
+          disabled={submitting}
+          title="Flag this question to come back to it (Alt+F)"
+          className={cn(isFlagged && "border-warning/60 text-foreground")}
+        >
+          <Flag className={cn("size-4", isFlagged && "fill-warning text-warning")} aria-hidden />
+          {isFlagged ? "Flagged" : "Flag for review"}
+        </Button>
+      </div>
 
-        <Card className="p-4">
-          {preview ? (
-            <p className="text-muted-foreground text-xs">
-              Ticks show which questions have a key recorded. Leave a
-              question blank to mark it manually.
-            </p>
-          ) : saveError ? (
-            <p className="text-destructive text-xs">
-              Your last auto-save failed ({saveError}). Press Save to retry
-              before leaving this page.
-            </p>
-          ) : (
-            <p className="text-muted-foreground text-xs">
-              Drafts auto-save every {SAVE_DEBOUNCE_MS / 1000} seconds.
-            </p>
+      {/* No height cap - let the question consume as much vertical space
+          as it needs. Scrolling happens at the page level. */}
+      <QuestionView
+        question={current}
+        path={currentLabel}
+        labels={labels}
+        answers={answers}
+        onAnswer={updateAnswer}
+        disabled={submitting || expired}
+        testId={testId}
+        // Each attempt gets its own choice order. Preview has no attempt,
+        // so it uses a fixed seed and the tutor still sees shuffled choices.
+        shuffleSeed={submissionId ?? `preview:${testId}`}
+      />
+
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void goTo(currentIdx - 1)}
+          disabled={submitting || currentIdx === 0}
+        >
+          <ArrowLeft className="size-4" aria-hidden /> Previous
+        </Button>
+
+        {!last ? (
+          <Button type="button" onClick={() => void goTo(currentIdx + 1)} disabled={submitting}>
+            Next <ArrowRight className="size-4" aria-hidden />
+          </Button>
+        ) : (
+          <Button type="button" variant="brand" onClick={requestSubmit} disabled={submitting}>
+            {submitting && <Loader2 className="size-4 animate-spin" aria-hidden />}
+            {preview ? "Save answer key" : "Submit test"}
+          </Button>
+        )}
+      </div>
+
+      <div className="text-muted-foreground space-y-1 text-xs">
+        {preview ? (
+          <p>Leave a question blank to mark it by hand.</p>
+        ) : saveError ? (
+          <p className="text-destructive">
+            Your last save failed ({saveError}). Press Save to try again
+            before leaving this page.
+          </p>
+        ) : (
+          <p>Your answers save as you go.</p>
+        )}
+        <p className="hidden sm:block">
+          <Kbd>Alt</Kbd> <Kbd>↑</Kbd> <Kbd>↓</Kbd> previous and next question,{" "}
+          <Kbd>Alt</Kbd> <Kbd>F</Kbd> flag
+          {preview ? null : (
+            <>
+              , <Kbd>Ctrl</Kbd> <Kbd>S</Kbd> save
+            </>
           )}
-        </Card>
-      </aside>
+          .
+        </p>
+      </div>
 
       {!preview && (
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -682,12 +722,36 @@ export function TestRunner({
             <AlertDialogHeader>
               <AlertDialogTitle>Submit this test?</AlertDialogTitle>
               <AlertDialogDescription>
-                {totalAnswered < totalAnswerable
+                {unanswered.length > 0
                   ? `You've answered ${totalAnswered} of ${totalAnswerable} questions. `
                   : "You've answered every question. "}
                 {"Once submitted you can't change your answers."}
               </AlertDialogDescription>
             </AlertDialogHeader>
+            {unanswered.length > 0 || flaggedSteps.length > 0 || saveError ? (
+              <div className="space-y-3 text-sm">
+                {saveError ? (
+                  <p className="text-destructive flex items-start gap-1.5">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    Your last save failed. Submitting sends your answers again.
+                  </p>
+                ) : null}
+                {unanswered.length > 0 ? (
+                  <JumpList
+                    title="Not answered"
+                    items={unanswered.slice(0, SUMMARY_LIMIT).map((u) => ({ key: u.id, label: u.label, go: () => { setConfirmOpen(false); void goTo(u.stepIndex, u.id); } }))}
+                    more={Math.max(0, unanswered.length - SUMMARY_LIMIT)}
+                  />
+                ) : null}
+                {flaggedSteps.length > 0 ? (
+                  <JumpList
+                    title="Flagged"
+                    items={flaggedSteps.map((s) => ({ key: s.id, label: s.label, go: () => { setConfirmOpen(false); void goTo(s.i); } }))}
+                    more={0}
+                  />
+                ) : null}
+              </div>
+            ) : null}
             <AlertDialogFooter>
               <AlertDialogCancel>Keep working</AlertDialogCancel>
               <AlertDialogAction
@@ -707,13 +771,119 @@ export function TestRunner({
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */
+/* Question strip                                                            */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+/**
+ * A button per step. Answered is solid, partly answered half filled, not
+ * answered an outline; a failed save adds a red border and an icon, a flag
+ * a corner mark. The current step has a ring and is kept in view.
+ */
+function QuestionStrip({
+  steps,
+  labels,
+  currentIdx,
+  disabled,
+  onGo,
+}: {
+  steps: StepSummary[];
+  labels: string[];
+  currentIdx: number;
+  disabled: boolean;
+  onGo: (i: number) => void;
+}) {
+  const currentRef = React.useRef<HTMLButtonElement>(null);
+  React.useEffect(() => {
+    currentRef.current?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }, [currentIdx]);
+
+  return (
+    <nav aria-label="Questions" className="-mx-1 overflow-x-auto pb-1.5 [scrollbar-width:thin]">
+      <ol className="flex w-max gap-1.5 px-1 py-1">
+        {steps.map((s, i) => {
+          const active = i === currentIdx;
+          return (
+            <li key={i}>
+              <button
+                ref={active ? currentRef : undefined}
+                type="button"
+                onClick={() => onGo(i)}
+                disabled={disabled}
+                aria-current={active ? "step" : undefined}
+                aria-label={stepName(labels[i] ?? String(i + 1), s)}
+                className={cn(
+                  "relative inline-flex h-8 min-w-9 items-center justify-center gap-0.5 overflow-hidden rounded-md border px-2 text-xs font-medium tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+                  s.state === "done"
+                    ? "border-brand-terracotta bg-brand-terracotta text-brand-terracotta-foreground"
+                    : s.state === "partial"
+                      ? "border-brand-terracotta/60 text-foreground"
+                      : "border-border text-muted-foreground hover:text-foreground",
+                  s.unsaved && "border-destructive",
+                  active && "ring-foreground ring-2 ring-offset-2 ring-offset-background",
+                )}
+              >
+                {s.state === "partial" ? (
+                  <span aria-hidden className="bg-brand-terracotta/25 absolute inset-x-0 bottom-0 h-1/2" />
+                ) : null}
+                {s.unsaved ? <AlertTriangle aria-hidden className="text-destructive relative size-3" /> : null}
+                <span className="relative">{labels[i]}</span>
+                {s.flagged ? (
+                  <span
+                    aria-hidden
+                    className="border-t-warning absolute top-0 right-0 size-0 border-t-[9px] border-l-[9px] border-l-transparent"
+                  />
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+/** The submit summary's lists of question labels that jump to the question. */
+function JumpList({
+  title,
+  items,
+  more,
+}: {
+  title: string;
+  items: Array<{ key: string; label: string; go: () => void }>;
+  more: number;
+}) {
+  return (
+    <div>
+      <p className="text-muted-foreground text-xs font-medium">{title}</p>
+      <ul className="mt-1 flex flex-wrap gap-1.5">
+        {items.map((it) => (
+          <li key={it.key}>
+            <button
+              type="button"
+              onClick={it.go}
+              aria-label={`Go to question ${it.label}`}
+              className="border-border hover:bg-muted h-7 min-w-9 rounded-md border px-2 text-xs font-medium tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {it.label}
+            </button>
+          </li>
+        ))}
+        {more > 0 ? <li className="text-muted-foreground self-center text-xs">and {more} more</li> : null}
+      </ul>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────── */
 /* Countdown                                                                 */
 /* ──────────────────────────────────────────────────────────────────────── */
 
 /**
- * Owns the 1s tick so only this badge re-renders each second. Renders
- * nothing until mounted: the server would stamp one value into the HTML and
- * hydration would compute another, which React reports as a mismatch.
+ * Owns the 1s tick so only this badge re-renders each second. The badge
+ * renders nothing until mounted: the server would stamp one value into the
+ * HTML and hydration would compute another, which React reports as a
+ * mismatch. The live region is always there, so screen readers hear the
+ * 5-minute and 1-minute warnings (not every second).
  */
 function Countdown({
   deadline,
@@ -729,6 +899,8 @@ function Countdown({
   cutShort: boolean;
 }) {
   const [now, setNow] = React.useState<number | null>(null);
+  const [announce, setAnnounce] = React.useState("");
+  const prevRef = React.useRef<number | null>(null);
   React.useEffect(() => {
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -738,27 +910,38 @@ function Countdown({
   const remaining =
     now == null ? null : Math.max(0, Math.ceil((deadline - now) / 1000));
   React.useEffect(() => {
+    if (remaining == null) return;
     if (remaining === 0) onExpire();
+    const msg = timerWarning(prevRef.current, remaining);
+    if (msg) setAnnounce(msg);
+    prevRef.current = remaining;
   }, [remaining, onExpire]);
 
-  if (remaining == null) return null;
-  if (!alwaysShow && remaining > SHOW_DUE_CLOCK_WITHIN_S) return null;
-  const low = remaining <= 60 && remaining > 0;
+  const visible = remaining != null && (alwaysShow || remaining <= SHOW_DUE_CLOCK_WITHIN_S);
+  const low = remaining != null && remaining <= 60 && remaining > 0;
   return (
-    <Badge
-      variant={low ? "destructive" : "soft"}
-      className="tabular-nums"
-      title={
-        cutShort || !alwaysShow
-          ? "The test closes at its due time, so this is less than the full time limit."
-          : "Time left"
-      }
-    >
-      {formatTime(remaining)}
-      {(cutShort || !alwaysShow) && (
-        <span className="ml-1 font-normal opacity-75">until due</span>
-      )}
-    </Badge>
+    <>
+      <span role="status" aria-live="polite" className="sr-only">
+        {announce}
+      </span>
+      {visible ? (
+        <Badge
+          variant={low ? "destructive" : "soft"}
+          className="font-mono tabular-nums"
+          title={
+            cutShort || !alwaysShow
+              ? "The test closes at its due time, so this is less than the full time limit."
+              : "Time left"
+          }
+        >
+          <span className="sr-only">Time left </span>
+          {formatTime(remaining)}
+          {(cutShort || !alwaysShow) && (
+            <span className="ml-1 font-sans font-normal opacity-75">until due</span>
+          )}
+        </Badge>
+      ) : null}
+    </>
   );
 }
 
@@ -799,9 +982,9 @@ function QuestionView({
   return (
     <Card
       id={questionAnchor(question.id)}
-      // scroll-mt clears the sticky header + the runner's sticky ribbon.
+      // scroll-mt clears the runner's sticky header and question strip.
       className={cn(
-        "scroll-mt-36 space-y-5 p-4 sm:p-6 lg:scroll-mt-44",
+        "scroll-mt-32 space-y-5 p-4 sm:p-6",
         question.parentId && "border-brand-terracotta/30",
       )}
     >
@@ -862,45 +1045,6 @@ function QuestionView({
 /** DOM id of a question card, for jumping to a part from the side panel. */
 function questionAnchor(questionId: string): string {
   return `question-${questionId}`;
-}
-
-/* ──────────────────────────────────────────────────────────────────────── */
-/* LabelChip                                                                 */
-/* ──────────────────────────────────────────────────────────────────────── */
-
-function LabelChip({
-  label,
-  active,
-  done,
-  partial,
-  small,
-  ...rest
-}: {
-  label: string;
-  active: boolean;
-  done: boolean;
-  partial?: boolean;
-  small?: boolean;
-} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children">) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "inline-flex items-center justify-center rounded-md border font-medium tabular-nums transition-colors disabled:opacity-60",
-        small ? "h-7 min-w-9 px-1.5 text-[11px]" : "h-8 min-w-10 px-2 text-xs",
-        active
-          ? "border-brand-terracotta bg-brand-terracotta text-brand-terracotta-foreground"
-          : done
-            ? "border-brand-terracotta/40 bg-brand-terracotta/10 text-foreground hover:bg-brand-terracotta/20"
-            : partial
-              ? "border-brand-terracotta/40 border-dashed text-foreground hover:bg-muted/60"
-              : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-      )}
-      {...rest}
-    >
-      {label}
-    </button>
-  );
 }
 
 const SUB_LETTERS = "abcdefghijklmnopqrstuvwxyz";

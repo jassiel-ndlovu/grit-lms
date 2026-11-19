@@ -1,7 +1,7 @@
 /**
  * Check the revamp shell's nav rules: npx tsx scripts/check-shell-nav.ts
  */
-import { FOOTER_LINKS, activeHref, navSectionsFor, type NavSection } from "../src/components/shell/nav-config";
+import { FOOTER_LINKS, activeHref, isFocusRoute, navSectionsFor, type NavSection } from "../src/components/shell/nav-config";
 import { buildLegacyViewer, type LegacyRole } from "../src/lib/viewer-core";
 
 const viewerFor = (role: LegacyRole) =>
@@ -61,6 +61,13 @@ const nexaAdmin = { persona: "admin" as const, permissions: ["admin.console" as 
 check("admin, billing off: no billing admin link", hrefsOf(navSectionsFor(nexaAdmin)).includes("/dashboard/admin/billing"), false);
 check("admin, billing on: billing admin link", hrefsOf(navSectionsFor(nexaAdmin, { billing: true })).includes("/dashboard/admin/billing"), true);
 check("billing page lights Billing, not Settings", activeHref("/dashboard/settings/billing", ["/dashboard/settings", "/dashboard/settings/billing"]), "/dashboard/settings/billing");
+
+check("focus: the runner", isFocusRoute("/dashboard/tests/abc123"), true);
+check("focus: trailing slash", isFocusRoute("/dashboard/tests/abc123/"), true);
+check("focus: not the tests list", isFocusRoute("/dashboard/tests"), false);
+check("focus: not pre-test", isFocusRoute("/dashboard/tests/pre-test/abc123"), false);
+check("focus: not review", isFocusRoute("/dashboard/tests/review/abc123"), false);
+check("focus: not the tutor side", isFocusRoute("/dashboard/tutor-tests/abc123"), false);
 
 for (const role of Object.keys(BEFORE) as LegacyRole[]) {
   const all = [...hrefsOf(navSectionsFor(viewerFor(role))), ...FOOTER_LINKS.map((l) => l.href)];
