@@ -19,7 +19,7 @@ Done:
   - `ws_nexa_legacy` is never planned for deletion.
 - **#93:** step 1 merged (#111). Replied to B with my OK for my paths in the drop PR, and moved the issue to `needs-b`.
 - **Checks:**
-  - `check-email-queue.ts`: 25 checks.
+  - `check-email-queue.ts`: 23 checks.
   - A one-off end-to-end run on the preview DB: 8 checks, covering verification queued and suppressed with the token removed, a notification email through the queue without being marked emailed when suppressed, the 7-day warning queued once, and the plan listing the due workspace without deleting it. The test rows were removed.
 
 Next:

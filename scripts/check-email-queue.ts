@@ -48,5 +48,15 @@ const rec = renderBillingEmail("receipt", { workspaceName: "W", invoiceNumber: "
 check("receipt names card and renewal", rec.text.includes("ending 4081") && rec.text.includes("5 Mar 2027"), true);
 check("every template links to billing", ["trial-ended", "read-only"].every((t) => renderBillingEmail(t as "trial-ended", { workspaceName: "W", invoiceNumber: "N", totalCents: 1 } as never).text.includes("/dashboard/billing")), true);
 
+// Retention warnings: 30 days, then 7 days, none once due
+check("warning thresholds", [45, 30, 20, 8, 7, 1, 0].map(retentionWarningDue), [null, 30, 30, 30, 7, 7, null]);
+const del = renderBillingEmail("deletion-warning", { workspaceName: "W", daysLeft: 7, deleteOn: "3 Apr 2027" });
+check("deletion warning says when and how to keep it", del.subject === "W will be deleted on 3 Apr 2027" && del.text.includes("Pay any time before then"), true);
+
+// Sealed queue secrets
+process.env.NEXTAUTH_SECRET = "test-secret-for-checks";
+const sealed = sealForQueue("tok_123");
+check("token not readable in the row", sealed.includes("tok_123"), false);
+
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);
