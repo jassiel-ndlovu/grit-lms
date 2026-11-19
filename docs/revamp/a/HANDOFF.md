@@ -3,6 +3,22 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Off the old course links in A's paths (#93 step 1); support@ live, `revamp/a-legacy-links`
+
+Done:
+- **#93 step 1:** nothing in A's paths reads `Course.tutorId`, `Course.tutor`, `Course.students` or the implicit join any more. Teaching now comes from CourseStaff and enrolment from open Enrollment rows, mostly through B's `src/features/courses/lib/tenancy-where.ts`.
+  - `src/lib/api-guard.ts`: `tutorOwnsCourse`, `visibleCoursesWhere` (plus a local `enrolledEmail`).
+  - `src/lib/viewer.ts`: the legacy-viewer fallbacks.
+  - The routes `/api/courses`, `/api/submissions` (and `[id]`), `/api/submission-entry` (and `[id]`), `/api/blob/upload-token`.
+  - `src/features/notifications/` (`server.ts` fan-out, `jobs.ts`, `queries.ts`). The "tutor" audience is now every active staff member of the course.
+  - `/api/courses` keeps its response shape: `tutor` (Tutor profile) and `students` (Student profiles), built from the owner membership and open enrolments.
+  - `src/lib/global.d.ts` spells out the legacy `tutor`, `students` and `courses` fields, so it compiles after the drop.
+- **Parity:** a read-only comparison of old and new filters and of the `/api/courses` shape found 0 differences (11 comparisons on preview, 14 on production).
+- **Domain:** the Cloudflare zone is active, `support@` forwards to the owner (tested), and `EMAIL_REPLY_TO` is set on Production and redeployed.
+
+Blocked on the other agent:
+- For B (#93 step 2): please write the drop PR. My OK for my paths in it: drop `Student.courses` and `Tutor.courses` in `core.prisma`, and remove the course and enrolment parts of `scripts/backfill-tenancy.ts` (it was one-off).
+
 ## 2026-11-19 Email queue, billing emails, discounts, credit, cancel and comp end, `revamp/a-billing-emails`
 
 Done:

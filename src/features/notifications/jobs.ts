@@ -17,6 +17,7 @@ import "server-only";
 
 import type { NotificationType } from "@/features/shared/enums";
 import { getPreferencesForUsers } from "@/features/users/preferences";
+import { enrolledStudent, taughtByEmail } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { DEFAULT_TIME_ZONE, hourInZone } from "@/lib/datetime";
 import { sendEmail } from "@/lib/email/send";
@@ -45,6 +46,16 @@ function localWeekday(now: Date, timeZone: string | null) {
 }
 
 /** Users (by email, case-insensitive) for a set of Student rows. */
+/** Open enrolments with each learner's Student profile (issue #93: not the old join). */
+const OPEN_STUDENTS = {
+  where: { endedAt: null },
+  select: { learner: { select: { user: { select: { studentProfile: { select: { id: true, email: true } } } } } } },
+} as const;
+
+function studentProfiles(rows: Array<{ learner: { user: { studentProfile: { id: string; email: string } | null } } }>) {
+  return rows.map((r) => r.learner.user.studentProfile).filter((s): s is { id: string; email: string } => s != null);
+}
+
 async function studentUsers(students: { id: string; email: string }[]) {
   if (students.length === 0) return [];
   const users = await prisma.user.findMany({
@@ -91,7 +102,7 @@ export async function dueDateReminders(now: Date) {
       id: true,
       title: true,
       courseId: true,
-      course: { select: { students: { select: { id: true, email: true } } } },
+      course: { select: { enrollments: OPEN_STUDENTS } },
       entries: { select: { studentId: true, status: true } },
     },
   });
@@ -99,7 +110,7 @@ export async function dueDateReminders(now: Date) {
     const handedIn = new Set(
       a.entries.filter((e) => e.status !== "NOT_SUBMITTED" && e.status !== "IN_PROGRESS").map((e) => e.studentId),
     );
-    const pending = await studentUsers(a.course.students.filter((s) => !handedIn.has(s.id)));
+    const pending = await studentUsers(studentProfiles(a.course.enrollments).filter((s) => !handedIn.has(s.id)));
     const link = assignmentRoutes.detail(a.id);
     // Reminders sent before the rename used the old URL; they still count.
     const userIds = await notYetNotified(pending.map((p) => p.userId), "SUBMISSION_DUE", [link, `/dashboard/submissions/${a.id}`]);
@@ -125,7 +136,7 @@ export async function dueDateReminders(now: Date) {
       id: true,
       title: true,
       courseId: true,
-      course: { select: { students: { select: { id: true, email: true } } } },
+      course: { select: { enrollments: OPEN_STUDENTS } },
       submissions: { select: { studentId: true, status: true } },
     },
   });
@@ -133,7 +144,7 @@ export async function dueDateReminders(now: Date) {
     const done = new Set(
       t.submissions.filter((s) => s.status !== "IN_PROGRESS" && s.status !== "NOT_STARTED").map((s) => s.studentId),
     );
-    const pending = await studentUsers(t.course.students.filter((s) => !done.has(s.id)));
+    const pending = await studentUsers(studentProfiles(t.course.enrollments).filter((s) => !done.has(s.id)));
     const link = `/dashboard/tests/pre-test/${t.id}`;
     const userIds = await notYetNotified(pending.map((p) => p.userId), "TEST_DUE", link);
     if (userIds.length === 0) continue;
@@ -183,7 +194,7 @@ export async function studyReminders(now: Date) {
     const remaining = await prisma.lesson.count({
       where: {
         type: "CONTENT",
-        course: { students: { some: { id: student.id } } },
+        course: enrolledStudent(student.id),
         completions: { none: { studentId: student.id } },
       },
     });
@@ -229,7 +240,7 @@ export async function gradingReminders(now: Date) {
     if (!p.notifyOnGradingQueue || localHour(now, p.timeZone) !== MORNING_HOUR) continue;
 
     const ownCourse = {
-      course: { tutor: { email: { equals: tutor.email, mode: "insensitive" as const } } },
+      course: taughtByEmail(tutor.email),
     };
     const [entries, tests] = await Promise.all([
       prisma.submissionEntry.count({

@@ -13,6 +13,7 @@
 import { NextResponse } from "next/server";
 
 import type { Prisma } from "@/generated/prisma";
+import { enrolledStudent, taughtBy } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { emitNotification } from "@/features/notifications/server";
 import {
@@ -45,16 +46,16 @@ export async function GET(req: Request) {
 
   if (courseId && studentId) {
     return NextResponse.json(
-      await findVisible({ id: courseId, students: { some: { id: studentId } } }),
+      await findVisible({ id: courseId, ...enrolledStudent(studentId) }),
     );
   } else if (courseIds) {
     return NextResponse.json(await findVisible({ id: { in: courseIds.split(",") } }));
   } else if (studentId) {
     return NextResponse.json(
-      await findVisible({ students: { some: { id: studentId } } }),
+      await findVisible(enrolledStudent(studentId)),
     );
   } else if (tutorId) {
-    return NextResponse.json(await findVisible({ tutorId }));
+    return NextResponse.json(await findVisible(taughtBy(tutorId)));
   } else if (subId) {
     const submission = await prisma.submission.findFirst({
       where: { id: subId, course: visible },

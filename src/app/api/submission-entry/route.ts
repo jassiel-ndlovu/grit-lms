@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Session } from "next-auth";
 
 import type { Prisma } from "@/generated/prisma";
+import { enrollmentFor, taughtByEmail } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { notifyHandIn } from "@/features/notifications/server";
 import type { Role } from "@/features/shared/enums";
@@ -30,7 +31,7 @@ function visibleEntriesWhere(session: Session): Prisma.SubmissionEntryWhereInput
   const email = session.user.email;
   switch (session.user.role as Role) {
     case "TUTOR":
-      return { submission: { course: { tutor: { email } } } };
+      return { submission: { course: taughtByEmail(email) } };
     case "STUDENT":
       return { student: { email } };
     case "ADMIN":
@@ -97,11 +98,11 @@ export async function POST(req: NextRequest) {
         courseId: true,
         isActive: true,
         course: {
-          select: { students: { where: { id: student.id }, select: { id: true } } },
+          select: { enrollments: enrollmentFor(student.id) },
         },
       },
     });
-    if (!submission || submission.course.students.length === 0) {
+    if (!submission || submission.course.enrollments.length === 0) {
       return forbidden("You're not enrolled in this course");
     }
     if (!submission.isActive) {

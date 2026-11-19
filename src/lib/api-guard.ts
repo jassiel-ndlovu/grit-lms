@@ -24,6 +24,12 @@ import type { Prisma } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { Role } from "@/features/shared/enums";
+import { taughtByEmail } from "@/features/courses/lib/tenancy-where";
+
+/** Courses the user (by email) has an open enrolment in. Replaces `students: { some: { email } }`. */
+function enrolledEmail(email: string): Prisma.CourseWhereInput {
+  return { enrollments: { some: { endedAt: null, learner: { user: { email: { equals: email, mode: "insensitive" } } } } } };
+}
 
 type GuardResult =
   | { ok: true; session: Session }
@@ -62,11 +68,12 @@ export async function requireApiRole(...roles: Role[]): Promise<GuardResult> {
 /** True when the course exists and its tutor is the session user. */
 export async function tutorOwnsCourse(session: Session, courseId: unknown): Promise<boolean> {
   if (typeof courseId !== "string" || !courseId) return false;
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { tutor: { select: { email: true } } },
+  // Teaching is read from CourseStaff, not Course.tutorId (issue #93).
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, ...taughtByEmail(session.user.email) },
+    select: { id: true },
   });
-  return course?.tutor.email === session.user.email;
+  return course != null;
 }
 
 /** The Student row for the session user, or null. */
@@ -86,9 +93,9 @@ export function visibleCoursesWhere(session: Session): Prisma.CourseWhereInput |
   const email = session.user.email;
   switch (session.user.role as Role) {
     case "TUTOR":
-      return { tutor: { email } };
+      return taughtByEmail(email);
     case "STUDENT":
-      return { students: { some: { email } } };
+      return enrolledEmail(email);
     case "ADMIN":
       return {};
     default:

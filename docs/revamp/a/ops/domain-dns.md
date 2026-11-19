@@ -2,7 +2,9 @@
 
 `nexa-lms.co.za` is registered at xneelo. Its DNS is served by Cloudflare
 (nameservers `grant.ns.cloudflare.com` and `jasmine.ns.cloudflare.com`, set at
-xneelo on 2026-11-19). The app is hosted on Vercel (project `grit-lms`).
+xneelo on 2026-11-19; the zone went active at 20:25 UTC that day). The app is
+hosted on Vercel (project `grit-lms`). The email records copied into Vercel DNS
+while both providers were delegated are no longer used and can be removed.
 
 ## Records (Cloudflare zone `nexa-lms.co.za`)
 
@@ -19,6 +21,8 @@ and www start failing TLS.
 | `resend._domainkey.notify` | TXT | DKIM key from Resend | Resend signing |
 | `send.notify` | CNAME | `send.forge.rmta.net` | Resend return path (SPF) |
 | `rsend.notify` | CNAME | `rsend-euw1.forge.rmta.net` | Resend return path (SPF) |
+| `nexa-lms.co.za` | MX | `route1/2/3.mx.cloudflare.net` | Cloudflare Email Routing (Cloudflare manages these) |
+| `nexa-lms.co.za` | TXT | `v=spf1 include:_spf.mx.cloudflare.net ~all` | SPF for routed mail (Cloudflare manages it) |
 | `_dmarc` | TXT | `v=DMARC1; p=quarantine; pct=100; adkim=r; aspf=r;` | DMARC: mail failing DKIM/SPF alignment goes to spam |
 
 The Cloudflare import also brought a proxied wildcard `*` A record; it was
@@ -36,10 +40,10 @@ CLI, signed in as the owner). Edits take a JSON `--body`; deletes need `--force`
   only delivers to the Resend account owner.
 - DMARC is `p=quarantine` (owner's call, 2026-11-19). Only Resend sends as
   the domain; anything else that should, needs DKIM for its own subdomain first.
-- **support@nexa-lms.co.za:** Cloudflare Email Routing rule "support to owner"
-  forwards to the owner's verified address. It starts working when the zone is
-  active (Cloudflare then adds its MX and SPF records at the apex). After that,
-  set `EMAIL_REPLY_TO=support@nexa-lms.co.za` on Production and redeploy.
+- **support@nexa-lms.co.za** forwards to the owner's verified address
+  (Cloudflare Email Routing rule "support to owner"; the catch-all drops
+  everything else). Tested 2026-11-19. `EMAIL_REPLY_TO=support@nexa-lms.co.za`
+  is set on Production, so replies to Nexa email reach it.
 
 ## Canonical URL
 

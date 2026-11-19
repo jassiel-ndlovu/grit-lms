@@ -7,16 +7,18 @@ declare global {
   namespace AppTypes {
     // Base model types
     type User = Prisma.UserGetPayload<object>;
-    type Tutor = Prisma.TutorGetPayload<{
-      include: { courses: true };
-    }>;
+    // Teacher and student links come from CourseStaff and Enrollment now
+    // (issue #93), not Prisma relations on Course, so these legacy shapes
+    // are spelled out: the /api routes still return them.
+    type TutorRow = Prisma.TutorGetPayload<object>;
+    type StudentRow = Prisma.StudentGetPayload<object>;
+    type CourseRow = Omit<Prisma.CourseGetPayload<object>, "tutorId">;
+    type Tutor = TutorRow & { courses: CourseRow[] };
     type Student = Prisma.StudentGetPayload<{
-      include: { courses: true; TestSubmission: true };
-    }>;
+      include: { TestSubmission: true };
+    }> & { courses: CourseRow[] };
     type Course = Prisma.CourseGetPayload<{
       include: {
-        tutor: true;
-        students: true;
         lessons: {
           include: {
             completions: true;
@@ -28,21 +30,15 @@ declare global {
         submissions: true;
         courseEvents: true;
       };
-    }>;
+    }> & { tutor: TutorRow; students: StudentRow[] };
     type Lesson = Prisma.LessonGetPayload<{
       include: { completions: true; attachmentUrls: true };
     }>;
     type Attachment = Prisma.AttachmentGetPayload<object>;
     type LessonCompletion = Prisma.LessonCompletionGetPayload<object>;
-    type CourseEvent = Prisma.CourseEventGetPayload<{
-      include: {
-        course: {
-          include: {
-            tutor: true;
-          };
-        };
-      };
-    }>;
+    type CourseEvent = Prisma.CourseEventGetPayload<object> & {
+      course: CourseRow & { tutor: TutorRow };
+    };
     type Quiz = Prisma.QuizGetPayload<{
       include: { completions: true };
     }>;
