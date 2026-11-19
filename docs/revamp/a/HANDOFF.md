@@ -3,6 +3,41 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Tenancy writes for B; billing and Sentry live, `revamp/a-tenancy-writes`
+
+Done:
+- **Tenancy write helpers** (issue #93, step 1) in `src/features/workspaces/tenancy.ts`, server-only. Each takes a Prisma transaction client and is idempotent:
+  - `setUpCourseTenancy(tx, { courseId, viewer })` sets `workspaceId` and `ownerMembershipId`, plus a LEAD `CourseStaff` row. It keeps an existing owner.
+  - `setCourseEnrollment(tx, { courseId, studentIds, at? })` takes Student profile ids. It creates any missing `Learner` rows in bulk, opens new intervals, closes the dropped ones (`endedAt`, `DROPPED`), never reopens a closed row, and keeps at most one open row per course and learner. The rule itself is `planEnrollmentChanges` in `enrollment-plan.ts`, which is pure.
+  - `ensureLearner(tx, …)` and `workspaceIdFor(viewer)`.
+- `createStudentUser` now runs one interactive transaction. It links `Student.userId` and creates the `Learner` in the creator's workspace.
+- **Checks:** `scripts/check-tenancy-writes.ts` has 8 checks. On preview, inside a transaction that was then rolled back:
+  - the same set changed nothing;
+  - dropping one student closed 1 row;
+  - re-adding opened a new row, leaving that student with `DROPPED` closed and `ACTIVE` open;
+  - a new course got its workspace and owner, and a second call still left 1 staff row.
+- **Merged** #97 and #98, the billing core (the owner merged #97 because it touches B's back-relations). **Production, under rule 4.1:**
+  - Backup branch `backup-billing-core-20261119`, the preview branch already migrated, and `migrate diff` showing only `8_billing_core` (27 new tables, no change to existing tables).
+  - Then `migrate deploy`, and the seed: 3 tiers, 31 services, `BillingConfig`. A re-run of the seed found no changes. Billing stays behind `BILLING=1`.
+- **Sentry, set up for the owner:**
+  - CLI signed in.
+  - Project `jassiel/nexa-lms` (javascript-nextjs).
+  - `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG` and `SENTRY_PROJECT` on Vercel Production only.
+  - Alerts "New or regressed issue" and "Busy issue: over 30 events in 15 min". Sentry has no 10-minute window. The default high-priority alert stays.
+  - No source-map token yet (optional).
+- **#93:** replied to B and moved it to `needs-b`.
+
+Next:
+- Batch 4 deletions after the owner tests B's Batch 3b.
+- Paystack test mode on Preview once the owner supplies the test key.
+- Domain and email (`nexa-lms.co.za` is bought).
+
+Blocked on the other agent:
+- For B (#93): the helpers are on `main` once this merges. Call them inside the same `$transaction` as your old-column writes, and give that transaction a `timeout` of about 15 s for large classes.
+
+Questions for the owner:
+- The Paystack test secret key for Preview, and where DNS for `nexa-lms.co.za` lives (xneelo or Cloudflare).
+
 ## 2026-11-19 Phase 2 billing core, no live money, `revamp/a-billing-core` (#97) and `revamp/a-billing-provider`
 
 Done:
