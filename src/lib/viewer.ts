@@ -3,15 +3,16 @@
  *
  * Contract: docs/revamp/contracts/viewer.md (owned by Agent A).
  *
- * Phase 0: there are no workspaces, memberships or guardianships in the
- * database yet, so the viewer is built from today's single `User.role` plus
- * the Tutor/Student profile, inside the one comped organisation the Phase 1
- * migration will create (`LEGACY_WORKSPACE`). The shape is final; Phase 1
- * replaces the internals of `loadViewer` and `canIn` without changing it.
+ * Phase 1: built from the tenancy tables (Membership, Learner,
+ * Guardianship, Workspace), with the active workspace taken from the
+ * `nexa_ws` cookie that `switchWorkspace` sets. A user the tenancy backfill
+ * has not reached yet falls back to the Phase 0 bridge (one comped
+ * organisation, persona from `User.role`), so nobody loses access.
  */
 
 import "server-only";
 
+import { cookies } from "next/headers";
 import { cache } from "react";
 
 import { auth } from "@/lib/auth";
@@ -19,7 +20,9 @@ import { prisma } from "@/lib/db";
 
 import {
   buildLegacyViewer,
+  buildTenancyViewer,
   can,
+  hasTenancy,
   needsScope,
   type LegacyRole,
   type Permission,
@@ -29,6 +32,8 @@ import {
 
 export * from "./viewer-core";
 
+export const ACTIVE_WORKSPACE_COOKIE = "nexa_ws";
+
 export class ViewerError extends Error {
   constructor(public readonly code: "UNAUTHENTICATED" | "FORBIDDEN", message?: string) {
     super(message ?? code);
@@ -36,50 +41,118 @@ export class ViewerError extends Error {
   }
 }
 
-const loadViewer = cache(async (userId: string, role: LegacyRole): Promise<Viewer | null> => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, email: true, emailVerified: true },
-  });
-  if (!user) return null;
+const workspaceSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  kind: true,
+  timezone: true,
+  logoUrl: true,
+  accentColor: true,
+  billingState: true,
+  trialEndsAt: true,
+} as const;
 
-  // Profiles still match users by email (design 01, section 8; fixed in Phase 1).
-  let profileId: string | null = null;
-  let imageUrl: string | null = null;
-  if (role === "TUTOR") {
-    const tutor = await prisma.tutor.findFirst({
-      where: { email: { equals: user.email, mode: "insensitive" } },
-      select: { id: true, profileImageUrl: true },
+const loadViewer = cache(
+  async (userId: string, role: LegacyRole, activeWorkspaceId: string | null): Promise<Viewer | null> => {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        platformRole: true,
+        tutorProfile: { select: { profileImageUrl: true } },
+        studentProfile: { select: { id: true, imageUrl: true } },
+        memberships: {
+          where: { status: "ACTIVE" },
+          orderBy: { joinedAt: "asc" },
+          select: {
+            id: true,
+            role: true,
+            workspace: { select: workspaceSelect },
+            teams: { select: { teamId: true, isLead: true } },
+          },
+        },
+        learners: {
+          where: { status: "ACTIVE" },
+          orderBy: { createdAt: "asc" },
+          select: { id: true, isMinor: true, paymentVisible: true, workspace: { select: workspaceSelect } },
+        },
+        guardianOf: {
+          where: { status: "ACTIVE" },
+          select: {
+            student: {
+              select: {
+                id: true,
+                name: true,
+                studentProfile: { select: { imageUrl: true } },
+                learners: { where: { status: "ACTIVE" }, select: { workspace: { select: { id: true, name: true } } } },
+              },
+            },
+          },
+        },
+        guardedBy: { where: { status: "ACTIVE" }, select: { id: true }, take: 1 },
+      },
     });
-    profileId = tutor?.id ?? null;
-    imageUrl = tutor?.profileImageUrl ?? null;
-  } else if (role === "STUDENT") {
-    const student = await prisma.student.findFirst({
-      where: { email: { equals: user.email, mode: "insensitive" } },
-      select: { id: true, imageUrl: true },
-    });
-    profileId = student?.id ?? null;
-    imageUrl = student?.imageUrl ?? null;
-  }
+    if (!user) return null;
 
-  return buildLegacyViewer({
-    user: {
+    const imageUrl = user.tutorProfile?.profileImageUrl ?? user.studentProfile?.imageUrl ?? null;
+    const children = user.guardianOf.map((g) => ({
+      userId: g.student.id,
+      name: g.student.name,
+      imageUrl: g.student.studentProfile?.imageUrl ?? null,
+      workspaces: g.student.learners.map((l) => ({ id: l.workspace.id, name: l.workspace.name })),
+    }));
+    const base = {
       id: user.id,
       name: user.name,
       email: user.email,
-      role,
       emailVerified: user.emailVerified != null,
+      platformRole: user.platformRole,
       imageUrl,
-    },
-    profileId,
-  });
-});
+    };
+
+    if (hasTenancy({ user: base, memberships: user.memberships, learners: user.learners, children })) {
+      return buildTenancyViewer({
+        user: base,
+        memberships: user.memberships,
+        learners: user.learners,
+        children,
+        hasActiveGuardian: user.guardedBy.length > 0,
+        activeWorkspaceId,
+      });
+    }
+
+    // Not backfilled yet: the Phase 0 bridge, unchanged.
+    let profileId: string | null = null;
+    if (role === "TUTOR") {
+      const tutor = await prisma.tutor.findFirst({
+        where: { email: { equals: user.email, mode: "insensitive" } },
+        select: { id: true },
+      });
+      profileId = tutor?.id ?? null;
+    } else if (role === "STUDENT") {
+      profileId = user.studentProfile?.id ?? null;
+      if (!profileId) {
+        const student = await prisma.student.findFirst({
+          where: { email: { equals: user.email, mode: "insensitive" } },
+          select: { id: true },
+        });
+        profileId = student?.id ?? null;
+      }
+    }
+    return buildLegacyViewer({ user: { ...base, role }, profileId });
+  },
+);
 
 /** Cached per request. Null when signed out. */
 export async function getViewer(): Promise<Viewer | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
-  return loadViewer(session.user.id, session.user.role as LegacyRole);
+  const active = (await cookies()).get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null;
+  return loadViewer(session.user.id, session.user.role as LegacyRole, active);
 }
 
 /** Throws ViewerError("UNAUTHENTICATED") or ViewerError("FORBIDDEN"). */
@@ -102,6 +175,9 @@ export async function requireViewer(opts: {
 /**
  * Workspace-level check plus a resource scope, for the "◐" cells of the
  * permission matrix. Async because the scope is checked in the database.
+ *
+ * A course is always checked against the active workspace, owners and
+ * admins included, so one workspace can never act on another's course.
  */
 export async function canIn(
   viewer: Viewer,
@@ -109,29 +185,40 @@ export async function canIn(
   scope: { courseId?: string; teamId?: string; childUserId?: string },
 ): Promise<boolean> {
   if (!can(viewer, permission)) return false;
-  if (!needsScope(viewer, permission)) return true;
+  if (viewer.persona === "admin") return true;
 
-  if (scope.teamId) {
-    return viewer.membership?.leadTeamIds.includes(scope.teamId) ?? false;
-  }
-  if (scope.childUserId) {
-    return viewer.children.some((c) => c.userId === scope.childUserId);
-  }
   if (scope.courseId) {
-    if (viewer.persona === "staff") return isCourseStaff(viewer, scope.courseId);
+    if (viewer.persona === "staff") return isCourseStaff(viewer, scope.courseId, needsScope(viewer, permission));
     if (viewer.persona === "learner") return isEnrolled(viewer, scope.courseId);
-    // Guardians: no children before Phase 1, so no course is in scope.
+    if (viewer.persona === "guardian") return childEnrolled(viewer, scope.courseId);
     return false;
   }
+  if (!needsScope(viewer, permission)) return true;
+  if (scope.teamId) return viewer.membership?.leadTeamIds.includes(scope.teamId) ?? false;
+  if (scope.childUserId) return viewer.children.some((c) => c.userId === scope.childUserId);
   // A scoped permission with no scope given is never enough.
   return false;
 }
 
-async function isCourseStaff(viewer: Viewer, courseId: string): Promise<boolean> {
+const isLegacy = (viewer: Viewer) => viewer.membership?.id.startsWith("legacy_") ?? false;
+
+async function isCourseStaff(viewer: Viewer, courseId: string, mustTeach: boolean): Promise<boolean> {
+  if (!viewer.workspace || !viewer.membership) return false;
+  if (isLegacy(viewer)) {
+    const course = await prisma.course.findFirst({
+      where: { id: courseId, tutor: { email: { equals: viewer.user.email, mode: "insensitive" } } },
+      select: { id: true },
+    });
+    return course != null;
+  }
+  const membershipId = viewer.membership.id;
   const course = await prisma.course.findFirst({
     where: {
       id: courseId,
-      tutor: { email: { equals: viewer.user.email, mode: "insensitive" } },
+      workspaceId: viewer.workspace.id,
+      ...(mustTeach
+        ? { OR: [{ ownerMembershipId: membershipId }, { staff: { some: { membershipId } } }] }
+        : {}),
     },
     select: { id: true },
   });
@@ -139,10 +226,25 @@ async function isCourseStaff(viewer: Viewer, courseId: string): Promise<boolean>
 }
 
 async function isEnrolled(viewer: Viewer, courseId: string): Promise<boolean> {
-  if (!viewer.learner) return false;
-  const course = await prisma.course.findFirst({
+  if (!viewer.learner || !viewer.workspace) return false;
+  const enrolment = await prisma.enrollment.findFirst({
+    where: { courseId, learnerId: viewer.learner.id, endedAt: null, workspaceId: viewer.workspace.id },
+    select: { id: true },
+  });
+  if (enrolment) return true;
+  // Phase 0 bridge: learner.id is the Student profile id.
+  const legacy = await prisma.course.findFirst({
     where: { id: courseId, students: { some: { id: viewer.learner.id } } },
     select: { id: true },
   });
-  return course != null;
+  return legacy != null;
+}
+
+async function childEnrolled(viewer: Viewer, courseId: string): Promise<boolean> {
+  if (viewer.children.length === 0) return false;
+  const enrolment = await prisma.enrollment.findFirst({
+    where: { courseId, endedAt: null, learner: { userId: { in: viewer.children.map((c) => c.userId) } } },
+    select: { id: true },
+  });
+  return enrolment != null;
 }
