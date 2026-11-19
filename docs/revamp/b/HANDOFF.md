@@ -3,6 +3,46 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Payouts settings, `revamp/b-fees-payouts`
+
+Built on A's billing contract section 3 (Draft 1.9, #124, #125).
+
+Done:
+- **Payouts** (`/dashboard/settings/payouts`, ux/04 §7), behind BILLING=1.
+  Open to `payouts.connect` or `fees.manage`. A Payouts card on Settings
+  links to it.
+  - **Who is paid** (organisations, `workspace.settings`): one account for
+    the organisation, or each tutor's own (`setPayoutMode`).
+  - **The account:** bank ••last4, holder, business name and status. To
+    connect or change it, pick the bank and enter the account number,
+    business name and an optional ID number.
+    - "Check account" calls `resolvePayoutAccount` and saves nothing.
+    - The holder's name is shown with "Yes, connect" / "No, edit".
+    - Editing any field clears the name shown.
+  - **In per-tutor mode** each tutor connects their own. People with
+    `payouts.connect` or `workspace.settings` also see a table of the
+    tutors' accounts.
+  - Errors: an unknown account reads "Paystack couldn't find that account.
+    Check the bank and number." Other messages from A and Paystack are
+    shown as written.
+- Helpers in `lib/payouts-ui.ts`: status chips, `accountLabel`,
+  `cleanAccountNumber`, `payoutErrorMessage`.
+
+Checked:
+- `tsc` and `eslint` are clean, and `check-payouts-ui` (new) passes.
+- A temporary sample-data page showed the mode switch, the connected
+  account with Change account, and the empty form with its account-number
+  check. No console errors.
+- Owner check on Preview, with Paystack's test keys: connect a test bank
+  account.
+
+Not done:
+- The tutors table can't name the tutor. `getPayoutSettings` gives
+  `membershipId` but no name, so the table shows the business name.
+- "Recent payouts" from ux/04 §7 has no query yet.
+- Changing the account doesn't ask for the password again (a ux/04
+  proposal, not in the contract).
+
 ## 2026-11-19 Nexa admin billing, part 1, `revamp/b-admin-billing`
 
 Built on A's billing contract section 4 (Draft 1.7, #118, #120). Pages are
