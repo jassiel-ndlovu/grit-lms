@@ -3,6 +3,48 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Course content delete for A (#113), `revamp/b-course-delete`
+
+Done:
+- **`deleteCourseContent(tx, courseId)`** in
+  `src/features/courses/delete-content.ts`, for A's course deletion
+  (#113, option 1).
+  - It deletes everything in B's tables under the course inside A's
+    transaction, children first: uploaded answer files, grades, question
+    grades, assessment completions, test submissions, test questions,
+    tests, assignment entries, assignments, quizzes, lesson completions,
+    attachments, lessons and events.
+  - It leaves `Course` and A's rows (CourseStaff, Enrollment, billing,
+    Notification).
+  - It returns `{ blobUrls, counts }`. `blobUrls` are the de-duplicated
+    Blob files to delete after the commit, found in every column of the
+    rows (covers, attachments, videos, memos, briefs, students' uploads,
+    and links inside rich text and answers). `counts` are rows deleted per
+    table.
+- **`countCourseContent(tx, courseId)`** returns the same shape without
+  deleting, for A's dry run. Both share one filter per table, so they
+  can't drift.
+- **`collectBlobUrls`** (`src/features/courses/lib/blob-urls.ts`), pure.
+  It uses the same regex as A's blob audit, and drops the query string and
+  trailing punctuation.
+- Neither function is a server action: the caller authorises.
+
+Checked:
+- `tsc` is clean.
+- `scripts/check-course-delete.ts` passes on Preview (20 checks). It
+  builds a fake course with one of everything inside one transaction that
+  is always rolled back, then:
+  - counts it, deletes it and counts again;
+  - checks the Blob URLs, that another course is untouched, and that the
+    Course row then deletes cleanly;
+  - after the rollback, checks the fake course and student are gone.
+
+For A:
+- Call it first in your transaction, then delete your rows and the
+  Course. No feature copies files between courses, but a URL could have
+  been pasted elsewhere by hand, so your cleanup may want to check other
+  references before deleting a file (research 08).
+
 ## 2026-11-19 Grading view in the test frame, `revamp/b-grading`
 
 Done:
