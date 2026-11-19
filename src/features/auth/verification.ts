@@ -15,8 +15,8 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 
 import { prisma } from "@/lib/db";
-import { sendEmail, type SendEmailResult } from "@/lib/email/send";
-import { verificationEmail } from "@/lib/email/templates";
+import { enqueueEmail, sealForQueue, sendQueuedNow } from "@/lib/email/queue";
+import type { SendEmailResult } from "@/lib/email/send";
 
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -45,7 +45,21 @@ export async function sendVerificationEmail(userId: string): Promise<SendEmailRe
     }),
   ]);
 
-  return sendEmail(verificationEmail({ to: user.email, name: user.name, token }));
+  // Through the send queue (AUTH priority), tried at once. The raw token is
+  // sealed in the row and removed once the email is sent or given up.
+  const key = `auth:verify:${user.id}:${hashToken(token).slice(0, 16)}`;
+  await enqueueEmail(prisma, {
+    key,
+    template: "auth:verify",
+    to: user.email,
+    userId: user.id,
+    category: "ACCOUNT",
+    priority: "AUTH",
+    data: { name: user.name, tokenSealed: sealForQueue(token) },
+  });
+  const [r] = await sendQueuedNow([key]);
+  if (r.outcome === "sent" || r.outcome === "retrying" || r.outcome === "skipped") return { ok: true, id: key };
+  return { ok: false, error: r.error ?? "Email not sent" };
 }
 
 export type VerifyResult =

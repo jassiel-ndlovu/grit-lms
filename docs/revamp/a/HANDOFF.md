@@ -3,6 +3,28 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 All email through the queue; retention warnings, `revamp/a-email-queue-all`
+
+Done:
+- **Every email now goes through `OutboundEmail`:**
+  - The verification email: AUTH priority, tried at once. The token is sealed with a key derived from `NEXTAUTH_SECRET`, so no new secret was needed, and removed from the row once the email is sent or given up.
+  - Immediate notification emails: one row per notification, tried at once.
+  - Digests: queued by the hourly job, which then drains the queue.
+  - The queue sets `Notification.emailedAt` when a mail is actually sent, and retries failures.
+  - Nothing calls `sendEmail` directly any more except the queue.
+- **Retention** (owner approved the policy on 2026-11-19), in `billing/retention.ts`:
+  - Warning emails go out 30 and 7 days before `deleteAfter`.
+  - `planRetention` lists the workspaces that are due and what would go.
+  - The billing job reports `retentionDue` and **deletes nothing yet**: deleting a course needs B's content tables to cascade or a delete helper from B (#113).
+  - `ws_nexa_legacy` is never planned for deletion.
+- **#93:** step 1 merged (#111). Replied to B with my OK for my paths in the drop PR, and moved the issue to `needs-b`.
+- **Checks:**
+  - `check-email-queue.ts`: 25 checks.
+  - A one-off end-to-end run on the preview DB: 8 checks, covering verification queued and suppressed with the token removed, a notification email through the queue without being marked emailed when suppressed, the 7-day warning queued once, and the plan listing the due workspace without deleting it. The test rows were removed.
+
+Next:
+- The retention deletes, once #113 lands, behind a flag and after the owner has seen a dry run.
+
 ## 2026-11-19 Off the old course links in A's paths (#93 step 1); support@ live, `revamp/a-legacy-links`
 
 Done:

@@ -12,10 +12,12 @@
  *      the workspace goes CANCELLED.
  *   4. Dunning: emails on day 0, 3 and 7, card retries on day 3 and 7,
  *      READ_ONLY with an email on day 14.
- *   5. Sends queued email.
+ *   5. Retention: warnings 30 and 7 days before deletion, and the list of
+ *      workspaces due (deletes wait for B's course delete helper).
+ *   6. Sends queued email.
  *
  * Not yet: usage metering and cap emails (they need B's AI-marking rows),
- * and retention deletes with their warnings (owner-only, AGENTS.md 4.2).
+ * and the retention deletes themselves (retention.ts).
  */
 
 import "server-only";
@@ -31,6 +33,7 @@ import { getBillingConfig } from "./data";
 import { dayLabel, queueBillingEmail } from "./emails";
 import { isBillingEnabled } from "./errors";
 import { buildRenewalInvoice } from "./invoice";
+import { planRetention, sendRetentionWarnings } from "./retention";
 
 const DAY = 24 * 60 * 60 * 1000;
 const TRIAL_EMAIL_DAYS = [4, 1] as const; // design: day 10 and day 13 of 14
@@ -48,6 +51,9 @@ export type BillingRunResult = {
   retriesPaid: number;
   retriesFailed: number;
   locked: number;
+  retentionWarnings: number;
+  /** Workspaces past their retention date; nothing is deleted yet (see retention.ts). */
+  retentionDue: number;
   emailsSent: number;
   emailsSuppressed: number;
   errors: number;
@@ -57,7 +63,7 @@ export type BillingRunResult = {
 export async function runBillingJob(opts: { provider?: PaymentProvider; now?: Date; budgetMs?: number; batch?: number } = {}): Promise<BillingRunResult> {
   const r: BillingRunResult = {
     trialEmails: 0, trialsEnded: 0, compsEnded: 0, cancelled: 0, renewalsPaid: 0, renewalsZero: 0, renewalsPending: 0,
-    dunningStarted: 0, retriesPaid: 0, retriesFailed: 0, locked: 0, emailsSent: 0, emailsSuppressed: 0, errors: 0, more: false,
+    dunningStarted: 0, retriesPaid: 0, retriesFailed: 0, locked: 0, retentionWarnings: 0, retentionDue: 0, emailsSent: 0, emailsSuppressed: 0, errors: 0, more: false,
   };
   if (!isBillingEnabled()) return { ...r, skipped: "BILLING is off" };
 
@@ -216,7 +222,17 @@ export async function runBillingJob(opts: { provider?: PaymentProvider; now?: Da
     }
   }
 
-  // 5. Email.
+  // 5. Retention: warnings, and the list of workspaces due (no deletes yet).
+  try {
+    r.retentionWarnings = await sendRetentionWarnings(now, batch);
+    const plan = await planRetention(now);
+    r.retentionDue = plan.length;
+    if (plan.length) console.warn("[billing] retention due (not deleted yet):", JSON.stringify(plan));
+  } catch (e) {
+    fail("retention", "plan", e);
+  }
+
+  // 6. Email.
   try {
     const sent = await drainEmailQueue({ limit: 50, now });
     r.emailsSent = sent.sent;

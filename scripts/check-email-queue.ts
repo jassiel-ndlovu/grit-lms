@@ -6,7 +6,8 @@
  */
 
 import { rands, renderBillingEmail } from "../src/lib/email/billing-templates";
-import { isRetryable, retryDelayMinutes } from "../src/lib/email/queue";
+import { retentionWarningDue } from "../src/features/billing/retention";
+import { isRetryable, retryDelayMinutes, sealForQueue } from "../src/lib/email/queue";
 import { recipientAllowed } from "../src/lib/email/send";
 
 let failures = 0;
