@@ -109,7 +109,7 @@ const METER_LABEL: Record<CapMeter, string> = {
 /** "12 of 20 students", "3 GB of 5 GB", "R120 of R500"; no limit → "12 students". */
 export function capLabel(cap: { meter: CapMeter; used: number; limit: number | null }): { name: string; amount: string } {
   const fmt = (n: number) =>
-    cap.meter === "storage-gb" ? `${n} GB` : cap.meter === "api-pass-through" ? formatRand(n) : n.toLocaleString("en-ZA").replace(/ /g, " ");
+    cap.meter === "storage-gb" ? `${n} GB` : cap.meter === "api-pass-through" ? formatRand(n) : n.toLocaleString("en-ZA").replace(/\u00a0/g, " ");
   const name = METER_LABEL[cap.meter];
   return { name, amount: cap.limit == null ? fmt(cap.used) : `${fmt(cap.used)} of ${fmt(cap.limit)}` };
 }
@@ -120,11 +120,56 @@ export function capTone(percent: number | null): Tone {
   return percent >= 100 ? "danger" : percent >= 80 ? "warning" : "neutral";
 }
 
-/**
- * A's card checks use references starting "nx-card-" (startCardReplacement).
- * The return path carries no query of its own, because Paystack adds
- * ?reference= to it.
- */
-export function isCardCheckReference(reference: string | null): boolean {
-  return reference?.startsWith("nx-card-") ?? false;
+export type InvoiceStatus = "DRAFT" | "OPEN" | "PAID" | "VOID" | "UNCOLLECTIBLE";
+
+/** An invoice's chip. PAID shows the day it was paid when the caller passes it. */
+export function invoiceChip(status: InvoiceStatus, paidOn?: string | null): { label: string; tone: Tone } {
+  switch (status) {
+    case "PAID":
+      return { label: paidOn ? `Paid ${paidOn}` : "Paid", tone: "success" };
+    case "OPEN":
+      return { label: "Unpaid", tone: "warning" };
+    case "VOID":
+      return { label: "Cancelled", tone: "neutral" };
+    case "UNCOLLECTIBLE":
+      return { label: "Written off", tone: "neutral" };
+    default:
+      return { label: "Draft", tone: "neutral" };
+  }
+}
+
+export type InvoicePayment = {
+  via: "CARD" | "OFFSITE";
+  status: "SUCCEEDED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED";
+};
+
+/** One attempt on an invoice, in words: "Card payment", "Card payment failed", "Paid outside Nexa". */
+export function paymentLabel(p: InvoicePayment): { label: string; tone: Tone } {
+  if (p.via === "OFFSITE") return { label: "Paid outside Nexa", tone: "neutral" };
+  switch (p.status) {
+    case "SUCCEEDED":
+      return { label: "Card payment", tone: "success" };
+    case "FAILED":
+      return { label: "Card payment failed", tone: "danger" };
+    case "REFUNDED":
+      return { label: "Card payment, refunded", tone: "neutral" };
+    default:
+      return { label: "Card payment, partly refunded", tone: "neutral" };
+  }
+}
+
+/** The meters the usage page shows: the two v1 bills on (getUsage, billing.md 1.6). */
+export const USAGE_METERS = [
+  { meter: "active-students", title: "Active students", unit: ["student", "students"] },
+  { meter: "ai-marks", title: "AI-marked answers", unit: ["answer", "answers"] },
+] as const satisfies ReadonlyArray<{ meter: CapMeter; title: string; unit: readonly [string, string] }>;
+
+/** "1 student", "1 234 answers". */
+export function countLabel(n: number, unit: readonly [string, string]): string {
+  return `${n.toLocaleString("en-ZA").replace(/\u00a0/g, " ")} ${n === 1 ? unit[0] : unit[1]}`;
+}
+
+/** The highest daily value and the day it fell on (first, on a tie); null with no days. */
+export function peakDay(days: ReadonlyArray<{ day: string; quantity: number }>): { day: string; quantity: number } | null {
+  return days.reduce<{ day: string; quantity: number } | null>((best, d) => (!best || d.quantity > best.quantity ? d : best), null);
 }

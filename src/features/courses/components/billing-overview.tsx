@@ -6,7 +6,8 @@
 
 import Link from "next/link";
 
-import { PageHeader } from "@/components/shell/page-header";
+import { PageHeader, type Crumb } from "@/components/shell/page-header";
+import { Ribbon, RibbonNav } from "@/components/shell/ribbon";
 import { StatusChip } from "@/components/shell/status-chip";
 import { PropertyList, PropertyRow } from "@/components/ui/property-list";
 import type { getBillingOverview, getCourseTiers } from "@/features/billing/queries";
@@ -21,8 +22,15 @@ export type CourseTierRow = Awaited<ReturnType<typeof getCourseTiers>>[number];
 
 const BAR: Record<string, string> = {
   neutral: "bg-primary",
-  warning: "bg-amber-500",
+  warning: "bg-warning",
   danger: "bg-destructive",
+};
+
+export const billingRoutes = {
+  overview: "/dashboard/settings/billing",
+  usage: "/dashboard/settings/billing/usage",
+  payments: "/dashboard/settings/billing/payments",
+  payment: (id: string) => `/dashboard/settings/billing/payments/${id}`,
 };
 
 export function BillingOverview({
@@ -38,7 +46,7 @@ export function BillingOverview({
   /** billing.manage: may pay. */
   canManage: boolean;
   /** Back from Paystack (`reference`) or a saved-card charge (`paid`). */
-  payment: { reference: string | null; paid: boolean; purpose: "payment" | "card" } | null;
+  payment: { reference: string | null; paid: boolean } | null;
 }) {
   const day = (iso: string | Date, year = true) =>
     formatDate(new Date(iso), ctx, year ? { day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short" });
@@ -51,7 +59,7 @@ export function BillingOverview({
 
   return (
     <BillingFrame status={<StatusChip tone={chip.tone}>{chip.label}</StatusChip>}>
-      {payment ? <PaymentReturn reference={payment.reference} purpose={payment.purpose} /> : null}
+      {payment ? <PaymentReturn reference={payment.reference} /> : null}
 
       {overdue ? (
         <section role="alert" className="border-destructive/40 bg-destructive/5 space-y-1 rounded-lg border p-4 text-sm">
@@ -193,30 +201,11 @@ export function BillingOverview({
             {o.state === "TRIAL" ? "Trial limits" : "Limits"}
           </h2>
           <ul className="space-y-3 text-sm">
-            {o.caps.map((c) => {
-              const { name, amount } = capLabel(c);
-              const tone = capTone(c.percent);
-              return (
-                <li key={c.meter} className="space-y-1">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-foreground">{name}</span>
-                    <span className="text-muted-foreground tabular-nums">{amount}</span>
-                  </div>
-                  {c.percent != null ? (
-                    <div
-                      role="meter"
-                      aria-label={name}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={c.percent}
-                      className="bg-muted h-1.5 overflow-hidden rounded-full"
-                    >
-                      <div className={`h-full ${BAR[tone] ?? BAR.neutral}`} style={{ width: `${c.percent}%` }} />
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
+            {o.caps.map((c) => (
+              <li key={c.meter}>
+                <CapBar cap={c} />
+              </li>
+            ))}
           </ul>
         </section>
       ) : null}
@@ -224,12 +213,71 @@ export function BillingOverview({
   );
 }
 
-export function BillingFrame({ status, children }: { status?: React.ReactNode; children: React.ReactNode }) {
+/** One limit: its name, "used of limit", and a bar from 0 to 100%. */
+export function CapBar({ cap, label }: { cap: BillingOverviewData["caps"][number]; /** Instead of the meter's name. */ label?: string }) {
+  const { name: meterName, amount } = capLabel(cap);
+  const name = label ?? meterName;
+  const tone = capTone(cap.percent);
+  return (
+    <div className="space-y-1 text-sm">
+      <div className="flex justify-between gap-4">
+        <span className="text-foreground">{name}</span>
+        <span className="text-muted-foreground tabular-nums">{amount}</span>
+      </div>
+      {cap.percent != null ? (
+        <div
+          role="meter"
+          aria-label={name}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.min(cap.percent, 100)}
+          className="bg-muted h-1.5 overflow-hidden rounded-full"
+        >
+          <div className={`h-full ${BAR[tone] ?? BAR.neutral}`} style={{ width: `${Math.min(cap.percent, 100)}%` }} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Settings › Billing [› page], the Overview / Usage / Payments ribbon, and
+ * the page's h1 (default "Billing").
+ */
+export function BillingFrame({
+  status,
+  page,
+  title = "Billing",
+  actions,
+  children,
+}: {
+  status?: React.ReactNode;
+  /** Crumbs after Billing, e.g. [{ label: "Payments", href }, { label: "NX-2026-0142" }]. */
+  page?: Crumb[];
+  title?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const crumbs: Crumb[] = [
+    { label: "Settings", href: "/dashboard/settings" },
+    page?.length ? { label: "Billing", href: billingRoutes.overview } : { label: "Billing" },
+    ...(page ?? []),
+  ];
   return (
     <>
-      <PageHeader breadcrumb={[{ label: "Settings", href: "/dashboard/settings" }, { label: "Billing" }]} status={status} />
+      <PageHeader breadcrumb={crumbs} status={status} actions={actions} />
+      <Ribbon>
+        <RibbonNav
+          label="Billing"
+          links={[
+            { label: "Overview", href: billingRoutes.overview },
+            { label: "Usage", href: billingRoutes.usage },
+            { label: "Payments", href: billingRoutes.payments },
+          ]}
+        />
+      </Ribbon>
       <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
-        <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Billing</h1>
+        <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">{title}</h1>
         {children}
       </div>
     </>
