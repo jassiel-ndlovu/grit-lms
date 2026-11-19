@@ -128,6 +128,11 @@ The course settings screen uses three calls defined in [billing.md](billing.md),
 6. **Tier changes:** billing runs in 30-day periods from each payment. Raising a course's tier bills it at that tier for the next 30 days, even if the service is switched off sooner ([a/design/03-billing.md](../a/design/03-billing.md)). B shows `previewServiceChange()` before the tutor confirms.
 7. **Who can switch:** `courses.services` permission: owner, admin, or the course lead.
 
+8. **Flag off:** with `BILLING` unset (production until the owner switches billing on) `hasService` is true for every `v1` key and false for the rest, so gating a feature now changes nothing for today's users.
+9. **Trial:** `hasService` follows the switched-on rows in the trial too. Design 03 says "every Pro service on" during the trial; that is done by switching the rows on when a workspace is created (onboarding, A), not by `hasService`.
+
+Built (2026-11-19): `hasService` in `src/features/billing/services.ts`; the catalogue in `src/features/billing/catalogue.ts` (client-safe, re-exported from `services.ts`).
+
 ## Examples
 
 ```ts
@@ -144,6 +149,7 @@ if (!(await hasService(viewer, courseId, "ai-marking"))) {
 
 | Date | Change |
 | --- | --- |
+| 2026-11-19 | Draft 1.3. `hasService` built; rules 8 (flag off) and 9 (trial) |
 | 2026-11-16 | Draft 1. Owner prices R99 / R139 / R179; `math-input` and `graphing` on Plus; automarker, judge mode and code plagiarism parked; `leaderboards` split from `judge-mode` (owner decision: everyone enrolled appears) |
 | 2026-11-16 | Draft 1.2. 30-day periods; `day-pass` later; `ai-credits` retired (overage at cost ÷ 0.8); Pro includes 30 AI marks per student per period |
 | 2026-11-16 | Draft 1.1. Course-settings calls moved to `billing.md` (`setCourseServices` with enable and disable lists, plus `previewServiceChange`); highest-tier-in-month rule |

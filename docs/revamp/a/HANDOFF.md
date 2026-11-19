@@ -3,6 +3,31 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Phase 2 billing core, no live money, `revamp/a-billing-core` (#97) and `revamp/a-billing-provider`
+
+Done:
+- **Schema (#97):** every design 03 and 04 model in `billing.prisma`, migration `8_billing_core` (additive: 29 enums, 27 tables). Money records restrict workspace deletion and keep course and learner ids as plain strings, so they outlive the retention job. Additions to the design: `ServiceStatus.RETIRED` and `UsageCapSource.ADMIN`.
+- **Seed:** `scripts/seed-billing.ts` (idempotent, dry run by default): tiers 9900/13900/17900 cents with 0/0/30 AI marks, every key in `contracts/services.md` with its status, and `BillingConfig` (30-day periods, 8000 bps margin, 14-day trial, no VAT). **Preview:** #97's Preview build applied `8_billing_core`, and the seed wrote 3 tiers, 31 services and the config. A re-run changed nothing.
+- **Provider:** `src/features/payments/provider/`: the design 04 `PaymentProvider` interface, `PaystackProvider` (fetch, `PAYSTACK_SECRET_KEY`) and `getProvider()` (`PAYMENT_PROVIDER`, Paystack only; Payfast is not built). Webhook signatures are HMAC-SHA512 compared in constant time and fail closed. `scripts/check-paystack.ts` has 29 checks, including a vector computed independently with `openssl`, and drives the provider with a fake fetch. No Paystack account or keys were created.
+- **Pricing (pure):** `src/features/billing/pricing.ts`: derived and billed tiers, the 30-day hold, periods, the period invoice (advance seats, catch-ups, tier upgrades, AI overage at cost ÷ 0.8, discount, credit, VAT) and `previewServiceChange`. `scripts/check-billing.ts` has 50 checks, including both worked examples in design 03 (333 600 and 457 400 cents).
+- **Queries and actions** behind `BILLING=1`: `getBillingOverview`, `getCourseTiers`, `getCourseServices`, `previewServiceChange`, `setCourseServices` (writes a `CourseTierHold` on a raise outside the trial, plus an `AuditLog` row) and `hasService`. `safe-action` passes `BillingError` and `ProviderError` codes through as `"CODE: message"`. Contracts `billing.md` (draft 1.2) and `services.md` (draft 1.3) record what was built.
+- **Not merged, not on production:** #97 adds back-relation fields to B's `learning.prisma`, so AGENTS.md 4.1 (condition 3) needs B's written OK or the owner. B was not running. The production migration waits for the merge.
+
+Next:
+- Payment actions and the webhook route (`startFirstPayment`, `payPlatformInvoice`, `/api/webhooks/paystack`) once the owner has Paystack test keys.
+- `buildRenewalInvoice` and the billing daily job (metering, renewals, dunning), then `getUsage`, `listPlatformInvoices` and `getPlatformInvoice`.
+- Onboarding: create a `Subscription`, trial caps and the trial's switched-on services with each new workspace.
+
+Blocked on the other agent:
+- For B: **please review the `Course` back-relations in `learning.prisma`** (#97): `services`, `tierHolds`, `tierOverride` and `feeSchedules`. They are relation fields only and add no column to `Course`. You were not running, so they went in under AGENTS.md section 2 with this note. Say in `b/HANDOFF.md` if you want them changed.
+- For B: billing screens can be built against `contracts/billing.md` section 1 now. Everything is behind `BILLING=1`, so set it on Preview only. Codes to map: `READ_ONLY`, `PAST_DUE`, `BILLING_DISABLED`, `NOT_FOUND`, `FORBIDDEN`. `hasService()` is safe to call today: with the flag off it is true for every v1 key.
+
+Questions for the owner:
+- **Merge #97, then this PR** (stacked on #97), unless B OKs the `Course` back-relations first. After the merge A applies `8_billing_core` to production under 4.1 (backup branch `backup-pre-billing-<date>` first) and runs `seed-billing.ts --apply --allow-production`. Both are additive. The `BILLING` flag stays off in production.
+- **Paystack test keys:** a test secret key in Vercel's Preview environment as `PAYSTACK_SECRET_KEY` (A may not create the account or keys).
+- **Sole-proprietor Paystack account** (proof of address under 6 months) before February 2027.
+- **Paystack sales answers** (design 04, open questions 1 to 4): multi-split to many subaccounts on one South African account, `charge_authorization` for Gate 1, the minimum charge for the R10 card-replacement step, how `all-proportional` spreads the fee, how partial refunds of a split debit the shares, and whether account checks need the holder's ID number.
+
 ## 2026-11-19 getViewer() on the tenancy tables, `revamp/a-viewer-tenancy`
 
 Done:

@@ -33,6 +33,8 @@ import { createSafeActionClient } from "next-safe-action";
 
 import { auth, AuthError, requireRole, requireSession } from "@/lib/auth";
 import { requireViewer, ViewerError } from "@/lib/viewer";
+import { BillingError } from "@/features/billing/errors";
+import { ProviderError } from "@/features/payments/provider/types";
 
 /**
  * Base client — no auth. Use for actions that should be callable by anyone
@@ -42,6 +44,10 @@ export const actionClient = createSafeActionClient({
   handleServerError(e) {
     if (e instanceof AuthError) {
       return e.message;
+    }
+    // Stable codes from docs/revamp/contracts/billing.md ("CODE: message").
+    if (e instanceof BillingError || e instanceof ProviderError) {
+      return `${e.code}: ${e.message}`;
     }
     if (e instanceof ViewerError) {
       return e.code === "UNAUTHENTICATED" ? "Please sign in again." : "You don't have access to do that.";
