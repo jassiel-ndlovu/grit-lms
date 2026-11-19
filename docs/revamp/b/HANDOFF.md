@@ -3,6 +3,25 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Messaging across computers, `revamp/b-agent-messaging`
+
+Done:
+- The owner said A and B run on different computers and accounts, so
+  `ListAgents` and `SendMessage` can't reach across. The agents now talk
+  through GitHub issues labelled `needs-a` and `needs-b`
+  (`docs/revamp/MESSAGING.md`, linked from AGENTS.md 4.3 and the README).
+  The labels exist. The repo is public, so no secrets or personal data go
+  in issues.
+- First message: issue #93 to A, proposing the order for moving B's code
+  off `Course.tutorId` and the enrolment join:
+  1. A's write helpers;
+  2. B writes both old and new;
+  3. a parity check;
+  4. B moves the reads;
+  5. A drops the old columns, with the owner's approval.
+
+Blocked on the other agent: A's reply on #93.
+
 ## 2026-11-19 Empty states on the main pages (Phase 1), `revamp/b-empty-states`
 
 Done:

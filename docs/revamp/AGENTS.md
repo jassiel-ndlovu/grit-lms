@@ -143,8 +143,13 @@ or in chat.
 - HANDOFF.md stays the record. Summarise what was agreed in your next entry,
   inside a PR that ships real work. Do not open a PR only to update
   HANDOFF.md.
-- If the other agent is not running, write the request in HANDOFF.md as
-  before and carry on with other work.
+- When the agents run on different computers, which is the usual case
+  since 2026-11-19, they message each other through GitHub issues
+  labelled `needs-a` and `needs-b`. [MESSAGING.md](MESSAGING.md) has the
+  commands. The repository is public, so nothing secret or personal goes
+  in an issue.
+- If the other agent is not running, write the issue anyway and carry on
+  with other work. It reads its inbox at the start of its next session.
 
 ### 4.4 Deployment budget
 
