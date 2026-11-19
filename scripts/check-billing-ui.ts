@@ -11,7 +11,10 @@ import {
   capTone,
   formatDelta,
   formatRand,
-  isCardCheckReference,
+  countLabel,
+  invoiceChip,
+  paymentLabel,
+  peakDay,
   groupServices,
   needsConfirm,
   type ServiceRow,
@@ -65,7 +68,20 @@ check("cap storage", capLabel({ meter: "storage-gb", used: 3, limit: 5 }), { nam
 check("cap rand", capLabel({ meter: "api-pass-through", used: 12000, limit: 50000 }), { name: "Usage above allowances", amount: "R120 of R500" });
 check("cap no limit", capLabel({ meter: "ai-marks", used: 7, limit: null }), { name: "AI-marked answers", amount: "7" });
 check("cap tones", [capTone(null), capTone(79), capTone(80), capTone(100)], ["neutral", "neutral", "warning", "danger"]);
-check("card check reference", [isCardCheckReference("nx-card-ws1-abc"), isCardCheckReference("nx-inv-1"), isCardCheckReference(null)], [true, false, false]);
+check("invoice chips", [invoiceChip("PAID", "30 Nov"), invoiceChip("PAID"), invoiceChip("OPEN"), invoiceChip("VOID")], [
+  { label: "Paid 30 Nov", tone: "success" },
+  { label: "Paid", tone: "success" },
+  { label: "Unpaid", tone: "warning" },
+  { label: "Cancelled", tone: "neutral" },
+]);
+check("payment labels", [
+  paymentLabel({ via: "CARD", status: "SUCCEEDED" }).label,
+  paymentLabel({ via: "CARD", status: "FAILED" }).tone,
+  paymentLabel({ via: "OFFSITE", status: "SUCCEEDED" }).label,
+], ["Card payment", "danger", "Paid outside Nexa"]);
+check("count labels", [countLabel(1, ["student", "students"]), countLabel(1234, ["answer", "answers"])], ["1 student", "1 234 answers"]);
+check("peak day", peakDay([{ day: "a", quantity: 2 }, { day: "b", quantity: 5 }, { day: "c", quantity: 5 }]), { day: "b", quantity: 5 });
+check("peak of nothing", peakDay([]), null);
 
 console.log(failures ? `\n${failures} failed` : "\nAll passed");
 process.exit(failures ? 1 : 0);

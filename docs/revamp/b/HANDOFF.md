@@ -3,6 +3,56 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Billing usage and payments history, `revamp/b-billing-history`
+
+Built on A's billing contract Draft 1.6 (#116).
+
+Done:
+- **Billing ribbon.** `BillingFrame` now has an Overview / Usage / Payments
+  ribbon and crumbs for sub-pages (Settings › Billing › Payments ›
+  NX-…). `billingRoutes` holds the paths.
+- **Usage** (`/dashboard/settings/billing/usage`, ux/03 §3):
+  - Covers active students and AI-marked answers for the current period
+    (the trial, before the first payment).
+  - Each shows the period total, the charge so far (or what the first 30
+    days would cost, in a trial), the limit bar when there is one, and a
+    daily chart.
+  - `?period=` picks an earlier period from the paid invoices' periods.
+- **Daily chart** (`usage-chart.tsx`): one series, so thin columns in one
+  hue and no legend. It has a hover readout (resting on the busiest day), a
+  labelled image for screen readers, and "Show as a table".
+- **Payments** (`/dashboard/settings/billing/payments`, ux/03 §6):
+  - Invoices newest first, with period, number, amount and status.
+  - "Older" and "Newest" page through A's cursor.
+  - The empty state says when the first payment is due, from the trial
+    end.
+- **One payment** (`.../payments/[id]`):
+  - The invoice's lines in A's order (discount, credit and VAT are A's own
+    lines), then the total.
+  - The payments made on it: card, failed, refunded, or paid outside Nexa.
+  - Pay for an open invoice (`billing.manage`).
+  - Download PDF once `pdfUrl` is set.
+- **Return page:** the wording now comes from `getBillingPaymentStatus`'s
+  `purpose`; `isCardCheckReference` is gone. Until the first poll answers,
+  it says "Checking with Paystack…".
+- `requireBillingPage()` (`features/courses/billing-page.ts`) holds the
+  checks every billing page makes.
+- **Fix:** `capLabel` grouped thousands with a no-break space, because its
+  replace matched a plain space.
+
+Checked:
+- `tsc` and `eslint` are clean, and `check-billing-ui` passes, with new
+  cases for the invoice and payment labels, `countLabel` and `peakDay`.
+- A temporary sample-data page showed every view: usage with a limit,
+  hover, the list, the empty state, a paid and an open invoice. No console
+  errors.
+- Owner check on Preview: Billing › Usage and Payments. The Preview
+  workspace is complimentary, so Payments shows the empty state.
+
+Not done:
+- **Setting a usage limit** waits for A's `setUsageCap`, which is in the
+  contract but not built yet. Asked on #106.
+
 ## 2026-11-19 Course content delete for A (#113), `revamp/b-course-delete`
 
 Done:

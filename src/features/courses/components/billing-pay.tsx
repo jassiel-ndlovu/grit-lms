@@ -72,8 +72,8 @@ export function PayButton({ invoiceId, label }: { invoiceId: string | null; labe
 
 /**
  * Adds or replaces the card used for renewals: Paystack runs a R10 check
- * that A refunds at once (billing.md 1.4). The return page tells it from a
- * payment by its reference (isCardCheckReference in lib/billing-ui).
+ * that A refunds at once (billing.md 1.4). The return page words it from
+ * the `purpose` getBillingPaymentStatus returns.
  */
 export function CardButton({ hasCard }: { hasCard: boolean }) {
   const [busy, setBusy] = React.useState(false);
@@ -105,10 +105,13 @@ export function CardButton({ hasCard }: { hasCard: boolean }) {
 
 type Phase = "checking" | "slow" | "succeeded" | "failed" | "unknown";
 
-export function PaymentReturn({ reference, purpose = "payment" }: { reference: string | null; purpose?: "payment" | "card" }) {
+export function PaymentReturn({ reference }: { reference: string | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const [phase, setPhase] = React.useState<Phase>(reference ? "checking" : "succeeded");
+  // CARD (the R10 card check) or INVOICE, from the first poll. Unknown until then.
+  const [purpose, setPurpose] = React.useState<"CARD" | "INVOICE" | null>(null);
+  const card = purpose === "CARD";
 
   React.useEffect(() => {
     if (!reference) return;
@@ -120,6 +123,7 @@ export function PaymentReturn({ reference, purpose = "payment" }: { reference: s
         const res = await getBillingPaymentStatus({ reference: reference! });
         const status = res?.data?.status;
         if (stopped) return;
+        if (res?.data?.purpose) setPurpose(res.data.purpose);
         if (status === "SUCCEEDED") {
           setPhase("succeeded");
           router.refresh();
@@ -157,7 +161,7 @@ export function PaymentReturn({ reference, purpose = "payment" }: { reference: s
     return (
       <div role="status" className={`${box} border-border`}>
         <span className="inline-flex items-center gap-2">
-          <Loader2 aria-hidden className="size-4 animate-spin" /> {purpose === "card" ? "Checking your card…" : "Checking your payment…"}
+          <Loader2 aria-hidden className="size-4 animate-spin" /> {card ? "Checking your card…" : purpose ? "Checking your payment…" : "Checking with Paystack…"}
         </span>
       </div>
     );
@@ -186,7 +190,7 @@ export function PaymentReturn({ reference, purpose = "payment" }: { reference: s
     return (
       <div role="alert" className={`${box} border-destructive/40 bg-destructive/5`}>
         <span>
-          {purpose === "card"
+          {card
             ? "The card check didn't go through, so your card wasn't changed. You can try again."
             : "Your payment didn't go through. Nothing was charged; you can try again."}
         </span>
@@ -197,9 +201,9 @@ export function PaymentReturn({ reference, purpose = "payment" }: { reference: s
     );
   }
   return (
-    <div role="status" className={`${box} border-emerald-600/30 bg-emerald-600/5`}>
+    <div role="status" className={`${box} border-success/30 bg-success/5`}>
       <span>
-        {purpose === "card" ? "Card saved. The R10 check is refunded to it." : "Payment received. Thank you."}
+        {card ? "Card saved. The R10 check is refunded to it." : "Payment received. Thank you."}
       </span>
       <Button variant="outline" size="sm" onClick={dismiss}>
         Close
