@@ -36,10 +36,22 @@ export function Ribbon({ className, children }: { className?: string; children: 
   );
 }
 
-export function RibbonNav({ links, label = "Sections", className }: { links: RibbonLink[]; label?: string; className?: string }) {
+export function RibbonNav({
+  links,
+  label = "Sections",
+  className,
+  current: forced,
+}: {
+  links: RibbonLink[];
+  label?: string;
+  className?: string;
+  /** The href to light when the page's URL is outside every link (e.g. a child route elsewhere). */
+  current?: string;
+}) {
   const pathname = usePathname() ?? "";
   // Exact-or-child match; the first link (the overview) only lights on itself.
-  const current = activeHref(pathname, links.slice(1).map((l) => l.href)) ?? (pathname === links[0]?.href ? links[0].href : null);
+  const current =
+    forced ?? activeHref(pathname, links.slice(1).map((l) => l.href)) ?? (pathname === links[0]?.href ? links[0].href : null);
   return (
     <nav aria-label={label} className={cn("-mb-px flex min-w-0 flex-1 self-stretch overflow-x-auto", className)}>
       <ul className="flex items-stretch gap-1">

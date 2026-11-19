@@ -3,6 +3,35 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-19 Grading view in the test frame, `revamp/b-grading`
+
+Done:
+- **Grading a student's test**
+  (`tutor-tests/submissions/[testId]/[studentId]`) is in `TestFrame`.
+  - Breadcrumb: Tests › course › test › Submissions › student. The
+    Submissions tab is lit.
+  - Auto-grade is a header action.
+  - The student's name and a status chip head the page, with email,
+    submitted time and current grade in a PropertyList.
+  - "No submission" uses the empty state.
+- `TestFrame` takes `view` for pages inside a view, and `RibbonNav`
+  takes `current` to light a tab when the URL is outside every link.
+- **GradingForm:**
+  - Questions are flat sections divided by rules, not cards.
+    Sub-questions are indented with a terracotta rule.
+  - The student's and correct answers use theme tokens (muted and
+    success) instead of slate and emerald.
+  - The save bar sticks to the bottom of the content column. It used to be
+    `fixed` across the window and covered the sidebar.
+- **The "Admin" box** is now a quiet "Submission" section at the end:
+  status override and delete. Its status select has a label.
+
+Checked:
+- `tsc` and `eslint` are clean.
+- A temporary sample page with MathJax showed the frame, a context with a
+  sub-question, both answer boxes and the save bar.
+- Owner check on Preview: open a submitted test and grade it.
+
 ## 2026-11-19 Legacy course links dropped (#93 step 5), `revamp/b-drop-legacy-course-links`
 
 Owner's approval, quoted on #93: "We can proceed with step 5. You have my
@@ -35,13 +64,20 @@ Before the drop (read-only):
   (2 courses, 11 enrolments) and production (6 courses, 12 enrolments).
 - The new integrity check was clean on both.
 
-Applying (see the PR for the order and where each step stands):
-1. A Neon backup branch of production, `backup-legacy-course-links-20261119`.
-2. `migrate deploy` on Preview, then check this branch's Preview deployment.
-3. Merge.
-4. Once the production deployment is live, `migrate deploy` on production.
-   Between those two, creating or editing a course fails, because
-   `tutorId` is still a required column with no value.
+Applied (2026-11-19):
+- **Preview:** the PR's Preview build applied the migration itself at
+  20:56 (`scripts/vercel-build.mjs` migrates Preview on every build). That
+  was before the backup, which I hadn't planned for, but Preview lost only
+  the duplicate links that parity had just shown matched.
+- **Backup:** the owner took a Neon snapshot of production.
+- **Production:** after #115 merged and its production deployment was
+  live, I ran `migrate deploy` by hand.
+- **After, on both databases:**
+  - the integrity check is clean (production 6 courses and 12 enrolments,
+    Preview 2 and 11);
+  - a read-only smoke test of the tenancy filters gave the pre-drop numbers;
+  - production logs showed no errors.
+- #93 is closed.
 
 For A: Preview deployments of branches made before this merge select
 `Course.tutorId` and fail on course pages once Preview has the

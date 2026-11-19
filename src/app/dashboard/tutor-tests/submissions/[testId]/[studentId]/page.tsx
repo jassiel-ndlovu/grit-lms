@@ -13,15 +13,13 @@
  * from TestContext / QuestionGradeContext).
  */
 
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Clock, GraduationCap, Mail, User } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { StatusChip } from "@/components/shell/status-chip";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { PropertyList, PropertyRow } from "@/components/ui/property-list";
 
 import {
   getTestDetailById,
@@ -35,6 +33,7 @@ import {
 } from "@/features/assessments/components/grading-form";
 import { SubmissionAdminPanel } from "@/features/assessments/components/submission-admin-panel";
 import { AutoGradeButton } from "@/features/assessments/components/auto-grade-button";
+import { TestFrame } from "@/features/assessments/components/test-frame";
 
 interface PageProps {
   params: Promise<{ testId: string; studentId: string }>;
@@ -138,21 +137,16 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
   }
   if (!submission) {
     return (
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-10">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/tutor-tests/${test.id}/submissions`}>
-            <ArrowLeft className="size-4" /> Back to submissions
-          </Link>
-        </Button>
-        <Card className="mt-6 p-8 sm:p-12 text-center">
-          <h1 className="font-display text-2xl text-foreground">
-            No submission
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            {student.fullName} hasn&apos;t started this test yet.
-          </p>
-        </Card>
-      </div>
+      <TestFrame test={test} view="submissions" page={student.fullName}>
+        <div className="mx-auto flex min-h-[320px] w-full max-w-3xl items-center justify-center px-4 py-10">
+          <EmptyState
+            compact
+            illustration={<Scene name="nothing-to-grade" />}
+            title="No submission"
+            description={`${student.fullName} hasn't started this test yet.`}
+          />
+        </div>
+      </TestFrame>
     );
   }
 
@@ -181,79 +175,37 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
       }
     : null;
 
+  const chip =
+    submission.status === "GRADED"
+      ? { tone: "success" as const, label: "Graded" }
+      : submission.status === "SUBMITTED"
+        ? { tone: "info" as const, label: "To mark" }
+        : { tone: "neutral" as const, label: "In progress" };
+
   return (
-    <div className="bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="flex h-14 items-center">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href={`/dashboard/tutor-tests/${test.id}/submissions`}>
-                <ArrowLeft className="size-4" /> Back to submissions
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
+    <TestFrame test={test} view="submissions" page={student.fullName} actions={<AutoGradeButton submissionId={submission.id} />}>
+      <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
         <header className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            {test.course.name} · {test.title}
-          </p>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-              Grade {student.fullName}
-            </h1>
-            <Badge
-              variant={
-                submission.status === "GRADED"
-                  ? "brand"
-                  : submission.status === "SUBMITTED"
-                    ? "soft"
-                    : "secondary"
-              }
-            >
-              {submission.status === "GRADED"
-                ? "Graded"
-                : submission.status === "SUBMITTED"
-                  ? "Awaiting grade"
-                  : "In progress"}
-            </Badge>
-          </div>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-xs">
-            <span className="inline-flex items-center gap-1.5">
-              <User className="size-3.5" />
+            <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">
               {student.fullName}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Mail className="size-3.5" />
-              {student.email}
-            </span>
-            <span className="inline-flex items-center gap-1.5 tabular-nums">
-              <Clock className="size-3.5" />
-              {submission.submittedAt
-                ? `Submitted ${dateFmt.format(submission.submittedAt)}`
-                : `Started ${dateFmt.format(submission.startedAt)}`}
-            </span>
-            {existingGrade && (
-              <span className="inline-flex items-center gap-1.5 tabular-nums">
-                <GraduationCap className="size-3.5" />
-                Previous: {existingGrade.score}/{existingGrade.outOf}
-              </span>
-            )}
+            </h1>
+            <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
           </div>
+          <PropertyList>
+            <PropertyRow label="Email">{student.email}</PropertyRow>
+            <PropertyRow label={submission.submittedAt ? "Submitted" : "Started"}>
+              <span className="tabular-nums">{dateFmt.format(submission.submittedAt ?? submission.startedAt)}</span>
+            </PropertyRow>
+            {existingGrade ? (
+              <PropertyRow label="Current grade">
+                <span className="tabular-nums">
+                  {existingGrade.score} / {existingGrade.outOf}
+                </span>
+              </PropertyRow>
+            ) : null}
+          </PropertyList>
         </header>
-
-        <div className="flex justify-end">
-          <AutoGradeButton submissionId={submission.id} />
-        </div>
-
-        <SubmissionAdminPanel
-          submissionId={submission.id}
-          testId={test.id}
-          studentName={student.fullName}
-          initialStatus={submission.status as "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "GRADED" | "LATE" | "NOT_SUBMITTED"}
-        />
 
         <GradingForm
           submissionId={submission.id}
@@ -265,7 +217,14 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
           existingGrade={existingGrade}
           labelScheme={test.labelScheme}
         />
+
+        <SubmissionAdminPanel
+          submissionId={submission.id}
+          testId={test.id}
+          studentName={student.fullName}
+          initialStatus={submission.status as "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "GRADED" | "LATE" | "NOT_SUBMITTED"}
+        />
       </div>
-    </div>
+    </TestFrame>
   );
 }

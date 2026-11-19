@@ -16,7 +16,6 @@ import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -102,23 +101,25 @@ export function SubmissionAdminPanel({
 
   return (
     <>
-      <Card className="space-y-3 border-destructive/30 p-4">
+      <section aria-labelledby="submission-admin" className="border-border space-y-3 border-t pt-6">
         <div>
-          <h3 className="text-foreground text-sm font-medium">Admin</h3>
+          <h2 id="submission-admin" className="text-foreground text-sm font-semibold">
+            Submission
+          </h2>
           <p className="text-muted-foreground text-xs">
-            Manual overrides for this submission. Deleting drops the grade too.
+            Change the status by hand, or delete the attempt. Deleting removes the grade too.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <label className="text-muted-foreground text-xs">Status</label>
+            <label htmlFor="submission-status" className="text-muted-foreground text-xs">Status</label>
             <Select
               value={status}
               onValueChange={(v) => saveStatus(v as Status)}
               disabled={savingStatus || deleting}
             >
-              <SelectTrigger className="h-8 w-56">
+              <SelectTrigger id="submission-status" className="h-8 w-56">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -146,7 +147,7 @@ export function SubmissionAdminPanel({
             Delete submission
           </Button>
         </div>
-      </Card>
+      </section>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
