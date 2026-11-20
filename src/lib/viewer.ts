@@ -63,6 +63,7 @@ const loadViewer = cache(
         name: true,
         email: true,
         emailVerified: true,
+        emailConfirmed: true,
         platformRole: true,
         tutorProfile: { select: { profileImageUrl: true } },
         studentProfile: { select: { id: true, imageUrl: true } },
@@ -110,7 +111,7 @@ const loadViewer = cache(
       id: user.id,
       name: user.name,
       email: user.email,
-      emailVerified: user.emailVerified != null,
+      emailVerified: user.emailVerified != null || user.emailConfirmed,
       platformRole: user.platformRole,
       imageUrl,
     };
@@ -126,7 +127,10 @@ const loadViewer = cache(
       });
     }
 
-    // Not backfilled yet: the Phase 0 bridge, unchanged.
+    // Not backfilled yet: the Phase 0 bridge, but only for accounts from
+    // before tenancy (they have a Tutor or Student profile). Anyone newer
+    // with no workspace yet (a fresh sign-up) has none, and onboarding
+    // creates one.
     let profileId: string | null = null;
     if (role === "TUTOR") {
       const tutor = await prisma.tutor.findFirst({
@@ -144,9 +148,15 @@ const loadViewer = cache(
         profileId = student?.id ?? null;
       }
     }
+    if (!profileId && (role === "TUTOR" || role === "STUDENT")) return buildNewUserViewer(base);
     return buildLegacyViewer({ user: { ...base, role }, profileId });
   },
 );
+
+/** A signed-in user with no workspace, learner or child yet: persona "none" until onboarding. */
+function buildNewUserViewer(base: Parameters<typeof buildTenancyViewer>[0]["user"]): Viewer {
+  return buildTenancyViewer({ user: base, memberships: [], learners: [], children: [], hasActiveGuardian: false, activeWorkspaceId: null });
+}
 
 /** Cached per request. Null when signed out. */
 export async function getViewer(): Promise<Viewer | null> {

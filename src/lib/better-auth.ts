@@ -1,16 +1,20 @@
 /**
- * Better Auth (design 02, section 2). STAGE 1: configured and mounted at
- * /api/ba behind BETTER_AUTH_ENABLED=1, next to NextAuth, which still signs
- * everyone in. The cutover (stage 2) moves getViewer, middleware and the
- * sign-in screens here and removes NextAuth.
+ * Better Auth (design 02, section 2). Mounted at /api/ba.
+ *
+ * Which system signs people in is chosen by AUTH_PROVIDER: unset keeps
+ * NextAuth (stage 1), "better-auth" is the cutover (stage 2). `auth()` in
+ * ./auth.ts reads whichever is on, so pages and actions don't change.
  *
  * - Database sessions in `Session`, so they can be revoked.
- * - Passwords in `Account` (providerId "credential"). Hashes carried over
- *   from User.password are bcrypt ($2…); new ones use Better Auth's scrypt.
- *   `verify` accepts both.
- * - Sign-up is off until the cutover: our User still needs `password`.
- * - Plugins: username (students without email), two-factor (required for
- *   owners and Nexa admins at the cutover).
+ * - Passwords in `Account` (providerId "credential"). Our own actions still
+ *   hash with bcrypt and keep User.password in step
+ *   (features/auth/credential.ts); `verify` accepts bcrypt and scrypt.
+ * - Sign-up (email and password, or Google) is on only after the cutover.
+ *   Self sign-ups are staff: legacy role TUTOR, no workspace until they
+ *   create one in onboarding. Email sign-ups verify their address first.
+ * - Google when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set. A Google
+ *   sign-in with the email of an existing account links to it.
+ * - Plugins: username (students without email), two-factor.
  * - Rate limits stored in the database (serverless has no shared memory).
  *
  * Server only.
@@ -26,13 +30,31 @@ import { nextCookies } from "better-auth/next-js";
 import { twoFactor, username } from "better-auth/plugins";
 
 import { prisma } from "@/lib/db";
+import { enqueueEmail, sealForQueue, sendQueuedNow } from "@/lib/email/queue";
 
 /** True for a bcrypt hash carried over from NextAuth. */
 export function isBcryptHash(hash: string): boolean {
   return /^\$2[aby]\$\d{2}\$/.test(hash);
 }
 
+/** "better-auth" once the cutover is switched on. */
+export function authProvider(): "next-auth" | "better-auth" {
+  return process.env.AUTH_PROVIDER === "better-auth" ? "better-auth" : "next-auth";
+}
+
+export function betterAuthEnabled(): boolean {
+  return authProvider() === "better-auth" || process.env.BETTER_AUTH_ENABLED === "1";
+}
+
 const appUrl = process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+const google = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  ? { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET }
+  : null;
+
+/** Better Auth's emailVerified is our emailConfirmed; keep the older emailVerified date in step. */
+async function stampEmailVerified(user: { id: string; emailVerified?: boolean | null }) {
+  if (user.emailVerified) await prisma.user.updateMany({ where: { id: user.id, emailVerified: null }, data: { emailVerified: new Date() } });
+}
 
 export const betterAuthInstance = betterAuth({
   appName: "Nexa",
@@ -48,12 +70,30 @@ export const betterAuthInstance = betterAuth({
     database: { generateId: false },
   },
   user: {
-    // Our User.emailVerified is a DateTime until the cutover.
+    // Our User.emailVerified is a DateTime; Better Auth's boolean lives in emailConfirmed.
     fields: { emailVerified: "emailConfirmed" },
+    additionalFields: {
+      role: { type: "string", required: false, input: false, defaultValue: "TUTOR" },
+      platformRole: { type: "string", required: false, input: false },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // Self sign-ups are staff; tutors create students and parents themselves.
+        before: async (user) => ({ data: { ...user, role: "TUTOR" } }),
+        after: async (user) => stampEmailVerified(user),
+      },
+      update: { after: async (user) => stampEmailVerified(user) },
+    },
+  },
+  account: {
+    accountLinking: { enabled: true, trustedProviders: ["google"] },
   },
   emailAndPassword: {
     enabled: true,
-    disableSignUp: true,
+    disableSignUp: authProvider() !== "better-auth",
+    requireEmailVerification: true,
     minPasswordLength: 10,
     maxPasswordLength: 128,
     password: {
@@ -61,6 +101,21 @@ export const betterAuthInstance = betterAuth({
       verify: async ({ hash, password }) => (isBcryptHash(hash) ? bcrypt.compare(password, hash) : verifyPassword({ hash, password })),
     },
   },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 60 * 60 * 24,
+    // Through our queue (budget, allowlist off production, retries).
+    sendVerificationEmail: async ({ user, url }) => {
+      const key = `auth:verify:ba:${user.id}:${Date.now()}`;
+      await enqueueEmail(prisma, {
+        key, template: "auth:verify", to: user.email, userId: user.id, workspaceId: null, category: "ACCOUNT", priority: "AUTH",
+        data: { name: user.name, urlSealed: sealForQueue(url) },
+      });
+      await sendQueuedNow([key]);
+    },
+  },
+  socialProviders: google ? { google: { ...google, prompt: "select_account", disableSignUp: authProvider() !== "better-auth" } } : {},
   session: {
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
@@ -73,11 +128,8 @@ export const betterAuthInstance = betterAuth({
     customRules: {
       "/sign-in/email": { window: 60, max: 5 },
       "/sign-in/username": { window: 60, max: 5 },
+      "/sign-up/email": { window: 60, max: 3 },
     },
   },
   plugins: [username(), twoFactor({ issuer: "Nexa" }), nextCookies()],
 });
-
-export function betterAuthEnabled(): boolean {
-  return process.env.BETTER_AUTH_ENABLED === "1";
-}
