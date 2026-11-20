@@ -28,6 +28,94 @@ model CourseEvent {
   repeatWeekdays  Int[]           @default([])
   repeatUntil     DateTime?
   repeatCount     Int?
+
+  /// IANA zone the series repeats in (A, #149): a weekly 16:00 class stays at 16:00 local time.
+  timeZone String @default("Africa/Johannesburg")
+
+  exceptions   CourseEventException[]
+  attendance   SessionAttendance[]
+  checkInCodes AttendanceCode[]
+}
+
+/// One occurrence of a series changed or cancelled ("this one only"). `occurrenceStart` is the occurrence's original start; the overrides replace the series' values for it (A, #149).
+model CourseEventException {
+  id              String    @id @default(cuid())
+  eventId         String
+  occurrenceStart DateTime
+  cancelled       Boolean   @default(false)
+  title           String?
+  description     String?
+  start           DateTime?
+  duration        Int?
+  location        String?
+  link            String?
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  event CourseEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, occurrenceStart])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+}
+
+enum AttendanceMethod {
+  TUTOR
+  CHECK_IN_CODE
+}
+
+/// A learner's attendance at one occurrence (A, #149).
+model SessionAttendance {
+  id                 String           @id @default(cuid())
+  eventId            String
+  occurrenceStart    DateTime
+  learnerId          String
+  status             AttendanceStatus
+  method             AttendanceMethod @default(TUTOR)
+  note               String?
+  markedByUserId     String?
+  markedAt           DateTime         @default(now())
+  /// When the parent absence email was queued, so it goes once.
+  guardianNotifiedAt DateTime?
+
+  event   CourseEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  learner Learner     @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, occurrenceStart, learnerId])
+  @@index([learnerId, occurrenceStart])
+}
+
+/// The current check-in code for an occurrence. Only a hash is stored; a new code replaces the old one.
+model AttendanceCode {
+  id              String   @id @default(cuid())
+  eventId         String
+  occurrenceStart DateTime
+  codeHash        String
+  expiresAt       DateTime
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  event CourseEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, occurrenceStart])
+  @@index([codeHash])
+}
+
+/// A per-user calendar feed (ICS) link. Only a hash of the token is stored; rotating replaces it.
+model CalendarFeedToken {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum RepeatFrequency {

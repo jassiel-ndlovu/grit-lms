@@ -3,6 +3,20 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Calendar and attendance backend (#149), `revamp/a-calendar-attendance`
+
+Following B research 10's fallback: today's recurrence columns stay, a time zone and an exceptions table are added, and RRULE goes only into feeds. B's preferred `rrule` column would have needed a destructive conversion of existing events and a rewrite of B's expander. Contract: `docs/revamp/contracts/calendar.md`.
+
+Done:
+- Migration `18_calendar_attendance` (additive): `CourseEvent.timeZone`, `CourseEventException`, `SessionAttendance`, `AttendanceCode`, `CalendarFeedToken`.
+- Occurrences with exceptions; series edits THIS / FOLLOWING / ALL; the attendance sheet; marking, with one parent email per absence; rotating check-in codes; history; private ICS feeds (basic detail for minors and guardians) and per-event `.ics`.
+- Checks: `scripts/check-calendar.ts` (17). An end-to-end run on preview with seeded data passed 14 checks; rows removed.
+
+Earlier on 2026-11-20:
+- The Anthropic key was added to Vercel Production. A live test marked correctly and caught an injection attempt, for about $0.007.
+- Better Auth is on in Preview (#170). B and the owner are testing before the production switch.
+- Migration 16 (maths answers, #164) was merged and applied.
+
 ## 2026-11-20 AI-assisted marking backend (#150), `revamp/a-ai-marking`
 
 The owner chose Anthropic's API (not Bedrock). The models follow B's research 09: Haiku 5.5, escalating to Sonnet 5.5. Setup, privacy and cost are in `docs/revamp/a/ops/ai-marking.md`.
