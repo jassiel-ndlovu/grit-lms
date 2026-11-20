@@ -54,6 +54,8 @@ export const createWorkspace = viewerActionClient
     kind: z.enum(["SOLO", "ORGANISATION"]),
     name: z.string().trim().min(2).max(80).optional(),
     timezone: z.string().min(1).max(64).optional(),
+    /** false skips the trial: the workspace stays read-only until the first payment. */
+    trial: z.boolean().optional(),
   }))
   .action(async ({ parsedInput, ctx: { viewer } }) => {
     assertBillingEnabled();

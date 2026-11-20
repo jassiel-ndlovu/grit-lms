@@ -239,7 +239,7 @@ export async function markInvoicePaid(
     },
   });
   const workspaceId = invoice.workspaceId;
-  const ws = await tx.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { billingState: true, name: true, timezone: true } });
+  const ws = await tx.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { billingState: true, name: true, timezone: true, trialEndsAt: true } });
 
   // The final arrears invoice of a cancelled workspace: paid, but it opens
   // no new period and does not reactivate the workspace.
@@ -251,9 +251,12 @@ export async function markInvoicePaid(
   }
 
   // The new period starts at the payment, or when the current one ends if
-  // it was paid early. Periods never overlap.
+  // it was paid early. Periods never overlap. Paid during the trial, it
+  // starts when the trial ends, so the tutor keeps the trial days (owner
+  // decision 2026-11-20).
   const latest = await tx.billingPeriod.findFirst({ where: { workspaceId }, orderBy: { end: "desc" } });
-  const start = latest && latest.end > paidAt ? latest.end : paidAt;
+  const trialLeft = ws.billingState === "TRIAL" && ws.trialEndsAt && ws.trialEndsAt > paidAt ? ws.trialEndsAt : null;
+  const start = latest && latest.end > paidAt ? latest.end : (trialLeft ?? paidAt);
   const { end, renewsAt } = periodFromPayment(start, periodDays);
 
   await tx.platformInvoice.update({

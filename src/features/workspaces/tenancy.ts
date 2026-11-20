@@ -12,6 +12,8 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma";
 import type { Viewer } from "@/lib/viewer-core";
 
+import { SERVICES } from "@/features/billing/catalogue";
+
 import { planEnrollmentChanges } from "./enrollment-plan";
 
 type Tx = Prisma.TransactionClient;
@@ -61,7 +63,24 @@ export async function setUpCourseTenancy(
       update: {},
     });
   }
+  // A new course starts on Pro (owner decision 2026-11-20): every v1
+  // premium service on. The tutor switches services off for Core or Plus.
+  if (course.workspaceId == null && workspaceId !== LEGACY_WORKSPACE_ID) {
+    await switchOnProServices(tx, { courseId, workspaceId, userId: viewer.user.id });
+  }
   return { workspaceId, ownerMembershipId };
+}
+
+/** Switches on every v1 premium service for a course that has no service rows yet. */
+export async function switchOnProServices(tx: Tx, input: { courseId: string; workspaceId: string; userId: string }) {
+  if ((await tx.courseService.count({ where: { courseId: input.courseId } })) > 0) return 0;
+  const keys = Object.values(SERVICES).filter((s) => s.kind === "premium" && s.status === "v1").map((s) => s.key);
+  const known = await tx.service.findMany({ where: { key: { in: keys } }, select: { key: true } });
+  await tx.courseService.createMany({
+    data: known.map((k) => ({ workspaceId: input.workspaceId, courseId: input.courseId, serviceKey: k.key, enabled: true, changedByUserId: input.userId })),
+    skipDuplicates: true,
+  });
+  return known.length;
 }
 
 /**
