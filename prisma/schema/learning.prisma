@@ -2,22 +2,23 @@
 // Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
 
 model Course {
-  id                String         @id @default(cuid())
-  name              String
-  description       String?
-  imageUrl          String
-  createdAt         DateTime       @default(now())
-  courseEvents      CourseEvent[]
-  Grade             Grade[]
-  lessons           Lesson[]
-  Notification      Notification[]
-  quizzes           Quiz[]
-  submissions       Submission[]
-  tests             Test[]
+  id                 String              @id @default(cuid())
+  name               String
+  description        String?
+  imageUrl           String
+  createdAt          DateTime            @default(now())
+  courseEvents       CourseEvent[]
+  Grade              Grade[]
+  lessons            Lesson[]
+  Notification       Notification[]
+  quizzes            Quiz[]
+  submissions        Submission[]
+  tests              Test[]
+  timeAccommodations TimeAccommodation[]
   // enumitem-style label template per lesson nesting level, e.g.
   // ["\arabic*", "\arabic{enumi}.\arabic*"]. Empty = the default
   // scheme. See src/lib/enum-labels.ts.
-  lessonLabelScheme String[]       @default([])
+  lessonLabelScheme  String[]            @default([])
 
   // Tenancy (Agent A, design 01; added in A's tenancy part 2 with the
   // owner's go-ahead, for B to review). Nullable until a later migration

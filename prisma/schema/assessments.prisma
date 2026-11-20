@@ -61,20 +61,25 @@ model TestQuestion {
 }
 
 model TestSubmission {
-  id             String           @id @default(cuid())
-  testId         String
-  studentId      String
-  startedAt      DateTime
-  submittedAt    DateTime?
-  answers        Json
-  score          Float?
-  feedback       String?
-  status         SubmissionStatus
-  grade          Grade?
-  questionGrades QuestionGrade[]
-  student        Student          @relation(fields: [studentId], references: [id])
-  test           Test             @relation(fields: [testId], references: [id], onDelete: Cascade)
-  uploadedFiles  UploadedFile[]
+  id               String           @id @default(cuid())
+  testId           String
+  studentId        String
+  startedAt        DateTime
+  submittedAt      DateTime?
+  answers          Json
+  score            Float?
+  feedback         String?
+  status           SubmissionStatus
+  // The student's TimeAccommodation for the course, copied when the
+  // attempt starts (and updated if a tutor changes it mid-sitting). Read by
+  // lib/attempt-deadline.ts: the runner's clock and the auto-submit job.
+  extraTimePercent Int              @default(0)
+  noTimeLimit      Boolean          @default(false)
+  grade            Grade?
+  questionGrades   QuestionGrade[]
+  student          Student          @relation(fields: [studentId], references: [id])
+  test             Test             @relation(fields: [testId], references: [id], onDelete: Cascade)
+  uploadedFiles    UploadedFile[]
 }
 
 enum QuestionType {
@@ -93,6 +98,28 @@ enum QuestionType {
   // themselves answerable. Tutor authoring should reject NONE for any
   // question without subQuestions.
   NONE
+}
+
+/// Extra time one student gets on a course's timed tests (owner decision 7,
+/// WCAG 2.2.1 Timing Adjustable). Set by the course's tutor on the course
+/// Settings page; copied onto each TestSubmission when it starts. The due
+/// date still closes the test. studentId has no relation because Student
+/// lives in core.prisma (Agent A's); rows go with the course.
+model TimeAccommodation {
+  id               String   @id @default(cuid())
+  courseId         String
+  studentId        String
+  /// 0, 25, 50 or 100: the time limit grows by this share.
+  extraTimePercent Int      @default(0)
+  /// The student's timed tests on this course have no time limit.
+  noTimeLimit      Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+  updatedByUserId  String?
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId])
+  @@index([studentId])
 }
 
 model AssessmentCompletion {
