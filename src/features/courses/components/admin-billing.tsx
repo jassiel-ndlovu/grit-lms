@@ -26,6 +26,7 @@ export const adminBillingRoutes = {
   invoice: (id: string) => `/dashboard/admin/billing/invoices/${id}`,
   discountCodes: "/dashboard/admin/billing/discount-codes",
   retention: "/dashboard/admin/billing/retention",
+  recoveries: "/dashboard/admin/billing/recoveries",
 };
 
 export const BILLING_STATES: BillingState[] = ["TRIAL", "ACTIVE", "PAST_DUE", "READ_ONLY", "COMPED", "CANCELLED"];
@@ -42,6 +43,7 @@ export function AdminBillingFrame({ page, title, children }: { page?: Crumb[]; t
           links={[
             { label: "Workspaces", href: adminBillingRoutes.workspaces },
             { label: "Discount codes", href: adminBillingRoutes.discountCodes },
+            { label: "Recoveries", href: adminBillingRoutes.recoveries },
             { label: "Retention", href: adminBillingRoutes.retention },
           ]}
         />
