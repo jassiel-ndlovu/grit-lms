@@ -44,10 +44,10 @@ check(
 const zones = timeZoneOptions("Europe/London");
 check("zones start with Johannesburg, then the current one, no repeats", [zones[0], zones[1], zones.length === new Set(zones).size], ["Africa/Johannesburg", "Europe/London", true]);
 
-const a = checklist({ named: true, hasCourse: false, payouts: "todo" });
-check("checklist", [a.done, a.total, a.items.map((i) => i.key)], [1, 3, ["business", "course", "payouts"]]);
-const b = checklist({ named: false, hasCourse: true, payouts: "not-mine" });
-check("checklist without payouts", [b.done, b.total, b.items.map((i) => i.key)], [1, 2, ["business", "course"]]);
+const a = checklist({ named: true, hasCourse: false, hasStudents: true, payouts: "todo" });
+check("checklist", [a.done, a.total, a.items.map((i) => i.key)], [2, 4, ["business", "course", "students", "payouts"]]);
+const b = checklist({ named: false, hasCourse: true, hasStudents: false, payouts: "not-mine" });
+check("checklist without payouts", [b.done, b.total, b.items.map((i) => i.key)], [1, 3, ["business", "course", "students"]]);
 
 console.log(failures ? `\n${failures} failed` : "\nAll passed");
 process.exit(failures ? 1 : 0);

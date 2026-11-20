@@ -52,6 +52,8 @@ export function BillingOverview({
     formatDate(new Date(iso), ctx, year ? { day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short" });
   const chip = STATE_CHIP[o.state];
   const comped = o.state === "COMPED";
+  // Cancelled: nothing renews; the paid period runs out, then read-only.
+  const cancelled = o.state === "CANCELLED";
   const overdue = o.overdueInvoiceId != null && (o.state === "PAST_DUE" || o.state === "READ_ONLY");
   // Paying starts a period: an overdue invoice is paid as it is; otherwise a
   // trial, read-only or cancelled workspace starts its first payment.
@@ -94,11 +96,19 @@ export function BillingOverview({
             <PropertyRow label="Current period">
               {day(o.period.start, false)} – {day(o.period.end)}
             </PropertyRow>
-            <PropertyRow label="Renews on">{day(o.period.renewsAt)}</PropertyRow>
+            {cancelled ? (
+              <PropertyRow label="Access until">{day(o.period.end)}</PropertyRow>
+            ) : (
+              <PropertyRow label="Renews on">{day(o.period.renewsAt)}</PropertyRow>
+            )}
           </>
         ) : null}
         <PropertyRow label={o.state === "TRIAL" ? "30 days cost" : "Next payment"}>
-          <span className={comped ? "line-through" : "text-foreground font-medium"}>{formatRand(o.nextRenewalEstimateCents)}</span>
+          {cancelled ? (
+            "None"
+          ) : (
+            <span className={comped ? "line-through" : "text-foreground font-medium"}>{formatRand(o.nextRenewalEstimateCents)}</span>
+          )}
         </PropertyRow>
         <PropertyRow label="Card">
           <span className="inline-flex flex-wrap items-center gap-3">
@@ -112,7 +122,7 @@ export function BillingOverview({
         </PropertyRow>
       </PropertyList>
 
-      {firstPayment && canManage ? (
+      {firstPayment && canManage && o.nextRenewalEstimateCents > 0 ? (
         <PayButton
           invoiceId={null}
           label={`Pay ${formatRand(o.nextRenewalEstimateCents)} for 30 days`}

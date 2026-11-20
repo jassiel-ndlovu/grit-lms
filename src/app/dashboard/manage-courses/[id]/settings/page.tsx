@@ -12,7 +12,8 @@ import { extraTimeToChoice } from "@/features/assessments/lib/extra-time";
 import { CourseFrame } from "@/features/courses/components/course-frame";
 import { CourseForm } from "@/features/courses/components/course-form";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
-import { listAllStudents } from "@/features/students/queries";
+import { listWorkspaceStudents } from "@/features/students/queries";
+import { LEGACY_WORKSPACE_ID } from "@/features/workspaces/tenancy";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -22,9 +23,11 @@ export const metadata = { title: "Course settings" };
 
 export default async function ManageCourseSettingsPage({ params }: PageProps) {
   const { id } = await params;
-  const [loaded, students] = await Promise.all([loadTutorCourse(id), listAllStudents()]);
+  const loaded = await loadTutorCourse(id);
   if (!loaded.ok) return <div className="text-muted-foreground p-8 text-sm">{loaded.message}</div>;
   const { course } = loaded;
+  // Same rule as A's setCourseEnrollment: no workspace means the legacy one.
+  const students = await listWorkspaceStudents(course.workspaceId ?? LEGACY_WORKSPACE_ID);
   const extraTime = await listExtraTime(course.id);
   const extraTimeInitial = Object.fromEntries(course.students.map((s) => [s.id, extraTimeToChoice(extraTime.get(s.id))]));
 
