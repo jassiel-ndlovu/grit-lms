@@ -33,6 +33,7 @@ const QUESTION_TYPES = [
   "REORDER",
   "FILL_IN_THE_BLANK",
   "NUMERIC",
+  "MATH_EXPRESSION",
   "NONE",
 ] as const;
 

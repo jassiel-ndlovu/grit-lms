@@ -73,6 +73,9 @@ export const QuestionTypeSchema = z.enum([
   "REORDER",
   "FILL_IN_THE_BLANK",
   "NUMERIC",
+  // A maths answer as TeX (migration 16; B design 01-maths-in-answers). B
+  // builds authoring and marking in phase 2.
+  "MATH_EXPRESSION",
   // Context-only — parent questions that group sub-questions but do not
   // themselves accept an answer. Tutor authoring rejects NONE for any
   // question without sub-questions.
