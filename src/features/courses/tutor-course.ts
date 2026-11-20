@@ -2,17 +2,17 @@ import "server-only";
 
 /**
  * Loads a course for the tutor's course pages (overview, lessons,
- * settings) and checks the signed-in tutor owns it.
- *
- * Ownership comes from CourseStaff via `courseBelongsToTutor` (issue #93,
- * step 4).
+ * settings, services) and checks the signed-in user may manage it: they
+ * teach it (CourseStaff), or they own or administer its workspace
+ * (`canManageCourse`, issue #192).
  */
 
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 
-import { courseBelongsToTutor, getCourseDetailById, type CourseDetail } from "./queries";
+import { canManageCourse, getCourseScope } from "./course-access";
+import { getCourseDetailById, type CourseDetail } from "./queries";
 import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export type TutorCourseResult =
@@ -26,7 +26,8 @@ export async function loadTutorCourse(id: string): Promise<TutorCourseResult> {
 
   const tutor = teacherFrom(session.user);
 
-  const [course, owns] = await Promise.all([getCourseDetailById(id), courseBelongsToTutor(id, tutor.id)]);
+  const scope = await getCourseScope(session.user.id);
+  const [course, owns] = await Promise.all([getCourseDetailById(id), canManageCourse(id, scope)]);
   if (!course) notFound();
   // Someone else's course looks the same as a missing one (the 404 page).
   if (!owns) notFound();

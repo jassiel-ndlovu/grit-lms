@@ -29,7 +29,6 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 import {
-  courseBelongsToTutor,
   getCourseGradebook,
 } from "@/features/grades/gradebook";
 import {
@@ -40,7 +39,7 @@ import {
 } from "@/features/grades/lib/weighting";
 import { WeightsEditor } from "@/features/grades/components/weights-editor";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { canManageCourse, getCourseScope } from "@/features/courses/course-access";
 
 interface PageProps {
   params: Promise<{ courseId: string }>;
@@ -66,9 +65,9 @@ export default async function CourseGradebookPage({ params }: PageProps) {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard/grades");
 
-  const tutor = teacherFrom(session.user);
+  const scope = await getCourseScope(session.user.id);
 
-  const owns = await courseBelongsToTutor(courseId, tutor.id);
+  const owns = await canManageCourse(courseId, scope);
   if (!owns) notFound();
 
   const book = await getCourseGradebook(courseId);

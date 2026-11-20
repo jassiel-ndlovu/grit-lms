@@ -3,6 +3,57 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-21 Owners see every course in their organisation, `revamp/b-owner-course-access`
+
+Owner decision on #192 (2026-11-20), finding F3 of the Preview pass: an
+organisation's owner saw only the courses they teach.
+
+Done:
+- **`CourseScope`** (`features/courses/lib/course-access.ts`, pure): the
+  user id, plus the active workspace when the viewer's grants are unscoped
+  (staff persona, `can(viewer, "courses.edit")` and
+  `!needsScope(viewer, "courses.edit")`: OWNER and ADMIN). Tutors get no
+  workspace. `manageableBy(scope)` is the Prisma filter (workspace OR
+  teaches it); `managesCourse(scope, row)` is the same check on a row
+  loaded with `{ workspaceId, staff: staffFor(email) }`.
+- **Server half** (`features/courses/course-access.ts`): `getCourseScope`
+  (per request, from `getViewer()`) and `canManageCourse(courseId, scope)`,
+  which replaces both `courseBelongsToTutor`s (courses and gradebook).
+- **Pages that now cover the whole workspace for owners and admins:**
+  Manage courses, a course's overview, lessons, settings and services
+  (`loadTutorCourse`), tests and grading, assignments, the assignment
+  editor and marking, the gradebook, the schedule, and the dashboard home
+  counts. The list queries take a `CourseScope` instead of a user id.
+- **Actions**: every B action that checked `staff.length === 0` now uses
+  `managesCourse`, so an owner can edit, mark and set weights on the
+  courses they can see. Tutors are unchanged, including PR 186's 404.
+- **Who teaches it**: course cards already name the teacher; the course
+  overview adds "Taught by" when the viewer doesn't teach it.
+- Analytics stays personal ("X's teaching analytics": `tutorScope`).
+- Check: `npx tsx scripts/check-course-access.ts`.
+
+Organisation / Tutor mode (#192): not built. When A adds `viewer.mode`,
+`managesWholeWorkspace` returns false in Tutor mode; nothing else changes.
+
+To test on Preview as `seed.ubuntu.owner`: Manage courses lists "Maths
+Grade 10 (seed)" (Ayanda Zulu) and "Physical Sciences Grade 11 (seed)"
+(Bongani Nkosi) as well as their own course; each opens, with "Taught by"
+on the overview; their tests, assignments, gradebook and schedule entries
+show up; the home counts include them. As `seed.ubuntu.tutor1`, Physical
+Sciences still 404s.
+
+Next:
+- Search still covers only courses the user teaches (`searchAsTutor`).
+
+Blocked on the other agent:
+- `viewer.mode` for the Organisation / Tutor switch (#192).
+- A's routes still check "teaches it" only: `api/blob/upload-token`
+  (an assignment brief on a tutor's saved assignment) and
+  `api/submission-entry/[id]` DELETE. An owner gets "another tutor's
+  assignment" there.
+
+Questions for the owner: none.
+
 ## 2026-11-20 Owner decisions after the Preview pass
 
 - **`REVAMP_UI` on Preview:** yes, to start testing the revamp for its

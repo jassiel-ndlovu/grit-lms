@@ -243,10 +243,10 @@ export const createTest = tutorActionClient
     // Ownership: the tutor must own the course this test is for.
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, staff: staffFor(ctx.session.user.email) },
+      select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
-    if (course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
       throw new Error("You don't own this course");
     }
     await assertMathsAllowed(course.id, parsedInput.questions, new Set());
@@ -310,10 +310,10 @@ export const updateTest = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.test.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Test not found");
-    if (existing.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
       throw new Error("You don't own this test");
     }
     if (parsedInput.questions !== undefined) {
@@ -407,10 +407,10 @@ export const deleteTest = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.test.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Test not found");
-    if (existing.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
       throw new Error("You don't own this test");
     }
 
@@ -691,13 +691,13 @@ export const gradeTestSubmission = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { staff: staffFor(ctx.session.user.email) } },
+            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!submission) throw new Error("Submission not found");
-    if (submission.test.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), submission.test.course)) {
       throw new Error("You don't own this test");
     }
 
@@ -846,14 +846,13 @@ import { serializeTest } from "./lib/test-io";
 import { applyAnswerKey } from "./lib/answer-key-store";
 import { z } from "zod";
 import { CuidSchema } from "../shared/primitives";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
+import { managesCourse } from "@/features/courses/lib/course-access";
 
 export const exportTestJson = tutorActionClient
   .schema(z.object({ id: CuidSchema }))
   .action(async ({ parsedInput, ctx }) => {
-    const tutor = teacherFrom(ctx.session.user);
-
-    const owns = await testBelongsToTutor(parsedInput.id, tutor.id);
+    const owns = await testBelongsToTutor(parsedInput.id, await getCourseScope(ctx.session.user.id));
     if (!owns) throw new Error("You don't own this test");
 
     const test = await getTestDetailById(parsedInput.id);
@@ -887,13 +886,13 @@ export const deleteTestSubmission = tutorActionClient
           select: {
             id: true,
             courseId: true,
-            course: { select: { staff: staffFor(ctx.session.user.email) } },
+            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!submission) throw new Error("Submission not found");
-    if (submission.test.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), submission.test.course)) {
       throw new Error("You don't own this test");
     }
 
@@ -936,13 +935,13 @@ export const updateTestSubmissionStatus = tutorActionClient
           select: {
             id: true,
             courseId: true,
-            course: { select: { staff: staffFor(ctx.session.user.email) } },
+            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!submission) throw new Error("Submission not found");
-    if (submission.test.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), submission.test.course)) {
       throw new Error("You don't own this test");
     }
 
@@ -983,13 +982,13 @@ export const autoGradeSubmissionAction = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { staff: staffFor(ctx.session.user.email) } },
+            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!submission) throw new Error("Submission not found");
-    if (submission.test.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), submission.test.course)) {
       throw new Error("You don't own this test");
     }
 
@@ -1094,9 +1093,7 @@ export const saveTestAnswerKey = tutorActionClient
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
-    const tutor = teacherFrom(ctx.session.user);
-
-    const owns = await testBelongsToTutor(parsedInput.testId, tutor.id);
+    const owns = await testBelongsToTutor(parsedInput.testId, await getCourseScope(ctx.session.user.id));
     if (!owns) throw new Error("You don't own this test");
 
     // The write itself lives in lib/answer-key-store.ts so it can be run

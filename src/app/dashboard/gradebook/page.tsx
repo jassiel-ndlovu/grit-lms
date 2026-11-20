@@ -13,7 +13,7 @@ import { auth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 
 import { listGradebookCoursesForTutor } from "@/features/grades/gradebook";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 export const metadata = { title: "Gradebook" };
 
@@ -22,9 +22,9 @@ export default async function GradebookIndexPage() {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard/grades");
 
-  const tutor = teacherFrom(session.user);
+  const scope = await getCourseScope(session.user.id);
 
-  const courses = await listGradebookCoursesForTutor(tutor.id);
+  const courses = await listGradebookCoursesForTutor(scope);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">

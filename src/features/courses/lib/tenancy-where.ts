@@ -87,7 +87,7 @@ export function enrollmentFor(studentId: string): {
  * `tutorOf(course)` to get `{ id, fullName, email }` back.
  */
 export const ownerTutor = {
-  select: { user: { select: { name: true, tutorProfile: { select: { id: true, fullName: true, email: true } } } } },
+  select: { user: { select: { id: true, name: true, tutorProfile: { select: { id: true, fullName: true, email: true } } } } },
 } as const;
 
 export interface CourseTutor {
