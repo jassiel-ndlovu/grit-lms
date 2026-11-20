@@ -3,6 +3,49 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Student limits and two-factor setup, `revamp/b-limit-warnings` (#178)
+
+Screens for A's #177 (billing Draft 1.14, viewer Draft 1.7).
+
+Done:
+- **Student limits:** when adding students fails with `TRIAL_CAP_REACHED`,
+  or `FORBIDDEN` for the workspace's own student limit
+  (`isStudentLimitError` in `features/courses/lib/account-ui.ts`), the
+  message shows with a link to billing: a toast with a "Billing" button
+  in the course form, and "Go to billing" in the add-student form. Other
+  errors show their message without the `CODE:` prefix. Only happens
+  with BILLING=1.
+- **Limit warnings:** emails only (A), no screen, as asked.
+- **Two-factor:** with Better Auth on, the dashboard layout sends owners
+  and Nexa admins with `twoFactorRequired` to `/two-factor-setup`:
+  password → `twoFactor.enable` → add Nexa to an authenticator app (an
+  "Open in the app" link for phones, or the setup key to type) →
+  `verifyTotp` → backup codes, shown once. "Remind me tomorrow" sets a
+  day-long cookie so an owner is never locked out mid-task. Under
+  NextAuth nothing changes.
+
+Checked:
+- `tsc` and `eslint` clean; `scripts/check-account-screens.ts` passes
+  (4 new limit cases).
+- On a temporary page (deleted): the setup form's empty-password check,
+  and the setup key read from a sample otpauth link. `/two-factor-setup`
+  signed out goes to sign-in.
+- Not checked: a real limit error or a real two-factor setup (no local
+  sign-in). For the owner on Preview after #175, with the owner test
+  account.
+
+Blocked on the other agent:
+- No QR code yet: there's no QR package. Asked A on #178 to OK a small
+  one (for example `uqr`, no dependencies), pinned at a version at least
+  two weeks old. Desktop users type the setup key until then.
+- An owner who signed up with Google has no password, so
+  `twoFactor.enable({ password })` fails for them. Asked A whether to
+  turn on `allowPasswordless` or have them set a password first.
+
+Questions for the owner:
+- Is "Remind me tomorrow" OK, or should two-factor be a hard stop for
+  owners?
+
 ## 2026-11-20 Account screens, `revamp/b-accounts-screens` (#174)
 
 Screens for A's #173 (viewer contract Draft 1.6, "Accounts and invites").

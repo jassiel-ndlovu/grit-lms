@@ -8,6 +8,7 @@
  */
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
@@ -17,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { createStudentAccount } from "@/features/users/account-actions";
 
 import type { RosterCourse } from "../../lib/roster";
-import { actionError } from "../../lib/account-ui";
+import { actionError, BILLING_PATH, isStudentLimitError } from "../../lib/account-ui";
 import { SignInCard, type SignInCardData } from "./sign-in-card";
 
 export function AddStudentForm({
@@ -39,6 +40,7 @@ export function AddStudentForm({
   const [courseIds, setCourseIds] = React.useState<string[]>(courses.length === 1 ? [courses[0].id] : []);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [atLimit, setAtLimit] = React.useState(false);
   const [card, setCard] = React.useState<SignInCardData | null>(null);
 
   function reset() {
@@ -54,6 +56,7 @@ export function AddStudentForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setAtLimit(false);
     if (fullName.trim().length < 2) return setError("Enter the student's full name.");
     if (coursesRequired && courseIds.length === 0) return setError("Choose at least one of your courses.");
     if (isMinor && !consent) return setError("Confirm you have a parent's or guardian's consent.");
@@ -67,7 +70,10 @@ export function AddStudentForm({
       consentAttested: isMinor ? consent : false,
     });
     setBusy(false);
-    if (!res?.data) return setError(actionError(res));
+    if (!res?.data) {
+      setAtLimit(isStudentLimitError(res?.serverError));
+      return setError(actionError(res));
+    }
     setCard({
       name: fullName.trim(),
       role: "Student",
@@ -139,6 +145,14 @@ export function AddStudentForm({
       {error ? (
         <p role="alert" className="text-destructive text-sm">
           {error}
+          {atLimit ? (
+            <>
+              {" "}
+              <Link href={BILLING_PATH} className="text-foreground font-medium underline underline-offset-2">
+                Go to billing
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
       <Button type="submit" disabled={busy || (coursesRequired && courses.length === 0)}>
