@@ -49,6 +49,9 @@ export function betterAuthEnabled(): boolean {
 }
 
 const appUrl = process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+/** Vercel Preview: every deployment has its own address, so take it from the request, limited to this team's preview hosts. */
+const PREVIEW_HOSTS = ["*-jassiel-ndlovus-projects.vercel.app"];
+const isPreview = process.env.VERCEL_ENV === "preview";
 const google = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
   ? { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET }
   : null;
@@ -60,10 +63,10 @@ async function stampEmailVerified(user: { id: string; emailVerified?: boolean | 
 
 export const betterAuthInstance = betterAuth({
   appName: "Nexa",
-  baseURL: appUrl,
+  baseURL: isPreview ? { allowedHosts: PREVIEW_HOSTS, fallback: appUrl } : appUrl,
   basePath: "/api/ba",
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
-  trustedOrigins: [appUrl, "https://www.nexa-lms.co.za", "https://nexa-lms.co.za"],
+  trustedOrigins: [appUrl, "https://www.nexa-lms.co.za", "https://nexa-lms.co.za", ...(isPreview ? PREVIEW_HOSTS.map((h) => `https://${h}`) : [])],
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   telemetry: { enabled: false },
   advanced: {
