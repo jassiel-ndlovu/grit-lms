@@ -254,7 +254,8 @@ export function DiscountCodeTable({
   olderHref: string | null;
   newestHref: string | null;
 }) {
-  const d = days(ctx);
+  // Codes are saved as whole UTC days (start 00:00, end 23:59:59), so show them in UTC too.
+  const d = days({ ...ctx, timeZone: "UTC" });
   if (list.items.length === 0 && !newestHref) {
     return <EmptyState compact title="No discount codes yet" description="Codes you create show here, with how often they've been used." />;
   }
