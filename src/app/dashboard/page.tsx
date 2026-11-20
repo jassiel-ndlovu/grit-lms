@@ -104,7 +104,8 @@ export default async function DashboardLanding({
     return <AdminDashboard firstName={userFirstName} />;
   }
   if (session.user.role === "PARENT") {
-    return <ParentDashboard firstName={userFirstName} />;
+    const viewer = await getViewer();
+    return <ParentDashboard firstName={userFirstName} learners={viewer?.children ?? []} />;
   }
 
   const student = await prisma.student.findUnique({
