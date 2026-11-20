@@ -179,6 +179,8 @@ enum PaymentPurpose {
   CARD_AUTHORISATION
   PLATFORM_INVOICE
   PARENT_CHECKOUT
+  /// A tutor paying back a refund Nexa funded (owner decision 2026-11-20).
+  PAYOUT_RECOVERY
 }
 
 enum PaymentStatus {
@@ -201,6 +203,15 @@ enum RefundStatus {
   PENDING
   PROCESSED
   FAILED
+}
+
+/// AWAITING_REFUND until Paystack processes the refund; then the notice goes out and deductions start at deductFrom.
+enum PayoutRecoveryStatus {
+  AWAITING_REFUND
+  ACTIVE
+  RECOVERED
+  CANCELLED
+  WAIVED
 }
 
 enum OffsiteMethod {
@@ -616,6 +627,7 @@ model PayoutAccount {
   workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   invoices    Invoice[]
   allocations PaymentAllocation[]
+  recoveries  PayoutRecovery[]
 
   @@unique([workspaceId, membershipId])
 }
@@ -718,9 +730,10 @@ model Payment {
   paidAt            DateTime?
   createdAt         DateTime          @default(now())
 
-  platformInvoice PlatformInvoice?    @relation(fields: [platformInvoiceId], references: [id], onDelete: Restrict)
-  allocations     PaymentAllocation[]
-  refunds         Refund[]
+  platformInvoice    PlatformInvoice?          @relation(fields: [platformInvoiceId], references: [id], onDelete: Restrict)
+  allocations        PaymentAllocation[]
+  refunds            Refund[]
+  recoveryDeductions PayoutRecoveryDeduction[]
 
   @@index([workspaceId])
   @@index([payerUserId])
@@ -785,6 +798,7 @@ model Refund {
 
   payment    Payment            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   allocation PaymentAllocation? @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+  recovery   PayoutRecovery?
 
   @@index([paymentId])
   @@index([status])
@@ -815,4 +829,49 @@ model OffsitePayment {
   @@index([workspaceId])
   @@index([invoiceId])
   @@index([platformInvoiceId])
+}
+
+/**
+ * What a payee owes Nexa for a refund Nexa funded (owner decision
+ * 2026-11-20): their share of the refunded amount. Recovered by smaller
+ * splits on later checkouts and, after 60 days with no payout, by an
+ * invoice the payee may pay by card.
+ */
+model PayoutRecovery {
+  id               String               @id @default(cuid())
+  workspaceId      String
+  payoutAccountId  String
+  refundId         String               @unique
+  amountCents      Int
+  status           PayoutRecoveryStatus @default(AWAITING_REFUND)
+  noticeSentAt     DateTime?
+  /// Deductions start here: the notice plus a grace period.
+  deductFrom       DateTime?
+  invoiceOfferedAt DateTime?
+  closedAt         DateTime?
+  /// Why it was waived or settled by hand.
+  note             String?
+  createdAt        DateTime             @default(now())
+
+  payoutAccount PayoutAccount             @relation(fields: [payoutAccountId], references: [id], onDelete: Restrict)
+  refund        Refund                    @relation(fields: [refundId], references: [id], onDelete: Restrict)
+  deductions    PayoutRecoveryDeduction[]
+
+  @@index([payoutAccountId, status])
+  @@index([status, deductFrom])
+}
+
+/// Money taken toward a recovery by one payment: a checkout whose split sent the payee less, or the payee paying the invoice. Counts once its payment succeeds.
+model PayoutRecoveryDeduction {
+  id          String   @id @default(cuid())
+  recoveryId  String
+  paymentId   String
+  amountCents Int
+  createdAt   DateTime @default(now())
+
+  recovery PayoutRecovery @relation(fields: [recoveryId], references: [id], onDelete: Cascade)
+  payment  Payment        @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([recoveryId, paymentId])
+  @@index([paymentId])
 }

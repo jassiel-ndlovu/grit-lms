@@ -6,7 +6,7 @@
  * conditional update, so two callers racing apply it once.
  *
  * Built: PLATFORM_INVOICE and CARD_AUTHORISATION (Gate 1), PARENT_CHECKOUT
- * (Gate 2, ./checkout.ts).
+ * (Gate 2, ./checkout.ts) and PAYOUT_RECOVERY (./recovery.ts).
  */
 
 import "server-only";
@@ -18,6 +18,7 @@ import { periodFromPayment } from "@/features/billing/pricing";
 import { prisma } from "@/lib/db";
 
 import { applyCheckoutPayment } from "./checkout";
+import { closeRecovered, syncRecoveries } from "./recovery";
 import { getProvider, type PaymentProvider } from "./provider";
 import { encryptSecret } from "./secrets";
 import { addCalendarMonths, decideSettlement, seatsAt } from "./settlement-rules";
@@ -89,6 +90,15 @@ export async function settlePayment(
         await applyCheckoutPayment(tx, { paymentId: payment.id, paidAt, feeCents: v.feeCents ?? null });
         return { refundId: null };
       }
+      if (payment.purpose === "PAYOUT_RECOVERY") {
+        await closeRecovered(tx, payment.id, paidAt);
+        if (payment.payerUserId) {
+          await tx.auditLog.create({
+            data: { workspaceId: payment.workspaceId, actorUserId: payment.payerUserId, action: "fees.recovery.paid", targetType: "Payment", targetId: payment.id, data: { amountCents: payment.amountCents } },
+          });
+        }
+        return { refundId: null };
+      }
       // CARD_AUTHORISATION: keep the card, give the verification charge back.
       if (payment.workspaceId && card) await saveCard(tx, payment.workspaceId, card);
       const refund = await tx.refund.create({
@@ -143,6 +153,7 @@ export async function issueRefund(refundId: string, provider: PaymentProvider = 
       data: { providerRefundId: r.providerRefundId, status: r.status, processedAt: r.status === "PENDING" ? null : new Date() },
     });
     if (r.status === "PROCESSED") await markRefunded(tx, refund.payment.id);
+    await syncRecoveries(tx, refund.payment.id);
   }, { timeout: 30_000 });
   return r.status;
 }

@@ -12,6 +12,7 @@ import { getBillingConfig, loadCourseBilling } from "@/features/billing/data";
 import { BillingError } from "@/features/billing/errors";
 import { addDays, billedTier, derivedTier } from "@/features/billing/pricing";
 import { getProvider, type PaymentProvider } from "@/features/payments/provider";
+import { recoveryOwed } from "@/features/payments/recovery-math";
 import { issueRefund, markInvoicePaid } from "@/features/payments/settle";
 import { prisma } from "@/lib/db";
 
@@ -205,6 +206,89 @@ export async function refundPayment(actor: Actor, input: { paymentId: string; am
     console.error("[admin] refund not confirmed by Paystack:", (e as Error).message);
   }
   return { refundId: created.id, status };
+}
+
+/**
+ * Refund a paid fee invoice, in full or in part, after an investigation
+ * (owner decision 2026-11-20: never self-serve). Paystack takes it from
+ * Nexa's balance; the payee's share of it becomes a PayoutRecovery, which
+ * starts with a notice once Paystack processes the refund.
+ */
+export async function refundFeeInvoice(actor: Actor, input: { invoiceId: string; amountCents?: number; reason: string }, provider: PaymentProvider = getProvider()) {
+  const created = await prisma.$transaction(async (tx) => {
+    const inv = await tx.invoice.findUnique({
+      where: { id: input.invoiceId },
+      select: {
+        id: true, number: true, workspaceId: true, status: true, paidVia: true,
+        allocations: {
+          where: { payment: { status: { in: ["SUCCEEDED", "PARTIALLY_REFUNDED"] } } },
+          select: { id: true, paymentId: true, payoutAccountId: true, amountCents: true, shareCents: true },
+        },
+      },
+    });
+    if (!inv) throw new BillingError("NOT_FOUND", "Invoice not found");
+    if ((inv.status !== "PAID" && inv.status !== "PARTIALLY_REFUNDED") || inv.paidVia !== "ONLINE") {
+      throw new BillingError("FORBIDDEN", "Only invoices paid online through Nexa can be refunded here");
+    }
+    if (inv.allocations.length !== 1) throw new BillingError("FORBIDDEN", "This invoice was paid more than once; refund the extra payment from its payment record");
+    const a = inv.allocations[0];
+    const done = await tx.refund.aggregate({ where: { allocationId: a.id, status: { in: ["PENDING", "PROCESSED"] } }, _sum: { amountCents: true } });
+    const left = a.amountCents - (done._sum.amountCents ?? 0);
+    const amount = input.amountCents ?? left;
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > left) throw new BillingError("FORBIDDEN", `Refund must be between 1 and ${left} cents`);
+    const owed = recoveryOwed(amount, a);
+    const refund = await tx.refund.create({
+      data: { paymentId: a.paymentId, allocationId: a.id, amountCents: amount, commissionReturnedCents: amount - owed, reason: input.reason, requestedByUserId: actor.userId },
+    });
+    if (owed > 0) await tx.payoutRecovery.create({ data: { workspaceId: inv.workspaceId, payoutAccountId: a.payoutAccountId, refundId: refund.id, amountCents: owed } });
+    await audit(tx, actor, inv.workspaceId, "fees.invoice.refund", "Invoice", inv.id, { refundId: refund.id, amountCents: amount, recoveryCents: owed, reason: input.reason });
+    return refund;
+  }, TX);
+  let status: string = "PENDING";
+  try {
+    status = await issueRefund(created.id, provider);
+  } catch (e) {
+    console.error("[admin] fee refund not confirmed by Paystack:", (e as Error).message);
+  }
+  return { refundId: created.id, status };
+}
+
+/** Stop recovering a refund from the payee (for example, the investigation found Nexa at fault). */
+export async function waiveRecovery(actor: Actor, input: { recoveryId: string; note: string }) {
+  return prisma.$transaction(async (tx) => {
+    const r = await tx.payoutRecovery.findUnique({ where: { id: input.recoveryId }, select: { id: true, workspaceId: true, status: true } });
+    if (!r) throw new BillingError("NOT_FOUND", "Recovery not found");
+    if (r.status !== "ACTIVE" && r.status !== "AWAITING_REFUND") throw new BillingError("FORBIDDEN", `Can't waive a recovery that is ${r.status}`);
+    await tx.payoutRecovery.update({ where: { id: r.id }, data: { status: "WAIVED", closedAt: new Date(), note: input.note } });
+    await audit(tx, actor, r.workspaceId, "fees.recovery.waive", "PayoutRecovery", r.id, { note: input.note });
+    return { id: r.id, status: "WAIVED" as const };
+  }, TX);
+}
+
+/** Pause deductions while a payee's dispute is looked at again: none are taken before `until`. */
+export async function holdRecovery(actor: Actor, input: { recoveryId: string; until: string; note: string }) {
+  const until = new Date(input.until);
+  if (Number.isNaN(until.getTime()) || until <= new Date()) throw new BillingError("FORBIDDEN", "Hold until a future date");
+  return prisma.$transaction(async (tx) => {
+    const r = await tx.payoutRecovery.findUnique({ where: { id: input.recoveryId }, select: { id: true, workspaceId: true, status: true } });
+    if (!r) throw new BillingError("NOT_FOUND", "Recovery not found");
+    if (r.status !== "ACTIVE") throw new BillingError("FORBIDDEN", `Can't hold a recovery that is ${r.status}`);
+    await tx.payoutRecovery.update({ where: { id: r.id }, data: { deductFrom: until } });
+    await audit(tx, actor, r.workspaceId, "fees.recovery.hold", "PayoutRecovery", r.id, { until: until.toISOString(), note: input.note });
+    return { id: r.id, deductFrom: until.toISOString() };
+  }, TX);
+}
+
+/** The payee repaid outside Nexa (for example by EFT): close it. */
+export async function settleRecoveryOffsite(actor: Actor, input: { recoveryId: string; note: string }) {
+  return prisma.$transaction(async (tx) => {
+    const r = await tx.payoutRecovery.findUnique({ where: { id: input.recoveryId }, select: { id: true, workspaceId: true, status: true } });
+    if (!r) throw new BillingError("NOT_FOUND", "Recovery not found");
+    if (r.status !== "ACTIVE") throw new BillingError("FORBIDDEN", `Can't settle a recovery that is ${r.status}`);
+    await tx.payoutRecovery.update({ where: { id: r.id }, data: { status: "RECOVERED", closedAt: new Date(), note: `Repaid off-site: ${input.note}` } });
+    await audit(tx, actor, r.workspaceId, "fees.recovery.offsite", "PayoutRecovery", r.id, { note: input.note });
+    return { id: r.id, status: "RECOVERED" as const };
+  }, TX);
 }
 
 export type DiscountCodeInput = {

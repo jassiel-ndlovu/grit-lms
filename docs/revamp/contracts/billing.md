@@ -109,9 +109,12 @@ One checkout may hold invoices for several children and several tutors.
 | `voidInvoice` | action | `fees.manage` | `{ invoiceId, reason }` | `{ status }` |
 | `markInvoicePaidOffsite` | action | `fees.markOffsite` | `{ invoiceId, method, amountCents, receivedOn, reference?, note }` | `{ status: "PAID" }` |
 | `voidOffsitePayment` | action | `fees.markOffsite` | `{ offsitePaymentId, reason }` | `{ invoiceStatus }` |
-| `requestRefund` | action | `fees.manage` | `{ invoiceId, amountCents?, reason }` | `{ refundId, status }` |
+| ~~`requestRefund`~~ | | | | Dropped (owner decision 2026-11-20): refunds are never self-serve; a Nexa admin refunds after an investigation (`adminRefundFeeInvoice`, section 4) |
+| `listPayoutRecoveries` | query | `payouts.connect` or `fees.manage` | none | `Array<{ id, payoutAccountId, invoiceNumber, refundCents, reason, owedCents, repaidCents, outstandingCents, status, noticeSentAt, deductFrom, payPath, closedAt }>` |
 
-**Built (2026-11-19):** all of section 3 except `requestRefund` (it comes with checkout). Actions in `src/features/payments/fee-actions.ts`, queries in `fee-queries.ts`, behind `BILLING=1`. Rules for the screens: `resolvePayoutAccount` first and show the `accountName`, then `connectPayoutAccount`; an account is `ACTIVE` at once (Paystack holds the first payout until it has verified it). In `PER_TUTOR` mode `connectPayoutAccount` connects the caller's own account, and tutors may call it. `issueInvoice` refuses lines paid to different tutors (one invoice per payee) and needs a connected payee; invoice numbers are `INV-<year>-<6 digits>` per workspace. `markInvoicePaidOffsite` takes the full total only. `voidInvoice` and the off-site mark are refused while a checkout holds the invoice. A tutor sees and manages only invoices for courses they teach.
+**Refund recovery (2026-11-20, owner decision).** Paystack takes a refund from Nexa's balance. The payee owes their share of it (refund x the invoice's split share / the invoice total); Nexa bears its commission part. The payee is emailed a notice of deduction when Paystack processes the refund. From 7 days later, each checkout that pays them sends them less, at most 50% of that payout, oldest debt first, until it is repaid. After 60 days with nothing recovered they are emailed an invoice to pay by card at `payPath` (`/api/payouts/recoveries/[id]/pay`, a plain link); afterwards they land on `/dashboard/fees?recovery=paid|pending|failed|nothing-owed|not-found|unknown|unavailable|error`. `listPayoutRecoveries` shows a tutor their own account's recoveries (owners and admins see all); `status` is `ACTIVE`, `RECOVERED`, `CANCELLED` or `WAIVED`. B: show active ones on the payouts or fees screen with what is outstanding and when deductions start, a Pay button when `payPath` is set, and handle the `recovery` query parameter on `/dashboard/fees`.
+
+**Built (2026-11-19):** all of section 3. Actions in `src/features/payments/fee-actions.ts`, queries in `fee-queries.ts`, behind `BILLING=1`. Rules for the screens: `resolvePayoutAccount` first and show the `accountName`, then `connectPayoutAccount`; an account is `ACTIVE` at once (Paystack holds the first payout until it has verified it). In `PER_TUTOR` mode `connectPayoutAccount` connects the caller's own account, and tutors may call it. `issueInvoice` refuses lines paid to different tutors (one invoice per payee) and needs a connected payee; invoice numbers are `INV-<year>-<6 digits>` per workspace. `markInvoicePaidOffsite` takes the full total only. `voidInvoice` and the off-site mark are refused while a checkout holds the invoice. A tutor sees and manages only invoices for courses they teach.
 
 Account numbers never come back in full; only `accountNumberLast4`. B shows card and bank fees as their own line, because the tutor bears them (2% Nexa commission plus the provider fee).
 
@@ -130,6 +133,11 @@ Account numbers never come back in full; only `accountNumberLast4`. B shows card
 | `adminRefundPayment` | action | `admin.override` | `{ paymentId, amountCents?, reason }` | `{ refundId, status }` |
 | `adminCreateDiscountCode` | action | `admin.override` | the `DiscountCode` fields in 03, minus counters | `{ id, code }` |
 | `adminDeactivateDiscountCode` | action | `admin.override` | `{ id, note }` | `{ active: false }` |
+| `adminRefundFeeInvoice` | action | `admin.override` | `{ invoiceId, amountCents?, reason }` (after an investigation; the reason is quoted to the payee) | `{ refundId, status }` |
+| `adminListPayoutRecoveries` | query | `admin.console` | `{ status?, workspaceId? }` | the `listPayoutRecoveries` rows plus `workspaceId`, `payeeName` (includes `AWAITING_REFUND`) |
+| `adminHoldRecovery` | action | `admin.override` | `{ recoveryId, until, note }` (pauses deductions during a dispute) | `{ id, deductFrom }` |
+| `adminWaiveRecovery` | action | `admin.override` | `{ recoveryId, note }` | `{ id, status: "WAIVED" }` |
+| `adminSettleRecoveryOffsite` | action | `admin.override` | `{ recoveryId, note }` (repaid by EFT or similar) | `{ id, status: "RECOVERED" }` |
 
 Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
@@ -153,6 +161,7 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.12. `requestRefund` dropped (refunds only by a Nexa admin after an investigation). Refund recovery from payees: `adminRefundFeeInvoice`, `adminListPayoutRecoveries`, `adminHoldRecovery`, `adminWaiveRecovery`, `adminSettleRecoveryOffsite`, tutor query `listPayoutRecoveries`, pay link `/api/payouts/recoveries/[id]/pay`. Rules in section 3 |
 | 2026-11-20 | Draft 1.11. `setUsageCap` built (`limitQuantity: null` removes the owner's cap; storage in GB; returns CapStatus or null; caps are stored and shown, not yet enforced). Admin queries `adminGetWorkspaceBilling({ workspaceId })` (list row + `courses` in the getCourseTiers shape + first `invoices` page), `adminGetPlatformInvoice({ id })` (getPlatformInvoice + `workspaceId`; payments carry `paymentId`, null for off-site, and `refundableCents`), `adminListDiscountCodes({ active?, cursor?, limit? })`. Admin actions now revalidate `/dashboard/admin`. Fee emails to payers: new invoice, overdue (1 and 7 days), receipt after checkout |
 | 2026-11-20 | Draft 1.10. Section 2 built (parent checkout); rules under the table |
 | 2026-11-19 | Draft 1.9. Section 3 built (payouts, fee schedules, fee invoices; `requestRefund` later); rules under the table |

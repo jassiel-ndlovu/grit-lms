@@ -3,6 +3,21 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Refund recovery from payees, `revamp/a-refund-recovery`
+
+Owner decisions (20 November): Nexa pays refunds and recovers the payee's share from their later payouts, after a notice; with no payout for 60 days the payee is offered an invoice. Refunds happen only after an investigation (refund policy to be written), so `requestRefund` is dropped. A disputes policy (parents dispute records, tutors held accountable, payers can't escape payment) comes later.
+
+Done:
+- Migration `12_payout_recovery` (additive): `PayoutRecovery`, `PayoutRecoveryDeduction`, `PaymentPurpose.PAYOUT_RECOVERY`. Applied to preview.
+- `payments/recovery-math.ts` (7-day grace, 50% cap per payout, 60 days to invoice) and `payments/recovery.ts`.
+- Admin: `refundFeeInvoice`, `holdRecovery`, `waiveRecovery`, `settleRecoveryOffsite`, `adminListPayoutRecoveries`. Tutor query `listPayoutRecoveries`.
+- Checkout deducts from payee splits; settlement closes repaid recoveries; refund processing (API answer or webhook) starts recoveries and marks fee invoices REFUNDED or PARTIALLY_REFUNDED.
+- Emails `payouts:recovery-notice`, `recovery-invoice`, `recovery-repaid`. Routes `/api/payouts/recoveries/[id]/pay` and `/return`. The fees job offers invoices at 60 days.
+- Checks: `check-payments.ts` (6 new); a one-off end-to-end run on preview with a fake provider, 21 checks; rows removed.
+- Paystack test mode: split payments to the owner's "Main Branch" and "Secondary Branch" subaccounts, refunded in full and in part.
+
+Not yet: production migration (backup branch first); B's screens for recoveries and admin refunds.
+
 ## 2026-11-20 Fees job, fee emails; admin queries and setUsageCap for B, `revamp/a-fees-daily`
 
 Done:

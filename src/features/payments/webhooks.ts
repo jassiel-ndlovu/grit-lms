@@ -11,6 +11,7 @@ import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
 
 import { getProvider, InvalidSignatureError, type NormalisedEvent, type PaymentProvider } from "./provider";
+import { syncRecoveries } from "./recovery";
 import { markRefunded, settlePayment } from "./settle";
 
 export type WebhookResult = { httpStatus: 200 | 401 | 400 | 500; outcome: string };
@@ -99,6 +100,7 @@ async function applyRefundEvent(reference: string, status: "PROCESSED" | "FAILED
       await tx.refund.update({ where: { id: r.id }, data: { status, processedAt: new Date(), providerRefundId: r.providerRefundId ?? providerId } });
     }
     if (status === "PROCESSED") await markRefunded(tx, payment.id);
+    await syncRecoveries(tx, payment.id);
     return targets.length;
   }, { timeout: 30_000 });
 }

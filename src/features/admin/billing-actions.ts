@@ -68,6 +68,22 @@ export const adminRefundPayment = adminActionClient
   .schema(z.object({ paymentId: id, amountCents: z.number().int().positive().optional(), reason: note }))
   .action(async ({ parsedInput, ctx }) => done(await o.refundPayment(actor(ctx as Ctx), parsedInput)));
 
+export const adminRefundFeeInvoice = adminActionClient
+  .schema(z.object({ invoiceId: id, amountCents: z.number().int().positive().optional(), reason: note }))
+  .action(async ({ parsedInput, ctx }) => done(await o.refundFeeInvoice(actor(ctx as Ctx), parsedInput)));
+
+export const adminWaiveRecovery = adminActionClient
+  .schema(z.object({ recoveryId: id, note }))
+  .action(async ({ parsedInput, ctx }) => done(await o.waiveRecovery(actor(ctx as Ctx), parsedInput)));
+
+export const adminHoldRecovery = adminActionClient
+  .schema(z.object({ recoveryId: id, until: isoDate, note }))
+  .action(async ({ parsedInput, ctx }) => done(await o.holdRecovery(actor(ctx as Ctx), parsedInput)));
+
+export const adminSettleRecoveryOffsite = adminActionClient
+  .schema(z.object({ recoveryId: id, note }))
+  .action(async ({ parsedInput, ctx }) => done(await o.settleRecoveryOffsite(actor(ctx as Ctx), parsedInput)));
+
 export const adminCreateDiscountCode = adminActionClient
   .schema(z.object({
     code: z.string().min(3).max(32),

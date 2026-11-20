@@ -8,7 +8,9 @@
  *      so a rerun or a late run adds nothing.
  *   2. Overdue reminders 1 and 7 days after the due date (unless the
  *      workspace switched them off), once each.
- *   3. Sends queued email.
+ *   3. Refunds still owed by a payee with no payout for 60 days: emails
+ *      them an invoice they can pay by card (./recovery.ts).
+ *   4. Sends queued email.
  *
  * Behind BILLING=1. Learners whose payee has no payout account are skipped
  * and counted.
@@ -22,6 +24,7 @@ import { drainEmailQueue } from "@/lib/email/queue";
 
 import { queueFeeEmail } from "./fee-emails";
 import { issueInvoice, resolvePayee, type IssueLine } from "./fees";
+import { offerRecoveryInvoices } from "./recovery";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -40,10 +43,10 @@ export function overdueReminder(dueAt: Date, now: Date): 1 | 7 | null {
   return null;
 }
 
-export type FeesRunResult = { skipped?: string; invoicesIssued: number; linesSkippedNoPayee: number; reminders: number; emailsSent: number; errors: number };
+export type FeesRunResult = { skipped?: string; invoicesIssued: number; linesSkippedNoPayee: number; reminders: number; recoveryInvoices: number; emailsSent: number; errors: number };
 
 export async function runFeesDaily(opts: { now?: Date } = {}): Promise<FeesRunResult> {
-  const r: FeesRunResult = { invoicesIssued: 0, linesSkippedNoPayee: 0, reminders: 0, emailsSent: 0, errors: 0 };
+  const r: FeesRunResult = { invoicesIssued: 0, linesSkippedNoPayee: 0, reminders: 0, recoveryInvoices: 0, emailsSent: 0, errors: 0 };
   if (!isBillingEnabled()) return { ...r, skipped: "BILLING is off" };
   const now = opts.now ?? new Date();
 
@@ -120,7 +123,15 @@ export async function runFeesDaily(opts: { now?: Date } = {}): Promise<FeesRunRe
     }
   }
 
-  // 3. Email.
+  // 3. Refund recoveries with no payout for 60 days: offer the payee an invoice.
+  try {
+    r.recoveryInvoices = await offerRecoveryInvoices(now);
+  } catch (e) {
+    r.errors++;
+    console.error("[fees] recovery invoices failed:", (e as Error).message);
+  }
+
+  // 4. Email.
   try {
     r.emailsSent = (await drainEmailQueue({ limit: 80, now })).sent;
   } catch (e) {

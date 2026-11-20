@@ -239,7 +239,7 @@ sequenceDiagram
   N-->>C: invoice PAID
 ```
 
-**Refunds.** Staff with `fees.manage` can refund a paid online `Invoice` in full or in part (`requestRefund`); Nexa admins can refund any payment, including Gate 1. The refund calls `provider.refund` with the `Refund.id` as idempotency key. Nexa returns its commission pro rata (`commissionReturnedCents`); the card fee is not refunded by Paystack and stays with the payee. Paystack refunds within one year. **Open question:** how Paystack debits a partial refund of a multi-split transaction across the subaccounts and the main account; Nexa must not fund a tutor's refund.
+**Refunds (owner decision 2026-11-20).** Refunds are never self-serve: a Nexa admin refunds a paid online `Invoice`, in full or in part, only after an investigation against the refund policy (to be written), with `adminRefundFeeInvoice`; Nexa admins can also refund any Gate 1 payment. The refund calls `provider.refund` with the `Refund.id` as idempotency key. Paystack takes it from Nexa's balance, single- or multi-split. The payee owes their share (refund x allocation share / invoice total) as a `PayoutRecovery`; Nexa bears its commission part (`commissionReturnedCents`). The card fee is not refunded by Paystack and stays with the payee. When the refund is processed the payee is emailed a notice of deduction; 7 days later each checkout paying them sends them less (at most 50% of that payout, oldest first; deductions held by pending payments count, so concurrent checkouts can't take the same debt twice). After 60 days with nothing recovered they are emailed an invoice to pay by card (`Payment.purpose = PAYOUT_RECOVERY`, no split). Admins can hold, waive, or settle a recovery off-site. Paystack refunds within one year. Test-mode refunds of split payments (one and two subaccounts, 20 November) were accepted and the full amount was debited at once.
 
 **Reconciliation** (`POST /api/cron/payments-reconcile`, nightly, `CRON_SECRET`):
 
@@ -269,7 +269,7 @@ Same conventions as 03, section 10. Files: `src/features/payments/queries.ts` an
 | `voidInvoice` | action | `fees.manage` | `{ invoiceId, reason }` | `{ status }` |
 | `markInvoicePaidOffsite` | action | `fees.markOffsite` | `{ invoiceId, method, amountCents, receivedOn, reference?, note }` | `{ status: "PAID" }` |
 | `voidOffsitePayment` | action | `fees.markOffsite` | `{ offsitePaymentId, reason }` | `{ invoiceStatus }` |
-| `requestRefund` | action | `fees.manage` | `{ invoiceId, amountCents?, reason }` | `{ refundId, status }` |
+| `adminRefundFeeInvoice` | action | `admin.override` | `{ invoiceId, amountCents?, reason }` | `{ refundId, status }` |
 | `adminMarkPaidOffsite` | action | `admin.override` | `{ platformInvoiceId, method, amountCents, receivedOn, reference?, note }` | `{ status: "PAID" }` |
 | `adminRefundPayment` | action | `admin.override` | `{ paymentId, amountCents?, reason }` | `{ refundId, status }` |
 | `adminGetPaymentVolume` | query | `admin.console` | none | `{ lifetimeCents, capCents, percent }` |

@@ -17,6 +17,7 @@ import { enqueueEmail } from "@/lib/email/queue";
 
 import { DEFAULT_CHECKOUT_CONFIG, planCheckout } from "./checkout-math";
 import { getProvider, type PaymentProvider } from "./provider";
+import { closeRecovered, planRecoveryDeductions } from "./recovery";
 
 type Tx = Prisma.TransactionClient;
 const LOCK_MS = 30 * 60 * 1000;
@@ -86,7 +87,7 @@ export async function startCheckoutFor(
   const reference = `nx-chk-${randomBytes(10).toString("hex")}`;
   const until = new Date(now.getTime() + LOCK_MS);
 
-  await prisma.$transaction(async (tx) => {
+  const splits = await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.create({
       data: {
         provider: "PAYSTACK", reference, purpose: "PARENT_CHECKOUT", payerUserId: payer.userId, amountCents: plan.totalCents,
@@ -102,6 +103,20 @@ export async function startCheckoutFor(
     });
     if (locked.count !== ids.length) throw new BillingError("FORBIDDEN", "One of these invoices is already being paid; try again in 30 minutes");
     await tx.paymentAllocation.createMany({ data: plan.allocations.map((a) => ({ ...a, paymentId: payment.id })) });
+    // Refunds Nexa funded come back out of these payees' shares (./recovery.ts).
+    const subOf = new Map(invoices.map((i) => [i.payoutAccount.id, i.payoutAccount.subaccountCode]));
+    const shareOf = new Map<string, number>();
+    for (const a of plan.allocations) shareOf.set(a.payoutAccountId, (shareOf.get(a.payoutAccountId) ?? 0) + a.shareCents);
+    const taken = await planRecoveryDeductions(tx, payment.id, [...shareOf].map(([payoutAccountId, shareCents]) => ({ payoutAccountId, shareCents })), now);
+    if (taken.size === 0) return plan.splits;
+    const less = new Map([...taken].map(([pa, cents]) => [subOf.get(pa)!, cents]));
+    const adjusted = plan.splits.map((s) => ({ subaccountCode: s.subaccountCode, shareCents: s.shareCents - (less.get(s.subaccountCode) ?? 0) }));
+    const recoveredCents = [...taken.values()].reduce((n, c) => n + c, 0);
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: { splitSent: { splits: adjusted, nexaShareCents: plan.nexaShareCents + recoveredCents, recoveredCents, config: DEFAULT_CHECKOUT_CONFIG } as Prisma.InputJsonValue },
+    });
+    return adjusted;
   }, { timeout: 30_000 });
 
   try {
@@ -111,7 +126,7 @@ export async function startCheckoutFor(
       amountCents: plan.totalCents,
       callbackUrl: input.callbackUrl,
       channels: ["card"],
-      splits: plan.splits,
+      splits,
       feeBearer: "PAYEES_PROPORTIONAL",
       metadata: { purpose: "PARENT_CHECKOUT", invoices: String(ids.length) },
     });
@@ -174,6 +189,7 @@ export async function applyCheckoutPayment(tx: Tx, input: { paymentId: string; p
       });
     }
   }
+  await closeRecovered(tx, input.paymentId, input.paidAt);
   if (unapplied.length) {
     console.error(`[payments] checkout paid invoices that were no longer open (${unapplied.join(", ")}); refund those shares by hand`);
     const ws = payment.allocations[0]?.invoice.workspaceId ?? null;
