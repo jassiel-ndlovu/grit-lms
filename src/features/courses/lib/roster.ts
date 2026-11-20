@@ -65,7 +65,8 @@ type LearnerRow = {
   enrollments: Array<{ course: { id: string; name: string } }>;
 };
 
-function toStudent(l: LearnerRow): RosterStudent {
+/** `scope` hides courses a scoped tutor doesn't teach (null: show all). */
+function toStudent(l: LearnerRow, scope: string[] | null): RosterStudent {
   return {
     learnerId: l.id,
     userId: l.user.id,
@@ -74,7 +75,7 @@ function toStudent(l: LearnerRow): RosterStudent {
     username: l.user.username,
     isMinor: l.isMinor,
     awaitingFirstSignIn: l.user.mustChangePassword,
-    courses: l.enrollments.map((e) => e.course),
+    courses: l.enrollments.map((e) => e.course).filter((c) => !scope || scope.includes(c.id)),
   };
 }
 
@@ -94,7 +95,7 @@ export async function listRoster(viewer: Viewer): Promise<RosterStudent[]> {
     orderBy: { user: { name: "asc" } },
     take: 500,
   });
-  return rows.map(toStudent);
+  return rows.map((r) => toStudent(r, scope));
 }
 
 /** One student the viewer manages, or null (not theirs, or not found). */
@@ -103,7 +104,7 @@ export async function getRosterStudent(viewer: Viewer, learnerId: string): Promi
   const scope = await scopeFor(viewer);
   if (scope && scope.length === 0) return null;
   const row = await prisma.learner.findFirst({ where: { id: learnerId, ...learnerWhere(viewer, scope) }, select: learnerSelect });
-  return row ? toStudent(row) : null;
+  return row ? toStudent(row, scope) : null;
 }
 
 export interface MemberRow {
