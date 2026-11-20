@@ -12,7 +12,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 
 import { listCoursesByTutorId } from "@/features/courses/queries";
-import { listAllStudents } from "@/features/students/queries";
+import { listWorkspaceStudents } from "@/features/students/queries";
+import { workspaceIdFor } from "@/features/workspaces/tenancy";
+import { getViewer } from "@/lib/viewer";
 import { CourseCard } from "@/features/courses/components/course-card";
 import { CourseGrid } from "@/features/courses/components/course-grid";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
@@ -34,7 +36,7 @@ export default async function ManageCoursesPage() {
 
   const [courses, students] = await Promise.all([
     listCoursesByTutorId(tutor.id),
-    listAllStudents(),
+    getViewer().then((v) => listWorkspaceStudents(v ? workspaceIdFor(v) : null)),
   ]);
 
   return (
