@@ -34,12 +34,17 @@ Checked:
   `12_time_accommodation` pending, and `migrate diff` from the live
   database equals that migration exactly.
 
-**Waiting on the owner:** Neon refused the backup branch
-`backup-time-accommodation-20261120` with "branches limit exceeded" (the
-project has production, preview and eight `backup-*` branches). Rule 4.1
-needs that backup before `migrate deploy` on production, and deleting an
-old backup is the owner's call. #134 stays unmerged until production has
-the migration, because production code would read the new columns.
+Applied to production (2026-11-20, rule 4.1):
+- Neon refused the backup branch at first ("branches limit exceeded"). The
+  owner said to delete the oldest pre-migration backups, so I deleted
+  `backup-pre-migrate-20261117`, `backup-pre-tenancy-20261119` and
+  `backup-pre-tenancy2-20261119`.
+- Backup branch `backup-time-accommodation-20261120` from production.
+- `migrate diff` from production still equalled `12_time_accommodation`
+  exactly; `migrate deploy` applied it; `migrate status` is up to date on
+  both databases. Then #134 was merged.
+- The Neon project now holds production, preview and six backups. Old
+  backups need pruning before the branch limit (10) is hit again.
 
 ## 2026-11-20 Student test runner, `revamp/b-test-runner`
 
