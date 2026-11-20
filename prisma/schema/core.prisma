@@ -60,9 +60,10 @@ model User {
   tutorProfile       Tutor?
   studentProfile     Student?
 
-  authSessions Session[]
-  authAccounts Account[]
-  twoFactors   TwoFactor[]
+  authSessions      Session[]
+  authAccounts      Account[]
+  twoFactors        TwoFactor[]
+  calendarFeedToken CalendarFeedToken?
 }
 
 enum PlatformRole {

@@ -158,10 +158,11 @@ model Learner {
   consentAttestedBy String?
   createdAt         DateTime      @default(now())
 
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   enrollments  Enrollment[]
   feeSchedules FeeSchedule[]
+  attendance   SessionAttendance[]
 
   @@unique([workspaceId, userId])
   @@index([userId])

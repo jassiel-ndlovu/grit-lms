@@ -24,6 +24,7 @@ import { decryptSecret, encryptSecret } from "@/features/payments/secrets";
 
 import { renderBillingEmail, type BillingTemplate, type BillingTemplateData, type Rendered } from "./billing-templates";
 import { renderFeeEmail, type FeeTemplate, type FeeTemplateData } from "./fee-templates";
+import { renderAbsenceEmail, type AbsenceData } from "./attendance-templates";
 import { renderPayoutEmail, type PayoutTemplate, type PayoutTemplateData } from "./payout-templates";
 import { recipientAllowed, sendEmail } from "./send";
 import { digestEmail, notificationEmail, passwordResetEmail, verificationEmail, type EmailNotificationItem } from "./templates";
@@ -103,6 +104,7 @@ function renderRow(template: string, to: string, data: unknown): Rendered {
     const t = template.slice("fees:".length) as FeeTemplate;
     return renderFeeEmail(t, data as FeeTemplateData[typeof t]);
   }
+  if (template === "attendance:absence") return renderAbsenceEmail(data as AbsenceData);
   if (template.startsWith("payouts:")) {
     const t = template.slice("payouts:".length) as PayoutTemplate;
     return renderPayoutEmail(t, data as PayoutTemplateData[typeof t]);
