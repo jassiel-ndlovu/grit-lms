@@ -15,7 +15,7 @@ import { viewerActionClient } from "@/lib/safe-action";
 import { requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";
 
-import { checkoutStatusFor, startCheckoutFor, type Payer } from "./checkout";
+import { checkoutStatusFor, previewCheckoutFor, startCheckoutFor, type Payer } from "./checkout";
 import { settlePayment } from "./settle";
 
 function payerOf(viewer: Viewer): Payer {
@@ -62,4 +62,13 @@ export const getCheckoutStatus = viewerActionClient
       return checkoutStatusFor(viewer.user.id, reference);
     }
     return before;
+  });
+
+/** Totals before paying, with a discount code applied if given. Nothing is locked. */
+export const previewCheckout = viewerActionClient
+  .schema(z.object({ invoiceIds: z.array(z.string().min(1)).min(1).max(30), discountCode: z.string().max(64).optional() }))
+  .action(async ({ parsedInput }) => {
+    assertBillingEnabled();
+    const viewer = await requireViewer();
+    return previewCheckoutFor(payerOf(viewer), parsedInput);
   });

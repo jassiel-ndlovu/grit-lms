@@ -11,6 +11,7 @@ import { requireViewer, ViewerError } from "@/lib/viewer";
 import { can, needsScope } from "@/lib/viewer-core";
 
 import { listPayableInvoicesFor } from "./checkout";
+import { listFeeDiscountCodesFor } from "./fee-discounts";
 import { listFeeInvoicesFor, payoutSettingsFor } from "./fees";
 import { getProvider } from "./provider";
 import { listRecoveriesFor } from "./recovery";
@@ -71,4 +72,12 @@ export async function listPayoutRecoveries() {
     select: { id: true },
   });
   return listRecoveriesFor(accounts.map((a) => a.id));
+}
+
+/** The workspace's discount codes for parent invoices. Owners and admins. */
+export async function listFeeDiscountCodes() {
+  assertBillingEnabled();
+  const viewer = await requireViewer({ permission: "fees.manage", workspace: true });
+  if (needsScope(viewer, "fees.manage")) throw new ViewerError("FORBIDDEN");
+  return listFeeDiscountCodesFor(viewer.workspace!.id);
 }

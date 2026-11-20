@@ -16,6 +16,7 @@ import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 import { can, needsScope } from "@/lib/viewer-core";
 import { prisma } from "@/lib/db";
 
+import { createFeeDiscountCode as createFeeDiscountCodeFor, deactivateFeeDiscountCode as deactivateFeeDiscountCodeFor } from "./fee-discounts";
 import * as fees from "./fees";
 
 async function staff(permission?: Parameters<typeof can>[1]) {
@@ -159,4 +160,37 @@ export const voidOffsitePayment = viewerActionClient
     if (!off?.invoiceId) throw new BillingError("NOT_FOUND", "Off-site payment not found");
     await assertFeeScope(viewer, await invoiceCourses(off.invoiceId), "fees.markOffsite");
     return done(await fees.voidOffsitePayment(actorOf(viewer), workspaceId, parsedInput));
+  });
+
+/* Discount codes on parent invoices (./fee-discounts.ts): owners and admins only, since the discount comes out of every payee's share. */
+async function workspaceFeeManager() {
+  const { viewer, workspaceId } = await staff("fees.manage");
+  if (needsScope(viewer, "fees.manage")) throw new ViewerError("FORBIDDEN");
+  return { viewer, workspaceId };
+}
+
+const isoDate = z.string().refine((s) => !Number.isNaN(Date.parse(s)), "Must be a date");
+
+export const createFeeDiscountCode = viewerActionClient
+  .schema(z.object({
+    code: z.string().trim().min(3).max(32),
+    description: z.string().trim().min(1).max(200),
+    kind: z.enum(["PERCENT", "FIXED"]),
+    percentBps: z.number().int().min(1).max(10_000).nullable().optional(),
+    amountCents: z.number().int().positive().nullable().optional(),
+    startsAt: isoDate,
+    endsAt: isoDate.nullable().optional(),
+    maxRedemptions: z.number().int().positive().nullable().optional(),
+    durationPeriods: z.number().int().positive().nullable().optional(),
+  }))
+  .action(async ({ parsedInput }) => {
+    const { viewer, workspaceId } = await workspaceFeeManager();
+    return done(await createFeeDiscountCodeFor(actorOf(viewer), workspaceId, parsedInput));
+  });
+
+export const deactivateFeeDiscountCode = viewerActionClient
+  .schema(z.object({ id: z.string().min(1).max(64) }))
+  .action(async ({ parsedInput }) => {
+    const { viewer, workspaceId } = await workspaceFeeManager();
+    return done(await deactivateFeeDiscountCodeFor(actorOf(viewer), workspaceId, parsedInput));
   });

@@ -7,7 +7,7 @@
 
 import { randomBytes } from "node:crypto";
 
-import { planCheckout, proportional } from "../src/features/payments/checkout-math";
+import { discountShares, planCheckout, proportional } from "../src/features/payments/checkout-math";
 import { RECOVERY, recoveryOwed, takeDeductions } from "../src/features/payments/recovery-math";
 import { decryptSecret, encryptSecret } from "../src/features/payments/secrets";
 import {
@@ -110,6 +110,12 @@ const same = planCheckout([
 check("two invoices for one tutor: one split entry", same.splits.length === 1 && same.allocations.length === 2, true);
 check("largest remainder adds up exactly", proportional(100, [1, 1, 1]), [34, 33, 33]);
 check("Nexa nets its 2% after a proportional fee", Math.round(plan.nexaShareCents * (1 - plan.estimatedFeeCents / plan.totalCents)) >= plan.commissionCents, true);
+
+// Parent-invoice discount codes.
+check("discount: 10% of each invoice", discountShares({ kind: "PERCENT", percentBps: 1000, amountCents: null }, [143000, 120000]), [14300, 12000]);
+check("discount: R100 fixed spread by total", discountShares({ kind: "FIXED", percentBps: null, amountCents: 10000 }, [30000, 10000]), [7500, 2500]);
+check("discount: never below R1 an invoice", discountShares({ kind: "PERCENT", percentBps: 10000, amountCents: null }, [5000]), [4900]);
+check("discount: fixed larger than the invoices", discountShares({ kind: "FIXED", percentBps: null, amountCents: 99999 }, [5000, 5000]), [4900, 4900]);
 
 // Refund recovery (owner decision 2026-11-20).
 check("recovery: payee owes their share of a full refund", recoveryOwed(10000, { amountCents: 10000, shareCents: 9800 }), 9800);
