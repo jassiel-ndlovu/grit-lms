@@ -12,6 +12,8 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { parentLanding } from "@/features/activity/lib/child-overview";
+import { getViewer } from "@/lib/viewer";
 import {
   CalendarDays,
   ExternalLink,
@@ -137,6 +139,8 @@ export default async function SchedulePage({ searchParams }: PageProps) {
 
   const session = await auth();
   if (!session?.user) redirect("/");
+  // Parents have no student pages; send them to their child (F7).
+  if (session.user.role === "PARENT") redirect(parentLanding((await getViewer())?.children ?? []));
 
   // ───── Build the feed (role-branched) ─────
   let items: CalendarItem[] = [];

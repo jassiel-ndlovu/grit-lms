@@ -2,26 +2,28 @@
  * ParentDashboard — landing page for PARENT users.
  *
  * Lists the children linked to this account (viewer.children: ACTIVE
- * guardianships, each with the workspaces the child learns in) and points
- * at Fees. Per-child progress and marks are still to come. Server
- * Component.
+ * guardianships, each with the workspaces the child learns in), each card
+ * with lesson progress and the latest released mark, linking to the
+ * child's view (/dashboard/children/[userId]). Server Component.
  */
 
 import Link from "next/link";
-import { Bell, CalendarDays, GraduationCap, MessageSquare, Receipt, TrendingUp, Users } from "lucide-react";
+import { Bell, ChevronRight, GraduationCap, MessageSquare, Receipt, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import type { ChildSummary } from "@/features/activity/child-overview";
+import { childRoutes } from "@/features/activity/lib/child-overview";
 import { APP_CONTACT } from "@/lib/branding";
 import type { Viewer } from "@/lib/viewer-core";
 
 const COMING_SOON = [
-  { icon: TrendingUp, title: "Progress", body: "Lesson completion and marks for each of your learners." },
-  { icon: CalendarDays, title: "Upcoming work", body: "Tests and assignments due in the next two weeks." },
   { icon: MessageSquare, title: "Tutor messages", body: "Questions and updates between you and your learners' tutors." },
 ];
 
-export function ParentDashboard({ firstName, learners }: { firstName: string; learners: Viewer["children"] }) {
+type Learner = Viewer["children"][number] & { summary: ChildSummary };
+
+export function ParentDashboard({ firstName, learners }: { firstName: string; learners: Learner[] }) {
   return (
     <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
@@ -64,17 +66,23 @@ export function ParentDashboard({ firstName, learners }: { firstName: string; le
           <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {learners.map((child) => (
               <li key={child.userId}>
-                <Card className="flex items-start gap-4 p-5">
-                  <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 shrink-0 items-center justify-center rounded-full font-medium">
-                    {child.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-foreground font-medium">{child.name}</p>
-                    <p className="text-muted-foreground text-sm">
-                      {child.workspaces.length ? child.workspaces.map((w) => w.name).join(" · ") : "Not learning anywhere yet"}
-                    </p>
-                  </div>
-                </Card>
+                <Link href={childRoutes.child(child.userId)} className="group block h-full">
+                  <Card className="flex h-full items-start gap-4 p-5 transition-shadow group-hover:shadow-md">
+                    <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 shrink-0 items-center justify-center rounded-full font-medium">
+                      {child.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-foreground font-medium">{child.name}</p>
+                        <p className="text-muted-foreground text-sm">
+                          {child.workspaces.length ? child.workspaces.map((w) => w.name).join(" · ") : "Not learning anywhere yet"}
+                        </p>
+                      </div>
+                      <ChildSummaryLine summary={child.summary} />
+                    </div>
+                    <ChevronRight className="text-muted-foreground size-4 shrink-0 self-center transition-transform group-hover:translate-x-0.5" />
+                  </Card>
+                </Link>
               </li>
             ))}
           </ul>
@@ -86,7 +94,7 @@ export function ParentDashboard({ firstName, learners }: { firstName: string; le
           <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">
             Coming soon
           </h2>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {COMING_SOON.map(({ icon: Icon, title, body }) => (
               <Card key={title} className="space-y-2 p-5">
                 <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md">
@@ -121,6 +129,35 @@ export function ParentDashboard({ firstName, learners }: { firstName: string; le
           </Card>
         </section>
       </div>
+    </div>
+  );
+}
+
+function ChildSummaryLine({ summary }: { summary: ChildSummary }) {
+  const { progress, latestMark, dueSoon } = summary;
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <div className="flex items-baseline justify-between text-xs">
+          <span className="text-muted-foreground">Lessons</span>
+          <span className="font-medium tabular-nums">
+            {progress.total > 0 ? `${progress.done}/${progress.total} · ${progress.percent}%` : "None yet"}
+          </span>
+        </div>
+        <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+          <div className="bg-brand-terracotta h-full" style={{ width: `${progress.percent}%` }} />
+        </div>
+      </div>
+      <p className="text-muted-foreground truncate text-xs">
+        {latestMark ? (
+          <>
+            Latest mark <span className="text-foreground font-medium tabular-nums">{latestMark.percent}%</span> in {latestMark.title}
+          </>
+        ) : (
+          "No marks released yet"
+        )}
+        {dueSoon > 0 ? ` · ${dueSoon} due soon` : ""}
+      </p>
     </div>
   );
 }

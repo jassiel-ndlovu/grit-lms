@@ -183,3 +183,29 @@ export const getGradeWithDetails = cache(async (id: string) => {
     include: detailInclude,
   });
 });
+
+/**
+ * Grades for one student with the fields that say whether each mark is
+ * released (submission status, the test's release-auto-marks setting).
+ * The parent's child view filters with `isReleased`
+ * (features/activity/lib/child-overview.ts), so a parent never sees a mark
+ * the student cannot.
+ */
+export const listGradesWithReleaseForStudent = cache(async (studentId: string) => {
+  return prisma.grade.findMany({
+    where: { studentId },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      title: true,
+      score: true,
+      outOf: true,
+      updatedAt: true,
+      course: { select: { id: true, name: true } },
+      testSubmission: {
+        select: { status: true, test: { select: { title: true, releaseAutoMarksToStudent: true } } },
+      },
+      submissionEntry: { select: { status: true, submission: { select: { title: true } } } },
+    },
+  });
+});
