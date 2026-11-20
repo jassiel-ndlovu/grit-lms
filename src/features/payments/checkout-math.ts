@@ -67,3 +67,19 @@ export function planCheckout(invoices: CheckoutInvoice[], cfg: CheckoutConfig = 
     splits: [...bySub].map(([subaccountCode, shareCents]) => ({ subaccountCode, shareCents })),
   };
 }
+
+/** The least a discounted invoice still costs, so a checkout never reaches zero (Paystack can't charge R0). */
+export const MIN_INVOICE_AFTER_DISCOUNT_CENTS = 100;
+
+/**
+ * A PARENT_INVOICE discount over the eligible invoices in one checkout.
+ * PERCENT takes that share of each invoice; FIXED is one amount per
+ * checkout, spread in proportion to the invoice totals. Each invoice keeps
+ * at least MIN_INVOICE_AFTER_DISCOUNT_CENTS.
+ */
+export function discountShares(code: { kind: "PERCENT" | "FIXED"; percentBps: number | null; amountCents: number | null }, totals: number[]): number[] {
+  const room = totals.map((t) => Math.max(0, t - MIN_INVOICE_AFTER_DISCOUNT_CENTS));
+  if (code.kind === "PERCENT") return totals.map((t, i) => Math.min(Math.round((t * (code.percentBps ?? 0)) / 10_000), room[i]));
+  const amount = Math.min(code.amountCents ?? 0, room.reduce((a, b) => a + b, 0));
+  return proportional(amount, totals).map((d, i) => Math.min(d, room[i]));
+}

@@ -3,6 +3,18 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Discount codes on parent invoices, `revamp/a-fee-discounts`
+
+Done:
+- `payments/fee-discounts.ts`: workspace-issued `PARENT_INVOICE` codes (owners and admins only, as the discount comes out of every payee's share). Applied at checkout to that workspace's invoices; redeemed per payer and child; `durationPeriods` counts paid checkouts; `maxRedemptions` counts children.
+- `discountShares` in `checkout-math.ts`: PERCENT per invoice, FIXED once per checkout spread by total, at least R1 left on each invoice.
+- Checkout: `previewCheckout` (no locks); the discount is kept in `Payment.splitSent` and written to the invoice (a `Discount <CODE>` line, lower total, redemption) only when the payment succeeds.
+- Actions `createFeeDiscountCode`, `deactivateFeeDiscountCode`; query `listFeeDiscountCodes`. Contract Draft 1.13. No migration.
+- Checks: `check-payments.ts` (4 new); a one-off end-to-end run on preview, 12 checks; rows removed.
+- Branch cleanup (#135): A's 46 merged branches and the superseded `revamp/a-contracts` wait for the owner's OK to delete.
+
+Known limit: two checkouts at the same moment may take one redemption past `maxRedemptions`.
+
 ## 2026-11-20 Refund recovery from payees, `revamp/a-refund-recovery`
 
 Owner decisions (20 November): Nexa pays refunds and recovers the payee's share from their later payouts, after a notice; with no payout for 60 days the payee is offered an invoice. Refunds happen only after an investigation (refund policy to be written), so `requestRefund` is dropped. A disputes policy (parents dispute records, tutors held accountable, payers can't escape payment) comes later.

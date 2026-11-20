@@ -150,7 +150,7 @@ sequenceDiagram
 **Checkout.** A guardian picks any open invoices across children and tutors and pays once (`startCheckout`).
 
 1. Load the invoices; check the payer may pay each one (`fees.pay`), each is `OPEN` and not locked, and each payee is `ACTIVE`.
-2. Apply a `PARENT_INVOICE` discount code, if given, to invoices of the issuing workspace.
+2. Apply a `PARENT_INVOICE` discount code, if given, to invoices of the issuing workspace (built 2026-11-20, `fee-discounts.ts`: workspace owners and admins issue them; per child per payer; each invoice keeps at least R1; recorded on the invoice when paid).
 3. `T` = sum of invoice totals. Commission `C` = Σ round(2% × invoice total). Estimated fee `F` = round((2.9% × T + 100) × 1.15) (card, VAT included while Nexa is not VAT-registered; stored as config).
 4. With `all-proportional`, every party bears the fee in proportion to its share. To keep Nexa's net at `C`, Nexa's gross share is `S_N = ceil(C × T / (T − F))`. Payee shares split `T − S_N` in proportion to their invoice totals (largest remainder, so they add up exactly).
 5. Create one `Payment` (`PARENT_CHECKOUT`) with a `PaymentAllocation` per invoice, lock the invoices for 30 minutes (`lockedByPaymentId`), and call `initializeCheckout` with one split entry per payee subaccount (invoices for the same payee are summed into one entry).

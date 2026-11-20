@@ -16,6 +16,7 @@ import { prisma } from "@/lib/db";
 import { enqueueEmail } from "@/lib/email/queue";
 
 import { DEFAULT_CHECKOUT_CONFIG, planCheckout } from "./checkout-math";
+import { applyCheckoutDiscount, resolveCheckoutDiscount, type CheckoutDiscount } from "./fee-discounts";
 import { getProvider, type PaymentProvider } from "./provider";
 import { closeRecovered, planRecoveryDeductions } from "./recovery";
 
@@ -56,23 +57,16 @@ export async function listPayableInvoicesFor(payer: Payer, input: { status?: "OP
   }));
 }
 
-/**
- * Locks the invoices for 30 minutes, records the payment and its split, and
- * returns Paystack's checkout page. Discount codes on parent invoices are
- * not built yet (`CODE_INVALID`).
- */
-export async function startCheckoutFor(
-  payer: Payer,
-  input: { invoiceIds: string[]; discountCode?: string; callbackUrl: string },
-  provider: PaymentProvider = getProvider(),
-) {
-  if (input.discountCode) throw new BillingError("CODE_INVALID", "Discount codes on fee invoices aren't available yet");
+/** Checks the payer may pay these invoices now, applies the discount code, and plans the split. */
+async function prepareCheckout(payer: Payer, input: { invoiceIds: string[]; discountCode?: string }, now: Date) {
   const ids = [...new Set(input.invoiceIds)];
   if (ids.length === 0 || ids.length > 30) throw new BillingError("FORBIDDEN", "Choose between 1 and 30 invoices");
-  const now = new Date();
   const invoices = await prisma.invoice.findMany({
     where: { id: { in: ids } },
-    select: { id: true, studentUserId: true, status: true, totalCents: true, lockedUntil: true, payoutAccount: { select: { id: true, subaccountCode: true, status: true } } },
+    select: {
+      id: true, studentUserId: true, learnerId: true, workspaceId: true, status: true, totalCents: true, lockedUntil: true,
+      payoutAccount: { select: { id: true, subaccountCode: true, status: true } },
+    },
   });
   if (invoices.length !== ids.length) throw new BillingError("NOT_FOUND", "Some invoices were not found");
   const allowed = new Set(payableUserIds(payer));
@@ -82,8 +76,43 @@ export async function startCheckoutFor(
     if (i.lockedUntil && i.lockedUntil > now) throw new BillingError("FORBIDDEN", "One of these invoices is already being paid; try again in 30 minutes");
     if (i.payoutAccount.status !== "ACTIVE") throw new BillingError("FORBIDDEN", "A tutor's payout account isn't ready yet");
   }
+  const discount = input.discountCode?.trim()
+    ? await resolveCheckoutDiscount(prisma, { code: input.discountCode, payerUserId: payer.userId, invoices, now })
+    : null;
+  const plan = planCheckout(invoices.map((i) => ({
+    invoiceId: i.id, payoutAccountId: i.payoutAccount.id, subaccountCode: i.payoutAccount.subaccountCode,
+    totalCents: i.totalCents - (discount?.perInvoice[i.id] ?? 0),
+  })));
+  return { ids, invoices, discount, plan };
+}
 
-  const plan = planCheckout(invoices.map((i) => ({ invoiceId: i.id, payoutAccountId: i.payoutAccount.id, subaccountCode: i.payoutAccount.subaccountCode, totalCents: i.totalCents })));
+/**
+ * What the payer would pay, before they choose to: totals per invoice after
+ * the discount code, if any. Same checks as startCheckout, nothing locked.
+ */
+export async function previewCheckoutFor(payer: Payer, input: { invoiceIds: string[]; discountCode?: string }) {
+  const { invoices, discount, plan } = await prepareCheckout(payer, input, new Date());
+  return {
+    totalCents: plan.totalCents,
+    discountCents: discount?.discountCents ?? 0,
+    code: discount?.code ?? null,
+    invoices: invoices.map((i) => ({ id: i.id, totalCents: i.totalCents, discountCents: discount?.perInvoice[i.id] ?? 0 })),
+  };
+}
+
+/**
+ * Locks the invoices for 30 minutes, records the payment and its split, and
+ * returns Paystack's checkout page. A PARENT_INVOICE discount code lowers
+ * the invoices of the workspace that issued it (./fee-discounts.ts); it is
+ * recorded on the invoices only once the payment succeeds.
+ */
+export async function startCheckoutFor(
+  payer: Payer,
+  input: { invoiceIds: string[]; discountCode?: string; callbackUrl: string },
+  provider: PaymentProvider = getProvider(),
+) {
+  const now = new Date();
+  const { ids, invoices, discount, plan } = await prepareCheckout(payer, input, now);
   const reference = `nx-chk-${randomBytes(10).toString("hex")}`;
   const until = new Date(now.getTime() + LOCK_MS);
 
@@ -92,7 +121,7 @@ export async function startCheckoutFor(
       data: {
         provider: "PAYSTACK", reference, purpose: "PARENT_CHECKOUT", payerUserId: payer.userId, amountCents: plan.totalCents,
         commissionCents: plan.commissionCents, estimatedFeeCents: plan.estimatedFeeCents,
-        splitSent: { splits: plan.splits, nexaShareCents: plan.nexaShareCents, config: DEFAULT_CHECKOUT_CONFIG } as Prisma.InputJsonValue,
+        splitSent: { splits: plan.splits, nexaShareCents: plan.nexaShareCents, config: DEFAULT_CHECKOUT_CONFIG, discount } as Prisma.InputJsonValue,
       },
       select: { id: true },
     });
@@ -114,7 +143,7 @@ export async function startCheckoutFor(
     const recoveredCents = [...taken.values()].reduce((n, c) => n + c, 0);
     await tx.payment.update({
       where: { id: payment.id },
-      data: { splitSent: { splits: adjusted, nexaShareCents: plan.nexaShareCents + recoveredCents, recoveredCents, config: DEFAULT_CHECKOUT_CONFIG } as Prisma.InputJsonValue },
+      data: { splitSent: { splits: adjusted, nexaShareCents: plan.nexaShareCents + recoveredCents, recoveredCents, config: DEFAULT_CHECKOUT_CONFIG, discount } as Prisma.InputJsonValue },
     });
     return adjusted;
   }, { timeout: 30_000 });
@@ -130,7 +159,7 @@ export async function startCheckoutFor(
       feeBearer: "PAYEES_PROPORTIONAL",
       metadata: { purpose: "PARENT_CHECKOUT", invoices: String(ids.length) },
     });
-    return { authorizationUrl, reference, totalCents: plan.totalCents, discountCents: 0 };
+    return { authorizationUrl, reference, totalCents: plan.totalCents, discountCents: discount?.discountCents ?? 0 };
   } catch (e) {
     await releaseLocks(prisma, reference, "FAILED");
     throw e;
@@ -153,7 +182,7 @@ export async function releaseLocks(db: Tx | typeof prisma, reference: string, st
 export async function applyCheckoutPayment(tx: Tx, input: { paymentId: string; paidAt: Date; feeCents: number | null }) {
   const payment = await tx.payment.findUniqueOrThrow({
     where: { id: input.paymentId },
-    select: { payerUserId: true, amountCents: true, allocations: { select: { id: true, invoiceId: true, amountCents: true, invoice: { select: { status: true, workspaceId: true, number: true } } } } },
+    select: { payerUserId: true, amountCents: true, splitSent: true, allocations: { select: { id: true, invoiceId: true, amountCents: true, invoice: { select: { status: true, workspaceId: true, number: true } } } } },
   });
   const unapplied: string[] = [];
   for (const a of payment.allocations) {
@@ -168,6 +197,10 @@ export async function applyCheckoutPayment(tx: Tx, input: { paymentId: string; p
   }
   // Receipt to the payer, for what was applied.
   const applied = payment.allocations.filter((a) => !unapplied.includes(a.invoice.number));
+  const discount = (payment.splitSent as { discount?: CheckoutDiscount | null } | null)?.discount;
+  if (discount && payment.payerUserId) {
+    await applyCheckoutDiscount(tx, { discount, payerUserId: payment.payerUserId, appliedInvoiceIds: applied.map((a) => a.invoiceId), now: input.paidAt });
+  }
   if (payment.payerUserId && applied.length) {
     const payer = await tx.user.findUnique({ where: { id: payment.payerUserId }, select: { email: true } });
     const payee = await tx.paymentAllocation.findFirst({ where: { paymentId: input.paymentId }, select: { payoutAccount: { select: { businessName: true } } } });
