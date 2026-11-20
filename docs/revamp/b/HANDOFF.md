@@ -3,6 +3,37 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Discount codes on fees, `revamp/b-fee-codes`
+
+From contract Draft 1.13 (`listFeeDiscountCodes`,
+`createFeeDiscountCode`, `deactivateFeeDiscountCode`) and a/ux/05,
+section 3.
+
+Done:
+- **`/dashboard/fees/discounts`** for owners and admins (`fees.manage`
+  without a scope). Linked as "Discount codes" in the Fees page header.
+  - The list shows each code with what it takes off, how many payments
+    per student, its dates, students who used it (of the limit), the
+    status (Live, Starts later, Ended, Used up, Off) and Turn off with a
+    confirm.
+  - A new-code form: code, description, percentage or rand amount, start
+    and optional end, an optional student limit and optional payments per
+    student.
+- **Date fix**, also on the Nexa admin codes table: code dates are saved
+  as whole UTC days, so they're now shown in UTC. Before, an end of
+  31 Jul showed as 1 Aug in South Africa.
+
+Checked:
+- `tsc` and `eslint` clean.
+- A temporary sample-data page showed the list, the empty state, the
+  form's checks and the Turn off dialog. Nothing was written.
+
+Not done:
+- Limiting a code to some courses (in the design): A's action has no
+  courses field.
+- Applying a code to a student from their Fees tab (`applyFeeDiscount`,
+  proposed in the design): not built by A yet.
+
 ## 2026-11-20 Workspace setup (onboarding), `revamp/b-onboarding`
 
 From A's #142 (`createWorkspace`, `updateWorkspaceProfile`; viewer

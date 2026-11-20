@@ -25,6 +25,8 @@ import { getPayoutSettings, listFeeInvoices, listPayableInvoices, listPayoutReco
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, formatDate, resolveLocale, type DateContext } from "@/lib/datetime";
 import { can, getViewer, type Viewer } from "@/lib/viewer";
+import { needsScope } from "@/lib/viewer-core";
+import { Button } from "@/components/ui/button";
 
 export const metadata = { title: "Fees" };
 
@@ -50,7 +52,19 @@ export default async function FeesPage({ searchParams }: PageProps) {
 
   const shell = (children: React.ReactNode) => (
     <>
-      <PageHeader breadcrumb={[{ label: "Fees" }]} actions={<NewFeeButton courses={courses} />} />
+      <PageHeader
+        breadcrumb={[{ label: "Fees" }]}
+        actions={
+          <>
+            {needsScope(viewer, "fees.manage") ? null : (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/dashboard/fees/discounts">Discount codes</Link>
+              </Button>
+            )}
+            <NewFeeButton courses={courses} />
+          </>
+        }
+      />
       <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
         <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Fees</h1>
         <RecoveryNotice state={sp.recovery} />
