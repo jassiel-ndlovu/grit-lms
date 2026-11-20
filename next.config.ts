@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**/*": ["./src/generated/prisma/*.node"],
   },
+  experimental: {
+    // forbidden() and unauthorized() render src/app/forbidden.tsx and
+    // unauthorized.tsx (B, #151; requested in #152).
+    authInterrupts: true,
+  },
   images: {
     // Vercel Blob serves files from this hostname pattern. Required for
     // next/image to load remote covers/avatars produced by the blob client.
