@@ -17,6 +17,8 @@ model Test {
   // still gets an auto-grade suggestion in the grading UI, but the
   // student sees no grade until the tutor releases it.
   releaseAutoMarksToStudent Boolean                @default(false)
+  /// AI-assisted marking suggestions for written answers (A, #150). Off by default; the tutor turns it on per test. Suggestions never release on their own.
+  aiMarking                 Boolean                @default(false)
   // Share of the course's final mark, as a percentage (e.g. 30 = 30%).
   // null means "no explicit weight" and the gradebook falls back to
   // weighting this assessment by its totalPoints relative to the other
@@ -49,6 +51,8 @@ model TestQuestion {
   matchPairs   Json?
   reorderItems String[]
   blankCount   Int?
+  /// For AI-assisted marking: { criteria: [{ id, label, max }], notes? }. Without it, the question's points are one criterion.
+  rubric       Json?
   createdAt    DateTime     @default(now())
 
   // Relations
@@ -61,7 +65,7 @@ model TestQuestion {
 }
 
 model TestSubmission {
-  id               String           @id @default(cuid())
+  id               String             @id @default(cuid())
   testId           String
   studentId        String
   startedAt        DateTime
@@ -73,12 +77,13 @@ model TestSubmission {
   // The student's TimeAccommodation for the course, copied when the
   // attempt starts (and updated if a tutor changes it mid-sitting). Read by
   // lib/attempt-deadline.ts: the runner's clock and the auto-submit job.
-  extraTimePercent Int              @default(0)
-  noTimeLimit      Boolean          @default(false)
+  extraTimePercent Int                @default(0)
+  noTimeLimit      Boolean            @default(false)
   grade            Grade?
   questionGrades   QuestionGrade[]
-  student          Student          @relation(fields: [studentId], references: [id])
-  test             Test             @relation(fields: [testId], references: [id], onDelete: Cascade)
+  aiSuggestions    AiMarkSuggestion[]
+  student          Student            @relation(fields: [studentId], references: [id])
+  test             Test               @relation(fields: [testId], references: [id], onDelete: Cascade)
   uploadedFiles    UploadedFile[]
 }
 
@@ -219,4 +224,64 @@ model Grade {
   student           Student          @relation(fields: [studentId], references: [id])
   submissionEntry   SubmissionEntry? @relation(fields: [submissionEntryId], references: [id], onDelete: Cascade)
   testSubmission    TestSubmission?  @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
+}
+
+enum AiMarkStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+  SKIPPED
+}
+
+enum AiConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AiTutorAction {
+  ACCEPTED
+  EDITED
+  REJECTED
+}
+
+/// An AI-suggested mark for one question of one submission (A, #150; B research 09). A suggestion only: the tutor accepts, edits or rejects it, and nothing reaches the student until the tutor releases marks. Deleted with the submission. Holds no prompt text; `requestId` is the opaque id sent to the provider.
+model AiMarkSuggestion {
+  id                String         @id @default(cuid())
+  testSubmissionId  String
+  questionId        String
+  workspaceId       String?
+  requestId         String         @unique
+  status            AiMarkStatus   @default(QUEUED)
+  attempts          Int            @default(0)
+  model             String?
+  promptVersion     String?
+  /// [{ id, label, awarded, max, justification, evidence[] }]
+  criteria          Json?
+  totalAwarded      Float?
+  outOf             Float
+  confidence        AiConfidence?
+  flags             String[]       @default([])
+  feedbackToStudent String?
+  escalated         Boolean        @default(false)
+  inputTokens       Int            @default(0)
+  outputTokens      Int            @default(0)
+  cacheReadTokens   Int            @default(0)
+  /// Provider cost in millionths of a US dollar.
+  costMicroUsd      Int            @default(0)
+  error             String?
+  tutorAction       AiTutorAction?
+  tutorScore        Float?
+  actedByUserId     String?
+  actedAt           DateTime?
+  requestedByUserId String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  testSubmission TestSubmission @relation(fields: [testSubmissionId], references: [id], onDelete: Cascade)
+
+  @@unique([testSubmissionId, questionId])
+  @@index([status, createdAt])
+  @@index([questionId])
 }

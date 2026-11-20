@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 AI-assisted marking backend (#150), `revamp/a-ai-marking`
+
+The owner chose Anthropic's API (not Bedrock). The models follow B's research 09: Haiku 5.5, escalating to Sonnet 5.5. Setup, privacy and cost are in `docs/revamp/a/ops/ai-marking.md`.
+
+Done:
+- Migration `17_ai_mark_suggestion`: `Test.aiMarking`, `TestQuestion.rubric`, the `AiMarkSuggestion` table and its enums. Applied to preview.
+- `src/features/ai-marking/`:
+  - `rules.ts`: scrub, injection signals, post-check, escalation, cost;
+  - `marker.ts`: `@anthropic-ai/sdk@1.6.0`, structured output, cached memo prefix, server-side refusal fallback on Sonnet;
+  - `jobs.ts`: queue, runner, usage records, the AI mark limit, suggestions, tutor actions;
+  - `actions.ts`: `setTestAiMarking`, `requestAiMarking`, `getAiSuggestions`, `recordAiSuggestionAction`.
+- The hourly notifications cron finishes anything still queued.
+- Checks: `scripts/check-ai-marking.ts` (22). An end-to-end run on preview with a stand-in marker passed 15 checks: queueing, scrubbing, escalation, flags, usage, the limit, the cascade on deleting a submission. Rows removed.
+
+Not yet:
+- `ANTHROPIC_API_KEY` (the owner creates it). No real provider call has been made yet.
+- Photos of handwritten answers.
+- Per-tutor calibration.
+- Grouping identical answers.
+
 ## 2026-11-20 Self sign-ups choose their role, `revamp/a-choose-role`
 
 Owner decision (20 November): a sign-up (email or Google) is not a tutor by default. Unconfirmed users go to a page where they choose a role and set some dashboard preferences. Google Cloud setup comes later (an internal issue on the owner's side).
