@@ -11,9 +11,9 @@
  * it. The server half (`getCourseScope`, `canManageCourse`) is in
  * `features/courses/course-access.ts`.
  *
- * The planned "Organisation / Tutor mode" switch (#192) narrows this in one
- * place: in Tutor mode `courseScopeFor` returns no workspace, so an owner
- * sees only what they teach. It waits on `viewer.mode` from Agent A.
+ * Organisation / Tutor mode (#192): in Tutor mode `needsScope` is true for
+ * an owner or admin (A's viewer, PR 198), so `courseScopeFor` returns no
+ * workspace and they see only what they teach.
  */
 
 import type { Prisma } from "@/generated/prisma";
@@ -31,7 +31,7 @@ export interface CourseScope {
 /** True when the viewer manages every course in their active workspace. */
 export function managesWholeWorkspace(viewer: Viewer): boolean {
   if (viewer.persona !== "staff" || !viewer.workspace) return false;
-  // #192: when A adds `viewer.mode`, return false here in Tutor mode.
+  // Tutor mode (#192) makes needsScope true, so this is false there.
   return can(viewer, "courses.edit") && !needsScope(viewer, "courses.edit");
 }
 

@@ -32,8 +32,10 @@ Done:
 - Analytics stays personal ("X's teaching analytics": `tutorScope`).
 - Check: `npx tsx scripts/check-course-access.ts`.
 
-Organisation / Tutor mode (#192): not built. When A adds `viewer.mode`,
-`managesWholeWorkspace` returns false in Tutor mode; nothing else changes.
+Organisation / Tutor mode (#192): A's PR 198 landed first. Its
+`needsScope` is true in Tutor mode, so a teaching owner in Tutor mode
+gets only their own courses with no extra code here (checked in the
+script). B still needs to build the switch in the shell.
 
 To test on Preview as `seed.ubuntu.owner`: Manage courses lists "Maths
 Grade 10 (seed)" (Ayanda Zulu) and "Physical Sciences Grade 11 (seed)"
@@ -46,7 +48,6 @@ Next:
 - Search still covers only courses the user teaches (`searchAsTutor`).
 
 Blocked on the other agent:
-- `viewer.mode` for the Organisation / Tutor switch (#192).
 - A's routes still check "teaches it" only: `api/blob/upload-token`
   (an assignment brief on a tutor's saved assignment) and
   `api/submission-entry/[id]` DELETE. An owner gets "another tutor's

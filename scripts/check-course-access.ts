@@ -55,6 +55,16 @@ check("owner of w1 acting in w2, where they tutor: own courses only",
   courseScopeFor(staff("o", "OWNER", ["w1", "w2"], "w2")), { userId: "o", workspaceId: null });
 check("owner of w1 with w1 active", courseScopeFor(staff("o", "OWNER", ["w1", "w2"], "w1")), { userId: "o", workspaceId: "w1" });
 
+// Organisation / Tutor mode (#192): only for an owner or admin who teaches.
+const teachingOwner = (mode: "organisation" | "tutor") =>
+  buildTenancyViewer({
+    user: user("o"),
+    memberships: [{ id: "m_o", role: "OWNER", workspace: ws("w1"), teams: [], teaches: true }],
+    learners: [], children: [], hasActiveGuardian: false, activeWorkspaceId: null, mode,
+  });
+check("teaching owner, Organisation mode: whole workspace", courseScopeFor(teachingOwner("organisation")).workspaceId, "w1");
+check("teaching owner, Tutor mode: own courses only", courseScopeFor(teachingOwner("tutor")).workspaceId, null);
+
 const learner = buildTenancyViewer({
   user: user("s"), memberships: [],
   learners: [{ id: "l1", isMinor: false, paymentVisible: true, workspace: ws("w1") }],
