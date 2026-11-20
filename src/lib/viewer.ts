@@ -29,11 +29,14 @@ import {
   type Permission,
   type Persona,
   type Viewer,
+  type ViewerMode,
 } from "./viewer-core";
 
 export * from "./viewer-core";
 
 export const ACTIVE_WORKSPACE_COOKIE = "nexa_ws";
+/** Organisation or tutor mode for owners and admins who teach (#192). */
+export const VIEWER_MODE_COOKIE = "nexa_mode";
 
 export class ViewerError extends Error {
   constructor(public readonly code: "UNAUTHENTICATED" | "FORBIDDEN", message?: string) {
@@ -55,7 +58,7 @@ const workspaceSelect = {
 } as const;
 
 const loadViewer = cache(
-  async (userId: string, role: LegacyRole, activeWorkspaceId: string | null): Promise<Viewer | null> => {
+  async (userId: string, role: LegacyRole, activeWorkspaceId: string | null, mode: ViewerMode | null = null): Promise<Viewer | null> => {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -79,6 +82,7 @@ const loadViewer = cache(
             role: true,
             workspace: { select: workspaceSelect },
             teams: { select: { teamId: true, isLead: true } },
+            _count: { select: { courseStaff: true } },
           },
         },
         learners: {
@@ -126,11 +130,12 @@ const loadViewer = cache(
     if (hasTenancy({ user: base, memberships: user.memberships, learners: user.learners, children })) {
       return buildTenancyViewer({
         user: base,
-        memberships: user.memberships,
+        memberships: user.memberships.map(({ _count, ...m }) => ({ ...m, teaches: _count.courseStaff > 0 })),
         learners: user.learners,
         children,
         hasActiveGuardian: user.guardedBy.length > 0,
         activeWorkspaceId,
+        mode,
       });
     }
 
@@ -173,8 +178,11 @@ function buildNewUserViewer(base: Parameters<typeof buildTenancyViewer>[0]["user
 export async function getViewer(): Promise<Viewer | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
-  const active = (await cookies()).get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null;
-  return loadViewer(session.user.id, session.user.role as LegacyRole, active);
+  const jar = await cookies();
+  const active = jar.get(ACTIVE_WORKSPACE_COOKIE)?.value ?? null;
+  const modeCookie = jar.get(VIEWER_MODE_COOKIE)?.value;
+  const mode: ViewerMode | null = modeCookie === "tutor" || modeCookie === "organisation" ? modeCookie : null;
+  return loadViewer(session.user.id, session.user.role as LegacyRole, active, mode);
 }
 
 /** Throws ViewerError("UNAUTHENTICATED") or ViewerError("FORBIDDEN"). */

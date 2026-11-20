@@ -91,6 +91,12 @@ export type Viewer = {
   workspaces: WorkspaceSummary[];
   workspace: ViewerWorkspace | null;
   persona: Persona;
+  /**
+   * For an owner or admin of an organisation who also teaches (#192):
+   * "organisation" (the whole organisation, full grants) or "tutor" (their
+   * own teaching, with a tutor's scoped grants). Null for everyone else.
+   */
+  mode: ViewerMode | null;
   membership: {
     id: string;
     role: MembershipRole;
@@ -210,7 +216,7 @@ export function needsScope(viewer: Viewer, permission: Permission): boolean {
   if (viewer.persona === "admin") return false;
   if (viewer.persona === "staff") {
     const role = viewer.membership?.role;
-    return role === "TUTOR" && SCOPED_FOR_TUTOR.has(permission);
+    return (role === "TUTOR" || viewer.mode === "tutor") && SCOPED_FOR_TUTOR.has(permission);
   }
   // Learners and guardians only ever act on their own courses or children.
   return viewer.persona === "learner" || viewer.persona === "guardian";
@@ -299,6 +305,7 @@ export function buildLegacyViewer(input: {
     workspaces,
     workspace,
     persona,
+    mode: null,
     membership,
     learner,
     children: [],
@@ -347,6 +354,8 @@ export type TenancyInput = {
     role: MembershipRole;
     workspace: TenancyWorkspaceRow;
     teams: Array<{ teamId: string; isLead: boolean }>;
+    /** Whether this membership teaches any course (CourseStaff rows). */
+    teaches?: boolean;
   }>;
   learners: Array<{
     id: string;
@@ -360,7 +369,11 @@ export type TenancyInput = {
   hasActiveGuardian: boolean;
   /** The `nexa_ws` cookie, if any. Ignored unless the user belongs there. */
   activeWorkspaceId: string | null;
+  /** The `nexa_mode` cookie, if any. Ignored unless the mode applies. */
+  mode?: ViewerMode | null;
 };
+
+export type ViewerMode = "organisation" | "tutor";
 
 function toViewerWorkspace(w: TenancyWorkspaceRow): ViewerWorkspace {
   return {
@@ -413,10 +426,17 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
   const workspaceRow = m?.workspace ?? l?.workspace ?? null;
   const workspace = workspaceRow ? toViewerWorkspace(workspaceRow) : null;
 
+  // Organisation or tutor mode (#192): only for an owner or admin of an
+  // organisation who also teaches. Tutor mode uses a tutor's grants.
+  const mode: ViewerMode | null =
+    persona === "staff" && m && (m.role === "OWNER" || m.role === "ADMIN") && m.workspace.kind === "ORGANISATION" && m.teaches
+      ? (input.mode === "tutor" ? "tutor" : "organisation")
+      : null;
+
   const perms = new Set(
     permissionsFor({
       persona,
-      membershipRole: m?.role ?? null,
+      membershipRole: mode === "tutor" ? "TUTOR" : (m?.role ?? null),
       workspaceKind: workspace?.kind ?? null,
       learnerPaymentVisible: l ? l.paymentVisible && !l.isMinor : false,
       hasActiveGuardian: input.hasActiveGuardian,
@@ -450,6 +470,7 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
     workspaces,
     workspace,
     persona,
+    mode,
     membership: m
       ? {
           id: m.id,

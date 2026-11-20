@@ -174,5 +174,5 @@ export const betterAuthInstance = betterAuth({
       "/sign-up/email": { window: 60, max: 3 },
     },
   },
-  plugins: [username(), twoFactor({ issuer: "Nexa" }), nextCookies()],
+  plugins: [username(), twoFactor({ issuer: "Nexa", allowPasswordless: true /* only for accounts without a password, e.g. Google sign-ups (#178) */ }), nextCookies()],
 });

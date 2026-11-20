@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-21 | Draft 1.11. `viewer.mode` ("organisation" \| "tutor" \| null) and `switchViewerMode({ mode })` for owners and admins of an organisation who also teach (#192, owner decision). Tutor mode uses a tutor's grants, scoped to their courses. Two-factor setup works for Google-only accounts (`allowPasswordless`); email change with two-factor on needs a sign-in in the last 15 minutes |
 | 2026-11-21 | Draft 1.10. Read-only workspaces (#189): staff lose every write permission except billing, fees, payouts and workspace settings (`READ_ONLY_STAFF_KEEPS`); `tutorActionClient` and `staffActionClient` refuse with `READ_ONLY: …`; `tutorReadActionClient` for exports that stay allowed. Enrolment outside the legacy workspace takes only the workspace's own students |
 | 2026-11-20 | Draft 1.9. Email change: `requestEmailChange({ password, newEmail })`, `confirmEmailChange({ token })`, `revertEmailChange({ token })` in `@/features/auth/email-change-actions` (see "Privacy") |
 | 2026-11-20 | Draft 1.8. POPIA rights: data export and account deletion (see "Privacy" below) |
@@ -252,3 +253,12 @@ Design 02, section 8. Server code: `src/features/users/export.ts` and `deletion.
 - **Undo:** the old address gets `/account/revert-email?token=…`, a button that calls `revertEmailChange`. It returns `{ status: reverted | invalid | expired | taken }` and works for 7 days.
 - **Placeholder addresses:** a student replacing a placeholder with a first real address follows the same steps, and no notice goes to the placeholder.
 - **Google-only accounts** have no password, so they can't change their email here yet.
+
+## Organisation and tutor mode (Draft 1.11)
+
+Owner decision, 2026-11-20 (#192).
+
+- **Who gets a mode:** `viewer.mode` is set only for an OWNER or ADMIN of an **organisation** who also teaches at least one course (a CourseStaff row). It is null for everyone else, including solo workspaces and plain tutors.
+- **Organisation mode** (the default) gives the full owner or admin grants.
+- **Tutor mode** gives exactly a tutor's grants, with `needsScope` true for the scoped ones. They see and edit only their own courses, collect fees for their own students (fees.manage, scoped), and lose billing, members, teams and workspace settings.
+- **Switching:** `switchViewerMode({ mode })` in `@/features/workspaces/actions` sets the `nexa_mode` cookie. It is FORBIDDEN when `viewer.mode` is null.
