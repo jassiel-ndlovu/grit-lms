@@ -41,6 +41,8 @@ model User {
   username         String?  @unique
   displayUsername  String?
   twoFactorEnabled Boolean? @default(false)
+  /// True for a self sign-up (email or Google) until they choose tutor, student or parent on the welcome page (owner decision 2026-11-20). Accounts made by tutors or admins are confirmed.
+  roleUnconfirmed  Boolean  @default(false)
 
   preferences             UserPreferences?
   activities              ActivityLog[]

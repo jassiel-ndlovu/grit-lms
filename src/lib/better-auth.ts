@@ -10,8 +10,10 @@
  *   hash with bcrypt and keep User.password in step
  *   (features/auth/credential.ts); `verify` accepts bcrypt and scrypt.
  * - Sign-up (email and password, or Google) is on only after the cutover.
- *   Self sign-ups are staff: legacy role TUTOR, no workspace until they
- *   create one in onboarding. Email sign-ups verify their address first.
+ *   A self sign-up has no role yet (`roleUnconfirmed`, legacy role STUDENT
+ *   meanwhile, which grants nothing without a workspace) and chooses tutor,
+ *   student or parent on the welcome page (features/users/choose-role.ts).
+ *   Email sign-ups verify their address first.
  * - Google when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set. A Google
  *   sign-in with the email of an existing account links to it.
  * - Plugins: username (students without email), two-factor.
@@ -73,15 +75,16 @@ export const betterAuthInstance = betterAuth({
     // Our User.emailVerified is a DateTime; Better Auth's boolean lives in emailConfirmed.
     fields: { emailVerified: "emailConfirmed" },
     additionalFields: {
-      role: { type: "string", required: false, input: false, defaultValue: "TUTOR" },
+      role: { type: "string", required: false, input: false, defaultValue: "STUDENT" },
+      roleUnconfirmed: { type: "boolean", required: false, input: false, defaultValue: false },
       platformRole: { type: "string", required: false, input: false },
     },
   },
   databaseHooks: {
     user: {
       create: {
-        // Self sign-ups are staff; tutors create students and parents themselves.
-        before: async (user) => ({ data: { ...user, role: "TUTOR" } }),
+        // A self sign-up chooses tutor, student or parent on the welcome page.
+        before: async (user) => ({ data: { ...user, role: "STUDENT", roleUnconfirmed: true } }),
         after: async (user) => stampEmailVerified(user),
       },
       update: { after: async (user) => stampEmailVerified(user) },

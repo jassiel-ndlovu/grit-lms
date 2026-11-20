@@ -35,7 +35,7 @@ function useBetterAuthSession(): AppSession {
   if (isPending) return { status: "loading", user: null };
   if (!data) return { status: "unauthenticated", user: null };
   const u = data.user as typeof data.user & { role?: string | null };
-  return { status: "authenticated", user: { id: u.id, name: u.name, email: u.email, role: u.role ?? "TUTOR" } };
+  return { status: "authenticated", user: { id: u.id, name: u.name, email: u.email, role: u.role ?? "STUDENT" } };
 }
 
 function useNextAuthAppSession(): AppSession {
@@ -74,13 +74,13 @@ export async function signInWithPassword(input: { identifier: string; password: 
 
 /** Starts Google sign-in (and sign-up). Redirects away. */
 export async function signInWithGoogle(callbackUrl = "/dashboard/start") {
-  await authClient.signIn.social({ provider: "google", callbackURL: callbackUrl, newUserCallbackURL: "/dashboard/onboarding" });
+  await authClient.signIn.social({ provider: "google", callbackURL: callbackUrl, newUserCallbackURL: "/dashboard/welcome" });
 }
 
 /** Staff sign-up (after the cutover). The account must verify its email before signing in. */
 export async function signUpWithPassword(input: { name: string; email: string; password: string }): Promise<SignInResult> {
   if (!BETTER) return { ok: false, error: "Sign-up isn't open yet." };
-  const r = await authClient.signUp.email({ name: input.name, email: input.email, password: input.password, callbackURL: "/dashboard/onboarding" });
+  const r = await authClient.signUp.email({ name: input.name, email: input.email, password: input.password, callbackURL: "/dashboard/welcome" });
   if (r.error) return { ok: false, error: r.error.status === 422 ? "You already have an account. Sign in instead." : r.error.message ?? "Sign-up failed." };
   return { ok: true };
 }
