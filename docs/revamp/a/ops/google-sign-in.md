@@ -1,5 +1,7 @@
 # Google sign-in (Better Auth)
 
+**Status:** the code is ready; the owner sets up Google Cloud later.
+
 **Answer first.** The owner creates an OAuth client in Google Cloud, under the owner's own Google account. Its redirect URIs are `/api/ba/callback/google` on each address Nexa runs at. The client ID and secret go into Vercel and `.env.local`, never the repo. Then Google sign-in turns on with `NEXT_PUBLIC_GOOGLE_SIGN_IN=1`. The code is ready: `src/lib/better-auth.ts` adds Google when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set, and B's sign-in page shows the button when `googleSignInAvailable` is true.
 
 ## 1. Google Cloud (owner)
@@ -47,7 +49,7 @@ Never paste the secret in chat, an issue or a commit.
 
 ## 3. How it behaves
 
-- **New person:** Google creates the account with the email already verified. They become staff (a tutor who signs up) and land in onboarding (`/dashboard/onboarding`) to create a workspace. Students and parents don't sign up; tutors create them.
+- **New person:** Google creates the account with the email already verified, without a role. They land on the welcome page (`/dashboard/welcome`), choose tutor, student or parent and set a few dashboard preferences. A tutor then goes on to onboarding to create a workspace (owner decision 2026-11-20: a sign-up is not a tutor by default).
 - **Existing email:** signing in with Google using the email of an existing Nexa account links Google to that account (`accountLinking`, with Google trusted, since Google verifies the address). Their password keeps working.
 - Before the cutover (`AUTH_PROVIDER` unset), Google sign-up is off.
 - Owners and Nexa admins will be required to set up two-factor authentication after the cutover. That applies to Google sign-ins too.

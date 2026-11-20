@@ -64,6 +64,8 @@ const loadViewer = cache(
         email: true,
         emailVerified: true,
         emailConfirmed: true,
+        roleUnconfirmed: true,
+        createdAt: true,
         platformRole: true,
         tutorProfile: { select: { profileImageUrl: true } },
         studentProfile: { select: { id: true, imageUrl: true } },
@@ -112,6 +114,7 @@ const loadViewer = cache(
       name: user.name,
       email: user.email,
       emailVerified: user.emailVerified != null || user.emailConfirmed,
+      roleConfirmed: !user.roleUnconfirmed,
       platformRole: user.platformRole,
       imageUrl,
     };
@@ -128,9 +131,10 @@ const loadViewer = cache(
     }
 
     // Not backfilled yet: the Phase 0 bridge, but only for accounts from
-    // before tenancy (they have a Tutor or Student profile). Anyone newer
-    // with no workspace yet (a fresh sign-up) has none, and onboarding
-    // creates one.
+    // before tenancy. Anyone newer with no workspace yet (a fresh sign-up,
+    // even with a Student profile) gets persona "none" until a tutor adds
+    // them or onboarding creates a workspace.
+    if (user.createdAt >= LEGACY_ACCOUNTS_BEFORE) return buildNewUserViewer(base);
     let profileId: string | null = null;
     if (role === "TUTOR") {
       const tutor = await prisma.tutor.findFirst({
@@ -152,6 +156,9 @@ const loadViewer = cache(
     return buildLegacyViewer({ user: { ...base, role }, profileId });
   },
 );
+
+/** Accounts created before this were backfilled into tenancy (design 01, section 8); only they may use the Phase 0 bridge. */
+const LEGACY_ACCOUNTS_BEFORE = new Date("2026-11-20T00:00:00Z");
 
 /** A signed-in user with no workspace, learner or child yet: persona "none" until onboarding. */
 function buildNewUserViewer(base: Parameters<typeof buildTenancyViewer>[0]["user"]): Viewer {

@@ -81,6 +81,8 @@ export type Viewer = {
     platformRole: PlatformRole;
     emailVerified: boolean;
     twoFactorEnabled: boolean;
+    /** False for a self sign-up that hasn't chosen tutor, student or parent yet: send them to /dashboard/welcome. */
+    roleConfirmed: boolean;
   };
   workspaces: WorkspaceSummary[];
   workspace: ViewerWorkspace | null;
@@ -281,6 +283,7 @@ export function buildLegacyViewer(input: {
       platformRole: user.role === "ADMIN" ? "NEXA_ADMIN" : "USER",
       emailVerified: user.emailVerified,
       twoFactorEnabled: false,
+      roleConfirmed: true,
     },
     workspaces,
     workspace,
@@ -323,6 +326,8 @@ export type TenancyInput = {
     emailVerified: boolean;
     platformRole: PlatformRole;
     imageUrl: string | null;
+    /** False until a self sign-up chooses a role. Defaults to true. */
+    roleConfirmed?: boolean;
   };
   memberships: Array<{
     id: string;
@@ -419,6 +424,7 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
       platformRole: user.platformRole,
       emailVerified: user.emailVerified,
       twoFactorEnabled: false,
+      roleConfirmed: user.roleConfirmed ?? true,
     },
     workspaces,
     workspace,

@@ -126,7 +126,7 @@ const betterAuthSession = cache(async (): Promise<Session | null> => {
   if (!s) return null;
   const u = s.user as typeof s.user & { role?: string | null };
   return {
-    user: { id: u.id, name: u.name, email: u.email, role: (u.role ?? "TUTOR") as Role },
+    user: { id: u.id, name: u.name, email: u.email, role: (u.role ?? "STUDENT") as Role },
     expires: new Date(s.session.expiresAt).toISOString(),
   } as Session;
 });

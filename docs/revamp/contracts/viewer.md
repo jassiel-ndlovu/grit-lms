@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.5. `user.roleConfirmed`; `chooseAccountRole({ role: "TUTOR" \| "STUDENT" \| "PARENT" })` → `{ role, next }` (once, for self sign-ups; `src/features/users/choose-role.ts`). When `roleConfirmed` is false, send the user to `/dashboard/welcome`. Only confirmed tutors can `createWorkspace` |
 | 2026-11-20 | Draft 1.4. `createWorkspace` takes `trial` (optional trial) |
 | 2026-11-20 | Draft 1.3. `createWorkspace` and `updateWorkspaceProfile` (onboarding) |
 | 2026-11-16 | Draft 1. No `mode` field (owner decision, plan revision 3) |

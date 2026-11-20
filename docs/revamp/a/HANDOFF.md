@@ -3,6 +3,19 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Self sign-ups choose their role, `revamp/a-choose-role`
+
+Owner decision (20 November): a sign-up (email or Google) is not a tutor by default. Unconfirmed users go to a page where they choose a role and set some dashboard preferences. Google Cloud setup comes later (an internal issue on the owner's side).
+
+Done:
+- Migration `15_user_role_unconfirmed` (one column, default false).
+- Better Auth sign-ups are `roleUnconfirmed`, with legacy role STUDENT meanwhile.
+- `chooseAccountRole` (once; TUTOR, STUDENT or PARENT; a student gets a Student profile). The viewer has `user.roleConfirmed`. `createWorkspace` needs a confirmed TUTOR or ADMIN.
+- The legacy viewer now goes by account date (before 2026-11-20).
+- On preview, 9 checks pass; rows removed. `check-viewer` passes.
+
+**Process slip:** Neon's 10-branch limit was full, so the backup before migration 15 failed, and the command applied the migration anyway. The change is one defaulted column, and the backup `backup-better-auth-20261120` was taken about an hour earlier. From now on the backup and the deploy run as separate steps, and the deploy runs only after the backup is confirmed. The old backup branches need the owner's OK to delete.
+
 ## 2026-11-20 Better Auth stage 2 (behind AUTH_PROVIDER), Google sign-in ready, `revamp/a-better-auth-stage2`
 
 The owner approved the cutover and asked for Google sign-in. Design 02, section 10a, has the details.

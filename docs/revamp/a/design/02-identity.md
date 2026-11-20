@@ -312,8 +312,8 @@ The export is available until the workspace's retention date. The link is signed
 
 **Stage 2 (built 2026-11-20, owner approved; switched on by an env var):**
 - `AUTH_PROVIDER=better-auth` (with `NEXT_PUBLIC_AUTH_PROVIDER`) makes `auth()` read Better Auth's session in the shape the app already uses, so `getViewer`, every page and the safe-action clients follow. Middleware checks the `nexa` session cookie.
-- Sign-up opens, email or Google (`docs/revamp/a/ops/google-sign-in.md`). Self sign-ups get the legacy role TUTOR and no workspace. Email sign-ups verify first, and the link goes through our email queue. A Google account with the email of an existing user links to it.
-- The legacy Phase 0 viewer is now only for accounts that have a Tutor or Student profile; a new user has persona "none" until onboarding.
+- Sign-up opens, email or Google (`docs/revamp/a/ops/google-sign-in.md`). A self sign-up has no role yet (`User.roleUnconfirmed`, migration 15; legacy role STUDENT meanwhile, which grants nothing without a workspace). They choose tutor, student or parent once on `/dashboard/welcome` (`chooseAccountRole`); a student gets a Student profile so tutors can enrol them. Only a confirmed TUTOR (or ADMIN) may create a workspace. The viewer has `user.roleConfirmed`. Email sign-ups verify first, and the link goes through our email queue. A Google account with the email of an existing user links to it.
+- The legacy Phase 0 viewer is now only for accounts created before 2026-11-20 (all backfilled into tenancy); a newer user has persona "none" until a tutor adds them or they create a workspace.
 - Every place that sets a password (reset, admin reset, change own password, creating a student) also writes the credential `Account` (`features/auth/credential.ts`); a reset signs out every device.
 - `src/lib/auth-client.ts` gives B `useAppSession`, `signInWithPassword` (email or username), `signInWithGoogle`, `signUpWithPassword` and `appSignOut`. Each works in both modes, so B can swap before the switch.
 
