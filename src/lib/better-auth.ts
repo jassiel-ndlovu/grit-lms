@@ -28,9 +28,11 @@ import bcrypt from "bcryptjs";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
+import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { twoFactor, username } from "better-auth/plugins";
 
+import { looksLikeCode, normaliseCode } from "@/features/auth/codes";
 import { prisma } from "@/lib/db";
 import { enqueueEmail, sealForQueue, sendQueuedNow } from "@/lib/email/queue";
 
@@ -84,6 +86,17 @@ export const betterAuthInstance = betterAuth({
     },
   },
   databaseHooks: {
+    session: {
+      create: {
+        // A sign-in code from a tutor stops working after 14 days unless the user chose a password.
+        before: async (session) => {
+          const u = await prisma.user.findUnique({ where: { id: session.userId }, select: { mustChangePassword: true, initialCodeExpiresAt: true } });
+          if (u?.mustChangePassword && u.initialCodeExpiresAt && u.initialCodeExpiresAt < new Date()) {
+            throw new APIError("FORBIDDEN", { message: "Your sign-in code has expired. Ask your tutor for a new one." });
+          }
+        },
+      },
+    },
     user: {
       create: {
         // A self sign-up chooses tutor, student or parent on the welcome page.
@@ -104,7 +117,12 @@ export const betterAuthInstance = betterAuth({
     maxPasswordLength: 128,
     password: {
       hash: (password) => hashPassword(password),
-      verify: async ({ hash, password }) => (isBcryptHash(hash) ? bcrypt.compare(password, hash) : verifyPassword({ hash, password })),
+      verify: async ({ hash, password }) => {
+        const check = (pw: string) => (isBcryptHash(hash) ? bcrypt.compare(pw, hash) : verifyPassword({ hash, password: pw }));
+        if (await check(password)) return true;
+        // A sign-in code typed in lower case or without its dashes (features/auth/codes.ts).
+        return looksLikeCode(password) ? check(normaliseCode(password)) : false;
+      },
     },
   },
   emailVerification: {

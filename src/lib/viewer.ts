@@ -65,6 +65,7 @@ const loadViewer = cache(
         emailVerified: true,
         emailConfirmed: true,
         roleUnconfirmed: true,
+        mustChangePassword: true,
         createdAt: true,
         platformRole: true,
         tutorProfile: { select: { profileImageUrl: true } },
@@ -115,6 +116,7 @@ const loadViewer = cache(
       email: user.email,
       emailVerified: user.emailVerified != null || user.emailConfirmed,
       roleConfirmed: !user.roleUnconfirmed,
+      mustChangePassword: user.mustChangePassword,
       platformRole: user.platformRole,
       imageUrl,
     };

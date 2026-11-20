@@ -17,6 +17,7 @@ import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { cache } from "react";
 
+import { looksLikeCode, normaliseCode } from "@/features/auth/codes";
 import { authProvider, betterAuthInstance } from "@/lib/better-auth";
 import { prisma } from "@/lib/db";
 import type { Role } from "@/features/shared/enums";
@@ -44,10 +45,9 @@ export const authOptions: NextAuthOptions = {
           throw new Error("No user found with this email.");
         }
 
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.password,
-        );
+        const isValid =
+          (await bcrypt.compare(credentials.password, user.password)) ||
+          (looksLikeCode(credentials.password) && (await bcrypt.compare(normaliseCode(credentials.password), user.password)));
         if (!isValid) {
           throw new Error("Invalid password.");
         }

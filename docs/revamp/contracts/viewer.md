@@ -188,9 +188,32 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.6. `user.mustChangePassword` (send to a set-password step; `setOwnPassword`). Tutor-created accounts, parent linking and staff invites: see "Accounts and invites" below |
 | 2026-11-20 | Draft 1.5. `user.roleConfirmed`; `chooseAccountRole({ role: "TUTOR" \| "STUDENT" \| "PARENT" })` → `{ role, next }` (once, for self sign-ups; `src/features/users/choose-role.ts`). When `roleConfirmed` is false, send the user to `/dashboard/welcome`. Only confirmed tutors can `createWorkspace` |
 | 2026-11-20 | Draft 1.4. `createWorkspace` takes `trial` (optional trial) |
 | 2026-11-20 | Draft 1.3. `createWorkspace` and `updateWorkspaceProfile` (onboarding) |
 | 2026-11-16 | Draft 1. No `mode` field (owner decision, plan revision 3) |
 | 2026-11-16 | Draft 1.2. Client components import types and `can()` from `@/lib/viewer-core`, because `viewer.ts` is server-only. Phase 0 bridge: one comped organisation until Phase 1 (PR #63) |
 | 2026-11-16 | Draft 1.1. Added `messages.announce` and `messages.direct` (A2 messaging design) |
+
+## Accounts and invites (Draft 1.6)
+
+Design 02, section 5 and 5.1; ux/01, sections 5 to 7. Server code: `src/features/users/accounts.ts` and `src/features/auth/invites.ts`.
+
+| Name | Where | Who | Input | Returns |
+| --- | --- | --- | --- | --- |
+| `createStudentAccount` | `@/features/users/account-actions` | `learners.invite` (tutors: on each chosen course; at least one) | `{ fullName, email?, username?, isMinor = true, courseIds, consentAttested }` | `{ userId, learnerId, username, email, code, codeExpiresAt }`. Show `code` once (sign-in card) |
+| `issueSignInCode` | same | manages the student, or a parent of one; never staff | `{ userId }` | `{ username, email, code, expiresAt }`. Signs them out everywhere. 10 an hour per tutor |
+| `linkParent` | same | `guardians.link` on the student | `{ learnerId, name, email?, relationship }` | `{ guardianshipId, newAccount, username?, code?, codeExpiresAt? }`. An existing account by email is linked and emailed; otherwise a parent account is made with a code |
+| `listParents` | same | `guardians.link` | `{ learnerId }` | `Array<{ guardianshipId, name, email, username, relationship, linkedAt }>` |
+| `revokeGuardianship` | same | `guardians.link` | `{ guardianshipId }` | `{ status: "REVOKED" }` |
+| `setOwnPassword` | same | the signed-in user while `mustChangePassword` | `{ newPassword }` | `{ ok }` |
+| `inviteStaff` | `@/features/auth/invite-actions` | `members.invite` (only the owner invites admins) | `{ emails, role: "ADMIN" \| "TUTOR", courseIds? }` | per email `INVITED`, `RESENT` or `ALREADY_MEMBER` |
+| `listInvites`, `revokeInvite` | same | `members.invite` | `{}` / `{ inviteId }` | invites with `state` (PENDING, EXPIRED, ACCEPTED, REVOKED) |
+| `getInvite` | same | anyone (signed out too) | `{ token }` | `{ state, workspaceName, workspaceLogoUrl, role, invitedBy, expiresAt, emailMasked }` or null |
+| `acceptInvite` | same | the signed-in user with the invited email | `{ token }` | `{ ok: true, workspaceId }` or `{ ok: false, reason: INVALID \| EXPIRED \| ACCEPTED \| REVOKED \| WRONG_ACCOUNT }` |
+
+- **Sign-in codes** look like `KQ4M-2XD7-PA`. They are the first password, work typed in lower case or without dashes, and stop working after 14 days, or once the user sets their own password.
+- **Signing in:** students and parents sign in with their **username** or email, plus the code (`signInWithPassword` in `auth-client.ts` uses the username when there is no `@`). They must then set a password: `viewer.user.mustChangePassword`.
+- **No email:** a student or parent without one gets a placeholder address that is never mailed.
+- **Invite emails** link to `/auth/invite/[token]` (B's page). It's valid for 7 days. Accepting needs that email signed in: a new person signs up with it first. An invited user's role is settled to tutor, so they skip the role choice.
