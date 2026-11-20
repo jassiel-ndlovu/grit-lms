@@ -9,6 +9,8 @@
  */
 
 import { redirect } from "next/navigation";
+import { parentLanding } from "@/features/activity/lib/child-overview";
+import { getViewer } from "@/lib/viewer";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -23,6 +25,8 @@ export const metadata = { title: "My courses" };
 export default async function StudentCoursesPage() {
   const session = await auth();
   if (!session?.user) redirect("/");
+  // Parents have no student pages; send them to their child (F7).
+  if (session.user.role === "PARENT") redirect(parentLanding((await getViewer())?.children ?? []));
 
   const student = await prisma.student.findUnique({
     where: { email: session.user.email },

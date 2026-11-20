@@ -4,7 +4,8 @@
  * Server Component that branches on role:
  *   - STUDENT: editorial home with progress, up-next deadlines, recent grades
  *   - TUTOR: TutorHome (what needs marking, what is due, drafts, the week)
- *   - ADMIN / PARENT: placeholder landings (features/admin, features/parents)
+ *   - PARENT: linked children with progress and latest mark (features/parents)
+ *   - ADMIN: placeholder landing (features/admin)
  *
  * Replaces the legacy client /dashboard/home/* split. All data comes from
  * feature queries.
@@ -50,6 +51,7 @@ import { listUpcomingEventsForStudent } from "@/features/events/queries";
 import { getUserPreferences } from "@/features/users/preferences";
 import { AdminDashboard } from "@/features/admin/components/admin-dashboard";
 import { ParentDashboard } from "@/features/parents/components/parent-dashboard";
+import { getChildSummary } from "@/features/activity/child-overview";
 import { DEFAULT_TIME_ZONE, formatDate, greetingFor, resolveLocale } from "@/lib/datetime";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
@@ -104,8 +106,15 @@ export default async function DashboardLanding({
     return <AdminDashboard firstName={userFirstName} />;
   }
   if (session.user.role === "PARENT") {
-    const viewer = await getViewer();
-    return <ParentDashboard firstName={userFirstName} learners={viewer?.children ?? []} />;
+    const learners = (await getViewer())?.children ?? [];
+    const now = new Date();
+    const summaries = await Promise.all(learners.map((c) => getChildSummary(c, now)));
+    return (
+      <ParentDashboard
+        firstName={userFirstName}
+        learners={learners.map((c, i) => ({ ...c, summary: summaries[i] }))}
+      />
+    );
   }
 
   const student = await prisma.student.findUnique({

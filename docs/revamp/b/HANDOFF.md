@@ -3,6 +3,46 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Parent child view, `revamp/b-parent-children`
+
+Follow-up to F7 in the Preview pass (`b/testing/preview-e2e-2026-11-20.md`):
+PR 187 listed a parent's children; per-child progress, marks and upcoming
+work were still "Coming soon".
+
+Done:
+- **`/dashboard/children/[userId]`**: one child's courses grouped by
+  workspace with lesson progress, the last six released marks, and tests
+  and assignments due in the next 14 days with the child's status (not
+  started, started, handed in, marked). Read-only. Gated on
+  `viewer.children` plus `canIn(viewer, "grades.view", { childUserId })`;
+  anything else is a 404.
+- **Released marks only**: `isReleased` hides a test mark until the
+  submission is GRADED, unless the test releases auto-marks at submit; an
+  assignment mark until its entry is GRADED. (Tutor-triggered auto-marks
+  write a Grade row before release; the student Grades page still lists
+  those, worth a look separately.)
+- **Parent home cards** link to the child view and show lesson progress,
+  the latest mark and the number due soon. "Progress" and "Upcoming work"
+  left "Coming soon"; "Tutor messages" stays.
+- **Redirects**: a PARENT opening `/dashboard/courses`, `/assignments` or
+  `/calendar` goes to their only child's view, or the parent home.
+- Code: pure helpers in `features/activity/lib/child-overview.ts`
+  (checked by `scripts/check-child-overview.ts`), loader in
+  `features/activity/child-overview.ts`, reusing the student queries keyed
+  by the child's Student profile (`Student.userId`). New query
+  `listGradesWithReleaseForStudent` in `features/grades/queries.ts`.
+- `features/parents/components/parent-dashboard.tsx` is the parent
+  dashboard home, edited by B as in PR 187; no change to A's viewer or
+  schema.
+
+Next:
+- Tutor messages for parents (needs A's messaging).
+- Owner recheck on Preview as `seed.parent.siblings` (steps in F7).
+
+Blocked on the other agent: none.
+
+Questions for the owner: none.
+
 ## 2026-11-20 Preview end-to-end pass, fixes, `revamp/b-preview-pass-2`
 
 The whole Preview pass (owner, tutor, students, parent, four workspace

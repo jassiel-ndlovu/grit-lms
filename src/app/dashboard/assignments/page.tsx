@@ -8,6 +8,8 @@
 
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import { parentLanding } from "@/features/activity/lib/child-overview";
+import { getViewer } from "@/lib/viewer";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,8 @@ export const metadata = { title: "Assignments" };
 export default async function SubmissionsIndexPage() {
   const session = await auth();
   if (!session?.user) redirect("/");
+  // Parents have no student pages; send them to their child (F7).
+  if (session.user.role === "PARENT") redirect(parentLanding((await getViewer())?.children ?? []));
 
   if (session.user.role === "STUDENT") {
     const student = await prisma.student.findUnique({
