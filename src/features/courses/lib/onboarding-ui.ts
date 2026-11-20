@@ -4,8 +4,8 @@
  *
  * Steps built so far are the ones with server actions behind them:
  * business (updateWorkspaceProfile), first course (createCourse) and
- * payouts (connectPayoutAccount). Subjects and students join when A adds
- * Workspace.subjects and createStudents.
+ * students (createStudentAccount, optional) and payouts
+ * (connectPayoutAccount). Subjects join when A adds Workspace.subjects.
  */
 
 export const ONBOARDING_PATH = "/dashboard/onboarding";
@@ -13,6 +13,7 @@ export const ONBOARDING_PATH = "/dashboard/onboarding";
 export const ONBOARDING_STEPS = [
   { key: "business", label: "Business" },
   { key: "course", label: "First course" },
+  { key: "students", label: "Students" },
   { key: "payouts", label: "Payouts" },
 ] as const;
 

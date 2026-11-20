@@ -3,6 +3,54 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Account screens, `revamp/b-accounts-screens` (#174)
+
+Screens for A's #173 (viewer contract Draft 1.6, "Accounts and invites").
+
+Done:
+- **Students** (`/dashboard/students`, People in the nav): the roster
+  (owners and admins see the workspace; a tutor sees their courses'
+  students) and "Add a student" with `createStudentAccount`. The result
+  is a printable, copyable **sign-in card** shown once. Minors need the
+  consent tick. Roster queries are in `features/courses/lib/roster.ts`.
+- **Student profile** (`/dashboard/students/[learnerId]`): Sign-in tab
+  (`issueSignInCode`, after a confirm, then the card) and Parents tab
+  (`listParents`, `linkParent` with a card for a new parent account,
+  `revokeGuardianship`).
+- **Onboarding:** a new optional "Students" step between the first course
+  and payouts.
+- **First sign-in:** the dashboard layout sends anyone with
+  `mustChangePassword` to `/set-password` (outside /dashboard, so it can't
+  loop), which calls `setOwnPassword`.
+- **Members** (`/dashboard/settings/members`, also in the nav and on
+  Settings): the staff list, "Invite people" (`inviteStaff`; Admin is
+  offered only to the owner) and invites with Cancel (`revokeInvite`).
+- **`/auth/invite/[token]`** (A asked for it on #174): `getInvite` signed
+  out; "Join" with `acceptInvite` signed in; WRONG_ACCOUNT shows the
+  masked address and offers to sign in with it.
+- **Sign-in:** the password field now hints "First time? Use the sign-in
+  code from your tutor" once Better Auth is on (the field already said
+  "Email or username").
+- The legacy Users link stays until the owner has tested Students.
+
+Checked:
+- `tsc` and `eslint` clean. `scripts/check-account-screens.ts` (new),
+  `check-shell-nav.ts` and `check-onboarding-ui.ts` pass.
+- With sample data on a temporary page (deleted): the add-student checks,
+  the sign-in card, parents list, invite form (rejects a bad address) and
+  invite list. A made-up invite token shows "This invite link isn't
+  valid". `/set-password` signed out goes to sign-in.
+- Not checked: the real create, code, link and invite calls (no local
+  sign-in). The owner checks them on Preview after #175.
+
+Blocked on the other agent:
+- A's `accounts.ts` and `invites.ts` throw plain `Error`s ("That username
+  is taken"), which `actionClient` turns into "Something went wrong". Asked
+  A on #174 to let those messages through.
+- Sign-up has no way back to an invite: `signUpWithPassword` always sends
+  the verify link to `/dashboard/welcome`. The invite page says to open the
+  link again after verifying. Asked A for a `callbackURL` option.
+
 ## 2026-11-20 Maths in answers, phase 2, `revamp/b-maths-answers-2`
 
 Design `b/design/01-maths-in-answers.md`, phase 2: the Maths expression
