@@ -6,6 +6,7 @@
  */
 
 import type { ChainedCommands, Editor, Range } from "@tiptap/core";
+import { NodeSelection, Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { DEFAULT_GRAPH } from "@/lib/content/graph-spec";
 import {
   ChartSpline, Code2, Heading2, Heading3, List, ListOrdered, Minus, Pilcrow, Quote, Sigma, SquareFunction, Table,
@@ -77,6 +78,25 @@ export function filterCommands(commands: BlockCommand[], query: string): BlockCo
 }
 
 export function runCommand(editor: Editor, command: BlockCommand, range?: Range) {
-  const chain = editor.chain().focus();
+  let chain = editor.chain().focus();
+  // A graph or maths node stays selected after it's inserted, and inserting
+  // at a node selection replaces the node. Move past it first, so "Graph"
+  // then "Inline maths" keeps both (found on Preview, 2026-11-20).
+  if (!range && editor.state.selection instanceof NodeSelection) chain = chain.command(cursorAfterSelectedNode);
   command.apply(range ? chain.deleteRange(range) : chain).run();
+}
+
+/** Puts the cursor in the next text position after the selected node, adding a paragraph when there's none. */
+function cursorAfterSelectedNode({ tr }: { tr: Transaction }): boolean {
+  const end = tr.selection.to;
+  const next = Selection.findFrom(tr.doc.resolve(end), 1, true);
+  if (next) {
+    tr.setSelection(next);
+    return true;
+  }
+  const paragraph = tr.doc.type.schema.nodes.paragraph;
+  if (!paragraph) return true;
+  tr.insert(end, paragraph.create());
+  tr.setSelection(TextSelection.create(tr.doc, end + 1));
+  return true;
 }

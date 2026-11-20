@@ -34,6 +34,7 @@ import {
 } from "@/features/assessments/lib/filters";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export const metadata = { title: "Assignments" };
 
@@ -165,17 +166,7 @@ export default async function SubmissionsIndexPage() {
   }
 
   if (session.user.role === "TUTOR") {
-    const tutor = await prisma.tutor.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-    if (!tutor) {
-      return (
-        <div className="text-muted-foreground p-8 text-sm">
-          No tutor profile found for this account.
-        </div>
-      );
-    }
+    const tutor = teacherFrom(session.user);
 
     const subs = await listSubmissionsByTutorId(tutor.id);
 

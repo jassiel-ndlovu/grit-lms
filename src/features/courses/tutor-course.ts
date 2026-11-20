@@ -11,9 +11,9 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 
 import { courseBelongsToTutor, getCourseDetailById, type CourseDetail } from "./queries";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export type TutorCourseResult =
   | { ok: true; course: CourseDetail; tutorId: string; userId: string }
@@ -24,11 +24,7 @@ export async function loadTutorCourse(id: string): Promise<TutorCourseResult> {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-  if (!tutor) return { ok: false, message: "No tutor profile found for this account." };
+  const tutor = teacherFrom(session.user);
 
   const [course, owns] = await Promise.all([getCourseDetailById(id), courseBelongsToTutor(id, tutor.id)]);
   if (!course) notFound();

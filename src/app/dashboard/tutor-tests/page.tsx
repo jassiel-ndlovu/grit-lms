@@ -15,7 +15,6 @@ import { PageHeader } from "@/components/shell/page-header";
 import { StatusChip } from "@/components/shell/status-chip";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 
 import { listTestsByTutorId } from "@/features/assessments/queries";
@@ -23,6 +22,7 @@ import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TutorTestActions } from "@/features/assessments/components/tutor-test-actions";
 import { ImportTestDialog } from "@/features/assessments/components/import-test-dialog";
 import { testRoutes } from "@/features/assessments/components/test-frame";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export const metadata = { title: "Tests" };
 
@@ -37,17 +37,7 @@ export default async function TutorTestsPage() {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-  if (!tutor) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No tutor profile found for this account.
-      </div>
-    );
-  }
+  const tutor = teacherFrom(session.user);
 
   const [tests, courses] = await Promise.all([
     listTestsByTutorId(tutor.id),

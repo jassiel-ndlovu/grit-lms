@@ -14,7 +14,7 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
-import { taughtBy, studentsOf, openEnrollmentCount } from "@/features/courses/lib/tenancy-where";
+import { taughtByUser, studentsOf, openEnrollmentCount } from "@/features/courses/lib/tenancy-where";
 
 import type {
   AssessmentKind,
@@ -155,9 +155,9 @@ export const getCourseGradebook = cache(
 );
 
 /** Courses owned by a tutor, with enough for the gradebook index cards. */
-export const listGradebookCoursesForTutor = cache(async (tutorId: string) => {
+export const listGradebookCoursesForTutor = cache(async (teacherUserId: string) => {
   return prisma.course.findMany({
-    where: taughtBy(tutorId),
+    where: taughtByUser(teacherUserId),
     select: {
       id: true,
       name: true,
@@ -170,8 +170,8 @@ export const listGradebookCoursesForTutor = cache(async (tutorId: string) => {
 
 /** Ownership gate for the gradebook pages and the weights action. */
 export const courseBelongsToTutor = cache(
-  async (courseId: string, tutorId: string) => {
-    const n = await prisma.course.count({ where: { id: courseId, ...taughtBy(tutorId) } });
+  async (courseId: string, teacherUserId: string) => {
+    const n = await prisma.course.count({ where: { id: courseId, ...taughtByUser(teacherUserId) } });
     return n > 0;
   },
 );

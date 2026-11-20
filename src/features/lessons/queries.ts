@@ -22,7 +22,7 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
-import { ownerTutor, taughtBy } from "@/features/courses/lib/tenancy-where";
+import { ownerTutor, taughtByUser } from "@/features/courses/lib/tenancy-where";
 
 /* ------------------------------------------------------------------------- */
 /* List queries                                                              */
@@ -93,8 +93,8 @@ export const getLessonDetailById = cache(async (id: string) => {
  * Used by update/delete actions before mutating.
  */
 export const lessonBelongsToTutor = cache(
-  async (lessonId: string, tutorId: string) => {
-    const n = await prisma.lesson.count({ where: { id: lessonId, course: taughtBy(tutorId) } });
+  async (lessonId: string, teacherUserId: string) => {
+    const n = await prisma.lesson.count({ where: { id: lessonId, course: taughtByUser(teacherUserId) } });
     return n > 0;
   },
 );

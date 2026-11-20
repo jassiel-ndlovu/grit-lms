@@ -17,6 +17,7 @@ import { tutorActionClient } from "@/lib/safe-action";
 
 import { CuidSchema } from "../shared/primitives";
 import { courseBelongsToTutor, parseAssessmentKey } from "./gradebook";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export const SetAssessmentWeightsSchema = z.object({
   courseId: CuidSchema,
@@ -35,11 +36,7 @@ export const SetAssessmentWeightsSchema = z.object({
 export const setAssessmentWeights = tutorActionClient
   .schema(SetAssessmentWeightsSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const tutor = await prisma.tutor.findUnique({
-      where: { email: ctx.session.user.email },
-      select: { id: true },
-    });
-    if (!tutor) throw new Error("Tutor profile not found");
+    const tutor = teacherFrom(ctx.session.user);
 
     const owns = await courseBelongsToTutor(parsedInput.courseId, tutor.id);
     if (!owns) throw new Error("You don't own this course");

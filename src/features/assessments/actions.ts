@@ -846,15 +846,12 @@ import { serializeTest } from "./lib/test-io";
 import { applyAnswerKey } from "./lib/answer-key-store";
 import { z } from "zod";
 import { CuidSchema } from "../shared/primitives";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export const exportTestJson = tutorActionClient
   .schema(z.object({ id: CuidSchema }))
   .action(async ({ parsedInput, ctx }) => {
-    const tutor = await prisma.tutor.findUnique({
-      where: { email: ctx.session.user.email },
-      select: { id: true },
-    });
-    if (!tutor) throw new Error("Tutor profile not found");
+    const tutor = teacherFrom(ctx.session.user);
 
     const owns = await testBelongsToTutor(parsedInput.id, tutor.id);
     if (!owns) throw new Error("You don't own this test");
@@ -1097,11 +1094,7 @@ export const saveTestAnswerKey = tutorActionClient
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
-    const tutor = await prisma.tutor.findUnique({
-      where: { email: ctx.session.user.email },
-      select: { id: true },
-    });
-    if (!tutor) throw new Error("Tutor profile not found");
+    const tutor = teacherFrom(ctx.session.user);
 
     const owns = await testBelongsToTutor(parsedInput.testId, tutor.id);
     if (!owns) throw new Error("You don't own this test");

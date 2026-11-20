@@ -10,12 +10,12 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
 
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TestForm } from "@/features/assessments/components/test-form";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export const metadata = { title: "New test" };
 
@@ -24,17 +24,7 @@ export default async function NewTestPage() {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-  if (!tutor) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No tutor profile found for this account.
-      </div>
-    );
-  }
+  const tutor = teacherFrom(session.user);
 
   const courses = await listCoursesByTutorId(tutor.id);
   if (courses.length === 0) {

@@ -22,7 +22,7 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
-import { enrolledStudent, openEnrollmentCount, ownerTutor, taughtBy } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, openEnrollmentCount, ownerTutor, taughtByUser } from "@/features/courses/lib/tenancy-where";
 
 /* ------------------------------------------------------------------------- */
 /* List queries                                                              */
@@ -60,9 +60,9 @@ export const listAllCourses = cache(async () => {
 /**
  * Courses owned by a tutor — used by /dashboard/manage-courses.
  */
-export const listCoursesByTutorId = cache(async (tutorId: string) => {
+export const listCoursesByTutorId = cache(async (teacherUserId: string) => {
   return prisma.course.findMany({
-    where: taughtBy(tutorId),
+    where: taughtByUser(teacherUserId),
     orderBy: { createdAt: "desc" },
     include: listInclude,
   });
@@ -144,8 +144,8 @@ export const getCourseDetailById = cache(async (id: string) => {
  * Used by the update/delete actions before mutating.
  */
 export const courseBelongsToTutor = cache(
-  async (courseId: string, tutorId: string) => {
-    const n = await prisma.course.count({ where: { id: courseId, ...taughtBy(tutorId) } });
+  async (courseId: string, teacherUserId: string) => {
+    const n = await prisma.course.count({ where: { id: courseId, ...taughtByUser(teacherUserId) } });
     return n > 0;
   },
 );

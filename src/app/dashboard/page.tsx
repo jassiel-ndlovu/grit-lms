@@ -59,6 +59,7 @@ import { getTutorHome } from "@/features/activity/tutor-home";
 import { SetupChecklist } from "@/features/courses/components/setup-checklist";
 import { setupChecklistFor } from "@/features/courses/setup-checklist";
 import { getViewer } from "@/lib/viewer";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export const metadata = { title: "Dashboard" };
 
@@ -80,10 +81,7 @@ export default async function DashboardLanding({
 
   const userFirstName = (session.user.name ?? "").split(" ")[0] || "there";
   if (session.user.role === "TUTOR") {
-    const tutor = await prisma.tutor.findUnique({ where: { email: session.user.email }, select: { id: true } });
-    if (!tutor) {
-      return <div className="text-muted-foreground p-8 text-sm">No tutor profile found for this account.</div>;
-    }
+    const tutor = teacherFrom(session.user);
     const [prefs, { show }] = await Promise.all([getUserPreferences(session.user.id), searchParams]);
     const dateCtx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
     const now = new Date();

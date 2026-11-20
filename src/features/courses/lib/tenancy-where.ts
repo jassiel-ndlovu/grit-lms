@@ -23,6 +23,16 @@ export function taughtBy(tutorId: string): Prisma.CourseWhereInput {
   return activeStaff({ tutorProfile: { is: { id: tutorId } } });
 }
 
+/**
+ * Courses the user teaches, by user id: any active CourseStaff membership.
+ * B's teaching pages use this (with the signed-in user's id), so a tutor
+ * made the tenancy way, with a Membership and no `Tutor` row, sees their
+ * courses. `taughtBy` stays for callers that still hold a Tutor profile id.
+ */
+export function taughtByUser(userId: string): Prisma.CourseWhereInput {
+  return activeStaff({ id: userId });
+}
+
 /** Courses the signed-in user (by email) teaches. Replaces `tutor.email === email`. */
 export function taughtByEmail(email: string): Prisma.CourseWhereInput {
   return activeStaff({ email: { equals: email, mode: "insensitive" } });

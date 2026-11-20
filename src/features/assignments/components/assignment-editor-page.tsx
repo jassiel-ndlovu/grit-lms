@@ -16,9 +16,9 @@ import "server-only";
 import { AssignmentForm, type AssignmentFormValues } from "@/features/assignments/components/assignment-form";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { getSubmissionDetailById, submissionBelongsToTutor } from "@/features/assignments/queries";
-import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 /** `id` edits that assignment; without one, a new assignment. */
 export async function AssignmentEditorPage({ id }: { id?: string }) {
@@ -26,10 +26,7 @@ export async function AssignmentEditorPage({ id }: { id?: string }) {
   if (!viewer) redirect("/");
   if (!can(viewer, "courses.edit")) redirect("/dashboard");
 
-  const tutor = await prisma.tutor.findUnique({ where: { email: viewer.user.email }, select: { id: true } });
-  if (!tutor) {
-    return <div className="text-muted-foreground p-8 text-sm">No tutor profile found for this account.</div>;
-  }
+  const tutor = teacherFrom(viewer.user);
 
   const [courses, submission] = await Promise.all([
     listCoursesByTutorId(tutor.id),

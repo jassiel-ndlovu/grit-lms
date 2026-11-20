@@ -19,7 +19,7 @@ import "server-only";
 import type { Session } from "next-auth";
 
 import { prisma } from "@/lib/db";
-import { enrolledStudent, openEnrollmentCount, ownerTutor, taughtBy, tutorOf } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, openEnrollmentCount, ownerTutor, taughtByUser, tutorOf } from "@/features/courses/lib/tenancy-where";
 
 import type { SearchGroup, SearchHit } from "./schemas";
 import { assignmentRoutes } from "@/features/assignments/routes";
@@ -40,7 +40,7 @@ export async function searchForUser(
     case "STUDENT":
       return searchAsStudent(session.user.email, q);
     case "TUTOR":
-      return searchAsTutor(session.user.email, q);
+      return searchAsTutor(session.user.id, q);
     case "ADMIN":
       return searchAsAdmin(q);
     default:
@@ -146,14 +146,9 @@ async function searchAsStudent(email: string, q: string): Promise<SearchGroup[]>
 /* Tutor                                                                      */
 /* ------------------------------------------------------------------------- */
 
-async function searchAsTutor(email: string, q: string): Promise<SearchGroup[]> {
-  const tutor = await prisma.tutor.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-  if (!tutor) return [];
-
-  const owned = taughtBy(tutor.id);
+async function searchAsTutor(userId: string, q: string): Promise<SearchGroup[]> {
+  // Courses the user teaches through CourseStaff, Tutor row or not.
+  const owned = taughtByUser(userId);
 
   const [courses, lessons, tests, assignments, events] = await Promise.all([
     prisma.course.findMany({

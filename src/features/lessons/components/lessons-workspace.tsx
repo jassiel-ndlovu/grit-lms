@@ -139,7 +139,7 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
                     illustration={<Scene name="empty-lessons" />}
                     title="No lessons yet"
                     description="Create the first lesson for this course."
-                    action={<CreateLessonButton courseId={courseId} nextOrder={0} label="Create first lesson" />}
+                    action={<CreateLessonButton courseId={courseId} nextOrder={0} editorFeatures={editorFeatures} label="Create first lesson" />}
                   />
                 ) : (
                   <EmptyState

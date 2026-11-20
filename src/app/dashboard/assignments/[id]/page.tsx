@@ -24,7 +24,7 @@ import {
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { enrolledStudent, taughtBy, tutorOf } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, taughtByUser, tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -43,6 +43,7 @@ import {
 } from "@/features/assignments/lib/sections";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 function fileNameFromUrl(url: string): string {
   try {
@@ -362,19 +363,9 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
 
   /* ---------------------------- Tutor branch ----------------------------- */
   if (session.user.role === "TUTOR") {
-    const tutor = await prisma.tutor.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-    if (!tutor) {
-      return (
-        <div className="text-muted-foreground p-8 text-sm">
-          No tutor profile found for this account.
-        </div>
-      );
-    }
+    const tutor = teacherFrom(session.user);
 
-    const teaches = await prisma.course.count({ where: { id: submission.courseId, ...taughtBy(tutor.id) } });
+    const teaches = await prisma.course.count({ where: { id: submission.courseId, ...taughtByUser(tutor.id) } });
     if (teaches === 0) {
       return (
         <div className="text-muted-foreground p-8 text-sm">
