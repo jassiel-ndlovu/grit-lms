@@ -21,7 +21,7 @@ interface PageProps {
 }
 
 export default async function BillingUsagePage({ searchParams }: PageProps) {
-  const { ctx } = await requireBillingPage();
+  const { ctx, canManage } = await requireBillingPage();
   const sp = await searchParams;
 
   try {
@@ -45,6 +45,7 @@ export default async function BillingUsagePage({ searchParams }: PageProps) {
           ctx={ctx}
           periods={earlier}
           periodStart={periodStart === current ? null : periodStart}
+          canManage={canManage}
         />
       </BillingFrame>
     );

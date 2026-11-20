@@ -22,7 +22,10 @@ export type PaymentVolume = Awaited<ReturnType<typeof adminGetPaymentVolume>>;
 
 export const adminBillingRoutes = {
   workspaces: "/dashboard/admin/billing",
+  workspace: (id: string) => `/dashboard/admin/billing/workspaces/${id}`,
+  invoice: (id: string) => `/dashboard/admin/billing/invoices/${id}`,
   discountCodes: "/dashboard/admin/billing/discount-codes",
+  retention: "/dashboard/admin/billing/retention",
 };
 
 export const BILLING_STATES: BillingState[] = ["TRIAL", "ACTIVE", "PAST_DUE", "READ_ONLY", "COMPED", "CANCELLED"];
@@ -39,6 +42,7 @@ export function AdminBillingFrame({ page, title, children }: { page?: Crumb[]; t
           links={[
             { label: "Workspaces", href: adminBillingRoutes.workspaces },
             { label: "Discount codes", href: adminBillingRoutes.discountCodes },
+            { label: "Retention", href: adminBillingRoutes.retention },
           ]}
         />
       </Ribbon>
@@ -187,7 +191,9 @@ export function WorkspaceTable({
               return (
                 <tr key={w.workspaceId}>
                   <td className="py-2 pr-3">
-                    <span className="text-foreground">{w.name}</span>
+                    <Link href={adminBillingRoutes.workspace(w.workspaceId)} className="text-foreground underline-offset-2 hover:underline">
+                      {w.name}
+                    </Link>
                     <span className="text-muted-foreground block text-xs">{w.kind === "SOLO" ? "Solo tutor" : "Organisation"}</span>
                   </td>
                   <td className="py-2 pr-3">
