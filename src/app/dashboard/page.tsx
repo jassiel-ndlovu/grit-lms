@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { auth } from "@/lib/auth";
+import { needsOnboarding } from "@/features/users/onboarding-gate";
 import { prisma } from "@/lib/db";
 import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +74,8 @@ export default async function DashboardLanding({
 }) {
   const session = await auth();
   if (!session?.user) redirect("/");
+  // A brand-new account (no workspace yet) sets one up first (A's #154).
+  if (await needsOnboarding()) redirect("/dashboard/onboarding");
 
   const userFirstName = (session.user.name ?? "").split(" ")[0] || "there";
   if (session.user.role === "TUTOR") {
