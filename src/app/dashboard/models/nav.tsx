@@ -90,7 +90,7 @@ const TUTOR_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { icon: PenTool, label: "Assignments", link: "/dashboard/assignments", description: "Review" },
   { icon: Award, label: "Gradebook", link: "/dashboard/gradebook", description: "Weighted marks" },
   { icon: BarChart3, label: "Analytics", link: "/dashboard/analytics", description: "Class performance" },
-  { icon: UserCog, label: "Users", link: "/dashboard/manage-users", description: "Manage accounts" },
+  { icon: UserCog, label: "Students", link: "/dashboard/students", description: "Accounts and sign-in codes" },
   { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 

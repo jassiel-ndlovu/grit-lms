@@ -23,6 +23,8 @@ import { z } from "zod";
 import { sendVerificationEmail } from "@/features/auth/verification";
 import { ensureLearner, workspaceIdFor } from "@/features/workspaces/tenancy";
 import { prisma } from "@/lib/db";
+import { ViewerError } from "@/lib/viewer";
+import { can, needsScope, type Viewer } from "@/lib/viewer-core";
 import {
   authActionClient,
   staffActionClient,
@@ -106,12 +108,54 @@ export const createStudentUser = staffActionClient
   });
 
 /**
- * Reset a user's password. Tutor-only; the tutor is trusted to have
- * confirmed the user's identity (e.g. by phone/email out-of-band).
+ * Whose password the caller may reset (2026-11-21, owner-approved fix by
+ * Agent B; it used to be anyone's, admins included):
+ *   - a Nexa admin (`admin.console`): anyone except another Nexa admin;
+ *   - workspace staff with `learners.invite`: a student who is an active
+ *     learner in their workspace (for a tutor, on one of their courses) and
+ *     holds no staff role anywhere.
+ * Everyone else, and every other target, gets the same refusal, so the
+ * action can't be used to find out who exists.
+ */
+async function assertMayResetPassword(viewer: Viewer, userId: string): Promise<void> {
+  const denied = () => new ViewerError("FORBIDDEN", "You can't reset that password.");
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, platformRole: true, memberships: { where: { status: "ACTIVE" }, select: { id: true }, take: 1 } },
+  });
+  if (!target || target.id === viewer.user.id) throw denied();
+
+  if (can(viewer, "admin.console")) {
+    if (target.platformRole === "NEXA_ADMIN" || target.role === "ADMIN") throw denied();
+    return;
+  }
+
+  if (!viewer.workspace || !can(viewer, "learners.invite")) throw denied();
+  if (target.role !== "STUDENT" || target.platformRole !== "USER" || target.memberships.length > 0) throw denied();
+  const scoped = needsScope(viewer, "learners.invite");
+  if (scoped && !viewer.membership) throw denied();
+  const learner = await prisma.learner.findFirst({
+    where: {
+      workspaceId: viewer.workspace.id,
+      userId,
+      status: "ACTIVE",
+      ...(scoped
+        ? { enrollments: { some: { endedAt: null, course: { staff: { some: { membershipId: viewer.membership!.id } } } } } }
+        : {}),
+    },
+    select: { id: true },
+  });
+  if (!learner) throw denied();
+}
+
+/**
+ * Reset a student's password (see assertMayResetPassword for who may). The
+ * caller is trusted to have confirmed the student's identity out of band.
  */
 export const resetUserPassword = staffActionClient
   .schema(ResetUserPasswordSchema)
-  .action(async ({ parsedInput }) => {
+  .action(async ({ parsedInput, ctx }) => {
+    await assertMayResetPassword(ctx.viewer, parsedInput.userId);
     const hashed = await bcrypt.hash(parsedInput.newPassword, BCRYPT_ROUNDS);
 
     const user = await prisma.$transaction(async (tx) => {

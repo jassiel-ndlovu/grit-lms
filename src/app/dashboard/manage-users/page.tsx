@@ -1,5 +1,10 @@
 /**
- * /dashboard/manage-users — tutor-only user provisioning surface.
+ * /dashboard/manage-users — Nexa admins only (2026-11-21). It lists every
+ * account on the platform, so tutors and workspace owners are sent to
+ * /dashboard/students, which shows only their own students and handles
+ * sign-in codes. resetUserPassword checks on the server too.
+ *
+ * Original note — tutor-only user provisioning surface.
  *
  * Replaces the legacy /api/seed-users route. Tutors can:
  *   - Create a Student user + Student profile in one submit.
@@ -25,7 +30,8 @@ export const metadata = { title: "Manage users" };
 export default async function ManageUsersPage() {
   const session = await auth();
   if (!session?.user) redirect("/auth");
-  if (session.user.role !== "TUTOR" && session.user.role !== "ADMIN") redirect("/dashboard");
+  if (session.user.role === "TUTOR") redirect("/dashboard/students");
+  if (session.user.role !== "ADMIN") redirect("/dashboard");
 
   const users = await listAllUsers();
   const studentCount = users.filter((u) => u.role === "STUDENT").length;

@@ -75,8 +75,6 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       items: [
         { label: "Students", href: "/dashboard/students", icon: "users", keywords: ["learners", "parents", "sign-in code", "accounts"], requires: "learners.invite" },
         { label: "Members", href: "/dashboard/settings/members", icon: "users", keywords: ["tutors", "admins", "staff", "invite", "team"], requires: "members.invite" },
-        // Legacy provisioning page; stays until the owner has tested Students.
-        { label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["accounts", "passwords"], requires: "learners.invite" },
       ],
     },
     {
