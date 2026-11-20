@@ -3,6 +3,32 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Teaching pages read workspaces, not the Tutor row, `revamp/b-tenancy-pages`
+
+Found in the Preview pass (`b/testing/preview-e2e-2026-11-20.md`, F1):
+the seeded tutors (and any tutor made through onboarding, invitations or
+the role choice) have a Membership but no `Tutor` row, so 20 of B's pages
+and actions stopped at "No tutor profile found for this account." The
+owner chose to move the pages rather than add Tutor rows.
+
+Done:
+- **`taughtByUser(userId)`** in `tenancy-where.ts`: courses with an active
+  CourseStaff membership for that user. `taughtBy(tutorId)` stays for A's
+  API routes, which still pass Tutor ids.
+- **`teacherFrom(user)`** (`features/courses/lib/teacher.ts`) replaces the
+  `prisma.tutor.findUnique({ where: { email } })` lookups in the dashboard
+  home, analytics, assignments, schedule, gradebook, manage courses, tests
+  and grading, the assignment editor, `loadTutorCourse`, and the export,
+  weights and test actions. Its `id` is a **user id**.
+- B's feature queries (`tutor-home`, `courses`, `assessments`,
+  `assignments`, `events`, `gradebook`, `lessons`, search) take
+  `teacherUserId` and filter with `taughtByUser`.
+- Tutors with a Tutor row are unaffected: their courses already go through
+  CourseStaff, backfilled by tenancy.
+- Left alone: the profile page still reads the Tutor row's bio and photo
+  when there is one. Students keep their Student rows, which own their
+  submissions and grades.
+
 ## 2026-11-20 Maths in answers, phase 1, `revamp/b-maths-answers-1`
 
 Design `b/design/01-maths-in-answers.md`, phase 1 (no schema change).

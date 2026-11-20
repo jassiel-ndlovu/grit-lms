@@ -17,7 +17,6 @@ import { redirect } from "next/navigation";
 import { BarChart3 } from "lucide-react";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -33,6 +32,7 @@ import {
   type BarDatum,
   type LineSeries,
 } from "@/features/grades/components/charts";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export const metadata = { title: "Analytics" };
 
@@ -46,17 +46,7 @@ export default async function TutorAnalyticsPage() {
   if (!session?.user) redirect("/auth");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, fullName: true },
-  });
-  if (!tutor) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No tutor profile found for this account.
-      </div>
-    );
-  }
+  const tutor = teacherFrom(session.user);
 
   const courses = await listCoursesByTutorId(tutor.id);
   const gradesByCourse = await Promise.all(

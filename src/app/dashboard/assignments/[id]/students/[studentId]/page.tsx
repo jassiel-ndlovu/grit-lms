@@ -19,7 +19,6 @@ import { notFound, redirect } from "next/navigation";
 import { CalendarDays, Download, Eye, FileText, Mail } from "lucide-react";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -38,6 +37,7 @@ import { EntryGradingForm } from "@/features/assignments/components/entry-gradin
 import { MemoFilesEditor } from "@/features/assignments/components/memo-files-editor";
 import { DeleteEntryButton } from "@/features/assignments/components/delete-entry-button";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 interface PageProps {
   params: Promise<{ id: string; studentId: string }>;
@@ -68,17 +68,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
   if (!session?.user) redirect("/auth");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, fullName: true },
-  });
-  if (!tutor) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No tutor profile found for this account.
-      </div>
-    );
-  }
+  const tutor = teacherFrom(session.user);
 
   const owns = await submissionBelongsToTutor(submissionId, tutor.id);
   if (!owns) {

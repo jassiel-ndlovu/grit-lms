@@ -10,7 +10,6 @@
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { listAllStudents } from "@/features/students/queries";
@@ -20,6 +19,7 @@ import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { getUserPreferences } from "@/features/users/preferences";
 import { CourseActions } from "@/features/courses/components/course-actions";
 import { CreateCourseButton } from "@/features/courses/components/create-course-button";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 export const metadata = { title: "Manage courses" };
 
@@ -29,18 +29,8 @@ export default async function ManageCoursesPage() {
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
   // The Tutor row is keyed by email — same lookup the legacy POST used.
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
+  const tutor = teacherFrom(session.user);
 
-  if (!tutor) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No tutor profile found for this account.
-      </div>
-    );
-  }
 
   const [courses, students] = await Promise.all([
     listCoursesByTutorId(tutor.id),

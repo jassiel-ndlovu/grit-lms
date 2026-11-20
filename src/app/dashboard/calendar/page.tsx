@@ -46,6 +46,7 @@ import {
 import { CreateEventButton } from "@/features/events/components/create-event-button";
 import { occurrencesOf } from "@/features/events/lib/recurrence";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 /**
  * How far ahead the calendar materialises repeating events. The grid only
@@ -188,17 +189,7 @@ export default async function SchedulePage({ searchParams }: PageProps) {
       })),
     ];
   } else if (session.user.role === "TUTOR") {
-    const tutor = await prisma.tutor.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-    if (!tutor) {
-      return (
-        <div className="text-muted-foreground p-8 text-sm">
-          No tutor profile found for this account.
-        </div>
-      );
-    }
+    const tutor = teacherFrom(session.user);
 
     const courses = await listCoursesByTutorId(tutor.id);
     tutorCourses = courses.map((c) => ({ id: c.id, name: c.name }));

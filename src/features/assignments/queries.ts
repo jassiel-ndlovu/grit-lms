@@ -17,7 +17,7 @@ import { cache } from "react";
 import type { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
-import { enrolledStudent, ownerTutor, taughtBy } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, ownerTutor, taughtByUser } from "@/features/courses/lib/tenancy-where";
 
 const submissionListInclude = {
   course: { select: { id: true, name: true } },
@@ -35,9 +35,9 @@ export type SubmissionListItem = Awaited<
 /**
  * Assignments owned by a tutor (across all their courses).
  */
-export const listSubmissionsByTutorId = cache(async (tutorId: string) => {
+export const listSubmissionsByTutorId = cache(async (teacherUserId: string) => {
   return prisma.submission.findMany({
-    where: { course: taughtBy(tutorId) },
+    where: { course: taughtByUser(teacherUserId) },
     orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
     include: submissionListInclude,
   });
@@ -155,8 +155,8 @@ export const listEntriesForStudentInCourse = cache(
 /* ------------------------------------------------------------------------- */
 
 export const submissionBelongsToTutor = cache(
-  async (submissionId: string, tutorId: string) => {
-    const n = await prisma.submission.count({ where: { id: submissionId, course: taughtBy(tutorId) } });
+  async (submissionId: string, teacherUserId: string) => {
+    const n = await prisma.submission.count({ where: { id: submissionId, course: taughtByUser(teacherUserId) } });
     return n > 0;
   },
 );

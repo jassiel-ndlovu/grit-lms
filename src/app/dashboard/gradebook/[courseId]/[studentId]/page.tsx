@@ -14,7 +14,6 @@ import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Mail } from "lucide-react";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +31,7 @@ import {
   summariseClass,
 } from "@/features/grades/lib/weighting";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 interface PageProps {
   params: Promise<{ courseId: string; studentId: string }>;
@@ -66,17 +66,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard/grades");
 
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-  if (!tutor) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No tutor profile found for this account.
-      </div>
-    );
-  }
+  const tutor = teacherFrom(session.user);
 
   const owns = await courseBelongsToTutor(courseId, tutor.id);
   if (!owns) {

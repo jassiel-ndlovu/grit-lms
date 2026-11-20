@@ -18,7 +18,6 @@
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { TestFrame } from "@/features/assessments/components/test-frame";
 
 import {
@@ -28,6 +27,7 @@ import {
 import { TestRunner } from "@/features/assessments/components/test-runner";
 import { buildRunnerTree } from "@/features/assessments/lib/question-tree";
 import { seedAnswersFromKeys } from "@/features/assessments/lib/answer-key";
+import { teacherFrom } from "@/features/courses/lib/teacher";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -42,17 +42,7 @@ export default async function PreviewTestPage({ params }: PageProps) {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = await prisma.tutor.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-  if (!tutor) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No tutor profile found for this account.
-      </div>
-    );
-  }
+  const tutor = teacherFrom(session.user);
 
   const owns = await testBelongsToTutor(testId, tutor.id);
   if (!owns) {
