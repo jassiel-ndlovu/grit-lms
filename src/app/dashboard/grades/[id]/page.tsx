@@ -32,6 +32,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import LessonMarkdown from "@/app/components/markdown";
+import { AnswerText } from "@/components/content/answer-text";
 
 import {
   getGradeWithDetails,
@@ -389,18 +390,19 @@ function AnswerView({
   switch (question.type) {
     case "MULTIPLE_CHOICE":
     case "TRUE_FALSE":
-    case "SHORT_ANSWER":
     case "NUMERIC":
       return wrap("Your answer", (
         <p className="text-foreground text-sm">{String(value)}</p>
       ));
 
+    // Typed answers: any $…$ maths is typeset (B design 01, phase 1).
+    case "SHORT_ANSWER":
     case "ESSAY":
+      return wrap("Your answer", <AnswerText text={String(value)} className="text-foreground text-sm" />);
+
     case "CODE":
       return wrap("Your answer", (
-        <div className={question.type === "CODE" ? "font-mono text-xs whitespace-pre-wrap text-foreground" : "text-foreground text-sm whitespace-pre-wrap"}>
-          {String(value)}
-        </div>
+        <div className="font-mono text-xs whitespace-pre-wrap text-foreground">{String(value)}</div>
       ));
 
     case "MULTI_SELECT": {

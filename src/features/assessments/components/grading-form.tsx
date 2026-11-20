@@ -29,6 +29,7 @@ import { useLocalDraft } from "@/lib/use-local-draft";
 import { formatLabel, normalizeScheme, type LabelScheme } from "@/lib/enum-labels";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
+import { AnswerText } from "@/components/content/answer-text";
 
 import { EmailStudentCheckbox } from "@/features/notifications/components/email-student-checkbox";
 
@@ -523,21 +524,15 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
   switch (type) {
     case "MULTIPLE_CHOICE":
     case "TRUE_FALSE":
-    case "SHORT_ANSWER":
     case "NUMERIC":
       return wrap(<p className="text-foreground">{String(value)}</p>);
+    // Typed answers: any $…$ maths is typeset (B design 01, phase 1).
+    case "SHORT_ANSWER":
     case "ESSAY":
+      return wrap(<AnswerText text={String(value)} className="text-foreground" />);
     case "CODE":
       return wrap(
-        <div
-          className={
-            type === "CODE"
-              ? "font-mono whitespace-pre-wrap text-xs text-foreground"
-              : "whitespace-pre-wrap text-foreground"
-          }
-        >
-          {String(value)}
-        </div>,
+        <div className="font-mono whitespace-pre-wrap text-xs text-foreground">{String(value)}</div>,
       );
     case "MULTI_SELECT": {
       const arr = Array.isArray(value) ? (value as string[]) : [];

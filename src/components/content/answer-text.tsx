@@ -1,0 +1,37 @@
+"use client";
+
+/**
+ * A student's typed answer, shown as they wrote it, with any `$…$` maths
+ * typeset (B design 01, phase 1). Only the maths spans go to MathJax;
+ * the text around them is plain and marked `mathjax_ignore`, so a stray
+ * dollar sign never turns into maths and markdown never applies.
+ * Needs the dashboard's MathJax context (MathProvider).
+ */
+
+import * as React from "react";
+import { MathJax } from "better-react-mathjax";
+
+import { splitAnswerMaths } from "@/lib/content/answer-maths";
+import { cn } from "@/lib/utils";
+
+export function AnswerText({ text, className }: { text: string; className?: string }) {
+  const segments = React.useMemo(() => splitAnswerMaths(text), [text]);
+  if (!segments.some((s) => s.kind === "maths")) {
+    return <div className={cn("whitespace-pre-wrap", className)}>{text}</div>;
+  }
+  return (
+    <div className={cn("whitespace-pre-wrap", className)}>
+      {segments.map((s, i) =>
+        s.kind === "text" ? (
+          <span key={i} className="mathjax_ignore">
+            {s.text}
+          </span>
+        ) : (
+          <MathJax key={i} inline={!s.display} dynamic={false} className={s.display ? "my-2 block overflow-x-auto" : undefined}>
+            {s.display ? String.raw`\[` + s.tex + String.raw`\]` : String.raw`\(` + s.tex + String.raw`\)`}
+          </MathJax>
+        ),
+      )}
+    </div>
+  );
+}
