@@ -3,6 +3,22 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 POPIA rights: data export and account deletion, `revamp/a-popia-rights`
+
+Design 02, section 8. Viewer contract Draft 1.8.
+
+Done:
+- Migration `20_account_deletion`: `User.deletionRequestedAt`, `deletionCancelTokenHash` and `deletedAt`.
+- `features/users/export.ts` and `GET /api/account/export`: own data, or a tutor for a student they teach; once a day per person; JSON with no secrets.
+- `features/users/deletion.ts`:
+  - request: the sole owner is blocked; otherwise sessions end and an email with a cancel link goes out (`account:deletion`, sealed token);
+  - cancel by the link, or by the tutor;
+  - after 14 days, the housekeeping job anonymises the account. Production needs `ACCOUNT_DELETIONS=1`, which is the owner's call.
+- Sign-in is refused during deletion (Better Auth hook and NextAuth). The mailer never sends to any `.invalid` address.
+- Checks: an end-to-end run on preview in Better Auth mode passed 14 checks; rows removed.
+
+Next: email change, after the Better Auth cutover. It needs re-authentication.
+
 ## 2026-11-20 Student limits, limit warnings, two-factor flag; Preview sign-in fix, `revamp/a-usage-caps`
 
 Done:

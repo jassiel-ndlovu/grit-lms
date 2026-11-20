@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.8. POPIA rights: data export and account deletion (see "Privacy" below) |
 | 2026-11-20 | Draft 1.7. `user.twoFactorEnabled` now read from the account; `user.twoFactorRequired` is true for workspace owners and Nexa admins without two-factor sign-in (design 02, section 7). After the Better Auth cutover, send them to set it up (`authClient.twoFactor.enable`) |
 | 2026-11-20 | Draft 1.6. `user.mustChangePassword` (send to a set-password step; `setOwnPassword`). Tutor-created accounts, parent linking and staff invites: see "Accounts and invites" below |
 | 2026-11-20 | Draft 1.5. `user.roleConfirmed`; `chooseAccountRole({ role: "TUTOR" \| "STUDENT" \| "PARENT" })` → `{ role, next }` (once, for self sign-ups; `src/features/users/choose-role.ts`). When `roleConfirmed` is false, send the user to `/dashboard/welcome`. Only confirmed tutors can `createWorkspace` |
@@ -218,3 +219,27 @@ Design 02, section 5 and 5.1; ux/01, sections 5 to 7. Server code: `src/features
 - **Signing in:** students and parents sign in with their **username** or email, plus the code (`signInWithPassword` in `auth-client.ts` uses the username when there is no `@`). They must then set a password: `viewer.user.mustChangePassword`.
 - **No email:** a student or parent without one gets a placeholder address that is never mailed.
 - **Invite emails** link to `/auth/invite/[token]` (B's page). It's valid for 7 days. Accepting needs that email signed in: a new person signs up with it first. An invited user's role is settled to tutor, so they skip the role choice.
+
+## Privacy (Draft 1.8)
+
+Design 02, section 8. Server code: `src/features/users/export.ts` and `deletion.ts`; actions in `@/features/users/privacy-actions`.
+
+| Name | Kind | Who | Input | Returns |
+| --- | --- | --- | --- | --- |
+| `GET /api/account/export` | route | signed in | `?userId=` (optional: a tutor, for a student they teach) | a JSON download of everything held about that person. 429 if one was made in the last 24 hours |
+| `getAccountDeletionStatus` | action | signed in | `{}` | `{ soleOwnerOf: string[] }`: workspaces to hand over before deleting |
+| `requestAccountDeletion` | action | signed in | `{ confirm: "DELETE" }` | `{ deleteOn, alreadyRequested }`. Signs them out everywhere and emails a cancel link |
+| `cancelAccountDeletion` | action | anyone with the link | `{ token }` | `{ cancelled }`. The link goes to `/account/cancel-deletion?token=…` (B's page) |
+| `requestStudentAccountDeletion` | action | `learners.invite` on the student (or the parent of one) | `{ userId, confirm: "DELETE" }` | same as above; for a parent's request |
+| `cancelStudentAccountDeletion` | action | same | `{ userId }` | `{ cancelled }` |
+
+**Notes:**
+- **During the 14 days**, sign-in is refused with "This account is being deleted…".
+- **After the grace**, the daily housekeeping job anonymises the account:
+  - name "Former user", an `.invalid` email, no username;
+  - sign-in data, preferences and notifications deleted;
+  - tests, assignments and grades deleted;
+  - memberships suspended and guardianships revoked;
+  - invoices and payments kept with the name only.
+- **Production** anonymises only with `ACCOUNT_DELETIONS=1`. Until then the job only reports what is due.
+- **The sole owner** of a workspace must hand it over first.

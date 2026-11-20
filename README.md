@@ -153,6 +153,10 @@ NEXTAUTH_SECRET="generate-with: openssl rand -base64 32"
 # domains here (comma separated). Never applies in production.
 # TEST_VERIFIED_EMAIL_DOMAINS="qa.example.org"
 
+# Account deletion (design 02, section 8): the daily housekeeping job anonymises
+# accounts after their 14-day grace only when this is 1; otherwise it reports.
+# ACCOUNT_DELETIONS="1"
+
 # Vercel Blob (used by client uploads via /api/blob/upload-token)
 # Get this from the Vercel dashboard → Storage → your Blob store → .env.local
 BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."

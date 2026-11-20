@@ -12,6 +12,7 @@ import { button, escapeHtml, layout } from "./templates";
 
 export type InviteData = { inviterName: string; workspaceName: string; role: "ADMIN" | "TUTOR"; expiresOn: string };
 export type GuardianLinkedData = { tutorName: string; studentName: string; workspaceName: string };
+export type DeletionData = { name: string; deleteOn: string };
 
 const p = (t: string) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;">${escapeHtml(t)}</p>`;
 
@@ -35,5 +36,20 @@ export function renderGuardianLinkedEmail(d: GuardianLinkedData): Rendered {
     subject: heading,
     html: layout({ heading, bodyHtml: paragraphs.map(p).join("") + button(url, "Open Nexa"), footer: "You're receiving this because a tutor linked a student to your Nexa account." }),
     text: `${heading}\n\n${paragraphs.join("\n\n")}\n\nOpen Nexa: ${url}\n`,
+  };
+}
+
+export function renderDeletionEmail(d: DeletionData, token: string): Rendered {
+  const heading = "Your Nexa account will be deleted";
+  const url = absoluteUrl(`/account/cancel-deletion?token=${encodeURIComponent(token)}`);
+  const paragraphs = [
+    `Hi ${d.name.split(" ")[0] || "there"}, we received a request to delete your Nexa account. It will be deleted on ${d.deleteOn}, and you can't sign in until then.`,
+    "Invoices and payments are kept with your name only, as tax law requires. Everything else about you is removed.",
+    "If you didn't ask for this, or changed your mind, cancel it before then.",
+  ];
+  return {
+    subject: heading,
+    html: layout({ heading, bodyHtml: paragraphs.map(p).join("") + button(url, "Cancel the deletion"), footer: "You're receiving this because someone asked to delete this Nexa account." }),
+    text: `${heading}\n\n${paragraphs.join("\n\n")}\n\nCancel: ${url}\n`,
   };
 }

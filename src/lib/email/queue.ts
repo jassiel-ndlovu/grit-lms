@@ -24,7 +24,7 @@ import { decryptSecret, encryptSecret } from "@/features/payments/secrets";
 
 import { renderBillingEmail, type BillingTemplate, type BillingTemplateData, type Rendered } from "./billing-templates";
 import { renderFeeEmail, type FeeTemplate, type FeeTemplateData } from "./fee-templates";
-import { renderGuardianLinkedEmail, renderInviteEmail, type GuardianLinkedData, type InviteData } from "./account-templates";
+import { renderDeletionEmail, renderGuardianLinkedEmail, renderInviteEmail, type DeletionData, type GuardianLinkedData, type InviteData } from "./account-templates";
 import { renderAbsenceEmail, type AbsenceData } from "./attendance-templates";
 import { renderPayoutEmail, type PayoutTemplate, type PayoutTemplateData } from "./payout-templates";
 import { recipientAllowed, sendEmail } from "./send";
@@ -107,6 +107,11 @@ function renderRow(template: string, to: string, data: unknown): Rendered {
   }
   if (template === "attendance:absence") return renderAbsenceEmail(data as AbsenceData);
   if (template === "guardian:linked") return renderGuardianLinkedEmail(data as GuardianLinkedData);
+  if (template === "account:deletion") {
+    const d = data as DeletionData & { tokenSealed?: string };
+    if (!d.tokenSealed) throw new Error("Cancel token already removed");
+    return renderDeletionEmail(d, unseal(d.tokenSealed));
+  }
   if (template === "auth:invite") {
     const d = data as InviteData & { tokenSealed?: string };
     if (!d.tokenSealed) throw new Error("Invite token already removed");
@@ -142,7 +147,7 @@ async function afterRow(template: string, data: unknown, sent: boolean): Promise
     const { name } = data as VerifyData;
     return { data: { name } };
   }
-  if (template === "auth:invite") {
+  if (template === "auth:invite" || template === "account:deletion") {
     const { tokenSealed: _drop, ...rest } = data as InviteData & { tokenSealed?: string };
     void _drop;
     return { data: rest as Prisma.InputJsonValue };

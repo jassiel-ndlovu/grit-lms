@@ -103,7 +103,10 @@ export const betterAuthInstance = betterAuth({
       create: {
         // A sign-in code from a tutor stops working after 14 days unless the user chose a password.
         before: async (session) => {
-          const u = await prisma.user.findUnique({ where: { id: session.userId }, select: { mustChangePassword: true, initialCodeExpiresAt: true } });
+          const u = await prisma.user.findUnique({ where: { id: session.userId }, select: { mustChangePassword: true, initialCodeExpiresAt: true, deletionRequestedAt: true, deletedAt: true } });
+          if (u?.deletedAt || u?.deletionRequestedAt) {
+            throw new APIError("FORBIDDEN", { message: "This account is being deleted. Use the link in the email we sent to cancel." });
+          }
           if (u?.mustChangePassword && u.initialCodeExpiresAt && u.initialCodeExpiresAt < new Date()) {
             throw new APIError("FORBIDDEN", { message: "Your sign-in code has expired. Ask your tutor for a new one." });
           }

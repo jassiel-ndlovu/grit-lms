@@ -34,21 +34,26 @@ model User {
   // Better Auth (design 02; stage 1, not yet used for sign-in). Its
   // emailVerified boolean is mapped to emailConfirmed so the DateTime above
   // keeps working until the cutover.
-  emailConfirmed       Boolean   @default(false)
-  image                String?
-  updatedAt            DateTime  @default(now()) @updatedAt
+  emailConfirmed          Boolean   @default(false)
+  image                   String?
+  updatedAt               DateTime  @default(now()) @updatedAt
   /// Lower case; for tutor-created students who sign in without an email.
-  username             String?   @unique
-  displayUsername      String?
-  twoFactorEnabled     Boolean?  @default(false)
+  username                String?   @unique
+  displayUsername         String?
+  twoFactorEnabled        Boolean?  @default(false)
   /// True for a self sign-up (email or Google) until they choose tutor, student or parent on the welcome page (owner decision 2026-11-20). Accounts made by tutors or admins are confirmed.
-  roleUnconfirmed      Boolean   @default(false)
+  roleUnconfirmed         Boolean   @default(false)
   /// Set when a tutor creates the account or issues a new sign-in code: the code is the password until the user chooses their own (design 02, section 5.1).
-  mustChangePassword   Boolean   @default(false)
+  mustChangePassword      Boolean   @default(false)
   /// The sign-in code stops working after this, if still unchanged.
-  initialCodeExpiresAt DateTime?
+  initialCodeExpiresAt    DateTime?
   /// A student without an email gets <id>@students.nexa-lms.invalid; nothing is ever sent to it.
-  emailIsPlaceholder   Boolean   @default(false)
+  emailIsPlaceholder      Boolean   @default(false)
+  /// Account deletion (design 02, section 8): requested, then anonymised by the daily job once the 14-day grace ends. Sign-in is blocked meanwhile; the emailed link cancels it.
+  deletionRequestedAt     DateTime?
+  deletionCancelTokenHash String?   @unique
+  /// Set when the account was anonymised.
+  deletedAt               DateTime?
 
   preferences             UserPreferences?
   activities              ActivityLog[]
