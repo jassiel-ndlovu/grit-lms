@@ -72,7 +72,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       </AppShell>
     </LegacyProviders>
   ) : (
-    <DashboardShell user={user}>{children}</DashboardShell>
+    <DashboardShell user={user} banner={viewer ? <AccountBanners viewer={viewer} /> : null}>
+      {children}
+    </DashboardShell>
   );
 
   return (

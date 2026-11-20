@@ -67,10 +67,11 @@ export function timeZoneOptions(current: string): string[] {
 }
 
 /** The setup checklist on the home page: what's done, in order. */
-export function checklist(state: { named: boolean; hasCourse: boolean; payouts: "done" | "todo" | "not-mine" }) {
+export function checklist(state: { named: boolean; hasCourse: boolean; hasStudents: boolean; payouts: "done" | "todo" | "not-mine" }) {
   const items = [
     { key: "business" as const, label: "Name your workspace", done: state.named },
     { key: "course" as const, label: "Create a course", done: state.hasCourse },
+    { key: "students" as const, label: "Add students", done: state.hasStudents },
     ...(state.payouts === "not-mine" ? [] : [{ key: "payouts" as const, label: "Connect payouts", done: state.payouts === "done" }]),
   ];
   return { items, done: items.filter((i) => i.done).length, total: items.length };
