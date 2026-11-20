@@ -14,7 +14,6 @@
  * then the roster below. Illustration provides visual anchor.
  */
 
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { UserPlus, Users } from "lucide-react";
 
@@ -24,6 +23,7 @@ import { Card } from "@/components/ui/card";
 import { listAllUsers } from "@/features/users/queries";
 import { CreateUserForm } from "@/features/users/components/create-user-form";
 import { UserList } from "@/features/users/components/user-list";
+import HeaderPeople from "@/components/illustrations/generated/header-people";
 
 export const metadata = { title: "Manage users" };
 
@@ -67,14 +67,8 @@ export default async function ManageUsersPage() {
               </div>
             </div>
           </div>
-          <div className="relative hidden h-40 w-56 shrink-0 md:block">
-            <Image
-              src="/illustrations/teamwork.svg"
-              alt=""
-              fill
-              priority
-              className="object-contain"
-            />
+          <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
+            <HeaderPeople className="h-full w-auto" />
           </div>
         </div>
       </section>

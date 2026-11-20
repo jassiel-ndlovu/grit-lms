@@ -6,7 +6,6 @@
  * client components in one role-branched RSC page.
  */
 
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { parentLanding } from "@/features/activity/lib/child-overview";
 import { getViewer } from "@/lib/viewer";
@@ -37,6 +36,7 @@ import {
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { teacherFrom } from "@/features/courses/lib/teacher";
+import HeaderAssignments from "@/components/illustrations/generated/header-assignments";
 
 export const metadata = { title: "Assignments" };
 
@@ -143,14 +143,8 @@ export default async function SubmissionsIndexPage() {
                 Every assignment across your courses, grouped by status.
               </p>
             </div>
-            <div className="relative hidden h-40 w-56 shrink-0 md:block">
-              <Image
-                src="/illustrations/planning.svg"
-                alt=""
-                fill
-                priority
-                className="object-contain"
-              />
+            <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
+              <HeaderAssignments className="h-full w-auto" />
             </div>
           </div>
         </section>

@@ -7,7 +7,6 @@
  * All writes flow through updateOwnPreferences.
  */
 
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -22,6 +21,7 @@ import { getUserPreferences } from "@/features/users/preferences";
 import { resolveLocale } from "@/lib/datetime";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { can, getViewer } from "@/lib/viewer";
+import HeaderSettings from "@/components/illustrations/generated/header-settings";
 
 export const metadata = { title: "Settings" };
 
@@ -76,14 +76,8 @@ export default async function SettingsPage() {
               land. Changes apply when you click &ldquo;Save preferences&rdquo;.
             </p>
           </div>
-          <div className="relative hidden h-32 w-40 shrink-0 md:block">
-            <Image
-              src="/illustrations/smart-work-efficiency.svg"
-              alt=""
-              fill
-              priority
-              className="object-contain"
-            />
+          <div className="illustration-paper hidden h-32 w-40 shrink-0 items-end justify-center md:flex">
+            <HeaderSettings className="h-full w-auto" />
           </div>
         </div>
       </section>

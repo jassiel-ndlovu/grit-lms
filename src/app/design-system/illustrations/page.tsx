@@ -64,6 +64,21 @@ export default async function IllustrationsPreviewPage() {
         </section>
       ))}
 
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Page headers (on the primary panel, `illustration-paper`)</h2>
+        {[false, true].map((dark) => (
+          <Themed key={String(dark)} dark={dark}>
+            <div className="bg-primary illustration-paper flex flex-wrap items-end gap-6 rounded-lg p-4">
+              {sceneEntries
+                .filter(([name]) => name.startsWith("header-"))
+                .map(([name, Scene]) => (
+                  <Scene key={name} className="h-32 w-auto" />
+                ))}
+            </div>
+          </Themed>
+        ))}
+      </section>
+
       {[false, true].map((dark) => (
         <section key={String(dark)} className="space-y-3">
           <h2 className="text-lg font-semibold">Avatar busts, {dark ? "dark" : "light"}</h2>

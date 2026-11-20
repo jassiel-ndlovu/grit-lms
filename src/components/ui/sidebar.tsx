@@ -44,13 +44,15 @@ function SidebarSection({ label, className, children, ...props }: SidebarSection
 
 interface SidebarItemProps extends Omit<React.ComponentProps<typeof Link>, "children"> {
   icon?: React.ReactNode;
+  /** CSS colour for the icon only (the label keeps the text colour). Muted when omitted. */
+  iconColor?: string;
   active?: boolean;
   /** Small trailing count or badge, e.g. items waiting to be graded. */
   trailing?: React.ReactNode;
   children: React.ReactNode;
 }
 
-function SidebarItem({ icon, active, trailing, className, children, ...props }: SidebarItemProps) {
+function SidebarItem({ icon, iconColor, active, trailing, className, style, children, ...props }: SidebarItemProps) {
   return (
     <li>
       <Link
@@ -59,10 +61,11 @@ function SidebarItem({ icon, active, trailing, className, children, ...props }: 
         className={cn(
           "flex h-8 items-center gap-2 rounded-md px-2 outline-none transition-colors",
           "hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-          "[&_svg]:text-muted-foreground [&_svg]:size-4 [&_svg]:shrink-0",
+          "[&_svg]:text-[var(--sidebar-item-icon,var(--muted-foreground))] [&_svg]:size-4 [&_svg]:shrink-0",
           active && "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
           className,
         )}
+        style={iconColor ? { ...style, ["--sidebar-item-icon" as string]: iconColor } : style}
         {...props}
       >
         {icon}
