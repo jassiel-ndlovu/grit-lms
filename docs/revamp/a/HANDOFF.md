@@ -3,6 +3,16 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Student limits, limit warnings, two-factor flag; Preview sign-in fix, `revamp/a-usage-caps`
+
+Done:
+- `features/billing/caps.ts`:
+  - `assertCanAddLearners` is called from `setCourseEnrollment` (B's course forms) and `createStudentAccountFor`. A hard-stop student limit refuses the learner that would go over it.
+  - `sendCapWarnings` runs in the daily billing job: one email at 80% and one at 100% per limit per period. Template `billing:cap-warning`.
+- Viewer: `twoFactorEnabled` is read from the account; `twoFactorRequired` is true for owners and Nexa admins without two-factor sign-in.
+- #175 (PR #176): B's Preview builds were from a branch made before #170, so they rejected their own addresses; B is to merge main. Sign-in errors now show the real reason. Off production, `@example.test` sign-ups count as verified.
+- Checks: an end-to-end run on preview (BILLING=1 in the test) passed 10 checks; rows removed and the limit restored. No migration.
+
 ## 2026-11-20 Tutor-created students and parents, sign-in codes, staff invites, `revamp/a-invites-students`
 
 Design 02, sections 5 and 5.1, built on Better Auth. Viewer contract Draft 1.6.

@@ -18,6 +18,8 @@ export type BillingTemplateData = {
   "read-only": { workspaceName: string; invoiceNumber: string; totalCents: number };
   receipt: { workspaceName: string; invoiceNumber: string; totalCents: number; paidOn: string; renewsOn: string; cardLast4: string | null };
   "deletion-warning": { workspaceName: string; daysLeft: number; deleteOn: string };
+  /** A usage limit at 80% or 100% (design 03, section 8). */
+  "cap-warning": { workspaceName: string; what: string; used: number; limit: number; level: 80 | 100; hardStop: boolean; trial: boolean };
 };
 
 export type BillingTemplate = keyof BillingTemplateData;
@@ -81,6 +83,18 @@ export function renderBillingEmail<T extends BillingTemplate>(template: T, data:
           `Invoice ${d.invoiceNumber} for ${rands(d.totalCents)} is unpaid. Pay now, or add a new card, before ${d.readOnlyOn}. After that the workspace is read-only for staff until it is paid. Students are never blocked.`,
         ],
         "Pay now",
+      );
+    }
+    case "cap-warning": {
+      const d = data as BillingTemplateData["cap-warning"];
+      const full = d.level === 100;
+      const stop = d.hardStop
+        ? d.trial ? "During the trial nothing more can be added until you pay for your first 30 days." : "Nothing more can be added this period unless you raise the limit."
+        : "Nothing stops at the limit; it's a warning only.";
+      return render(
+        full ? `${d.workspaceName} has reached its ${d.what} limit` : `${d.workspaceName} has used ${d.level}% of its ${d.what} limit`,
+        [`${d.workspaceName} is at ${d.used} of ${d.limit} ${d.what}.`, full ? stop : `At ${d.limit}, ${stop.charAt(0).toLowerCase()}${stop.slice(1)}`],
+        d.trial ? "Choose plans and pay" : "Review usage",
       );
     }
     case "read-only": {
