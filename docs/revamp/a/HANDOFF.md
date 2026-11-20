@@ -3,6 +3,20 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Better Auth stage 2 (behind AUTH_PROVIDER), Google sign-in ready, `revamp/a-better-auth-stage2`
+
+The owner approved the cutover and asked for Google sign-in. Design 02, section 10a, has the details.
+
+Done:
+- `auth()` follows `AUTH_PROVIDER`. Middleware works in both modes. Sign-up (email and Google) opens with the switch.
+- Self sign-ups are role TUTOR with no workspace; the legacy viewer is limited to accounts with old profiles.
+- Password writers keep the credential Account in step; a reset signs out every device.
+- Better Auth's verification emails go through our queue (`auth:verify` with `urlSealed`).
+- `src/lib/auth-client.ts` for B. `docs/revamp/a/ops/google-sign-in.md` for the owner's Google Cloud setup.
+- Checks: on preview with `AUTH_PROVIDER=better-auth`, 11 checks pass (sign-up, the TUTOR role, the queued verification, no sign-in before verifying, session role, reset, credential sync, new and old passwords); rows removed. `check-viewer`, `check-email-queue` and `check-payments` pass. No migration.
+
+Not yet: B's client swap and sign-up page; the production backfill and the switch; required 2FA; removing NextAuth; the owner's Google Cloud client.
+
 ## 2026-11-20 Better Auth stage 1 (alongside NextAuth), `revamp/a-better-auth-stage1`
 
 Design 02 says to move to Better Auth before invites and sign-in codes are built. Stage 1 adds it next to NextAuth with nothing switched over; design 02, section 10a, has the details.

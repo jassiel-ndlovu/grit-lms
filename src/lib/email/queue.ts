@@ -90,7 +90,7 @@ function unseal(sealed: string): string {
   return decryptSecret(sealed, queueKey());
 }
 
-type VerifyData = { name: string; tokenSealed?: string };
+type VerifyData = { name: string; tokenSealed?: string; urlSealed?: string };
 type NotificationData = { item: EmailNotificationItem; notificationIds: string[] };
 type DigestData = { period: "daily" | "weekly"; items: EmailNotificationItem[]; notificationIds: string[] };
 
@@ -109,6 +109,7 @@ function renderRow(template: string, to: string, data: unknown): Rendered {
   }
   if (template === "auth:verify") {
     const d = data as VerifyData;
+    if (d.urlSealed) return verificationEmail({ to, name: d.name, link: unseal(d.urlSealed) });
     if (!d.tokenSealed) throw new Error("Verification token already removed");
     return verificationEmail({ to, name: d.name, token: unseal(d.tokenSealed) });
   }
