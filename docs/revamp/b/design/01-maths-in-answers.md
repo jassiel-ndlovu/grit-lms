@@ -1,7 +1,7 @@
 # Maths in students' answers: plan
 
-Status: plan, approved by the owner for planning on 2026-11-20. Nothing is
-built yet. It follows visual maths input for tutors (#157) and B research 02.
+Status: plan; the owner made the four decisions on 2026-11-20 (below).
+Nothing is built yet. It follows visual maths input for tutors (#157) and B research 02.
 
 ## The problem
 
@@ -105,15 +105,15 @@ Students can only type maths as plain text: `x^2+3x`, `sqrt(2)/2`, `1/2`.
 
 Phase 1 can start once math input (#157) is merged.
 
-## Decisions for the owner
+## Owner decisions, 2026-11-20
 
-1. **Default marking mode:** equivalent (recommended), or same form?
-2. **Undecided answers:** send them to the tutor (recommended), or count
-   them wrong?
-3. **Tier:** the maths field for students on every tier, with only creating
-   maths questions on Plus (recommended), or all of it on Plus?
-4. **Phase 3:** should existing short-answer questions be able to opt in to
-   equivalence marking?
+1. **Default marking mode: equivalent.** Same form and a decimal margin are
+   per-question choices.
+2. **Undecided answers go to the tutor**, never counted wrong.
+3. **Tier:** the maths field is there for students on every tier. Only
+   creating maths expression questions needs Plus (`math-input`).
+4. **Phase 3 is in:** existing short-answer questions can opt in to
+   equivalence marking.
 
 ## Risks
 
