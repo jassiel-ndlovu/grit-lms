@@ -38,6 +38,8 @@ export interface NavSection {
 
 const HOME: NavLink = { label: "Home", href: "/dashboard", icon: "home", keywords: ["dashboard", "overview"] };
 const CALENDAR: NavLink = { label: "Calendar", href: "/dashboard/calendar", icon: "calendar", keywords: ["schedule", "events", "timetable"] };
+/** Paying fees: guardians, and adult students who see their own (fees.pay). */
+const PAY_FEES: NavLink = { label: "Fees", href: "/dashboard/fees", icon: "fees", keywords: ["pay", "invoices", "card"], requires: "fees.pay", billing: true };
 const INBOX: NavLink = { label: "Notifications", href: "/dashboard/notifications", icon: "inbox", keywords: ["inbox", "updates"] };
 
 const BY_PERSONA: Record<Persona, NavSection[]> = {
@@ -53,6 +55,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Grades", href: "/dashboard/grades", icon: "grades", keywords: ["marks", "results"], requires: "grades.view" },
       ],
     },
+    { label: "Account", items: [PAY_FEES] },
   ],
   staff: [
     { items: [HOME, INBOX] },
@@ -87,7 +90,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
     },
   ],
   // Guardians get their children's pages in Phase 1 (viewer.children).
-  guardian: [{ items: [HOME, INBOX] }],
+  guardian: [{ items: [HOME, INBOX] }, { label: "Account", items: [PAY_FEES] }],
   none: [{ items: [HOME, INBOX] }],
 };
 

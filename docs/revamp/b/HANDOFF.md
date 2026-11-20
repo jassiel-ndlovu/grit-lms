@@ -3,6 +3,45 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Fees, part 2: parents pay, `revamp/b-fees-pay`
+
+From A's #125 (parent checkout, contract section 2, Draft 1.10 to 1.13).
+
+Done:
+- **`/dashboard/fees` for payers.** Staff with `fees.manage` still get
+  the fees list. A guardian (`fees.pay`) or an adult student who sees
+  their own fees now gets "To pay" instead of a 404
+  (`listPayableInvoices`).
+  - Open fees are grouped by child and ticked by default.
+  - A fee held by a checkout shows "Payment in progress until 14:30"
+    and can't be ticked.
+  - Paid fees are listed below.
+- **Discount code**: optional; Apply calls `previewCheckout` and shows the
+  discount and the new total. Changing the ticked fees or the code drops
+  the preview, so a stale discount never goes to Paystack.
+- **Pay**: `startCheckout` with the ticked ids (and the code), then
+  Paystack.
+- **`/dashboard/fees/return`**: polls `getCheckoutStatus` every 2.5 s
+  for up to 60 s. It then shows one of: paid, didn't go through (fees
+  stay locked up to 30 minutes), still confirming, or couldn't check.
+- **Sidebar**: "Fees" under Account for learners and guardians with
+  `fees.pay` and billing on.
+
+Checked:
+- `tsc` and `eslint` clean; `check-fee-pay-ui` (new) and
+  `check-shell-nav` pass.
+- A temporary sample-data page showed two children's fees, a locked fee,
+  totals changing as fees are unticked, the empty state and a return
+  message, at desktop and phone width. Nothing was written.
+
+Not done:
+- Not paid end to end on Preview (needs a guardian test account and
+  Paystack test mode).
+- An adult student whose fees are visible but who also has a guardian can
+  open the page but gets no sidebar link (they lack `fees.pay`).
+- Owner screens for fee discount codes (`createFeeDiscountCode` and
+  friends, Draft 1.13) aren't built.
+
 ## 2026-11-20 Refund recovery screens, `revamp/b-refund-recovery`
 
 From A's #137 (PR #136, contract Draft 1.12).
