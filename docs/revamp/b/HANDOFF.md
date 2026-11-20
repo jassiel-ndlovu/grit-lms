@@ -3,6 +3,33 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Preview end-to-end pass, fixes, `revamp/b-preview-pass-2`
+
+The whole Preview pass (owner, tutor, students, parent, four workspace
+states) is in `docs/revamp/b/testing/preview-e2e-2026-11-20.md`, findings
+F1-F13. Fixes merged along the way: PR 171 (lesson editor), PR 186 (tutor
+scoping, 404 for other tutors' courses), PR 187 (parent home lists
+children). This branch adds:
+
+- **Enrol picker scoped to the workspace (F11).** `listAllStudents` showed
+  every student on Nexa with emails to any tutor. Now
+  `listWorkspaceStudents(workspaceId)` (active learners there; legacy
+  courses use `LEGACY_WORKSPACE_ID`). Owner's decision: workspace only,
+  everywhere.
+- **Account banners in the legacy shell (F10).** `DashboardShell` takes a
+  `banner` slot; the layout passes A's `AccountBanners`, as for AppShell.
+- **"Add students" on the home checklist (F9).** `checklist()` takes
+  `hasStudents`.
+- **Cancelled billing (F13).** "Access until", "Next payment: None", no R0
+  pay button.
+
+Waiting on A: #189 (read-only workspaces accept staff writes; enrolment
+accepts any student id), the F5 billing question on #178, and F8 (fees 404
+for a minor without a parent). Owner: `REVAMP_UI=1` on Preview to test the
+switcher and trial chip; whether the course cover stays required (F11); how
+a cancelled workspace with no students comes back (F13). Follow-ups for B:
+owners seeing all workspace courses (F3); parent screens are PR 188.
+
 ## 2026-11-20 Teaching pages read workspaces, not the Tutor row, `revamp/b-tenancy-pages`
 
 Found in the Preview pass (`b/testing/preview-e2e-2026-11-20.md`, F1):
