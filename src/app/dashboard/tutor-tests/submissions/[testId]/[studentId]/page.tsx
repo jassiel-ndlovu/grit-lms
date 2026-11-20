@@ -86,6 +86,7 @@ function buildTree(all: TestDetail["questions"]): GradingQuestion[] {
       reorderItems: q.reorderItems,
       matchPairs: q.matchPairs,
       correctAnswer: q.answer,
+      mathMode: q.mathMode ?? null,
       subQuestions: build(q.id),
     }));
   }

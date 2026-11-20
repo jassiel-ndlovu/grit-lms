@@ -15,6 +15,8 @@
  */
 
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { PreferencesProvider } from "@/components/preferences-provider";
 import { AppShell, type ShellUser } from "@/components/shell/app-shell";
@@ -23,15 +25,24 @@ import { isBillingEnabled } from "@/features/billing/errors";
 import { getUserPreferences } from "@/features/users/preferences";
 import { AccountBanners } from "@/features/workspaces/components/account-banners";
 import { auth } from "@/lib/auth";
+import { authProvider } from "@/lib/better-auth";
 import { resolveLocale } from "@/lib/datetime";
 import { getViewer } from "@/lib/viewer";
 import { isRevampUi, mathJaxVersion } from "@/lib/ui-flags";
 
+import { TWO_FACTOR_LATER_COOKIE } from "../two-factor-setup/cookie";
 import DashboardShell from "./dashboard-shell";
 import { LegacyProviders } from "./legacy-providers";
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const [session, viewer] = await Promise.all([auth(), getViewer()]);
+  // Signed in with a tutor's sign-in code: choose a password first (#174).
+  if (viewer?.user.mustChangePassword) redirect("/set-password");
+  // Owners and Nexa admins must set up two-factor sign-in (#178). Better
+  // Auth only; "Remind me tomorrow" sets a day-long cookie.
+  if (viewer?.user.twoFactorRequired && authProvider() === "better-auth" && !(await cookies()).has(TWO_FACTOR_LATER_COOKIE)) {
+    redirect("/two-factor-setup");
+  }
   const prefs = session?.user ? await getUserPreferences(session.user.id) : null;
 
   // The revamp nav goes by viewer.persona and permissions. `role` is only

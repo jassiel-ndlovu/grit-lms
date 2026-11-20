@@ -3,6 +3,80 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Email change, `revamp/a-email-change`
+
+Design 02, section 8. Viewer contract Draft 1.9.
+
+Done:
+- Migration `21_email_change`: the `EmailChangeRequest` table.
+- `features/auth/email-change.ts`: the password is re-checked (credential Account or User.password, bcrypt or scrypt).
+  - The confirm link goes to the new address and lasts 1 hour.
+  - On confirm: the email is verified, the legacy profiles are updated, and all sessions end.
+  - The old address gets an undo link that lasts 7 days.
+  - Emails `account:email-confirm` and `account:email-changed`, with sealed tokens that are removed after sending.
+- Checks: an end-to-end run on preview passed 12 checks; rows removed.
+- The owner approved deleting 5 old Neon backups. Kept: `backup-invites-20261120`, `backup-account-deletion-20261120`.
+
+Not yet: two-factor re-authentication. It comes with required two-factor after the Better Auth cutover.
+
+## 2026-11-20 POPIA rights: data export and account deletion, `revamp/a-popia-rights`
+
+Design 02, section 8. Viewer contract Draft 1.8.
+
+Done:
+- Migration `20_account_deletion`: `User.deletionRequestedAt`, `deletionCancelTokenHash` and `deletedAt`.
+- `features/users/export.ts` and `GET /api/account/export`: own data, or a tutor for a student they teach; once a day per person; JSON with no secrets.
+- `features/users/deletion.ts`:
+  - request: the sole owner is blocked; otherwise sessions end and an email with a cancel link goes out (`account:deletion`, sealed token);
+  - cancel by the link, or by the tutor;
+  - after 14 days, the housekeeping job anonymises the account. Production needs `ACCOUNT_DELETIONS=1`, which is the owner's call.
+- Sign-in is refused during deletion (Better Auth hook and NextAuth). The mailer never sends to any `.invalid` address.
+- Checks: an end-to-end run on preview in Better Auth mode passed 14 checks; rows removed.
+
+Next: email change, after the Better Auth cutover. It needs re-authentication.
+
+## 2026-11-20 Student limits, limit warnings, two-factor flag; Preview sign-in fix, `revamp/a-usage-caps`
+
+Done:
+- `features/billing/caps.ts`:
+  - `assertCanAddLearners` is called from `setCourseEnrollment` (B's course forms) and `createStudentAccountFor`. A hard-stop student limit refuses the learner that would go over it.
+  - `sendCapWarnings` runs in the daily billing job: one email at 80% and one at 100% per limit per period. Template `billing:cap-warning`.
+- Viewer: `twoFactorEnabled` is read from the account; `twoFactorRequired` is true for owners and Nexa admins without two-factor sign-in.
+- #175 (PR #176): B's Preview builds were from a branch made before #170, so they rejected their own addresses; B is to merge main. Sign-in errors now show the real reason. Off production, `@example.test` sign-ups count as verified.
+- Checks: an end-to-end run on preview (BILLING=1 in the test) passed 10 checks; rows removed and the limit restored. No migration.
+
+## 2026-11-20 Tutor-created students and parents, sign-in codes, staff invites, `revamp/a-invites-students`
+
+Design 02, sections 5 and 5.1, built on Better Auth. Viewer contract Draft 1.6.
+
+Done:
+- Migration `19_invites_student_codes`: the `Invite` table, with a partial unique index for one pending invite; `User.mustChangePassword`, `initialCodeExpiresAt` and `emailIsPlaceholder`.
+- `features/auth/codes.ts`: codes, usernames and placeholder emails. `features/users/accounts.ts`: student accounts, new codes, parent linking, the first password. `features/auth/invites.ts`: staff invites.
+- Sign-in:
+  - Better Auth accepts a code typed loosely;
+  - a session hook refuses an expired code;
+  - NextAuth accepts a loosely typed code too;
+  - placeholder addresses are never mailed;
+  - tutor-created accounts are `emailConfirmed`, so they can sign in at once.
+- Emails `auth:invite` (sealed token, removed after sending) and `guardian:linked`.
+- Checks: `scripts/check-accounts.ts` (15). An end-to-end run on preview in Better Auth mode passed 21 checks; rows removed.
+
+Note: students and parents without an email can only sign in once production runs Better Auth (username sign-in).
+
+## 2026-11-20 Calendar and attendance backend (#149), `revamp/a-calendar-attendance`
+
+Following B research 10's fallback: today's recurrence columns stay, a time zone and an exceptions table are added, and RRULE goes only into feeds. B's preferred `rrule` column would have needed a destructive conversion of existing events and a rewrite of B's expander. Contract: `docs/revamp/contracts/calendar.md`.
+
+Done:
+- Migration `18_calendar_attendance` (additive): `CourseEvent.timeZone`, `CourseEventException`, `SessionAttendance`, `AttendanceCode`, `CalendarFeedToken`.
+- Occurrences with exceptions; series edits THIS / FOLLOWING / ALL; the attendance sheet; marking, with one parent email per absence; rotating check-in codes; history; private ICS feeds (basic detail for minors and guardians) and per-event `.ics`.
+- Checks: `scripts/check-calendar.ts` (17). An end-to-end run on preview with seeded data passed 14 checks; rows removed.
+
+Earlier on 2026-11-20:
+- The Anthropic key was added to Vercel Production. A live test marked correctly and caught an injection attempt, for about $0.007.
+- Better Auth is on in Preview (#170). B and the owner are testing before the production switch.
+- Migration 16 (maths answers, #164) was merged and applied.
+
 ## 2026-11-20 AI-assisted marking backend (#150), `revamp/a-ai-marking`
 
 The owner chose Anthropic's API (not Bedrock). The models follow B's research 09: Haiku 5.5, escalating to Sonnet 5.5. Setup, privacy and cost are in `docs/revamp/a/ops/ai-marking.md`.

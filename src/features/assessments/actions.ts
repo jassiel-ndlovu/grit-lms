@@ -32,6 +32,9 @@ import {
 import { emitNotification, notifyHandIn } from "@/features/notifications/server";
 import { getExtraTime } from "./accommodations";
 import { autoGradeSubmission } from "./lib/auto-grade";
+import { checkMaths } from "./lib/maths-check";
+import { hasService } from "@/features/billing/services";
+import { getViewer } from "@/lib/viewer";
 import { loadTestFingerprint, STALE_TEST_MESSAGE } from "./lib/test-fingerprint";
 
 import {
@@ -87,6 +90,7 @@ async function createQuestionTree(
             : (node.matchPairs as Prisma.InputJsonValue),
         reorderItems: node.reorderItems ?? [],
         blankCount: node.blankCount ?? null,
+        mathMode: node.type === "MATH_EXPRESSION" ? node.mathMode ?? "EQUIVALENT" : null,
       },
       select: { id: true },
     });
@@ -154,6 +158,7 @@ async function upsertQuestionTree(
             : (node.matchPairs as Prisma.InputJsonValue),
         reorderItems: node.reorderItems ?? [],
         blankCount: node.blankCount ?? null,
+        mathMode: node.type === "MATH_EXPRESSION" ? node.mathMode ?? "EQUIVALENT" : null,
       };
 
       let currentId: string;
@@ -209,6 +214,29 @@ async function upsertQuestionTree(
 /* createTest                                                                 */
 /* ------------------------------------------------------------------------- */
 
+/** Ids (or "new") of every MATH_EXPRESSION node in the tree. */
+function mathsNodeIds(nodes: CreateTestQuestionTree[], out: string[] = []): string[] {
+  for (const n of nodes) {
+    if (n.type === "MATH_EXPRESSION") out.push(n.id ?? "new");
+    if (n.subQuestions?.length) mathsNodeIds(n.subQuestions, out);
+  }
+  return out;
+}
+
+/**
+ * Maths-expression questions are part of the Plus `math-input` service.
+ * Adding one needs the service on the course; ones the test already has
+ * stay editable if the plan changes.
+ */
+async function assertMathsAllowed(courseId: string, nodes: CreateTestQuestionTree[], alreadyMaths: Set<string>) {
+  const added = mathsNodeIds(nodes).filter((id) => !alreadyMaths.has(id));
+  if (added.length === 0) return;
+  const viewer = await getViewer();
+  if (!viewer || !(await hasService(viewer, courseId, "math-input"))) {
+    throw new Error("Maths-expression questions are part of the Plus plan for this course");
+  }
+}
+
 export const createTest = tutorActionClient
   .schema(CreateTestWithQuestionsSchema)
   .action(async ({ parsedInput, ctx }) => {
@@ -221,6 +249,7 @@ export const createTest = tutorActionClient
     if (course.staff.length === 0) {
       throw new Error("You don't own this course");
     }
+    await assertMathsAllowed(course.id, parsedInput.questions, new Set());
 
     const created = await prisma.$transaction(async (tx) => {
       const test = await tx.test.create({
@@ -286,6 +315,13 @@ export const updateTest = tutorActionClient
     if (!existing) throw new Error("Test not found");
     if (existing.course.staff.length === 0) {
       throw new Error("You don't own this test");
+    }
+    if (parsedInput.questions !== undefined) {
+      const existingMaths = await prisma.testQuestion.findMany({
+        where: { testId: parsedInput.id, type: "MATH_EXPRESSION" },
+        select: { id: true },
+      });
+      await assertMathsAllowed(existing.course.id, parsedInput.questions, new Set(existingMaths.map((q) => q.id)));
     }
 
     const data: Prisma.TestUpdateInput = {};
@@ -530,6 +566,7 @@ export const submitTestAnswers = studentActionClient
           matchPairs: true,
           reorderItems: true,
           blankCount: true,
+          mathMode: true,
         },
       });
 
@@ -543,6 +580,7 @@ export const submitTestAnswers = studentActionClient
       const { grades, autoScore, autoOutOf, pendingCount } = autoGradeSubmission(
         questions,
         rawAnswers,
+        { checkMaths },
       );
 
       if (grades.length > 0) {
@@ -968,6 +1006,7 @@ export const autoGradeSubmissionAction = tutorActionClient
         matchPairs: true,
         reorderItems: true,
         blankCount: true,
+        mathMode: true,
       },
     });
 
@@ -979,7 +1018,7 @@ export const autoGradeSubmissionAction = tutorActionClient
         : {};
 
     const { grades, autoScore, autoOutOf, autoCount, pendingCount } =
-      autoGradeSubmission(questions, rawAnswers);
+      autoGradeSubmission(questions, rawAnswers, { checkMaths });
 
     if (grades.length > 0) {
       await prisma.$transaction(async (tx) => {

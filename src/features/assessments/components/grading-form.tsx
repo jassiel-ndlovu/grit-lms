@@ -29,7 +29,7 @@ import { useLocalDraft } from "@/lib/use-local-draft";
 import { formatLabel, normalizeScheme, type LabelScheme } from "@/lib/enum-labels";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
-import { AnswerText } from "@/components/content/answer-text";
+import { AnswerText, MathsAnswerText } from "@/components/content/answer-text";
 
 import { EmailStudentCheckbox } from "@/features/notifications/components/email-student-checkbox";
 
@@ -52,7 +52,15 @@ export type GradingQuestion = {
   // Tutor's correct-answer key from test creation — displayed alongside
   // the student's answer so the tutor can compare at a glance.
   correctAnswer: unknown;
+  /** MATH_EXPRESSION only: how the answer is marked. */
+  mathMode?: string | null;
   subQuestions: GradingQuestion[];
+};
+
+const MATH_MODE_LABEL: Record<string, string> = {
+  EQUIVALENT: "Any equivalent form is right.",
+  FORM: "Must be in the same form as the key.",
+  MARGIN: "A number within the key's margin.",
 };
 
 export type GradingExistingQG = {
@@ -530,6 +538,8 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
     case "SHORT_ANSWER":
     case "ESSAY":
       return wrap(<AnswerText text={String(value)} className="text-foreground" />);
+    case "MATH_EXPRESSION":
+      return wrap(<MathsAnswerText tex={String(value)} className="text-foreground" />);
     case "CODE":
       return wrap(
         <div className="font-mono whitespace-pre-wrap text-xs text-foreground">{String(value)}</div>,
@@ -617,6 +627,16 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
 
 function CorrectAnswerView({ q }: { q: GradingQuestion }) {
   switch (q.type) {
+    case "MATH_EXPRESSION": {
+      const key = typeof q.correctAnswer === "string" ? q.correctAnswer : "";
+      if (!key.trim()) return <p className="text-muted-foreground italic text-xs">No key set — grade manually.</p>;
+      return (
+        <div className="text-foreground space-y-1 text-sm">
+          <MathsAnswerText tex={key} />
+          <p className="text-muted-foreground text-xs">{MATH_MODE_LABEL[q.mathMode ?? "EQUIVALENT"] ?? ""}</p>
+        </div>
+      );
+    }
     case "MULTIPLE_CHOICE":
     case "TRUE_FALSE":
     case "SHORT_ANSWER":

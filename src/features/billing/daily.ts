@@ -33,6 +33,7 @@ import { getBillingConfig } from "./data";
 import { dayLabel, queueBillingEmail } from "./emails";
 import { isBillingEnabled } from "./errors";
 import { buildRenewalInvoice } from "./invoice";
+import { sendCapWarnings } from "./caps";
 import { deleteWorkspaceData, planRetention, retentionDeletesEnabled, sendRetentionWarnings } from "./retention";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -55,6 +56,7 @@ export type BillingRunResult = {
   /** Workspaces past their retention date; nothing is deleted yet (see retention.ts). */
   retentionDue: number;
   retentionDeleted: number;
+  capWarnings: number;
   emailsSent: number;
   emailsSuppressed: number;
   errors: number;
@@ -64,7 +66,7 @@ export type BillingRunResult = {
 export async function runBillingJob(opts: { provider?: PaymentProvider; now?: Date; budgetMs?: number; batch?: number } = {}): Promise<BillingRunResult> {
   const r: BillingRunResult = {
     trialEmails: 0, trialsEnded: 0, compsEnded: 0, cancelled: 0, renewalsPaid: 0, renewalsZero: 0, renewalsPending: 0,
-    dunningStarted: 0, retriesPaid: 0, retriesFailed: 0, locked: 0, retentionWarnings: 0, retentionDue: 0, retentionDeleted: 0, emailsSent: 0, emailsSuppressed: 0, errors: 0, more: false,
+    dunningStarted: 0, retriesPaid: 0, retriesFailed: 0, locked: 0, retentionWarnings: 0, retentionDue: 0, retentionDeleted: 0, capWarnings: 0, emailsSent: 0, emailsSuppressed: 0, errors: 0, more: false,
   };
   if (!isBillingEnabled()) return { ...r, skipped: "BILLING is off" };
 
@@ -245,6 +247,13 @@ export async function runBillingJob(opts: { provider?: PaymentProvider; now?: Da
     }
   } catch (e) {
     fail("retention", "plan", e);
+  }
+
+  // 5b. Usage limits at 80% and 100%: one email each per period.
+  try {
+    r.capWarnings = await sendCapWarnings(now);
+  } catch (e) {
+    fail("cap warnings", "all", e);
   }
 
   // 6. Email.

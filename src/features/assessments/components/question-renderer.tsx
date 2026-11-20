@@ -31,7 +31,7 @@ import { toFileAnswers, type TestFileAnswer } from "../lib/file-answers";
 import { choiceSeed, seededShuffle, shuffleAwayFromOriginal } from "../lib/shuffle";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
-import { AnswerText } from "@/components/content/answer-text";
+import { AnswerText, MathsAnswerText } from "@/components/content/answer-text";
 import { MathField } from "@/components/editor/math-field";
 import { hasAnswerMaths, inlineMaths } from "@/lib/content/answer-maths";
 
@@ -47,6 +47,7 @@ type QuestionType =
   | "REORDER"
   | "FILL_IN_THE_BLANK"
   | "NUMERIC"
+  | "MATH_EXPRESSION"
   | "NONE"; // Context-only, for grouping sub-questions.
 
 export interface RendererQuestion {
@@ -97,6 +98,8 @@ export function QuestionRenderer(props: QuestionRendererProps) {
       return <ShortAnswer {...props} />;
     case "NUMERIC":
       return <Numeric {...props} />;
+    case "MATH_EXPRESSION":
+      return <MathsAnswer {...props} />;
     case "ESSAY":
     case "CODE":
       return <LongText {...props} />;
@@ -224,6 +227,27 @@ function Numeric({ value, onChange, disabled }: QuestionRendererProps) {
       disabled={disabled}
       placeholder="0"
     />
+  );
+}
+
+/* ─── MATH_EXPRESSION ─────────────────────────────────────────────────── */
+
+function MathsAnswer({ value, onChange, disabled }: QuestionRendererProps) {
+  const tex = typeof value === "string" ? value : "";
+  if (disabled) {
+    return (
+      <div className="border-input bg-muted/30 rounded-md border px-3 py-2">
+        <MathsAnswerText tex={tex} />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1.5">
+      <MathField label="Your answer" value={tex} onChange={(v) => onChange(v.trim() === "" ? null : v)} />
+      <p className="text-muted-foreground text-xs">
+        Type maths as it looks: / makes a fraction, ^ a power. On a phone or tablet the maths keyboard opens.
+      </p>
+    </div>
   );
 }
 

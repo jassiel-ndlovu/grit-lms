@@ -29,6 +29,136 @@ Done:
   when there is one. Students keep their Student rows, which own their
   submissions and grades.
 
+## 2026-11-20 Student limits and two-factor setup, `revamp/b-limit-warnings` (#178)
+
+Screens for A's #177 (billing Draft 1.14, viewer Draft 1.7).
+
+Done:
+- **Student limits:** when adding students fails with `TRIAL_CAP_REACHED`,
+  or `FORBIDDEN` for the workspace's own student limit
+  (`isStudentLimitError` in `features/courses/lib/account-ui.ts`), the
+  message shows with a link to billing: a toast with a "Billing" button
+  in the course form, and "Go to billing" in the add-student form. Other
+  errors show their message without the `CODE:` prefix. Only happens
+  with BILLING=1.
+- **Limit warnings:** emails only (A), no screen, as asked.
+- **Two-factor:** with Better Auth on, the dashboard layout sends owners
+  and Nexa admins with `twoFactorRequired` to `/two-factor-setup`:
+  password → `twoFactor.enable` → add Nexa to an authenticator app (an
+  "Open in the app" link for phones, or the setup key to type) →
+  `verifyTotp` → backup codes, shown once. "Remind me tomorrow" sets a
+  day-long cookie so an owner is never locked out mid-task. Under
+  NextAuth nothing changes.
+
+Checked:
+- `tsc` and `eslint` clean; `scripts/check-account-screens.ts` passes
+  (4 new limit cases).
+- On a temporary page (deleted): the setup form's empty-password check,
+  and the setup key read from a sample otpauth link. `/two-factor-setup`
+  signed out goes to sign-in.
+- Not checked: a real limit error or a real two-factor setup (no local
+  sign-in). For the owner on Preview after #175, with the owner test
+  account.
+
+Blocked on the other agent:
+- No QR code yet: there's no QR package. Asked A on #178 to OK a small
+  one (for example `uqr`, no dependencies), pinned at a version at least
+  two weeks old. Desktop users type the setup key until then.
+- An owner who signed up with Google has no password, so
+  `twoFactor.enable({ password })` fails for them. Asked A whether to
+  turn on `allowPasswordless` or have them set a password first.
+
+Owner decision (2026-11-20): keep "Remind me tomorrow"; two-factor is
+not a hard stop for owners.
+
+## 2026-11-20 Account screens, `revamp/b-accounts-screens` (#174)
+
+Screens for A's #173 (viewer contract Draft 1.6, "Accounts and invites").
+
+Done:
+- **Students** (`/dashboard/students`, People in the nav): the roster
+  (owners and admins see the workspace; a tutor sees their courses'
+  students) and "Add a student" with `createStudentAccount`. The result
+  is a printable, copyable **sign-in card** shown once. Minors need the
+  consent tick. Roster queries are in `features/courses/lib/roster.ts`.
+- **Student profile** (`/dashboard/students/[learnerId]`): Sign-in tab
+  (`issueSignInCode`, after a confirm, then the card) and Parents tab
+  (`listParents`, `linkParent` with a card for a new parent account,
+  `revokeGuardianship`).
+- **Onboarding:** a new optional "Students" step between the first course
+  and payouts.
+- **First sign-in:** the dashboard layout sends anyone with
+  `mustChangePassword` to `/set-password` (outside /dashboard, so it can't
+  loop), which calls `setOwnPassword`.
+- **Members** (`/dashboard/settings/members`, also in the nav and on
+  Settings): the staff list, "Invite people" (`inviteStaff`; Admin is
+  offered only to the owner) and invites with Cancel (`revokeInvite`).
+- **`/auth/invite/[token]`** (A asked for it on #174): `getInvite` signed
+  out; "Join" with `acceptInvite` signed in; WRONG_ACCOUNT shows the
+  masked address and offers to sign in with it.
+- **Sign-in:** the password field now hints "First time? Use the sign-in
+  code from your tutor" once Better Auth is on (the field already said
+  "Email or username").
+- The legacy Users link stays until the owner has tested Students.
+
+Checked:
+- `tsc` and `eslint` clean. `scripts/check-account-screens.ts` (new),
+  `check-shell-nav.ts` and `check-onboarding-ui.ts` pass.
+- With sample data on a temporary page (deleted): the add-student checks,
+  the sign-in card, parents list, invite form (rejects a bad address) and
+  invite list. A made-up invite token shows "This invite link isn't
+  valid". `/set-password` signed out goes to sign-in.
+- Not checked: the real create, code, link and invite calls (no local
+  sign-in). The owner checks them on Preview after #175.
+
+Blocked on the other agent:
+- A's `accounts.ts` and `invites.ts` throw plain `Error`s ("That username
+  is taken"), which `actionClient` turns into "Something went wrong". Asked
+  A on #174 to let those messages through.
+- Sign-up has no way back to an invite: `signUpWithPassword` always sends
+  the verify link to `/dashboard/welcome`. The invite page says to open the
+  link again after verifying. Asked A for a `callbackURL` option.
+
+## 2026-11-20 Maths in answers, phase 2, `revamp/b-maths-answers-2`
+
+Design `b/design/01-maths-in-answers.md`, phase 2: the Maths expression
+question type, on A's migration 16 (#164).
+
+Done:
+- **`checkMaths`** (`src/features/assessments/lib/maths-check.ts`, server
+  only) marks a TeX answer against the TeX key with Compute Engine
+  (`@cortex-js/compute-engine` pinned at 0.180.0, A's OK on #161). Modes:
+  any equivalent form (default), same form as the key, or a number within
+  a `±` margin. It never throws; anything it can't decide is "undecided".
+- **Auto-marking:** `autoGradeSubmission` takes the checker as an option.
+  Undecided answers go to the tutor (owner decision 2), never marked wrong.
+  Both marking actions pass it.
+- **Tutor editor:** "Maths expression" type with a MathLive key and a
+  Marking select. `mathMode` travels through the form, the edit page,
+  the save actions, the fingerprint, the answer key and JSON import and
+  export (documented in the import guide).
+- **Plus gate:** adding a maths-expression question needs the `math-input`
+  service on the course (`hasService`). Questions a test already has stay
+  editable. The editor still offers the type everywhere; the save says
+  it's a Plus feature when the course doesn't have it.
+- **Student runner:** a MathLive answer box. MathLive starts loading when
+  the attempt opens if the test has a maths question.
+- **Grading form, review and grade pages:** the answer and key are
+  typeset (`MathsAnswerText`); the grading form also says which mode marks it.
+- `/design-system/questions` has a maths sample and the editor card.
+
+Checked:
+- `tsc` and `eslint` clean. `scripts/check-maths-answers.ts` (new):
+  27 checker cases plus 2 marking cases pass.
+- In `/design-system/questions`, typed x(x+3) in the student box: stored
+  as TeX and typeset for the tutor. The editor card's key and Marking
+  select update the question.
+- Not checked: saving a real test and marking a real submission (no
+  local sign-in). Fingerprints now include `mathMode`, so an editor
+  opened before this deploys will be asked to reload once on save.
+
+Next: owner checks a maths test on Preview once #175 is fixed.
+
 ## 2026-11-20 Maths in answers, phase 1, `revamp/b-maths-answers-1`
 
 Design `b/design/01-maths-in-answers.md`, phase 1 (no schema change).

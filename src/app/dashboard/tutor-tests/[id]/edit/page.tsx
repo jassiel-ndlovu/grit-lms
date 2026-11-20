@@ -67,6 +67,7 @@ function buildEditorTree(all: TestDetail["questions"]): EditorQuestion[] {
         : [],
       reorderItems: q.reorderItems,
       blankCount: q.blankCount,
+      mathMode: q.mathMode ?? null,
       subQuestions: build(q.id),
     }));
   }

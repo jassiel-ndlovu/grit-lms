@@ -83,6 +83,10 @@ export type Viewer = {
     twoFactorEnabled: boolean;
     /** False for a self sign-up that hasn't chosen tutor, student or parent yet: send them to /dashboard/welcome. */
     roleConfirmed: boolean;
+    /** True while a tutor-issued sign-in code is still the password: send them to set their own (setOwnPassword). */
+    mustChangePassword: boolean;
+    /** Owners and Nexa admins must use two-factor sign-in (design 02, section 7): true until they set it up. */
+    twoFactorRequired: boolean;
   };
   workspaces: WorkspaceSummary[];
   workspace: ViewerWorkspace | null;
@@ -284,6 +288,8 @@ export function buildLegacyViewer(input: {
       emailVerified: user.emailVerified,
       twoFactorEnabled: false,
       roleConfirmed: true,
+      mustChangePassword: false,
+      twoFactorRequired: false,
     },
     workspaces,
     workspace,
@@ -328,6 +334,8 @@ export type TenancyInput = {
     imageUrl: string | null;
     /** False until a self sign-up chooses a role. Defaults to true. */
     roleConfirmed?: boolean;
+    mustChangePassword?: boolean;
+    twoFactorEnabled?: boolean;
   };
   memberships: Array<{
     id: string;
@@ -423,8 +431,10 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
       imageUrl: user.imageUrl,
       platformRole: user.platformRole,
       emailVerified: user.emailVerified,
-      twoFactorEnabled: false,
+      twoFactorEnabled: user.twoFactorEnabled ?? false,
       roleConfirmed: user.roleConfirmed ?? true,
+      mustChangePassword: user.mustChangePassword ?? false,
+      twoFactorRequired: !(user.twoFactorEnabled ?? false) && (user.platformRole === "NEXA_ADMIN" || input.memberships.some((x) => x.role === "OWNER")),
     },
     workspaces,
     workspace,

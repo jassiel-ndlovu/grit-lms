@@ -35,3 +35,17 @@ export function AnswerText({ text, className }: { text: string; className?: stri
     </div>
   );
 }
+
+/**
+ * A maths answer or key stored as bare TeX (MATH_EXPRESSION, phase 2),
+ * typeset inline. Blank shows a dash.
+ */
+export function MathsAnswerText({ tex, className }: { tex: string | null | undefined; className?: string }) {
+  const t = (tex ?? "").trim();
+  if (!t) return <span className={cn("text-muted-foreground", className)}>—</span>;
+  return (
+    <MathJax inline dynamic className={cn("overflow-x-auto", className)}>
+      {String.raw`\(` + t + String.raw`\)`}
+    </MathJax>
+  );
+}

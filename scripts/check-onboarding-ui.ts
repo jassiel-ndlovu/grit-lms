@@ -23,9 +23,9 @@ function check(name: string, got: unknown, want: unknown) {
   if (!ok) console.log(`        got:  ${JSON.stringify(got)}\n        want: ${JSON.stringify(want)}`);
 }
 
-check("steps", ["business", "course", "payouts", "subjects", ""].map(parseStep), ["business", "course", "payouts", null, null]);
-check("next", [nextStep("business"), nextStep("course"), nextStep("payouts")], ["course", "payouts", null]);
-check("previous", [previousStep("business"), previousStep("payouts")], [null, "course"]);
+check("steps", ["business", "course", "students", "payouts", "subjects", ""].map(parseStep), ["business", "course", "students", "payouts", null, null]);
+check("next", [nextStep("business"), nextStep("course"), nextStep("students"), nextStep("payouts")], ["course", "students", "payouts", null]);
+check("previous", [previousStep("business"), previousStep("students"), previousStep("payouts")], [null, "course", "students"]);
 check("href", stepHref("course"), "/dashboard/onboarding/course");
 
 check(

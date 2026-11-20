@@ -39,6 +39,7 @@ export default async function SettingsPage() {
   // Billing (BILLING=1) is for people with billing.view in the active workspace.
   const showBilling = isBillingEnabled() && viewer?.workspace != null && can(viewer, "billing.view");
   // Payouts: whoever connects the account, or manages fees (tutors in per-tutor mode).
+  const showMembers = viewer?.workspace != null && can(viewer, "members.invite");
   const showPayouts =
     isBillingEnabled() && viewer?.workspace != null && (can(viewer, "payouts.connect") || can(viewer, "fees.manage"));
   const defaults: SettingsFormValues = {
@@ -95,6 +96,19 @@ export default async function SettingsPage() {
           <span>
             <span className="text-foreground block font-semibold">Billing</span>
             <span className="text-muted-foreground">Plans, the next payment and limits for this workspace.</span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
+
+      {showMembers ? (
+        <Link
+          href="/dashboard/settings/members"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">Members</span>
+            <span className="text-muted-foreground">Invite tutors and admins, and see who&apos;s joined.</span>
           </span>
           <span aria-hidden className="text-muted-foreground">→</span>
         </Link>

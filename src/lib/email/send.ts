@@ -28,6 +28,8 @@ export type SendEmailResult =
  * Design 05, "Non-production guard".
  */
 export function recipientAllowed(email: string, env: Record<string, string | undefined> = process.env): boolean {
+  // Placeholder addresses (students without email, deleted accounts) end in .invalid and never receive mail.
+  if (/\.invalid$/i.test(email.trim())) return false;
   if (env.VERCEL_ENV === "production") return true;
   const allow = (env.EMAIL_ALLOWLIST ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
   return allow.includes(email.trim().toLowerCase());

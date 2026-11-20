@@ -82,6 +82,7 @@ model Workspace {
 
   // Billing and payments (billing.prisma, Phase 2).
   subscription        Subscription?
+  invites             Invite[]
   billingPeriods      BillingPeriod[]
   courseServices      CourseService[]
   courseTierHolds     CourseTierHold[]
@@ -158,10 +159,11 @@ model Learner {
   consentAttestedBy String?
   createdAt         DateTime      @default(now())
 
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   enrollments  Enrollment[]
   feeSchedules FeeSchedule[]
+  attendance   SessionAttendance[]
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -239,4 +241,40 @@ model AuditLog {
 
   @@index([workspaceId, at])
   @@index([actorUserId, at])
+}
+
+enum InviteKind {
+  STAFF
+  LEARNER
+  GUARDIAN
+}
+
+/// An emailed invitation (design 02, section 5). v1 uses STAFF only; LEARNER and GUARDIAN fields exist so the later flows need no migration. One pending invite per (workspace, email, kind), enforced by a partial unique index in the migration. Only a hash of the token is stored.
+model Invite {
+  id               String          @id @default(cuid())
+  workspaceId      String
+  kind             InviteKind
+  /// Lower case.
+  email            String
+  tokenHash        String          @unique
+  /// STAFF only: ADMIN or TUTOR.
+  role             MembershipRole?
+  /// STAFF: CourseStaff rows to create. LEARNER (later): enrolments.
+  courseIds        String[]        @default([])
+  isMinor          Boolean         @default(false)
+  learnerInviteId  String?
+  learnerId        String?
+  displayName      String
+  invitedById      String
+  expiresAt        DateTime
+  acceptedAt       DateTime?
+  acceptedByUserId String?
+  revokedAt        DateTime?
+  createdAt        DateTime        @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("InviteInvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind])
+  @@index([email])
 }

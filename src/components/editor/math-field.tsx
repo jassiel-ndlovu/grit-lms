@@ -36,6 +36,11 @@ function loadMathLive(): Promise<void> {
   return loading;
 }
 
+/** Start loading MathLive early, e.g. when a test has maths questions further on. */
+export function preloadMathLive(): void {
+  void loadMathLive();
+}
+
 export interface MathFieldProps {
   /** Accessible name. */
   label: string;

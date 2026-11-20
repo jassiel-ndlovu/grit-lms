@@ -16,6 +16,9 @@ import { BusinessForm } from "@/features/courses/components/onboarding-forms";
 import { PayoutConnect } from "@/features/courses/components/payout-connect";
 import { ONBOARDING_PATH, parseStep, stepHref, trialDaysLeft } from "@/features/courses/lib/onboarding-ui";
 import { getPayoutSettings, listBanks } from "@/features/payments/fee-queries";
+import { AddStudentForm } from "@/features/courses/components/accounts/add-student-form";
+import { coursesForAdding } from "@/features/courses/lib/roster";
+import { needsScope } from "@/lib/viewer-core";
 import { can, getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "Set up Nexa" };
@@ -56,13 +59,34 @@ export default async function OnboardingStepPage({ params }: PageProps) {
           title="Create your first course"
           lead="One course is one class, billed per student after the trial. You can add more later."
         />
-        <CourseForm students={[]} showStudents={false} redirectTo={stepHref("payouts")} />
+        <CourseForm students={[]} showStudents={false} redirectTo={stepHref("students")} />
         <div className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-5">
           <Button asChild variant="ghost">
             <Link href={stepHref("business")}>Back</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={stepHref("payouts")}>Skip for now</Link>
+            <Link href={stepHref("students")}>Skip for now</Link>
+          </Button>
+        </div>
+      </OnboardingFrame>
+    );
+  }
+
+  if (step === "students") {
+    const courses = await coursesForAdding(viewer);
+    return (
+      <OnboardingFrame step={step} trialDays={trialDays}>
+        <StepHeading
+          title="Add your students (optional)"
+          lead="Each student gets a username and a sign-in code to print or send. They don't need an email. You can add more later under Students."
+        />
+        <AddStudentForm courses={courses} workspaceName={ws.name} coursesRequired={needsScope(viewer, "learners.invite")} />
+        <div className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-5">
+          <Button asChild variant="ghost">
+            <Link href={stepHref("course")}>Back</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={stepHref("payouts")}>Next</Link>
           </Button>
         </div>
       </OnboardingFrame>
@@ -81,7 +105,7 @@ export default async function OnboardingStepPage({ params }: PageProps) {
         <StepHeading title="Get paid through Nexa" lead="Your owner connects the account parents' payments go to." />
         <div className="flex justify-between gap-3">
           <Button asChild variant="ghost">
-            <Link href={stepHref("course")}>Back</Link>
+            <Link href={stepHref("students")}>Back</Link>
           </Button>
           {done}
         </div>
@@ -106,7 +130,7 @@ export default async function OnboardingStepPage({ params }: PageProps) {
       )}
       <div className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-5">
         <Button asChild variant="ghost">
-          <Link href={stepHref("course")}>Back</Link>
+          <Link href={stepHref("students")}>Back</Link>
         </Button>
         {mine ? (
           done

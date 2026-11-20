@@ -28,9 +28,11 @@ import bcrypt from "bcryptjs";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { hashPassword, verifyPassword } from "better-auth/crypto";
+import { APIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { twoFactor, username } from "better-auth/plugins";
 
+import { looksLikeCode, normaliseCode } from "@/features/auth/codes";
 import { prisma } from "@/lib/db";
 import { enqueueEmail, sealForQueue, sendQueuedNow } from "@/lib/email/queue";
 
@@ -49,6 +51,22 @@ export function betterAuthEnabled(): boolean {
 }
 
 const appUrl = process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+/** Vercel Preview: every deployment has its own address, so take it from the request, limited to this team's preview hosts. */
+const PREVIEW_HOSTS = ["*-jassiel-ndlovus-projects.vercel.app"];
+
+/**
+ * Outside production, test addresses count as verified at sign-up and get
+ * no verification email (Resend can't deliver to them anyway): the
+ * reserved @example.test domain, plus any domain in
+ * TEST_VERIFIED_EMAIL_DOMAINS (comma separated). Never in production.
+ */
+export function verificationWaived(email: string, env: Record<string, string | undefined> = process.env): boolean {
+  if (env.VERCEL_ENV === "production") return false;
+  const domain = email.trim().toLowerCase().split("@")[1] ?? "";
+  const extra = (env.TEST_VERIFIED_EMAIL_DOMAINS ?? "").split(",").map((d) => d.trim().toLowerCase()).filter(Boolean);
+  return domain === "example.test" || extra.includes(domain);
+}
+const isPreview = process.env.VERCEL_ENV === "preview";
 const google = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
   ? { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET }
   : null;
@@ -60,10 +78,10 @@ async function stampEmailVerified(user: { id: string; emailVerified?: boolean | 
 
 export const betterAuthInstance = betterAuth({
   appName: "Nexa",
-  baseURL: appUrl,
+  baseURL: isPreview ? { allowedHosts: PREVIEW_HOSTS, fallback: appUrl } : appUrl,
   basePath: "/api/ba",
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
-  trustedOrigins: [appUrl, "https://www.nexa-lms.co.za", "https://nexa-lms.co.za"],
+  trustedOrigins: [appUrl, "https://www.nexa-lms.co.za", "https://nexa-lms.co.za", ...(isPreview ? PREVIEW_HOSTS.map((h) => `https://${h}`) : [])],
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   telemetry: { enabled: false },
   advanced: {
@@ -81,10 +99,26 @@ export const betterAuthInstance = betterAuth({
     },
   },
   databaseHooks: {
+    session: {
+      create: {
+        // A sign-in code from a tutor stops working after 14 days unless the user chose a password.
+        before: async (session) => {
+          const u = await prisma.user.findUnique({ where: { id: session.userId }, select: { mustChangePassword: true, initialCodeExpiresAt: true, deletionRequestedAt: true, deletedAt: true } });
+          if (u?.deletedAt || u?.deletionRequestedAt) {
+            throw new APIError("FORBIDDEN", { message: "This account is being deleted. Use the link in the email we sent to cancel." });
+          }
+          if (u?.mustChangePassword && u.initialCodeExpiresAt && u.initialCodeExpiresAt < new Date()) {
+            throw new APIError("FORBIDDEN", { message: "Your sign-in code has expired. Ask your tutor for a new one." });
+          }
+        },
+      },
+    },
     user: {
       create: {
         // A self sign-up chooses tutor, student or parent on the welcome page.
-        before: async (user) => ({ data: { ...user, role: "STUDENT", roleUnconfirmed: true } }),
+        before: async (user) => ({
+          data: { ...user, role: "STUDENT", roleUnconfirmed: true, ...(verificationWaived(user.email) ? { emailVerified: true } : {}) },
+        }),
         after: async (user) => stampEmailVerified(user),
       },
       update: { after: async (user) => stampEmailVerified(user) },
@@ -101,7 +135,12 @@ export const betterAuthInstance = betterAuth({
     maxPasswordLength: 128,
     password: {
       hash: (password) => hashPassword(password),
-      verify: async ({ hash, password }) => (isBcryptHash(hash) ? bcrypt.compare(password, hash) : verifyPassword({ hash, password })),
+      verify: async ({ hash, password }) => {
+        const check = (pw: string) => (isBcryptHash(hash) ? bcrypt.compare(pw, hash) : verifyPassword({ hash, password: pw }));
+        if (await check(password)) return true;
+        // A sign-in code typed in lower case or without its dashes (features/auth/codes.ts).
+        return looksLikeCode(password) ? check(normaliseCode(password)) : false;
+      },
     },
   },
   emailVerification: {
@@ -110,6 +149,7 @@ export const betterAuthInstance = betterAuth({
     expiresIn: 60 * 60 * 24,
     // Through our queue (budget, allowlist off production, retries).
     sendVerificationEmail: async ({ user, url }) => {
+      if (verificationWaived(user.email)) return;
       const key = `auth:verify:ba:${user.id}:${Date.now()}`;
       await enqueueEmail(prisma, {
         key, template: "auth:verify", to: user.email, userId: user.id, workspaceId: null, category: "ACCOUNT", priority: "AUTH",
