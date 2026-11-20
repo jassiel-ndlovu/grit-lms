@@ -1,17 +1,19 @@
 /**
  * ParentDashboard — landing page for PARENT users.
  *
- * Placeholder: parents can't be linked to students yet, so this explains
- * what's coming and points at the pages parents already have. Server
+ * Lists the children linked to this account (viewer.children: ACTIVE
+ * guardianships, each with the workspaces the child learns in) and points
+ * at Fees. Per-child progress and marks are still to come. Server
  * Component.
  */
 
 import Link from "next/link";
-import { Bell, CalendarDays, GraduationCap, MessageSquare, TrendingUp, Users } from "lucide-react";
+import { Bell, CalendarDays, GraduationCap, MessageSquare, Receipt, TrendingUp, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { APP_CONTACT } from "@/lib/branding";
+import type { Viewer } from "@/lib/viewer-core";
 
 const COMING_SOON = [
   { icon: TrendingUp, title: "Progress", body: "Lesson completion and marks for each of your learners." },
@@ -19,7 +21,7 @@ const COMING_SOON = [
   { icon: MessageSquare, title: "Tutor messages", body: "Questions and updates between you and your learners' tutors." },
 ];
 
-export function ParentDashboard({ firstName }: { firstName: string }) {
+export function ParentDashboard({ firstName, learners }: { firstName: string; learners: Viewer["children"] }) {
   return (
     <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
       <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
@@ -38,25 +40,45 @@ export function ParentDashboard({ firstName }: { firstName: string }) {
         <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">
           Your learners
         </h2>
-        <Card className="flex min-h-[200px] flex-col items-center justify-center gap-4 p-10 text-center">
-          <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
-            <Users className="size-6" />
-          </div>
-          <div>
-            <h3 className="font-display text-xl leading-tight text-foreground">
-              No learners linked yet
-            </h3>
-            <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
-              Once your account is linked to your child&apos;s, their courses and results
-              will show here. Ask your school to link your accounts.
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <a href={`mailto:${APP_CONTACT.email}?subject=Link%20my%20parent%20account`}>
-              Contact the school
-            </a>
-          </Button>
-        </Card>
+        {learners.length === 0 ? (
+          <Card className="flex min-h-[200px] flex-col items-center justify-center gap-4 p-10 text-center">
+            <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-14 items-center justify-center rounded-full">
+              <Users className="size-6" />
+            </div>
+            <div>
+              <h3 className="font-display text-xl leading-tight text-foreground">
+                No learners linked yet
+              </h3>
+              <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
+                Once your account is linked to your child&apos;s, their courses and results
+                will show here. Ask your school to link your accounts.
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <a href={`mailto:${APP_CONTACT.email}?subject=Link%20my%20parent%20account`}>
+                Contact the school
+              </a>
+            </Button>
+          </Card>
+        ) : (
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {learners.map((child) => (
+              <li key={child.userId}>
+                <Card className="flex items-start gap-4 p-5">
+                  <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 shrink-0 items-center justify-center rounded-full font-medium">
+                    {child.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-foreground font-medium">{child.name}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {child.workspaces.length ? child.workspaces.map((w) => w.name).join(" · ") : "Not learning anywhere yet"}
+                    </p>
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
@@ -82,6 +104,12 @@ export function ParentDashboard({ firstName }: { firstName: string }) {
             Shortcuts
           </h2>
           <Card className="divide-border divide-y p-0">
+            {learners.length ? (
+              <Link href="/dashboard/fees" className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 text-sm transition-colors">
+                <Receipt className="text-brand-terracotta size-4" />
+                Fees
+              </Link>
+            ) : null}
             <Link href="/dashboard/notifications" className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 text-sm transition-colors">
               <Bell className="text-brand-terracotta size-4" />
               Notifications
