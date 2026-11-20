@@ -6,6 +6,8 @@
 import "server-only";
 
 import { deleteWorkspaceData, planRetention, retentionDeletesEnabled } from "@/features/billing/retention";
+import { BillingError } from "@/features/billing/errors";
+import { getCourseTiersFor, getPlatformInvoiceFor, listPlatformInvoicesFor } from "@/features/billing/queries";
 import { lifetimeVolume } from "@/features/payments/reconcile";
 import { prisma } from "@/lib/db";
 import { requireViewer, type BillingState } from "@/lib/viewer";
@@ -110,4 +112,67 @@ export async function retentionPreviewFor(now: Date) {
     });
   }
   return { deletesEnabled: retentionDeletesEnabled(), items };
+}
+
+/**
+ * One workspace for the admin console: its list row, courses with tiers
+ * (getCourseTiers shape, with `override`) and the first page of invoices.
+ */
+export async function adminGetWorkspaceBilling(input: { workspaceId: string }) {
+  await requireViewer({ permission: "admin.console" });
+  const ws = await prisma.workspace.findUnique({ where: { id: input.workspaceId }, select: { name: true, slug: true } });
+  if (!ws) throw new BillingError("NOT_FOUND", "Workspace not found");
+  const list = await adminListWorkspaceBillingFor({ q: ws.slug, limit: 200 });
+  const row = list.items.find((i) => i.workspaceId === input.workspaceId);
+  if (!row) throw new BillingError("NOT_FOUND", "Workspace not found");
+  const [courses, invoices] = await Promise.all([getCourseTiersFor(input.workspaceId), listPlatformInvoicesFor(input.workspaceId, { limit: 20 })]);
+  return { ...row, courses, invoices };
+}
+
+/**
+ * Any workspace's invoice (getPlatformInvoice shape) plus `workspaceId`, and
+ * per payment its `paymentId` (null for off-site) and `refundableCents`.
+ */
+export async function adminGetPlatformInvoice(input: { id: string }) {
+  await requireViewer({ permission: "admin.console" });
+  const row = await prisma.platformInvoice.findUnique({ where: { id: input.id }, select: { workspaceId: true } });
+  if (!row) throw new BillingError("NOT_FOUND", "Invoice not found");
+  const inv = await getPlatformInvoiceFor(row.workspaceId, input);
+  const payments = await prisma.payment.findMany({
+    where: { platformInvoiceId: input.id, status: { in: ["SUCCEEDED", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"] } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, status: true, amountCents: true, createdAt: true, paidAt: true, refunds: { where: { status: { in: ["PENDING", "PROCESSED"] } }, select: { amountCents: true } } },
+  });
+  const offsite = await prisma.offsitePayment.findMany({ where: { platformInvoiceId: input.id, voidedAt: null }, select: { receivedOn: true, amountCents: true } });
+  const card = payments.map((p) => ({
+    paymentId: p.id as string | null,
+    at: (p.paidAt ?? p.createdAt).toISOString(),
+    amountCents: p.amountCents,
+    via: "CARD" as const,
+    status: p.status as string,
+    refundableCents: p.status === "SUCCEEDED" || p.status === "PARTIALLY_REFUNDED" ? p.amountCents - p.refunds.reduce((n, r) => n + r.amountCents, 0) : 0,
+  }));
+  const off = offsite.map((o) => ({ paymentId: null, at: o.receivedOn.toISOString(), amountCents: o.amountCents, via: "OFFSITE" as const, status: "SUCCEEDED", refundableCents: 0 }));
+  return { ...inv, workspaceId: row.workspaceId, payments: [...card, ...off].sort((a, b) => a.at.localeCompare(b.at)) };
+}
+
+/** Nexa discount codes, newest first; `redemptions` is how many workspaces used each. */
+export async function adminListDiscountCodes(input: { active?: boolean; cursor?: string; limit?: number } = {}) {
+  await requireViewer({ permission: "admin.console" });
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+  const rows = await prisma.discountCode.findMany({
+    where: { issuerWorkspaceId: null, ...(input.active === undefined ? {} : { active: input.active }) },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+    ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+  });
+  const page = rows.slice(0, limit);
+  return {
+    items: page.map((c) => ({
+      id: c.id, code: c.code, description: c.description, kind: c.kind, percentBps: c.percentBps, amountCents: c.amountCents,
+      scope: c.scope, startsAt: c.startsAt.toISOString(), endsAt: c.endsAt?.toISOString() ?? null, maxRedemptions: c.maxRedemptions,
+      redemptions: c.redemptionCount, durationPeriods: c.durationPeriods, active: c.active,
+    })),
+    nextCursor: rows.length > limit ? page[page.length - 1].id : null,
+  };
 }

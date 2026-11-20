@@ -153,6 +153,7 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.11. `setUsageCap` built (`limitQuantity: null` removes the owner's cap; storage in GB; returns CapStatus or null; caps are stored and shown, not yet enforced). Admin queries `adminGetWorkspaceBilling({ workspaceId })` (list row + `courses` in the getCourseTiers shape + first `invoices` page), `adminGetPlatformInvoice({ id })` (getPlatformInvoice + `workspaceId`; payments carry `paymentId`, null for off-site, and `refundableCents`), `adminListDiscountCodes({ active?, cursor?, limit? })`. Admin actions now revalidate `/dashboard/admin`. Fee emails to payers: new invoice, overdue (1 and 7 days), receipt after checkout |
 | 2026-11-20 | Draft 1.10. Section 2 built (parent checkout); rules under the table |
 | 2026-11-19 | Draft 1.9. Section 3 built (payouts, fee schedules, fee invoices; `requestRefund` later); rules under the table |
 | 2026-11-19 | Draft 1.8. `getPlatformInvoice().pdfUrl` is now `/api/billing/invoices/<id>/pdf` (a PDF rendered on request; staff with `billing.view` for their own workspace, Nexa admins for any). New admin query `adminRetentionPreview()`: workspaces past their retention date and what deleting each would remove (a dry run), plus `deletesEnabled` |

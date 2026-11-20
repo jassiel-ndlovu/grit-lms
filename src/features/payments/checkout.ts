@@ -13,6 +13,7 @@ import { randomBytes } from "node:crypto";
 import { Prisma } from "@/generated/prisma";
 import { BillingError } from "@/features/billing/errors";
 import { prisma } from "@/lib/db";
+import { enqueueEmail } from "@/lib/email/queue";
 
 import { DEFAULT_CHECKOUT_CONFIG, planCheckout } from "./checkout-math";
 import { getProvider, type PaymentProvider } from "./provider";
@@ -148,6 +149,29 @@ export async function applyCheckoutPayment(tx: Tx, input: { paymentId: string; p
     if (ok.count === 0) unapplied.push(a.invoice.number);
     if (input.feeCents != null && payment.amountCents > 0) {
       await tx.paymentAllocation.update({ where: { id: a.id }, data: { feeShareCents: Math.round((input.feeCents * a.amountCents) / payment.amountCents) } });
+    }
+  }
+  // Receipt to the payer, for what was applied.
+  const applied = payment.allocations.filter((a) => !unapplied.includes(a.invoice.number));
+  if (payment.payerUserId && applied.length) {
+    const payer = await tx.user.findUnique({ where: { id: payment.payerUserId }, select: { email: true } });
+    const payee = await tx.paymentAllocation.findFirst({ where: { paymentId: input.paymentId }, select: { payoutAccount: { select: { businessName: true } } } });
+    if (payer) {
+      await enqueueEmail(tx, {
+        key: `fees:receipt:${input.paymentId}`,
+        template: "fees:receipt",
+        to: payer.email,
+        userId: payment.payerUserId,
+        workspaceId: applied[0].invoice.workspaceId,
+        category: "BILLING",
+        priority: "BILLING",
+        data: {
+          payeeName: payee?.payoutAccount.businessName ?? "",
+          numbers: applied.map((a) => a.invoice.number),
+          totalCents: applied.reduce((n, a) => n + a.amountCents, 0),
+          paidOn: new Intl.DateTimeFormat("en-ZA", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Johannesburg" }).format(input.paidAt),
+        },
+      });
     }
   }
   if (unapplied.length) {

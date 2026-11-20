@@ -21,13 +21,13 @@ on:
   schedule:
     - cron: "0 * * * *"        # on the hour: auto-submit + notification jobs + billing
     - cron: "5-55/5 * * * *"   # every other 5 minutes: auto-submit only
-    - cron: "30 0 * * *"       # daily 00:30 UTC: housekeeping + payments reconcile
+    - cron: "30 0 * * *"       # daily 00:30 UTC: housekeeping + payments reconcile + fees
   workflow_dispatch:
     inputs:
       job:
         description: Which job to run
         type: choice
-        options: [auto-submit, notifications, housekeeping, billing, payments-reconcile, both]
+        options: [auto-submit, notifications, housekeeping, billing, payments-reconcile, fees-daily, both]
         default: both
 
 permissions: {}
@@ -91,4 +91,12 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 90 \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/payments-reconcile"
+          echo
+
+      - name: Fees (monthly invoices, overdue reminders)
+        if: env.JOB == 'housekeeping' || env.JOB == 'fees-daily'
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/fees-daily"
           echo

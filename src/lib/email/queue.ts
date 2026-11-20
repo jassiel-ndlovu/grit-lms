@@ -23,6 +23,7 @@ import { createHash } from "node:crypto";
 import { decryptSecret, encryptSecret } from "@/features/payments/secrets";
 
 import { renderBillingEmail, type BillingTemplate, type BillingTemplateData, type Rendered } from "./billing-templates";
+import { renderFeeEmail, type FeeTemplate, type FeeTemplateData } from "./fee-templates";
 import { recipientAllowed, sendEmail } from "./send";
 import { digestEmail, notificationEmail, passwordResetEmail, verificationEmail, type EmailNotificationItem } from "./templates";
 
@@ -96,6 +97,10 @@ function renderRow(template: string, to: string, data: unknown): Rendered {
   if (template.startsWith("billing:")) {
     const t = template.slice("billing:".length) as BillingTemplate;
     return renderBillingEmail(t, data as BillingTemplateData[typeof t]);
+  }
+  if (template.startsWith("fees:")) {
+    const t = template.slice("fees:".length) as FeeTemplate;
+    return renderFeeEmail(t, data as FeeTemplateData[typeof t]);
   }
   if (template === "auth:verify") {
     const d = data as VerifyData;

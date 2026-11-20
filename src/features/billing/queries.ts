@@ -124,7 +124,7 @@ async function distinctActiveLearners(workspaceId: string): Promise<number> {
 }
 
 /** Usage against each cap, counted from `windowStart` (the period or the trial). */
-async function capStatuses(workspaceId: string, windowStart: Date, meter?: string): Promise<CapStatus[]> {
+export async function capStatuses(workspaceId: string, windowStart: Date, meter?: string): Promise<CapStatus[]> {
   const capRows = await prisma.usageCap.findMany({ where: { workspaceId, ...(meter ? { meter: meter as never } : {}) } });
   const caps: CapStatus[] = [];
   for (const cap of capRows) {
@@ -245,6 +245,12 @@ export async function getBillingOverview() {
 
 export async function getCourseTiers() {
   const { workspace } = await workspaceViewer("billing.view");
+  return getCourseTiersFor(workspace.id);
+}
+
+/** getCourseTiers without the permission check (admin console, scripts). */
+export async function getCourseTiersFor(workspaceId: string) {
+  const workspace = { id: workspaceId };
   const now = new Date();
   const [courses, period, { prices, aiMarksPerStudent }] = await Promise.all([
     loadWorkspaceCourses(workspace.id),

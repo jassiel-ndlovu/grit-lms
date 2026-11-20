@@ -3,6 +3,32 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Fees job, fee emails; admin queries and setUsageCap for B, `revamp/a-fees-daily`
+
+Done:
+- **For B** (#120, #106), contract Draft 1.11:
+  - `adminGetWorkspaceBilling`, `adminGetPlatformInvoice` (with `paymentId` and `refundableCents`) and `adminListDiscountCodes`.
+  - `setUsageCap`: stored and shown; enforcement (`assertUnderCap`) comes with metering.
+  - Admin actions now revalidate `/dashboard/admin`.
+  - `getCourseTiersFor` was split out for reuse.
+- **`/api/cron/fees-daily`** (daily 00:30 UTC, `payments/fees-daily.ts`):
+  - MONTHLY schedules invoice on their billing day in the workspace's time zone, grouped into one invoice per learner and payee.
+  - A schedule invoices a learner once per month, and a voided one isn't reissued.
+  - Learners without a payee account are skipped and counted.
+  - Overdue reminders go out at 1 and 7 days, unless the workspace turned them off.
+  - The job then drains the email queue.
+- **Fee emails** (`lib/email/fee-templates.ts`, `payments/fee-emails.ts`):
+  - A new invoice, from the job or issued by hand, emails its payers: every active guardian, else the adult student who may see fees, else nobody.
+  - Payers get a receipt after a checkout.
+  - `issueInvoice` takes a null actor for the job, and then writes no audit row.
+- **Checks:**
+  - `check-jobs.ts` passes.
+  - A one-off end-to-end run on the preview DB: 11 checks covering grouping, the billing day, idempotency, no payee, email recipients, reminders once each, and the receipt. Rows removed.
+
+Not yet:
+- `requestRefund` for fee invoices. A partial refund of a multi-split payment debits the subaccounts in a way Paystack hasn't confirmed (design 04, open question). It waits for the owner's Paystack test account.
+- Parent-invoice discount codes.
+
 ## 2026-11-20 Parent checkout; owner admin account; Prisma engine fix; test admin, `revamp/a-gate2-checkout`
 
 Done:
