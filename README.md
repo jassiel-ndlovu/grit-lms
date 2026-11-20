@@ -138,6 +138,12 @@ DATABASE_URL="postgresql://user:password@host:5432/nexa_lms"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="generate-with: openssl rand -base64 32"
 
+# Better Auth (stage 1 of the move off NextAuth; see src/lib/better-auth.ts).
+# /api/ba answers 404 unless BETTER_AUTH_ENABLED=1. The secret falls back to
+# NEXTAUTH_SECRET.
+# BETTER_AUTH_ENABLED="1"
+# BETTER_AUTH_SECRET="generate-with: openssl rand -base64 32"
+
 # Vercel Blob (used by client uploads via /api/blob/upload-token)
 # Get this from the Vercel dashboard → Storage → your Blob store → .env.local
 BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."

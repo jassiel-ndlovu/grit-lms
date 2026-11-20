@@ -302,6 +302,16 @@ The export is available until the workspace's retention date. The link is signed
 - **Errors:** all sign-in errors read "Email or password is incorrect". This fixes today's enumeration leak.
 - Every lockout, 2FA reset, ban and impersonation writes an `AuditLog` row.
 
+## 10a. Migration status (2026-11-20)
+
+**Stage 1 (built):** `better-auth@1.7.18` (the newest release at least two weeks old) in `src/lib/better-auth.ts`, mounted at `/api/ba` and answering 404 unless `BETTER_AUTH_ENABLED=1`.
+- Migrations: `13_better_auth_tables` (`Session`, `Account`, `Verification`, `TwoFactor`, `RateLimit`; User gains `emailConfirmed`, `image`, `updatedAt`, `username`, `displayUsername`, `twoFactorEnabled`) and `14_user_password_default` (`User.password` defaults to "", which Better Auth requires and which matches no password).
+- Better Auth's `emailVerified` boolean maps to `User.emailConfirmed`, so the existing DateTime keeps working. Ids come from Prisma's `cuid()` (`generateId: false`).
+- `scripts/migrate-auth-accounts.ts` copies each `User.password` (bcrypt) into a credential `Account` and sets `emailConfirmed`; it is idempotent and refreshes a hash changed through NextAuth since. `verify` accepts bcrypt and scrypt; new hashes are scrypt.
+- Sign-up is off; plugins `username` and `twoFactor`; rate limits stored in the database (5 sign-ins a minute per IP); telemetry off; cookies prefixed `nexa`.
+
+**Stage 2 (cutover, needs the owner's go-ahead and B):** run the backfill on production; switch `getViewer`, `requireSession`, the safe-action clients and middleware to Better Auth's session; B moves the 7 client files to `auth-client.ts`; turn on sign-up and 2FA for owners and admins; remove NextAuth. Everyone signs in again once.
+
 ## 11. Code locations
 
 | Path | Contents |

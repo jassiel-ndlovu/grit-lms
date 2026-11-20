@@ -3,6 +3,17 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Better Auth stage 1 (alongside NextAuth), `revamp/a-better-auth-stage1`
+
+Design 02 says to move to Better Auth before invites and sign-in codes are built. Stage 1 adds it next to NextAuth with nothing switched over; design 02, section 10a, has the details.
+
+Done:
+- Migrations `13_better_auth_tables` and `14_user_password_default` (both additive), applied to preview.
+- `src/lib/better-auth.ts`; route `/api/ba/[...all]` (404 unless `BETTER_AUTH_ENABLED=1`); `scripts/migrate-auth-accounts.ts`.
+- On preview: backfilled 10 users; a Better Auth sign-in with the test admin's carried-over bcrypt password works; a database session is written and read back; a wrong password and sign-up are refused.
+
+Next (stage 2, the cutover): the owner's go-ahead (everyone signs in once more), B's 7 client files, then invites, sign-in codes and parent linking (ux/01, sections 5 to 7) on Better Auth.
+
 ## 2026-11-20 Optional trial, paying during the trial, courses start on Pro, `revamp/a-trial-options`
 
 Owner decisions (20 November): the trial is optional. A tutor may skip it, pay during it (the first 30 days start when the trial ends), or pay any time after it. A card before the trial comes later; for now the card is added after. New courses start on Pro, and tutors must be told that Core and Plus exist and cost less. Up to 3 owned workspaces and a verified email are confirmed.

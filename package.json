@@ -43,6 +43,7 @@
     "@vercel/blob": "^2.3.3",
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
+    "better-auth": "1.7.18",
     "better-react-mathjax": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
