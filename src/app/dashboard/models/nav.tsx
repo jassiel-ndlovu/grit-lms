@@ -33,7 +33,7 @@ import React, {
 } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { appSignOut } from "@/lib/auth-client";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Award,
@@ -347,7 +347,7 @@ function NavPanel({ user, collapsed, onToggleCollapsed, onClose }: NavPanelProps
             {user ? (
               <button
                 type="button"
-                onClick={() => signOut()}
+                onClick={() => void appSignOut()}
                 className={cn(
                   "group flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors",
                   "hover:bg-muted",
