@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.9. Email change: `requestEmailChange({ password, newEmail })`, `confirmEmailChange({ token })`, `revertEmailChange({ token })` in `@/features/auth/email-change-actions` (see "Privacy") |
 | 2026-11-20 | Draft 1.8. POPIA rights: data export and account deletion (see "Privacy" below) |
 | 2026-11-20 | Draft 1.7. `user.twoFactorEnabled` now read from the account; `user.twoFactorRequired` is true for workspace owners and Nexa admins without two-factor sign-in (design 02, section 7). After the Better Auth cutover, send them to set it up (`authClient.twoFactor.enable`) |
 | 2026-11-20 | Draft 1.6. `user.mustChangePassword` (send to a set-password step; `setOwnPassword`). Tutor-created accounts, parent linking and staff invites: see "Accounts and invites" below |
@@ -243,3 +244,10 @@ Design 02, section 8. Server code: `src/features/users/export.ts` and `deletion.
   - invoices and payments kept with the name only.
 - **Production** anonymises only with `ACCOUNT_DELETIONS=1`. Until then the job only reports what is due.
 - **The sole owner** of a workspace must hand it over first.
+
+**Email change (Draft 1.9):**
+- **Request:** settings call `requestEmailChange({ password, newEmail })`. It returns `{ sentTo }`; the confirm link goes to the new address, lasts 1 hour, and can be requested once every 2 minutes.
+- **Confirm:** `/account/confirm-email?token=…` is a button that calls `confirmEmailChange`. It returns `{ status: changed | invalid | expired | taken }`, and when it works it signs the user out everywhere, so send them to sign-in with the new address.
+- **Undo:** the old address gets `/account/revert-email?token=…`, a button that calls `revertEmailChange`. It returns `{ status: reverted | invalid | expired | taken }` and works for 7 days.
+- **Placeholder addresses:** a student replacing a placeholder with a first real address follows the same steps, and no notice goes to the placeholder.
+- **Google-only accounts** have no password, so they can't change their email here yet.
