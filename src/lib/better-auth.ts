@@ -53,6 +53,19 @@ export function betterAuthEnabled(): boolean {
 const appUrl = process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 /** Vercel Preview: every deployment has its own address, so take it from the request, limited to this team's preview hosts. */
 const PREVIEW_HOSTS = ["*-jassiel-ndlovus-projects.vercel.app"];
+
+/**
+ * Outside production, test addresses count as verified at sign-up and get
+ * no verification email (Resend can't deliver to them anyway): the
+ * reserved @example.test domain, plus any domain in
+ * TEST_VERIFIED_EMAIL_DOMAINS (comma separated). Never in production.
+ */
+export function verificationWaived(email: string, env: Record<string, string | undefined> = process.env): boolean {
+  if (env.VERCEL_ENV === "production") return false;
+  const domain = email.trim().toLowerCase().split("@")[1] ?? "";
+  const extra = (env.TEST_VERIFIED_EMAIL_DOMAINS ?? "").split(",").map((d) => d.trim().toLowerCase()).filter(Boolean);
+  return domain === "example.test" || extra.includes(domain);
+}
 const isPreview = process.env.VERCEL_ENV === "preview";
 const google = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
   ? { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET }
@@ -100,7 +113,9 @@ export const betterAuthInstance = betterAuth({
     user: {
       create: {
         // A self sign-up chooses tutor, student or parent on the welcome page.
-        before: async (user) => ({ data: { ...user, role: "STUDENT", roleUnconfirmed: true } }),
+        before: async (user) => ({
+          data: { ...user, role: "STUDENT", roleUnconfirmed: true, ...(verificationWaived(user.email) ? { emailVerified: true } : {}) },
+        }),
         after: async (user) => stampEmailVerified(user),
       },
       update: { after: async (user) => stampEmailVerified(user) },
@@ -131,6 +146,7 @@ export const betterAuthInstance = betterAuth({
     expiresIn: 60 * 60 * 24,
     // Through our queue (budget, allowlist off production, retries).
     sendVerificationEmail: async ({ user, url }) => {
+      if (verificationWaived(user.email)) return;
       const key = `auth:verify:ba:${user.id}:${Date.now()}`;
       await enqueueEmail(prisma, {
         key, template: "auth:verify", to: user.email, userId: user.id, workspaceId: null, category: "ACCOUNT", priority: "AUTH",

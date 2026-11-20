@@ -63,7 +63,10 @@ export async function signInWithPassword(input: { identifier: string; password: 
     ? await authClient.signIn.email({ email: input.identifier, password: input.password, callbackURL: input.callbackUrl })
     : await authClient.signIn.username({ username: input.identifier, password: input.password, callbackURL: input.callbackUrl });
   if (r.error) {
-    if (r.error.status === 403) return { ok: false, error: "Please verify your email address first. We've sent you a new link." };
+    const code = (r.error as { code?: string }).code;
+    if (code === "EMAIL_NOT_VERIFIED") return { ok: false, error: "Please verify your email address first. We've sent you a new link." };
+    if (code === "INVALID_ORIGIN" || code === "MISSING_OR_NULL_ORIGIN") return { ok: false, error: "Sign-in isn't available on this address. Use the main Nexa address." };
+    if (r.error.status === 403) return { ok: false, error: r.error.message || "You can't sign in right now. Ask your tutor for a new sign-in code." };
     if (r.error.status === 429) return { ok: false, error: "Too many attempts. Try again in a minute, or reset your password." };
     return { ok: false, error: failed };
   }
@@ -81,7 +84,11 @@ export async function signInWithGoogle(callbackUrl = "/dashboard/start") {
 export async function signUpWithPassword(input: { name: string; email: string; password: string }): Promise<SignInResult> {
   if (!BETTER) return { ok: false, error: "Sign-up isn't open yet." };
   const r = await authClient.signUp.email({ name: input.name, email: input.email, password: input.password, callbackURL: "/dashboard/welcome" });
-  if (r.error) return { ok: false, error: r.error.status === 422 ? "You already have an account. Sign in instead." : r.error.message ?? "Sign-up failed." };
+  if (r.error) {
+    const code = (r.error as { code?: string }).code;
+    if (code === "INVALID_ORIGIN" || code === "MISSING_OR_NULL_ORIGIN") return { ok: false, error: "Sign-up isn't available on this address. Use the main Nexa address." };
+    return { ok: false, error: r.error.status === 422 ? "You already have an account. Sign in instead." : r.error.message ?? "Sign-up failed." };
+  }
   return { ok: true };
 }
 
