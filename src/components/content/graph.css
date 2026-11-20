@@ -1,0 +1,23 @@
+/* Mafs in Nexa's colours. Curves use fixed hues so "Blue" is blue on every
+   page, each AA on white (light) or on the dark card (dark). */
+.nexa-graph {
+  --mafs-blue: #2563eb;
+  --mafs-red: #c53030;
+  --mafs-green: #0f7b6c;
+  --mafs-orange: #8a6116;
+  --mafs-violet: #7c3aed;
+}
+.dark .nexa-graph {
+  --mafs-blue: #6ea8fe;
+  --mafs-red: #f07068;
+  --mafs-green: #4dab9a;
+  --mafs-orange: #d9a441;
+  --mafs-violet: #a78bfa;
+}
+.nexa-graph .MafsView {
+  --mafs-bg: var(--card, #ffffff);
+  --mafs-fg: var(--foreground, #37352f);
+  --mafs-origin-color: var(--foreground, #37352f);
+  --mafs-line-color: color-mix(in srgb, var(--muted-foreground, #6f6e69) 35%, transparent);
+  font-family: var(--font-geist, inherit);
+}

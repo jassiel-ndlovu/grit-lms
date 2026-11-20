@@ -15,6 +15,7 @@ import type { AnyExtension } from "@tiptap/core";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import StarterKit from "@tiptap/starter-kit";
 
+import { Graph } from "./graph";
 import { ContentImage } from "./image";
 import { BlockMath, InlineMath } from "./math";
 
@@ -35,5 +36,6 @@ export function contentExtensions(): AnyExtension[] {
     TableCell,
     InlineMath,
     BlockMath,
+    Graph, // schema version 2
   ];
 }

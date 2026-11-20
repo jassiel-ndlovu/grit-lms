@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import "@/components/content/rich-content.css";
 import "./editor.css";
 import { DEFAULT_FEATURES, commandsFor, type EditorFeatures } from "./commands";
+import { EditorGraph } from "./graph-view";
 import { EditorBlockMath, EditorInlineMath } from "./math-views";
 import { SlashMenu, SlashMenuExtension, type SlashState } from "./slash-menu";
 import { EditorToolbar } from "./toolbar";
@@ -82,7 +83,7 @@ export function RichEditor({
     editable,
     extensions: [
       ...contentExtensions().map((e): AnyExtension =>
-        e.name === "inlineMath" ? EditorInlineMath : e.name === "blockMath" ? EditorBlockMath : e,
+        e.name === "inlineMath" ? EditorInlineMath : e.name === "blockMath" ? EditorBlockMath : e.name === "graph" ? EditorGraph : e,
       ),
       UndoRedo,
       Dropcursor,

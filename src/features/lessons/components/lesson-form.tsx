@@ -36,6 +36,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RichEditor } from "@/components/editor/rich-editor";
+import type { EditorFeatures } from "@/components/editor/commands";
 import {
   Select,
   SelectContent,
@@ -91,6 +92,8 @@ export interface LessonFormProps {
    * excludes the lesson itself and its descendants.
    */
   parentOptions?: Array<{ id: string; label: string; title: string; depth: number }>;
+  /** Editor blocks this course may use (the Plus graph block). */
+  editorFeatures?: Partial<EditorFeatures>;
   /**
    * "stack" (default): every field in order, for the create dialog.
    * "document": the lessons page; a large title, the content under it,
@@ -109,6 +112,7 @@ export function LessonForm({
   className,
   parentOptions = [],
   layout = "stack",
+  editorFeatures,
 }: LessonFormProps) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -288,12 +292,14 @@ export function LessonForm({
                   value={field.value ?? defaultValues?.descriptionJson}
                   fallbackMarkdown={defaultValues?.description}
                   onChange={field.onChange}
+                  features={editorFeatures}
                   placeholder="Write the lesson. Type / for blocks, $ for maths"
                   className="[&_.rich-editor-surface]:min-h-64"
                 />
                 <FormDescription>
-                  Headings, lists, tables, code and maths. Type / for the block
-                  menu.
+                  {editorFeatures?.graph
+                    ? "Headings, lists, tables, code, maths and graphs. Type / for the block menu."
+                    : "Headings, lists, tables, code and maths. Type / for the block menu."}
                 </FormDescription>
                 <FormMessage />
               </FormItem>

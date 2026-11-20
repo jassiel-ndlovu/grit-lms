@@ -6,19 +6,24 @@
  */
 
 import type { ChainedCommands, Editor, Range } from "@tiptap/core";
+import { DEFAULT_GRAPH } from "@/lib/content/graph-spec";
 import {
-  Code2, Heading2, Heading3, List, ListOrdered, Minus, Pilcrow, Quote, Sigma, SquareFunction, Table,
+  ChartSpline, Code2, Heading2, Heading3, List, ListOrdered, Minus, Pilcrow, Quote, Sigma, SquareFunction, Table,
   type LucideIcon,
 } from "lucide-react";
+
+import { pendingNewGraph } from "./graph-view";
 
 export interface EditorFeatures {
   /** Maths nodes and the TeX box. On unless turned off. */
   math: boolean;
+  /** The Graph block (Plus service `graphing`). Off unless the page turns it on. */
+  graph: boolean;
   tables: boolean;
   headings: boolean;
 }
 
-export const DEFAULT_FEATURES: EditorFeatures = { math: true, tables: true, headings: true };
+export const DEFAULT_FEATURES: EditorFeatures = { math: true, graph: false, tables: true, headings: true };
 
 export interface BlockCommand {
   id: string;
@@ -45,6 +50,13 @@ export const BLOCK_COMMANDS: BlockCommand[] = [
   {
     id: "math-inline", label: "Inline maths", keywords: ["equation", "latex", "tex", "formula"], icon: Sigma, feature: "math",
     apply: (c) => c.insertContent({ type: "inlineMath", attrs: { latex: "" } }),
+  },
+  {
+    id: "graph", label: "Graph", keywords: ["plot", "chart", "function", "parabola", "axes", "coordinates"], icon: ChartSpline, feature: "graph",
+    apply: (c) => {
+      pendingNewGraph.current = true;
+      return c.insertContent({ type: "graph", attrs: { spec: DEFAULT_GRAPH } });
+    },
   },
   {
     id: "table", label: "Table", keywords: ["grid", "rows", "columns"], icon: Table, feature: "tables",
