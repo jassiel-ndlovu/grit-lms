@@ -19,6 +19,7 @@ export default async function OnboardingPage() {
   if (!isBillingEnabled()) notFound();
   const viewer = await getViewer();
   if (!viewer) redirect("/auth");
+  if (!viewer.user.roleConfirmed) redirect("/dashboard/welcome");
 
   return (
     <OnboardingFrame step={null} trialDays={null}>

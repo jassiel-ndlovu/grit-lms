@@ -4,8 +4,9 @@
  * /auth/sign-up: create an account (A's #154). Name, email and a password
  * of 10+ characters through signUpWithPassword, or "Continue with Google".
  * An email sign-up must verify its address, so success shows "Check your
- * email"; the link lands on /dashboard/welcome, which sends a new account
- * to onboarding. Before the Better Auth cutover, sign-up is closed.
+ * email"; the link lands on /dashboard/welcome, where a new account
+ * chooses tutor, student or parent. Before the Better Auth cutover,
+ * sign-up is closed.
  */
 
 import * as React from "react";
@@ -21,7 +22,7 @@ type Phase = "form" | "creating" | "sent";
 
 export default function SignUpPage() {
   return (
-    <AuthFrame title="Create your Nexa account" lead="Set up your workspace in a few minutes.">
+    <AuthFrame title="Create your Nexa account" lead="For tutors, students and parents.">
       {signUpOpen ? <SignUpCard /> : <ClosedCard />}
     </AuthFrame>
   );
@@ -65,7 +66,7 @@ function SignUpCard() {
         <h2 className="mt-4 text-base font-medium text-slate-900">Check your email</h2>
         <p className="mt-1 text-sm text-slate-600">
           We&apos;ve sent a link to <span className="font-medium text-slate-900">{email.trim()}</span>. Open it to verify your
-          address and set up your workspace.
+          address and finish setting up.
         </p>
         <p className="mt-4 text-xs text-slate-500">
           Nothing there? Check your spam folder, or{" "}
@@ -153,7 +154,7 @@ function SignUpCard() {
                 <ArrowRight aria-hidden className="size-4" />
               </button>
               <p className="text-center text-xs text-slate-500">
-                Students and parents: your tutor or school adds you, so you don&apos;t need to sign up here.
+                For tutors, students and parents. You&apos;ll choose which after you verify your email.
               </p>
             </form>
           </div>
