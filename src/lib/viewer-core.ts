@@ -154,6 +154,11 @@ const NEXA_ADMIN: readonly Permission[] = [
   "admin.console", "admin.impersonate", "admin.override",
 ];
 
+/** What staff keep in a read-only workspace: viewing, paying Nexa, collecting fees, and closing or exporting. */
+export const READ_ONLY_STAFF_KEEPS: ReadonlySet<Permission> = new Set([
+  "content.view", "grades.view", "billing.view", "billing.manage", "fees.manage", "fees.markOffsite", "payouts.connect", "workspace.settings", "workspace.delete",
+]);
+
 /** Permissions that are only ever "own" (◐) for this role and need a scope. */
 export const SCOPED_FOR_TUTOR: ReadonlySet<Permission> = new Set([
   "courses.edit", "courses.services", "learners.invite",
@@ -417,6 +422,12 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
       hasActiveGuardian: input.hasActiveGuardian,
     }),
   );
+  // A read-only workspace (trial ended unpaid, renewal unpaid 14 days, or
+  // cancelled): staff keep viewing, billing, fees and payouts only (design
+  // 03, section 5; #189). Learners and guardians are never blocked.
+  if (persona === "staff" && workspace?.readOnly) {
+    for (const p of [...perms]) if (!READ_ONLY_STAFF_KEEPS.has(p)) perms.delete(p);
+  }
   // A Nexa admin who also teaches keeps the console in every context.
   if (user.platformRole === "NEXA_ADMIN" && persona !== "admin") {
     permissionsFor({ persona: "admin", membershipRole: null, workspaceKind: null, learnerPaymentVisible: false, hasActiveGuardian: false })

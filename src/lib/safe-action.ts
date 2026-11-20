@@ -32,7 +32,7 @@
 import { createSafeActionClient } from "next-safe-action";
 
 import { auth, AuthError, requireRole, requireSession } from "@/lib/auth";
-import { requireViewer, ViewerError } from "@/lib/viewer";
+import { getViewer, requireViewer, ViewerError } from "@/lib/viewer";
 import { BillingError } from "@/features/billing/errors";
 import { ProviderError } from "@/features/payments/provider/types";
 
@@ -69,8 +69,27 @@ export const authActionClient = actionClient.use(async ({ next }) => {
 /**
  * Tutor-only client — adds `ctx.session` with role asserted to "TUTOR".
  */
+/**
+ * Staff writes are refused in a read-only workspace (#189): one guard here
+ * for every action on the tutor and staff clients. Billing, fees and
+ * exports use other clients, so they keep working.
+ */
+async function assertWritable() {
+  const viewer = await getViewer();
+  if (viewer?.persona === "staff" && viewer.workspace?.readOnly) {
+    throw new BillingError("READ_ONLY", "Your workspace is read-only. Pay to unlock it.");
+  }
+}
+
+/** Tutor reads and exports that stay allowed in a read-only workspace. */
+export const tutorReadActionClient = actionClient.use(async ({ next }) => {
+  const session = await requireRole("TUTOR");
+  return next({ ctx: { session } });
+});
+
 export const tutorActionClient = actionClient.use(async ({ next }) => {
   const session = await requireRole("TUTOR");
+  await assertWritable();
   return next({ ctx: { session } });
 });
 
@@ -105,6 +124,7 @@ export const parentActionClient = actionClient.use(async ({ next }) => {
 export const staffActionClient = actionClient.use(async ({ next }) => {
   const session = await requireRole("TUTOR", "ADMIN");
   const viewer = await requireViewer();
+  await assertWritable();
   return next({ ctx: { session, viewer } });
 });
 

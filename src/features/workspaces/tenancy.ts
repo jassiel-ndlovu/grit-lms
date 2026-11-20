@@ -114,6 +114,13 @@ export async function setCourseEnrollment(
     .filter((id): id is string => id != null);
   const unmatched = studentIds.length - userIds.length;
 
+  // Only students who belong to this workspace can be enrolled (#189); new
+  // ones are added with createStudentAccount. The legacy workspace still
+  // takes any existing student, as before tenancy.
+  if (workspaceId !== LEGACY_WORKSPACE_ID && userIds.length) {
+    const members = new Set((await tx.learner.findMany({ where: { workspaceId, userId: { in: userIds } }, select: { userId: true } })).map((l) => l.userId));
+    if (userIds.some((u) => !members.has(u))) throw new Error("One of these students isn't in this workspace. Add them as a student first.");
+  }
   // Ensure a Learner in this workspace for each, in three queries whatever
   // the class size (create the missing ones, then read all ids).
   if (userIds.length) {

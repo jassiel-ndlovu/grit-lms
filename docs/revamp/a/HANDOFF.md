@@ -3,6 +3,18 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-21 Read-only guard and enrolment scoping (#189); seed seat charges (F5), `revamp/a-read-only-guard`
+
+The owner confirmed production sign-in works after the cutover.
+
+Done:
+- **Permissions:** in a read-only workspace, staff keep only `READ_ONLY_STAFF_KEEPS`: content.view, grades.view, billing.*, fees.*, payouts.connect, workspace.settings, workspace.delete. Learners, guardians and Nexa admins are unaffected.
+- **Action clients:** `tutorActionClient` and `staffActionClient` refuse with `READ_ONLY:` in a read-only workspace. `tutorReadActionClient` is new, for exports (B to move `exportTestJson` onto it).
+- **Enrolment:** `setCourseEnrollment` refuses students who aren't learners in the course's workspace, except in the legacy workspace.
+- **F5:** the Preview seed now records advance seat charges for paid periods, as a real payment does. Preview was reseeded.
+- **F8:** `/dashboard/fees` is B's page; passed back.
+- Checks: 7 on preview; `check-viewer` passes.
+
 ## 2026-11-20 Production switched to Better Auth, `revamp/a-auth-cutover`
 
 The owner and B finished the Preview pass (`docs/revamp/b/testing/preview-e2e-2026-11-20.md`). Sign-in worked for every role after #175; no finding blocks the switch.
