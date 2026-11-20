@@ -83,6 +83,8 @@ export type Viewer = {
     twoFactorEnabled: boolean;
     /** False for a self sign-up that hasn't chosen tutor, student or parent yet: send them to /dashboard/welcome. */
     roleConfirmed: boolean;
+    /** True while a tutor-issued sign-in code is still the password: send them to set their own (setOwnPassword). */
+    mustChangePassword: boolean;
   };
   workspaces: WorkspaceSummary[];
   workspace: ViewerWorkspace | null;
@@ -284,6 +286,7 @@ export function buildLegacyViewer(input: {
       emailVerified: user.emailVerified,
       twoFactorEnabled: false,
       roleConfirmed: true,
+      mustChangePassword: false,
     },
     workspaces,
     workspace,
@@ -328,6 +331,7 @@ export type TenancyInput = {
     imageUrl: string | null;
     /** False until a self sign-up chooses a role. Defaults to true. */
     roleConfirmed?: boolean;
+    mustChangePassword?: boolean;
   };
   memberships: Array<{
     id: string;
@@ -425,6 +429,7 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
       emailVerified: user.emailVerified,
       twoFactorEnabled: false,
       roleConfirmed: user.roleConfirmed ?? true,
+      mustChangePassword: user.mustChangePassword ?? false,
     },
     workspaces,
     workspace,

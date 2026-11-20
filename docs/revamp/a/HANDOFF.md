@@ -3,6 +3,24 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Tutor-created students and parents, sign-in codes, staff invites, `revamp/a-invites-students`
+
+Design 02, sections 5 and 5.1, built on Better Auth. Viewer contract Draft 1.6.
+
+Done:
+- Migration `19_invites_student_codes`: the `Invite` table, with a partial unique index for one pending invite; `User.mustChangePassword`, `initialCodeExpiresAt` and `emailIsPlaceholder`.
+- `features/auth/codes.ts`: codes, usernames and placeholder emails. `features/users/accounts.ts`: student accounts, new codes, parent linking, the first password. `features/auth/invites.ts`: staff invites.
+- Sign-in:
+  - Better Auth accepts a code typed loosely;
+  - a session hook refuses an expired code;
+  - NextAuth accepts a loosely typed code too;
+  - placeholder addresses are never mailed;
+  - tutor-created accounts are `emailConfirmed`, so they can sign in at once.
+- Emails `auth:invite` (sealed token, removed after sending) and `guardian:linked`.
+- Checks: `scripts/check-accounts.ts` (15). An end-to-end run on preview in Better Auth mode passed 21 checks; rows removed.
+
+Note: students and parents without an email can only sign in once production runs Better Auth (username sign-in).
+
 ## 2026-11-20 Calendar and attendance backend (#149), `revamp/a-calendar-attendance`
 
 Following B research 10's fallback: today's recurrence columns stay, a time zone and an exceptions table are added, and RRULE goes only into feeds. B's preferred `rrule` column would have needed a destructive conversion of existing events and a rewrite of B's expander. Contract: `docs/revamp/contracts/calendar.md`.
