@@ -3,6 +3,17 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Optional trial, paying during the trial, courses start on Pro, `revamp/a-trial-options`
+
+Owner decisions (20 November): the trial is optional. A tutor may skip it, pay during it (the first 30 days start when the trial ends), or pay any time after it. A card before the trial comes later; for now the card is added after. New courses start on Pro, and tutors must be told that Core and Plus exist and cost less. Up to 3 owned workspaces and a verified email are confirmed.
+
+Done:
+- `createWorkspace({ ..., trial: false })`: READ_ONLY until the first payment; no trial caps; deleted 2 months later if never paid.
+- `markInvoicePaid`: paid during the trial, the period starts at `trialEndsAt` (the workspace is ACTIVE and the trial caps are lifted at once).
+- `setUpCourseTenancy` switches on every v1 premium service for a new course outside the legacy workspace (`switchOnProServices`). services.md rule 9, Draft 1.4.
+- The trial-ending and trial-ended emails say courses are on Pro and that Core and Plus cost less, and that paying early keeps the trial days.
+- A one-off run on preview passed 5 checks; rows removed. `check-email-queue.ts` passes. No migration.
+
 ## 2026-11-20 Onboarding: create a workspace with its trial, `revamp/a-onboarding`
 
 Done:

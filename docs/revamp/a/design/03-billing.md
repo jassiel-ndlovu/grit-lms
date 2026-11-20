@@ -57,7 +57,7 @@ Keys come from [research/02-service-catalogue.md](../research/02-service-catalog
 
 - **Rule:** a successful payment at time `t` starts a period `[t, t + 30 days)`. The renewal charge is attempted at `t + 30 days` (the start of the next period). In the workspace timezone a payment on 3 February 2027 covers 3 February to 4 March inclusive and renews on **5 March**. **Owner decision (16 November):** exactly 30 days (`BillingConfig.periodDays = 30`).
 - **Late payment:** "each payment is valid for the next 30 days", so a renewal paid late starts the new period on the payment date, and `renewsAt` moves with it. **Owner decision (16 November):** a late payment still buys 30 days from the day it is paid. The days between the missed renewal and the late payment are not billed (at most 14; staff were nagged throughout).
-- **First period:** the owner's first payment ends the trial. Paying before day 14 starts the paid period at once and lifts the trial caps; the remaining trial days are not added. **Decision taken here.** Alternative: save the card early and charge at `trialEndsAt`.
+- **First period (owner decision 2026-11-20):** the trial is optional. A tutor may skip it (the workspace is `READ_ONLY` until the first payment, which starts the period at once), pay during it, or pay any time after it. Paying during the trial makes the workspace `ACTIVE` and lifts the trial caps at once, but the first 30 days start when the trial ends, so the tutor keeps the trial days. A card before the trial comes later; for now the card is added at the first payment. New courses start on Pro; tutors downgrade for a cheaper plan.
 - **No proration** anywhere: adds, drops, tier changes and cancellation are all whole-period amounts.
 
 ## 4. What a renewal invoice charges

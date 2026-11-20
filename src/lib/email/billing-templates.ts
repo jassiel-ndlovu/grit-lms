@@ -51,9 +51,10 @@ export function renderBillingEmail<T extends BillingTemplate>(template: T, data:
         d.daysLeft <= 1 ? `Your Nexa trial ends tomorrow` : `Your Nexa trial ends in ${d.daysLeft} days`,
         [
           `The free trial for ${d.workspaceName} ends on ${d.trialEndsOn}.`,
-          "Choose a tier for each course and pay for your first 30 days to keep everything running. After the trial, staff can still sign in, but can't make changes until the bill is paid. Students are never blocked.",
+          "Your courses are on Pro, with every feature on. If you don't need all of them, you can move any course to Core or Plus, which cost less, on the billing page before you pay.",
+          "You can pay now: your first 30 days start when the trial ends, so you keep the rest of your trial. After the trial, staff can still sign in, but can't make changes until the bill is paid. Students are never blocked.",
         ],
-        "Choose tiers and pay",
+        "Review plans and pay",
       );
     }
     case "trial-ended": {
@@ -62,9 +63,9 @@ export function renderBillingEmail<T extends BillingTemplate>(template: T, data:
         "Your Nexa trial has ended",
         [
           `The trial for ${d.workspaceName} is over, so the workspace is read-only for staff. Students can still take tests and submit work.`,
-          "Pay for your first 30 days and everything opens again straight away.",
+          "Pay for your first 30 days and everything opens again straight away. Your courses are on Pro; if you'd like a cheaper plan, move any course to Core or Plus on the billing page before you pay.",
         ],
-        "Pay now",
+        "Review plans and pay",
       );
     }
     case "dunning": {

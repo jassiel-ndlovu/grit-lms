@@ -1,9 +1,16 @@
 /**
  * Creating a workspace (ux/01, section 3; design 01 and 03, section 6).
- * The signed-in user becomes its OWNER, and it starts a 14-day TRIAL with
- * no card: a Subscription row (billed to the owner's email) and the trial
- * caps (20 active students, 100 AI marks). Server only; takes the user so
- * scripts can test it.
+ * The signed-in user becomes its OWNER and a Subscription row is billed to
+ * their email. The trial is optional (owner decision 2026-11-20):
+ *
+ *   - with it: a 14-day TRIAL with no card and the trial caps (20 active
+ *     students, 100 AI marks). Paying during the trial starts the first
+ *     30 days when the trial ends (settle.ts, markInvoicePaid).
+ *   - without it: READ_ONLY until the first payment, which starts the first
+ *     period at once. Never paid, it is deleted 2 months later like an
+ *     ended trial.
+ *
+ * Server only; takes the user so scripts can test it.
  */
 
 import "server-only";
@@ -11,6 +18,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 
 import { getBillingConfig } from "@/features/billing/data";
+import { addCalendarMonths } from "@/features/payments/settlement-rules";
 import { BillingError } from "@/features/billing/errors";
 import { prisma } from "@/lib/db";
 
@@ -48,7 +56,7 @@ export function slugFor(name: string): string {
 
 export async function createWorkspaceFor(
   user: { id: string; name: string; email: string; emailVerified: boolean },
-  input: { kind: "SOLO" | "ORGANISATION"; name?: string; timezone?: string },
+  input: { kind: "SOLO" | "ORGANISATION"; name?: string; timezone?: string; trial?: boolean },
   now: Date = new Date(),
 ) {
   if (!user.emailVerified) throw new BillingError("FORBIDDEN", "Verify your email address first");
@@ -58,20 +66,23 @@ export async function createWorkspaceFor(
   const owned = await prisma.membership.count({ where: { userId: user.id, role: "OWNER", status: "ACTIVE" } });
   if (owned >= MAX_OWNED_WORKSPACES) throw new BillingError("FORBIDDEN", `You can own up to ${MAX_OWNED_WORKSPACES} workspaces`);
   const config = await getBillingConfig();
-  const trialEndsAt = new Date(now.getTime() + config.trialDays * DAY);
+  const trial = input.trial ?? true;
+  const trialEndsAt = trial ? new Date(now.getTime() + config.trialDays * DAY) : now;
 
   return prisma.$transaction(async (tx) => {
     const ws = await tx.workspace.create({
-      data: { kind: input.kind, name, slug: slugFor(name), timezone, billingState: "TRIAL", trialEndsAt },
+      data: { kind: input.kind, name, slug: slugFor(name), timezone, billingState: trial ? "TRIAL" : "READ_ONLY", trialEndsAt },
       select: { id: true, slug: true, name: true, kind: true, trialEndsAt: true },
     });
     const m = await tx.membership.create({ data: { workspaceId: ws.id, userId: user.id, role: "OWNER" }, select: { id: true } });
-    await tx.subscription.create({ data: { workspaceId: ws.id, billingEmail: user.email } });
-    await tx.usageCap.createMany({ data: TRIAL_CAPS.map((c) => ({ workspaceId: ws.id, meter: c.meter, limitQuantity: c.limitQuantity, source: "TRIAL" as const })) });
-    await tx.auditLog.create({
-      data: { workspaceId: ws.id, actorUserId: user.id, action: "workspace.create", targetType: "Workspace", targetId: ws.id, data: { kind: input.kind, membershipId: m.id } },
+    await tx.subscription.create({
+      data: { workspaceId: ws.id, billingEmail: user.email, ...(trial ? {} : { readOnlySince: now, deleteAfter: addCalendarMonths(now, 2) }) },
     });
-    return { workspaceId: ws.id, slug: ws.slug, name: ws.name, kind: ws.kind, trialEndsAt: ws.trialEndsAt!.toISOString() };
+    if (trial) await tx.usageCap.createMany({ data: TRIAL_CAPS.map((c) => ({ workspaceId: ws.id, meter: c.meter, limitQuantity: c.limitQuantity, source: "TRIAL" as const })) });
+    await tx.auditLog.create({
+      data: { workspaceId: ws.id, actorUserId: user.id, action: "workspace.create", targetType: "Workspace", targetId: ws.id, data: { kind: input.kind, membershipId: m.id, trial } },
+    });
+    return { workspaceId: ws.id, slug: ws.slug, name: ws.name, kind: ws.kind, trial, trialEndsAt: trial ? ws.trialEndsAt!.toISOString() : null };
   }, { timeout: 30_000 });
 }
 

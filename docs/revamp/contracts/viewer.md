@@ -144,7 +144,7 @@ export function canIn(
 
 `switchWorkspace(workspaceId)` sets the `nexa_ws` cookie after checking membership or learner rows, then revalidates the layout. Pages read the new context on the next render.
 
-`createWorkspace({ kind: "SOLO" | "ORGANISATION", name?, timezone? })` (ux/01, section 3) makes the caller the OWNER of a new workspace, starts the 14-day trial (Subscription billed to the caller's email; trial caps 20 active students and 100 AI marks), switches to it, and returns `{ workspaceId, slug, name, kind, trialEndsAt }`. The name defaults to "Thandi's practice" or "Thandi's organisation" from the caller's first name; the time zone to `Africa/Johannesburg`. Refused when the email is not verified, or when the caller already owns 3 workspaces. Behind `BILLING=1`.
+`createWorkspace({ kind: "SOLO" | "ORGANISATION", name?, timezone?, trial? })` (ux/01, section 3) makes the caller the OWNER of a new workspace. The trial is optional (owner decision 2026-11-20): `trial: false` skips it, and the workspace is read-only for staff until the first payment (`trialEndsAt` comes back null). By default it starts the 14-day trial (Subscription billed to the caller's email; trial caps 20 active students and 100 AI marks), switches to it, and returns `{ workspaceId, slug, name, kind, trialEndsAt }`. The name defaults to "Thandi's practice" or "Thandi's organisation" from the caller's first name; the time zone to `Africa/Johannesburg`. Refused when the email is not verified, or when the caller already owns 3 workspaces. Behind `BILLING=1`.
 
 `updateWorkspaceProfile({ name?, timezone? })` needs `workspace.settings`; names are 2 to 80 characters and the time zone must be an IANA name. Returns `{ id, name, timezone }`.
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.4. `createWorkspace` takes `trial` (optional trial) |
 | 2026-11-20 | Draft 1.3. `createWorkspace` and `updateWorkspaceProfile` (onboarding) |
 | 2026-11-16 | Draft 1. No `mode` field (owner decision, plan revision 3) |
 | 2026-11-16 | Draft 1.2. Client components import types and `can()` from `@/lib/viewer-core`, because `viewer.ts` is server-only. Phase 0 bridge: one comped organisation until Phase 1 (PR #63) |
