@@ -6,7 +6,7 @@
 
 import { redirect } from "next/navigation";
 
-import { needsOnboarding } from "@/features/users/onboarding-gate";
+import { newAccountRedirect } from "@/features/users/onboarding-gate";
 import { startPathFor } from "@/features/users/start-page";
 import { getUserPreferences } from "@/features/users/preferences";
 import { auth } from "@/lib/auth";
@@ -14,7 +14,8 @@ import { auth } from "@/lib/auth";
 export default async function StartPage() {
   const session = await auth();
   if (!session?.user) redirect("/auth");
-  if (await needsOnboarding()) redirect("/dashboard/onboarding");
+  const firstStop = await newAccountRedirect();
+  if (firstStop) redirect(firstStop);
   const prefs = await getUserPreferences(session.user.id);
   redirect(startPathFor(session.user.role, prefs.defaultDashboardTab));
 }
