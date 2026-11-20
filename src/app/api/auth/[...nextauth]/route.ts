@@ -1,7 +1,19 @@
-import NextAuth from "next-auth";
+/**
+ * Stand-in for NextAuth's old endpoints, which Better Auth replaced on
+ * 2026-11-20. B's providers.tsx still mounts next-auth's SessionProvider,
+ * which asks /api/auth/session on every page; answer "no session" so it
+ * stays quiet. Delete this, and the next-auth package, once providers.tsx
+ * no longer uses it.
+ */
 
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
 
-const handler = NextAuth(authOptions);
+export const dynamic = "force-dynamic";
 
-export { handler as GET, handler as POST };
+export function GET() {
+  return NextResponse.json({});
+}
+
+export function POST() {
+  return NextResponse.json({});
+}

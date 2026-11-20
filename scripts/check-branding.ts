@@ -67,6 +67,8 @@ const ALLOWED: readonly RegExp[] = [
   /grit-lms\.vercel\.app/gi, // Vercel project URL
   /github\.com\/[\w.-]+\/grit-lms/gi, // GitHub repo URL
   /\bcd grit-lms\b/gi, // clone folder named after the repo
+  /grit-lms-sb/gi, // Neon project name
+  /integrity/gi, // an ordinary word that contains "grit"
 ];
 
 const OLD_NAME = /grit/i;
