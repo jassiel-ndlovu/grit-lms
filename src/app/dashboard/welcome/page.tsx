@@ -1,7 +1,8 @@
 /**
  * /dashboard/welcome: where a new account lands after verifying its email
  * or signing up with Google (A's auth-client uses it as the callback).
- * A self sign-up picks tutor, student or parent here, once (#158).
+ * A self sign-up picks tutor, student or parent here, once (#158), then
+ * sets a few preferences.
  * Anyone who has already chosen moves on.
  */
 
@@ -22,7 +23,7 @@ export default async function WelcomePage() {
   const first = viewer.user.name.split(" ")[0];
   return (
     <OnboardingFrame step={null} trialDays={null}>
-      <StepHeading title={first ? `Welcome, ${first}` : "Welcome to Nexa"} lead="How will you use Nexa?" />
+      <StepHeading title={first ? `Welcome, ${first}` : "Welcome to Nexa"} lead="Two quick questions and you're in." />
       <RoleChooser />
     </OnboardingFrame>
   );
