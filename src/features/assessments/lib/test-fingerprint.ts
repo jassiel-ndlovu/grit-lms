@@ -44,6 +44,7 @@ const QUESTION_FIELDS = {
   matchPairs: true,
   reorderItems: true,
   blankCount: true,
+  mathMode: true,
 } as const;
 
 /** Hash any JSON-able value with object keys sorted, so key order never matters. */

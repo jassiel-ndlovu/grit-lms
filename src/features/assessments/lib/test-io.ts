@@ -53,6 +53,7 @@ type ImportQuestion = {
   matchPairs?: Array<{ left: string; right: string }> | null;
   reorderItems?: string[] | null;
   blankCount?: number | null;
+  mathMode?: "EQUIVALENT" | "FORM" | "MARGIN" | null;
   subQuestions?: ImportQuestion[] | null;
 };
 
@@ -72,6 +73,7 @@ const ImportQuestionSchema: z.ZodType<ImportQuestion> = z.lazy(() =>
     matchPairs: z.array(MatchPairSchema).nullable().optional(),
     reorderItems: z.array(z.string()).nullable().optional(),
     blankCount: z.number().int().positive().nullable().optional(),
+    mathMode: z.enum(["EQUIVALENT", "FORM", "MARGIN"]).nullable().optional(),
     subQuestions: z.array(ImportQuestionSchema).nullable().optional(),
   }),
 );
@@ -129,6 +131,7 @@ function toCreateTree(q: ImportQuestion): CreateTestQuestionTree {
     matchPairs: q.matchPairs ?? null,
     reorderItems: q.reorderItems ?? [],
     blankCount: q.blankCount ?? null,
+    mathMode: q.type === "MATH_EXPRESSION" ? q.mathMode ?? "EQUIVALENT" : null,
     subQuestions: (q.subQuestions ?? []).map(toCreateTree),
   }; 
 }
@@ -217,6 +220,7 @@ type SerializedQuestion = {
   matchPairs?: Array<{ left: string; right: string }>;
   reorderItems?: string[];
   blankCount?: number;
+  mathMode?: "EQUIVALENT" | "FORM" | "MARGIN";
 };
 
 /** Types that carry a list of choices. */
@@ -233,6 +237,7 @@ const HAS_ANSWER = new Set([
   "TRUE_FALSE",
   "SHORT_ANSWER",
   "NUMERIC",
+  "MATH_EXPRESSION",
   "FILL_IN_THE_BLANK",
 ]);
 
@@ -279,6 +284,9 @@ function serializeQuestion(
   }
   if (q.type === "FILL_IN_THE_BLANK" && q.blankCount != null) {
     out.blankCount = q.blankCount;
+  }
+  if (q.type === "MATH_EXPRESSION" && q.mathMode) {
+    out.mathMode = q.mathMode;
   }
 
   return out;
@@ -397,6 +405,7 @@ Extra fields depend on the type. Only include the fields relevant to the type.
 | \`TRUE_FALSE\`         | —                                               | \`"true"\` or \`"false"\` (string)                      |
 | \`SHORT_ANSWER\`       | —                                               | string                                              |
 | \`NUMERIC\`            | —                                               | string or number                                    |
+| \`MATH_EXPRESSION\`    | \`mathMode\`: \`EQUIVALENT\` (default), \`FORM\` or \`MARGIN\` | string — TeX, e.g. \`x(x+3)\`; for MARGIN \`3.14 \\pm 0.01\` |
 | \`ESSAY\`              | —                                               | \`null\` (graded manually)                            |
 | \`CODE\`               | \`language: string\`                              | \`null\` (graded manually)                            |
 | \`FILE_UPLOAD\`        | —                                               | \`null\` (graded manually)                            |

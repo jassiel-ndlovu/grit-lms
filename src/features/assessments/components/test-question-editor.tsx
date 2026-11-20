@@ -11,6 +11,7 @@
  *   - MULTIPLE_CHOICE / MULTI_SELECT: options editor + correct choice(s)
  *   - TRUE_FALSE:                     radio for true / false
  *   - SHORT_ANSWER / NUMERIC:         free-text correct answer
+ *   - MATH_EXPRESSION:                a maths key (MathLive) + marking mode
  *   - ESSAY / CODE:                   optional model answer (manual marking)
  *   - FILE_UPLOAD:                    optional model answer — file(s) OR a
  *                                     Markdown/MathJax text solution
@@ -61,6 +62,7 @@ import {
   type TestFileAnswer,
 } from "../lib/file-answers";
 import { cn } from "@/lib/utils";
+import { MathField } from "@/components/editor/math-field";
 
 /* ─── Shape ────────────────────────────────────────────────────────────── */
 
@@ -76,6 +78,7 @@ export type EditorQuestionType =
   | "REORDER"
   | "FILL_IN_THE_BLANK"
   | "NUMERIC"
+  | "MATH_EXPRESSION"
   | "NONE";
 
 export interface EditorQuestion {
@@ -90,8 +93,12 @@ export interface EditorQuestion {
   matchPairs: Array<{ left: string; right: string }>;
   reorderItems: string[];
   blankCount: number | null;
+  /** MATH_EXPRESSION only: how the answer is marked. */
+  mathMode?: MathModeValue | null;
   subQuestions: EditorQuestion[];
 }
+
+export type MathModeValue = "EQUIVALENT" | "FORM" | "MARGIN";
 
 const TYPE_LABELS: Record<EditorQuestionType, string> = {
   MULTIPLE_CHOICE: "Multiple choice",
@@ -105,6 +112,7 @@ const TYPE_LABELS: Record<EditorQuestionType, string> = {
   REORDER: "Reorder",
   FILL_IN_THE_BLANK: "Fill in the blank",
   NUMERIC: "Numeric",
+  MATH_EXPRESSION: "Maths expression",
   NONE: "Context (no answer)",
 };
 
@@ -125,6 +133,7 @@ export function blankQuestion(): EditorQuestion {
     matchPairs: [],
     reorderItems: [],
     blankCount: null,
+    mathMode: null,
     subQuestions: [],
   };
 }
@@ -239,6 +248,7 @@ export function TestQuestionEditor({
           : [],
       blankCount: nextType === "FILL_IN_THE_BLANK" ? question.blankCount ?? 1 : null,
       language: nextType === "CODE" ? question.language ?? "" : null,
+      mathMode: nextType === "MATH_EXPRESSION" ? question.mathMode ?? "EQUIVALENT" : null,
       points: nextType === "NONE" ? 0 : question.points || 1,
     });
   }
@@ -554,6 +564,8 @@ function TypeSpecificFields({
           )}
         </div>
       );
+    case "MATH_EXPRESSION":
+      return <MathsKeyFields question={question} patch={patch} />;
     case "CODE":
       return (
         <div className="space-y-3">
@@ -1186,6 +1198,66 @@ function FillBlanksEditor({
             </li>
           ))}
         </ol>
+      </div>
+    </div>
+  );
+}
+
+/* ─── MATH_EXPRESSION key ─────────────────────────────────────────────── */
+
+const MATH_MODES: Array<{ value: MathModeValue; label: string; hint: string }> = [
+  {
+    value: "EQUIVALENT",
+    label: "Any equivalent form",
+    hint: "Marked right if it's mathematically equal: x(x+3) and x²+3x both count.",
+  },
+  {
+    value: "FORM",
+    label: "Same form as the key",
+    hint: "Order and spacing don't matter, but the form does: for a factorised key, x²+3x is wrong.",
+  },
+  {
+    value: "MARGIN",
+    label: "A number within a margin",
+    hint: "Write the margin in the key with ±, e.g. 3.14 ± 0.01. Without one the value must match.",
+  },
+];
+
+function MathsKeyFields({
+  question,
+  patch,
+}: {
+  question: EditorQuestion;
+  patch: <K extends keyof EditorQuestion>(key: K, value: EditorQuestion[K]) => void;
+}) {
+  const mode = question.mathMode ?? "EQUIVALENT";
+  const key = typeof question.answer === "string" ? question.answer : "";
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+      <div className="space-y-1.5">
+        <span className="text-foreground text-xs font-medium">Correct answer</span>
+        <MathField label="Correct answer" value={key} onChange={(v) => patch("answer", v)} />
+        <p className="text-muted-foreground text-xs">
+          Answers that can&apos;t be checked automatically go to you to mark.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <span className="text-foreground text-xs font-medium">Marking</span>
+        <Select value={mode} onValueChange={(v) => patch("mathMode", v as MathModeValue)}>
+          <SelectTrigger className="w-full sm:w-56" aria-label="Marking">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MATH_MODES.map((m) => (
+              <SelectItem key={m.value} value={m.value}>
+                {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-muted-foreground max-w-56 text-xs">
+          {MATH_MODES.find((m) => m.value === mode)?.hint}
+        </p>
       </div>
     </div>
   );

@@ -3,6 +3,46 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Maths in answers, phase 2, `revamp/b-maths-answers-2`
+
+Design `b/design/01-maths-in-answers.md`, phase 2: the Maths expression
+question type, on A's migration 16 (#164).
+
+Done:
+- **`checkMaths`** (`src/features/assessments/lib/maths-check.ts`, server
+  only) marks a TeX answer against the TeX key with Compute Engine
+  (`@cortex-js/compute-engine` pinned at 0.180.0, A's OK on #161). Modes:
+  any equivalent form (default), same form as the key, or a number within
+  a `±` margin. It never throws; anything it can't decide is "undecided".
+- **Auto-marking:** `autoGradeSubmission` takes the checker as an option.
+  Undecided answers go to the tutor (owner decision 2), never marked wrong.
+  Both marking actions pass it.
+- **Tutor editor:** "Maths expression" type with a MathLive key and a
+  Marking select. `mathMode` travels through the form, the edit page,
+  the save actions, the fingerprint, the answer key and JSON import and
+  export (documented in the import guide).
+- **Plus gate:** adding a maths-expression question needs the `math-input`
+  service on the course (`hasService`). Questions a test already has stay
+  editable. The editor still offers the type everywhere; the save says
+  it's a Plus feature when the course doesn't have it.
+- **Student runner:** a MathLive answer box. MathLive starts loading when
+  the attempt opens if the test has a maths question.
+- **Grading form, review and grade pages:** the answer and key are
+  typeset (`MathsAnswerText`); the grading form also says which mode marks it.
+- `/design-system/questions` has a maths sample and the editor card.
+
+Checked:
+- `tsc` and `eslint` clean. `scripts/check-maths-answers.ts` (new):
+  27 checker cases plus 2 marking cases pass.
+- In `/design-system/questions`, typed x(x+3) in the student box: stored
+  as TeX and typeset for the tutor. The editor card's key and Marking
+  select update the question.
+- Not checked: saving a real test and marking a real submission (no
+  local sign-in). Fingerprints now include `mathMode`, so an editor
+  opened before this deploys will be asked to reload once on save.
+
+Next: owner checks a maths test on Preview once #175 is fixed.
+
 ## 2026-11-20 Maths in answers, phase 1, `revamp/b-maths-answers-1`
 
 Design `b/design/01-maths-in-answers.md`, phase 1 (no schema change).
