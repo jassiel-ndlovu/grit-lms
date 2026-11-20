@@ -139,9 +139,11 @@ export function activeHref(pathname: string, hrefs: readonly string[]): string |
  * Pages shown without the sidebar, top bar or search: the student test
  * runner (`/dashboard/tests/<id>`), so a student can't leave a sitting by
  * accident (b/research/05 "Test runner"). Its pre-test and review pages keep
- * the shell.
+ * the shell. Also workspace setup (`/dashboard/onboarding`, a/ux/01 §4),
+ * which draws its own header.
  */
 export function isFocusRoute(pathname: string): boolean {
+  if (pathname === "/dashboard/onboarding" || pathname.startsWith("/dashboard/onboarding/")) return true;
   const m = /^\/dashboard\/tests\/([^/]+)\/?$/.exec(pathname);
   return m != null && m[1] !== "pre-test" && m[1] !== "review";
 }

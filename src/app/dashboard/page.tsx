@@ -55,6 +55,9 @@ import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { TutorHome } from "@/features/activity/components/tutor-home";
 import { parseAttentionFilter } from "@/features/activity/lib/attention";
 import { getTutorHome } from "@/features/activity/tutor-home";
+import { SetupChecklist } from "@/features/courses/components/setup-checklist";
+import { setupChecklistFor } from "@/features/courses/setup-checklist";
+import { getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "Dashboard" };
 
@@ -80,9 +83,19 @@ export default async function DashboardLanding({
     const [prefs, { show }] = await Promise.all([getUserPreferences(session.user.id), searchParams]);
     const dateCtx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
     const now = new Date();
-    const data = await getTutorHome(tutor.id, now, dateCtx.timeZone);
+    const [data, setup] = await Promise.all([
+      getTutorHome(tutor.id, now, dateCtx.timeZone),
+      getViewer().then(setupChecklistFor),
+    ]);
     return (
-      <TutorHome firstName={userFirstName} data={data} filter={parseAttentionFilter(show)} now={now} dateCtx={dateCtx} />
+      <TutorHome
+        firstName={userFirstName}
+        data={data}
+        filter={parseAttentionFilter(show)}
+        now={now}
+        dateCtx={dateCtx}
+        setup={setup ? <SetupChecklist workspaceId={setup.workspaceId} items={setup.items} /> : null}
+      />
     );
   }
   if (session.user.role === "ADMIN") {

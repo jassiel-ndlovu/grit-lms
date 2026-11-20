@@ -22,7 +22,7 @@ import { signOut } from "next-auth/react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Award, BarChart3, BookOpen, Calendar, ChevronsUpDown, ClipboardList, FileText,
-  CreditCard, GraduationCap, Receipt, HelpCircle, Home, Inbox, LogOut, Menu, Search, Settings, User,
+  CreditCard, GraduationCap, Receipt, HelpCircle, Home, Inbox, LogOut, Menu, Plus, Search, Settings, User,
   Users, X, type LucideIcon,
 } from "lucide-react";
 
@@ -58,6 +58,8 @@ export interface ShellUser {
   workspaces?: ShellWorkspace[];
   /** The active one (viewer.workspace.id); null for guardians and admins. */
   workspaceId?: string | null;
+  /** Offer "Create a workspace" (billing on, verified email, not a learner or guardian). */
+  canCreateWorkspace?: boolean;
 }
 
 export interface ShellWorkspace {
@@ -180,6 +182,11 @@ function AccountMenu({ user }: { user: ShellUser }) {
               ))}
             </DropdownMenuRadioGroup>
           </>
+        ) : null}
+        {user.canCreateWorkspace ? (
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/onboarding"><Plus /> Create a workspace</Link>
+          </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

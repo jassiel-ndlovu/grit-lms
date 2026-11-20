@@ -59,6 +59,8 @@ export interface CourseFormProps {
   redirectTo?: string;
   /** Optional callback after a successful save. */
   onSuccess?: () => void;
+  /** Show the enrolment picker (default). Onboarding hides it: no students yet. */
+  showStudents?: boolean;
 }
 
 export function CourseForm({
@@ -66,6 +68,7 @@ export function CourseForm({
   defaultValues,
   redirectTo,
   onSuccess,
+  showStudents = true,
 }: CourseFormProps) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -186,23 +189,25 @@ export function CourseForm({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="studentIds"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Enrolled students</FormLabel>
-              <FormControl>
-                <StudentPicker
-                  students={students}
-                  value={field.value ?? []}
-                  onChange={field.onChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {showStudents ? (
+          <FormField
+            control={form.control}
+            name="studentIds"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Enrolled students</FormLabel>
+                <FormControl>
+                  <StudentPicker
+                    students={students}
+                    value={field.value ?? []}
+                    onChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
 
         <div className="flex justify-end gap-2">
           <Button type="submit" disabled={pending}>

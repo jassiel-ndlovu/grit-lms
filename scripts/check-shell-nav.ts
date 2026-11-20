@@ -68,6 +68,8 @@ check("focus: not the tests list", isFocusRoute("/dashboard/tests"), false);
 check("focus: not pre-test", isFocusRoute("/dashboard/tests/pre-test/abc123"), false);
 check("focus: not review", isFocusRoute("/dashboard/tests/review/abc123"), false);
 check("focus: not the tutor side", isFocusRoute("/dashboard/tutor-tests/abc123"), false);
+check("focus: onboarding", [isFocusRoute("/dashboard/onboarding"), isFocusRoute("/dashboard/onboarding/course")], [true, true]);
+check("focus: not a look-alike", isFocusRoute("/dashboard/onboarding-help"), false);
 
 for (const role of Object.keys(BEFORE) as LegacyRole[]) {
   const all = [...hrefsOf(navSectionsFor(viewerFor(role))), ...FOOTER_LINKS.map((l) => l.href)];
