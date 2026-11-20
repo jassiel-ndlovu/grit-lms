@@ -3,6 +3,44 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Extra time per student, `revamp/b-extra-time` (#134)
+
+Owner decision 7; the owner asked for the field in chat ("Yes, create the
+field for extra time.").
+
+Done:
+- **Schema:** `TimeAccommodation` (assessments.prisma): one row per
+  student per course, `extraTimePercent` (0/25/50/100) or `noTimeLimit`,
+  cascades with the course. `studentId` has no relation because `Student`
+  is in A's core.prisma. `TestSubmission` gains `extraTimePercent` and
+  `noTimeLimit` (defaulted), copied from the grant when the attempt starts.
+  Migration `12_time_accommodation` is additive.
+- **Setting it:** "Extra time on timed tests" card on the course Settings
+  page, a picker per enrolled student (`setExtraTime`: course staff only,
+  enrolled students only). It also updates the student's open attempts on
+  the course, so a mid-sitting grant counts at once.
+- **Applying it:** `attemptDeadline` / `effectiveTimeLimit` stretch or drop
+  the time limit; the runner's clock, the auto-submit job and the pre-test
+  page use it. The due date still closes the test for everyone.
+
+Checked:
+- `tsc` and `eslint` clean; `check-extra-time` (new) and
+  `check-runner-state` pass.
+- A temporary sample-data page showed the card, its empty state, and a
+  refused change (not signed in) going back; nothing was written.
+- Preview: the PR's build applied the migration; `migrate status` is up to
+  date.
+- Production (read-only): `migrate status` shows only
+  `12_time_accommodation` pending, and `migrate diff` from the live
+  database equals that migration exactly.
+
+**Waiting on the owner:** Neon refused the backup branch
+`backup-time-accommodation-20261120` with "branches limit exceeded" (the
+project has production, preview and eight `backup-*` branches). Rule 4.1
+needs that backup before `migrate deploy` on production, and deleting an
+old backup is the owner's call. #134 stays unmerged until production has
+the migration, because production code would read the new columns.
+
 ## 2026-11-20 Student test runner, `revamp/b-test-runner`
 
 Owner decision 8 (one question per screen), b/research/05 "Test runner"
