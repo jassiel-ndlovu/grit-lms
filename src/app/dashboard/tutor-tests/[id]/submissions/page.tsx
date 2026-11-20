@@ -22,7 +22,7 @@ import {
 } from "@/features/assessments/queries";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { TestFrame } from "@/features/assessments/components/test-frame";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -50,9 +50,9 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = teacherFrom(session.user);
+  const scope = await getCourseScope(session.user.id);
 
-  const owns = await testBelongsToTutor(testId, tutor.id);
+  const owns = await testBelongsToTutor(testId, scope);
   if (!owns) {
     return (
       <div className="text-muted-foreground p-8 text-sm">

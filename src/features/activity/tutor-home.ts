@@ -9,7 +9,7 @@ import "server-only";
  */
 
 import { prisma } from "@/lib/db";
-import { taughtByUser } from "@/features/courses/lib/tenancy-where";
+import { manageableBy, type CourseScope } from "@/features/courses/lib/course-access";
 import { occurrencesOf } from "@/features/events/lib/recurrence";
 
 import { attentionRows, type AttentionRow, type AttentionSource } from "./lib/attention";
@@ -23,14 +23,14 @@ export interface TutorHomeData {
   upcoming: { id: string; title: string; course: string; date: Date }[];
 }
 
-export async function getTutorHome(teacherUserId: string, now: Date, timeZone: string): Promise<TutorHomeData> {
+export async function getTutorHome(scope: CourseScope, now: Date, timeZone: string): Promise<TutorHomeData> {
   const [courses, tests, assignments, events] = await Promise.all([
     prisma.course.findMany({
-      where: taughtByUser(teacherUserId),
+      where: manageableBy(scope),
       select: { id: true, enrollments: { where: { endedAt: null }, select: { learnerId: true } } },
     }),
     prisma.test.findMany({
-      where: { course: taughtByUser(teacherUserId) },
+      where: { course: manageableBy(scope) },
       select: {
         id: true,
         title: true,
@@ -41,7 +41,7 @@ export async function getTutorHome(teacherUserId: string, now: Date, timeZone: s
       },
     }),
     prisma.submission.findMany({
-      where: { course: taughtByUser(teacherUserId) },
+      where: { course: manageableBy(scope) },
       select: {
         id: true,
         title: true,
@@ -52,7 +52,7 @@ export async function getTutorHome(teacherUserId: string, now: Date, timeZone: s
       },
     }),
     prisma.courseEvent.findMany({
-      where: { course: taughtByUser(teacherUserId) },
+      where: { course: manageableBy(scope) },
       select: {
         id: true,
         title: true,

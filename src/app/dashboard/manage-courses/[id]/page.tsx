@@ -11,6 +11,7 @@ import { prisma } from "@/lib/db";
 import { CourseOverview } from "@/features/courses/components/course-overview";
 import { lessonSummary, sortWork, type WorkItem } from "@/features/courses/lib/course-overview";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
+import { otherTeacherName } from "@/features/courses/lib/course-access";
 import { describeRecurrence, occurrencesOf } from "@/features/events/lib/recurrence";
 import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesson-tree";
 import { getUserPreferences } from "@/features/users/preferences";
@@ -70,14 +71,18 @@ export default async function ManageCourseOverviewPage({ params }: PageProps) {
     .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
 
   const tests = course.tests.length;
-  const props: [string, React.ReactNode][] = [
+  const props: [string, React.ReactNode][] = [];
+  // An owner or admin looking at a tutor's course (#192): say who teaches it.
+  const teacher = otherTeacherName(userId, course);
+  if (teacher) props.push(["Taught by", teacher]);
+  props.push(
     ["Students", `${course.students.length} enrolled`],
     ["Lessons", lessonSummary(course.lessons)],
     [
       "Assessments",
       `${tests} test${tests === 1 ? "" : "s"} · ${assignments.length} assignment${assignments.length === 1 ? "" : "s"}`,
     ],
-  ];
+  );
   if (schedule.length) props.push(["Schedule", schedule.slice(0, 2).join("; ")]);
   props.push([
     "Next session",

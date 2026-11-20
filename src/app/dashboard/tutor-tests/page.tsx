@@ -22,7 +22,7 @@ import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TutorTestActions } from "@/features/assessments/components/tutor-test-actions";
 import { ImportTestDialog } from "@/features/assessments/components/import-test-dialog";
 import { testRoutes } from "@/features/assessments/components/test-frame";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 export const metadata = { title: "Tests" };
 
@@ -37,11 +37,11 @@ export default async function TutorTestsPage() {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = teacherFrom(session.user);
+  const scope = await getCourseScope(session.user.id);
 
   const [tests, courses] = await Promise.all([
-    listTestsByTutorId(tutor.id),
-    listCoursesByTutorId(tutor.id),
+    listTestsByTutorId(scope),
+    listCoursesByTutorId(scope),
   ]);
 
   // Sort published-first, then by due date descending so the tutor's

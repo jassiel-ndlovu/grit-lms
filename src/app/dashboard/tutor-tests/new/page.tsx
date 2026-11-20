@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/shell/page-header";
 
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TestForm } from "@/features/assessments/components/test-form";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 export const metadata = { title: "New test" };
 
@@ -24,9 +24,9 @@ export default async function NewTestPage() {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = teacherFrom(session.user);
+  const scope = await getCourseScope(session.user.id);
 
-  const courses = await listCoursesByTutorId(tutor.id);
+  const courses = await listCoursesByTutorId(scope);
   if (courses.length === 0) {
     return (
       <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-10">

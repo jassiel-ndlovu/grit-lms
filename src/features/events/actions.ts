@@ -25,6 +25,8 @@ import {
 import { z } from "zod";
 
 import { CuidSchema } from "../shared/primitives";
+import { getCourseScope } from "@/features/courses/course-access";
+import { managesCourse } from "@/features/courses/lib/course-access";
 
 const DeleteCourseEventSchema = z.object({ id: CuidSchema });
 
@@ -33,10 +35,10 @@ export const createCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { staff: staffFor(ctx.session.user.email) },
+      select: { workspaceId: true, staff: staffFor(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
-    if (course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
       throw new Error("You don't own this course");
     }
 
@@ -73,10 +75,10 @@ export const updateCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.courseEvent.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Event not found");
-    if (existing.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
       throw new Error("You don't own this event");
     }
 
@@ -119,10 +121,10 @@ export const deleteCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.courseEvent.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Event not found");
-    if (existing.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
       throw new Error("You don't own this event");
     }
 

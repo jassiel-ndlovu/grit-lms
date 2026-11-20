@@ -42,6 +42,8 @@ import {
   type LessonOrderNode,
 } from "./schemas";
 import { subtreeIds } from "./lib/lesson-tree";
+import { getCourseScope } from "@/features/courses/course-access";
+import { managesCourse } from "@/features/courses/lib/course-access";
 
 /* ------------------------------------------------------------------------- */
 /* Helpers                                                                   */
@@ -117,12 +119,12 @@ export const createLesson = tutorActionClient
     // Ownership check — the tutor must own the course this lesson is for.
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, staff: staffFor(ctx.session.user.email) },
+      select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) },
     });
     if (!course) {
       throw new Error("Course not found");
     }
-    if (course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
       throw new Error("You don't own this course");
     }
     if (parsedInput.parentId) {
@@ -201,14 +203,14 @@ export const updateLesson = tutorActionClient
       where: { id: parsedInput.id },
       include: {
         attachmentUrls: { select: { url: true } },
-        course: { select: { id: true, staff: staffFor(ctx.session.user.email) } },
+        course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } },
       },
     });
 
     if (!existing) {
       throw new Error("Lesson not found");
     }
-    if (existing.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
       throw new Error("You don't own this lesson");
     }
 
@@ -307,14 +309,14 @@ export const deleteLesson = tutorActionClient
       where: { id: parsedInput.id },
       include: {
         attachmentUrls: { select: { url: true } },
-        course: { select: { id: true, staff: staffFor(ctx.session.user.email) } },
+        course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } },
       },
     });
 
     if (!existing) {
       throw new Error("Lesson not found");
     }
-    if (existing.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
       throw new Error("You don't own this lesson");
     }
 
@@ -370,10 +372,10 @@ export const reorderLessons = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { staff: staffFor(ctx.session.user.email), lessons: { select: { id: true } } },
+      select: { workspaceId: true, staff: staffFor(ctx.session.user.email), lessons: { select: { id: true } } },
     });
     if (!course) throw new Error("Course not found");
-    if (course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
       throw new Error("You don't own this course");
     }
 
@@ -413,10 +415,10 @@ export const updateLessonLabelScheme = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { staff: staffFor(ctx.session.user.email) },
+      select: { workspaceId: true, staff: staffFor(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
-    if (course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
       throw new Error("You don't own this course");
     }
     await prisma.course.update({
