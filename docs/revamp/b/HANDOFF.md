@@ -3,6 +3,43 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Error pages (404, 500, 401, 403), `revamp/b-error-pages`
+
+Owner's request: Nexa's own pages instead of Next's plain 404.
+
+Done:
+- **`src/components/error-screen.tsx`:** one layout for every error page.
+  It has a small "Error 404" label, a plain-words title and description,
+  buttons, "Still stuck? Contact support" and an Open Peeps figure on
+  wide screens. `ErrorFrame` adds the Nexa wordmark for pages outside the
+  dashboard.
+- **`src/components/error-screen-client.tsx`:**
+  - the missing address under the 404 text;
+  - a Back button, shown only when there's history;
+  - `ErrorBoundaryScreen`, which reports the error to Sentry and shows
+    Try again plus the error reference (`digest`) for support.
+- **Pages:**
+  - `app/not-found.tsx`: any unknown address.
+  - `app/dashboard/not-found.tsx`: `notFound()` inside the dashboard,
+    in the shell.
+  - `app/error.tsx` and `app/dashboard/error.tsx`: crashes.
+  - `app/global-error.tsx`: the root layout itself fails.
+  - `app/forbidden.tsx` and `app/unauthorized.tsx`: 403 and 401.
+
+Checked:
+- `tsc` and `eslint` clean.
+- Dev server: an unknown address gives the new 404 with status 404 and
+  the address. A temporary page that throws gave the 500 page (status 500)
+  with Try again. Both were checked at narrow and wide widths, and the
+  temporary page was removed.
+- The dashboard 404 and 500 need a signed-in session, so they weren't
+  seen locally. They use the same component.
+
+For A:
+- 403 and 401 render only once `experimental.authInterrupts: true` is in
+  `next.config` (A's file). Pages can then call `forbidden()` and
+  `unauthorized()` instead of `notFound()`.
+
 ## 2026-11-20 Discount codes on fees, `revamp/b-fee-codes`
 
 From contract Draft 1.13 (`listFeeDiscountCodes`,
