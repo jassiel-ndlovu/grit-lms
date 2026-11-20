@@ -2,9 +2,7 @@
 
 /**
  * Client-side sign-in helpers for B's components (design 02, section 2).
- * Each works with whichever system is on (NEXT_PUBLIC_AUTH_PROVIDER, set
- * together with AUTH_PROVIDER), so B can swap its imports from
- * `next-auth/react` before the cutover and nothing changes until it.
+ * Better Auth only, since the 2026-11-20 cutover.
  *
  *   useAppSession()            replaces useSession()
  *   signInWithPassword(...)    replaces signIn("credentials", ...)
@@ -15,9 +13,9 @@
 
 import { createAuthClient } from "better-auth/react";
 import { twoFactorClient, usernameClient } from "better-auth/client/plugins";
-import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, useSession as useNextAuthSession } from "next-auth/react";
 
-const BETTER = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "better-auth";
+/** Better Auth signs everyone in since the 2026-11-20 cutover. */
+const BETTER = true;
 
 /** True when the Google button should show (Better Auth on, and Google keys configured). */
 export const googleSignInAvailable = BETTER && process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN === "1";
@@ -38,26 +36,15 @@ function useBetterAuthSession(): AppSession {
   return { status: "authenticated", user: { id: u.id, name: u.name, email: u.email, role: u.role ?? "STUDENT" } };
 }
 
-function useNextAuthAppSession(): AppSession {
-  const { data, status } = useNextAuthSession();
-  if (status === "loading") return { status, user: null };
-  if (!data?.user) return { status: "unauthenticated", user: null };
-  const u = data.user as { id?: string; name?: string | null; email?: string | null; role?: string };
-  return { status: "authenticated", user: { id: u.id ?? "", name: u.name ?? "", email: u.email ?? "", role: u.role ?? "" } };
-}
 
 /** The signed-in user on the client. The mode is fixed at build time, so this is always the same hook. */
-export const useAppSession: () => AppSession = BETTER ? useBetterAuthSession : useNextAuthAppSession;
+export const useAppSession: () => AppSession = useBetterAuthSession;
 
 export type SignInResult = { ok: true } | { ok: false; error: string; twoFactorRequired?: boolean };
 
 /** Email (or, after the cutover, username) and password. Never says whether an account exists. */
 export async function signInWithPassword(input: { identifier: string; password: string; callbackUrl?: string }): Promise<SignInResult> {
   const failed = "That email and password don't match.";
-  if (!BETTER) {
-    const r = await nextAuthSignIn("credentials", { email: input.identifier, password: input.password, redirect: false });
-    return r?.ok && !r.error ? { ok: true } : { ok: false, error: failed };
-  }
   const isEmail = input.identifier.includes("@");
   const r = isEmail
     ? await authClient.signIn.email({ email: input.identifier, password: input.password, callbackURL: input.callbackUrl })
@@ -82,7 +69,6 @@ export async function signInWithGoogle(callbackUrl = "/dashboard/start") {
 
 /** Staff sign-up (after the cutover). The account must verify its email before signing in. */
 export async function signUpWithPassword(input: { name: string; email: string; password: string }): Promise<SignInResult> {
-  if (!BETTER) return { ok: false, error: "Sign-up isn't open yet." };
   const r = await authClient.signUp.email({ name: input.name, email: input.email, password: input.password, callbackURL: "/dashboard/welcome" });
   if (r.error) {
     const code = (r.error as { code?: string }).code;
@@ -93,7 +79,6 @@ export async function signUpWithPassword(input: { name: string; email: string; p
 }
 
 export async function appSignOut(callbackUrl = "/") {
-  if (!BETTER) return nextAuthSignOut({ callbackUrl });
   await authClient.signOut();
   window.location.href = callbackUrl;
 }

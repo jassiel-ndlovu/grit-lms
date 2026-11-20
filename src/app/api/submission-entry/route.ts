@@ -13,7 +13,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { NextRequest, NextResponse } from "next/server";
-import type { Session } from "next-auth";
+import type { Session } from "@/lib/auth";
 
 import type { Prisma } from "@/generated/prisma";
 import { enrollmentFor, taughtByEmail } from "@/features/courses/lib/tenancy-where";

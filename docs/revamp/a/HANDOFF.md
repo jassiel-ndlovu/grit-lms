@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-21 Restarting cancelled workspaces (#191); NextAuth removed from A's code, `revamp/a-restart-and-nextauth`
+
+Owner decision (2026-11-21): restarting with no students is free with a card on file.
+
+Done:
+- **`billing/restart.ts`** and the `restartWorkspace` action (billing contract Draft 1.15). It returns PAY_OUTSTANDING, PAY_FIRST_PERIOD, CARD_REQUIRED or RESTARTED (a R0 first period).
+- **NextAuth removed from A's code:**
+  - `lib/auth.ts` is Better Auth only, with its own `Session` type;
+  - middleware checks only the Better Auth cookie;
+  - `auth-client.ts` has no NextAuth fallback;
+  - the API routes import `Session` from `@/lib/auth`;
+  - sign-ins are written to the activity log from a Better Auth hook.
+- **What stays until B moves off it:** B's `providers.tsx` (`SessionProvider`) and `features/search/queries.ts` (a type import). The `next-auth` package and `lib/next-auth.d.ts` remain, and a stand-in `/api/auth/[...nextauth]` answers "no session". Delete all three once B is done.
+- **`check-branding`:** allows the Neon project name and the word "integrity".
+- **Checks:**
+  - restart: 8 checks on preview (Preview reseeded afterwards);
+  - all check scripts pass;
+  - local `next build` passes with a secret set.
+- **Process:** the 2026-11-21 deploy limit was hit (#198 merged without a build). This PR waits for every check to pass. See AGENTS.md 4.4.
+
 ## 2026-11-21 Organisation and tutor mode (#192); two-factor answers (#178), `revamp/a-viewer-mode`
 
 Done:
