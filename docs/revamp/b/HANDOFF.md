@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Owner decisions after the Preview pass
+
+- **`REVAMP_UI` on Preview:** yes, to start testing the revamp for its
+  production release. The owner sets it in Vercel (Preview environment),
+  then a redeploy. Re-run 5.1 (workspace switcher) and the trial chip in 6.1
+  afterwards.
+- **Course cover stays required.** Add a few stock covers and use one when
+  none is chosen; the "Must be a valid URL" error then can't happen (F11).
+- **Restarting a cancelled workspace:** allowed; the owner pays what the
+  restart costs before it's recovered, even with no students. A designs
+  `restartWorkspace` on #191; B builds the screen after.
+- **Finding self-registered students (future, not decided):** B's
+  suggestion on #191: students and parents browse courses and request to
+  join; tutors may invite one known username or email; tutors never browse
+  the global student list.
+- **Owners see every course in their organisation; staff who teach switch
+  between Organisation and Tutor mode** (#192). B can do the owner access
+  part now; the mode needs `viewer.mode` from A.
+- **PR 188** (parent per-child view) reviewed and merged.
+
 ## 2026-11-20 Parent child view, `revamp/b-parent-children`
 
 Follow-up to F7 in the Preview pass (`b/testing/preview-e2e-2026-11-20.md`):
