@@ -7,7 +7,7 @@
  * Stage 2: the same routes are scheduled in QStash or Vercel Cron.
  */
 
-export type JobName = "auto-submit" | "notifications" | "housekeeping" | "billing" | "payments-reconcile";
+export type JobName = "auto-submit" | "notifications" | "housekeeping" | "billing" | "payments-reconcile" | "fees-daily";
 
 export type JobInfo = {
   name: JobName;
@@ -46,6 +46,12 @@ export const JOBS: Record<JobName, JobInfo> = {
   "payments-reconcile": {
     name: "payments-reconcile",
     path: "/api/cron/payments-reconcile",
+    schedule: "30 0 * * *",
+    staleAfterMinutes: 26 * 60,
+  },
+  "fees-daily": {
+    name: "fees-daily",
+    path: "/api/cron/fees-daily",
     schedule: "30 0 * * *",
     staleAfterMinutes: 26 * 60,
   },

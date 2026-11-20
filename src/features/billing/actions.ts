@@ -19,7 +19,9 @@ import { requireViewer } from "@/lib/viewer";
 
 import { chargeSavedCard, createInvoicePayment } from "./charge";
 import { assertBillingEnabled, BillingError } from "./errors";
+import { loadOpenPeriod } from "./data";
 import { createFirstInvoice } from "./invoice";
+import { capStatuses } from "./queries";
 import { addDays, applyServiceChange, billedTier, derivedTier, holdUntilFor, tierAbove } from "./pricing";
 import { assertSwitchable, loadServiceChangeContext, requireCourseServicesAccess } from "./queries";
 
@@ -325,4 +327,48 @@ export const redeemDiscountCode = viewerActionClient
     });
     revalidatePath("/dashboard", "layout");
     return { description: code.description, scope: code.scope, periodsLeft: code.durationPeriods };
+  });
+
+const CAP_METERS = { "active-students": "ACTIVE_STUDENTS", "ai-marks": "AI_MARKS", "storage-gb": "STORAGE_MB", "api-pass-through": "API_REQUESTS", "live-room-minutes": "LIVE_ROOM_MINUTES" } as const;
+
+/**
+ * The owner's own limit on a meter for each period (design 03, section 8).
+ * `limitQuantity: null` removes it. Storage is set in GB and stored in MB.
+ * Returns the CapStatus the usage page shows, or null once removed. Trial
+ * and Nexa-admin caps are separate rows and are not touched.
+ */
+export const setUsageCap = viewerActionClient
+  .schema(z.object({
+    meter: z.enum(["active-students", "ai-marks", "storage-gb", "api-pass-through", "live-room-minutes"]),
+    limitQuantity: z.number().int().positive().max(10_000_000).nullable(),
+    hardStop: z.boolean().default(true),
+  }))
+  .action(async ({ parsedInput }) => {
+    const { viewer, workspace } = await billingManager();
+    const meter = CAP_METERS[parsedInput.meter];
+    const where = { workspaceId_meter_source: { workspaceId: workspace.id, meter, source: "TUTOR" as const } };
+    await prisma.$transaction(async (tx) => {
+      if (parsedInput.limitQuantity == null) {
+        await tx.usageCap.deleteMany({ where: { workspaceId: workspace.id, meter, source: "TUTOR" } });
+      } else {
+        const limit = meter === "STORAGE_MB" ? parsedInput.limitQuantity * 1024 : parsedInput.limitQuantity;
+        await tx.usageCap.upsert({
+          where,
+          create: { workspaceId: workspace.id, meter, limitQuantity: limit, hardStop: parsedInput.hardStop, source: "TUTOR" },
+          update: { limitQuantity: limit, hardStop: parsedInput.hardStop, notifiedLevel: 0, notifiedPeriodStart: null },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          workspaceId: workspace.id, actorUserId: viewer.user.id, impersonatorUserId: viewer.impersonatedBy?.userId ?? null,
+          action: "billing.cap.set", targetType: "Workspace", targetId: workspace.id,
+          data: { meter: parsedInput.meter, limitQuantity: parsedInput.limitQuantity, hardStop: parsedInput.hardStop },
+        },
+      });
+    });
+    revalidatePath("/dashboard", "layout");
+    if (parsedInput.limitQuantity == null) return null;
+    const period = await loadOpenPeriod(workspace.id, new Date());
+    const caps = await capStatuses(workspace.id, period?.start ?? new Date(Date.now() - 30 * 864e5), meter);
+    return caps.find((c) => c.source === "TUTOR") ?? null;
   });

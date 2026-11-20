@@ -29,7 +29,7 @@ function actor(ctx: Ctx): o.Actor {
 }
 
 function done<T>(r: T): T {
-  revalidatePath("/admin", "layout");
+  revalidatePath("/dashboard/admin", "layout");
   return r;
 }
 

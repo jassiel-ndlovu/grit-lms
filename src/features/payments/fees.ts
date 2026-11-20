@@ -15,6 +15,7 @@ import { Prisma } from "@/generated/prisma";
 import { BillingError } from "@/features/billing/errors";
 import { prisma } from "@/lib/db";
 
+import { queueFeeEmail } from "./fee-emails";
 import { getProvider, type PaymentProvider } from "./provider";
 
 type Tx = Prisma.TransactionClient;
@@ -198,7 +199,7 @@ export type IssueLine = { courseId?: string | null; description: string; quantit
  * An OPEN invoice to one learner, for one payee: every line's course must be
  * paid to the same account (in PER_TUTOR mode, one tutor per invoice).
  */
-export async function issueInvoice(actor: Actor, workspaceId: string, input: { learnerId: string; lines: IssueLine[]; dueAt: string; periodStart?: Date; periodEnd?: Date }) {
+export async function issueInvoice(actor: Actor | null, workspaceId: string, input: { learnerId: string; lines: IssueLine[]; dueAt: string; periodStart?: Date; periodEnd?: Date }) {
   if (input.lines.length === 0) throw new BillingError("FORBIDDEN", "An invoice needs at least one line");
   for (const l of input.lines) {
     if (!Number.isSafeInteger(l.quantity) || l.quantity <= 0) throw new BillingError("FORBIDDEN", "Quantities are whole numbers above zero");
@@ -242,7 +243,12 @@ export async function issueInvoice(actor: Actor, workspaceId: string, input: { l
           },
           select: { id: true, number: true },
         });
-        await audit(tx, actor, workspaceId, "fees.invoice.issue", "Invoice", inv.id, { number, totalCents: total, learnerId: input.learnerId });
+        if (actor) await audit(tx, actor, workspaceId, "fees.invoice.issue", "Invoice", inv.id, { number, totalCents: total, learnerId: input.learnerId });
+        await queueFeeEmail(tx, {
+          studentUserId: learner.userId, learnerId: input.learnerId, workspaceId, template: "invoice", event: inv.id,
+          data: (who) => ({ payeeName: who.payeeName, studentName: who.studentName, number, totalCents: total, dueOn: who.day(dueAt) }),
+          payoutAccountId,
+        });
         return inv;
       }, TX);
     } catch (e) {
