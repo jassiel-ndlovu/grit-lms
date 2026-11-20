@@ -13,6 +13,7 @@ import { BookOpen, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import type { CourseListItem } from "../queries";
+import { courseCoverSrc } from "../lib/stock-covers";
 
 export interface CourseCardProps {
   course: CourseListItem;
@@ -40,20 +41,14 @@ export function CourseCard({
     >
       <Link href={href} className="block in-data-[view=list]:flex">
         <div className="bg-muted relative aspect-video w-full overflow-hidden in-data-[view=list]:aspect-auto in-data-[view=list]:min-h-28 in-data-[view=list]:w-32 in-data-[view=list]:shrink-0 sm:in-data-[view=list]:w-48">
-          {(course.imageUrl) ? (
-            <Image
-              src={course.imageUrl}
-              alt={course.name}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="object-cover transition-transform group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center text-xs">
-              No cover
-            </div>
-          )}
+          <Image
+            src={courseCoverSrc(course)}
+            alt={course.name}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform group-hover:scale-105"
+            loading="lazy"
+          />
         </div>
 
         <div className="min-w-0 flex-1 space-y-2 p-4 in-data-[view=list]:pr-12">
