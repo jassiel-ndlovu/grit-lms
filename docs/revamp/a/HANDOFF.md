@@ -16,7 +16,9 @@ Done:
 - Checks: `check-payments.ts` (6 new); a one-off end-to-end run on preview with a fake provider, 21 checks; rows removed.
 - Paystack test mode: split payments to the owner's "Main Branch" and "Secondary Branch" subaccounts, refunded in full and in part.
 
-Not yet: production migration (backup branch first); B's screens for recoveries and admin refunds.
+Production: backup branch `backup-payout-recovery-20261120`, then `12_payout_recovery` applied. B's `12_time_accommodation` (#134) landed at the same time with the same number; both are independent and applied, so the names stay. Next migration is 13.
+
+Not yet: B's screens for recoveries and admin refunds.
 
 ## 2026-11-20 Fees job, fee emails; admin queries and setUsageCap for B, `revamp/a-fees-daily`
 
