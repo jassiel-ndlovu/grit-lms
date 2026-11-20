@@ -22,15 +22,19 @@ import {
   subtreeIds,
   type LessonTreeNode,
 } from "../lib/lesson-tree";
+import type { EditorFeatures } from "@/components/editor/commands";
+
 import type { getLessonDetailById, listLessonsByCourseId } from "../queries";
 
 export interface LessonsWorkspaceProps {
   course: { id: string; name: string; lessonLabelScheme: string[] };
   lessons: Awaited<ReturnType<typeof listLessonsByCourseId>>;
   selectedLesson: Awaited<ReturnType<typeof getLessonDetailById>>;
+  /** Editor blocks this course may use, for example the Plus graph block. */
+  editorFeatures?: Partial<EditorFeatures>;
 }
 
-export function LessonsWorkspace({ course, lessons, selectedLesson }: LessonsWorkspaceProps) {
+export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatures }: LessonsWorkspaceProps) {
   const courseId = course.id;
   const selectedLessonId = selectedLesson?.id ?? null;
 
@@ -85,6 +89,7 @@ export function LessonsWorkspace({ course, lessons, selectedLesson }: LessonsWor
                 courseId={courseId}
                 nextOrder={tree.length}
                 parentOptions={parentOptions}
+                editorFeatures={editorFeatures}
                 label={lessons.length === 0 ? "Create first lesson" : "Add lesson or group"}
               />
             }
@@ -109,6 +114,7 @@ export function LessonsWorkspace({ course, lessons, selectedLesson }: LessonsWor
               <LessonForm
                 layout="document"
                 courseId={courseId}
+                editorFeatures={editorFeatures}
                 parentOptions={editParentOptions}
                 defaultValues={{
                   type: selectedLesson.type,

@@ -24,6 +24,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import type { EditorFeatures } from "@/components/editor/commands";
+
 import { LessonForm } from "./lesson-form";
 
 export interface CreateLessonButtonProps {
@@ -34,6 +36,7 @@ export interface CreateLessonButtonProps {
   label?: string;
   /** Labelled lessons the new one may be nested under. */
   parentOptions?: Array<{ id: string; label: string; title: string; depth: number }>;
+  editorFeatures?: Partial<EditorFeatures>;
 }
 
 export function CreateLessonButton({
@@ -41,6 +44,7 @@ export function CreateLessonButton({
   nextOrder = 0,
   label = "Add lesson",
   parentOptions,
+  editorFeatures,
 }: CreateLessonButtonProps) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
@@ -66,6 +70,7 @@ export function CreateLessonButton({
           courseId={courseId}
           defaultValues={{ order: nextOrder }}
           parentOptions={parentOptions}
+          editorFeatures={editorFeatures}
           onSuccess={({ id }) => {
             setOpen(false);
             router.push(

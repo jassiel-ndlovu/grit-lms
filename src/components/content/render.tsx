@@ -5,7 +5,8 @@
  *
  * Every node renders through its own renderHTML, except:
  * - image: the width attribute becomes a max-width, lazy loading, no drag;
- * - table: wrapped so a wide table scrolls inside the page.
+ * - table: wrapped so a wide table scrolls inside the page;
+ * - graph: GraphFigure, which draws it with Mafs in the browser.
  * Maths nodes emit their TeX in `\( \)` / `\[ \]`; the MathTypeset wrapper
  * (client) has MathJax typeset them in the browser.
  */
@@ -15,6 +16,9 @@ import type { JSONContent } from "@tiptap/core";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 
 import { contentExtensions } from "@/lib/content/extensions";
+import { graphNodeSpec } from "@/lib/content/graph";
+
+import { GraphFigure } from "./graph-figure";
 
 const SAFE_SRC = /^(https?:|\/(?!\/))/i;
 
@@ -40,6 +44,10 @@ export function renderRichContent(doc: JSONContent): React.ReactNode {
               style={{ maxWidth: width ?? "100%", height: "auto" }}
             />
           );
+        },
+        graph: ({ node }) => {
+          const spec = graphNodeSpec(node.attrs);
+          return spec ? <GraphFigure spec={spec} /> : null;
         },
         table: ({ children }) => (
           <div className="my-4 overflow-x-auto">

@@ -15,7 +15,7 @@ export function EditorDemo({ sample }: { sample: string }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <RichEditor label="Lesson body" fallbackMarkdown={sample} onChange={setValue} name="body" />
+      <RichEditor label="Lesson body" fallbackMarkdown={sample} onChange={setValue} name="body" features={{ graph: true }} />
       <div className="min-w-0 space-y-4 text-sm">
         <p data-testid="validity">
           {value === null ? "Edit to see the output." : valid ? "validateDoc: passes" : "validateDoc: FAILS"}

@@ -11,9 +11,11 @@
  * components.
  */
 
+import { hasService } from "@/features/billing/services";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
 import { LessonsWorkspace } from "@/features/lessons/components/lessons-workspace";
 import { getLessonDetailById, listLessonsByCourseId } from "@/features/lessons/queries";
+import { getViewer } from "@/lib/viewer";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -33,5 +35,10 @@ export default async function ManageLessonsPage({ params, searchParams }: PagePr
     selectedLessonParam && lessons.some((l) => l.id === selectedLessonParam) ? selectedLessonParam : null;
   const selectedLesson = selectedLessonId ? await getLessonDetailById(selectedLessonId) : null;
 
-  return <LessonsWorkspace course={course} lessons={lessons} selectedLesson={selectedLesson} />;
+  // Graphs are a Plus service (contracts/services.md): the block is offered
+  // only where the course has it. Graphs already in a lesson still show.
+  const viewer = await getViewer();
+  const graph = viewer ? await hasService(viewer, courseId, "graphing") : false;
+
+  return <LessonsWorkspace course={course} lessons={lessons} selectedLesson={selectedLesson} editorFeatures={{ graph }} />;
 }

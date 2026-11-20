@@ -31,11 +31,11 @@ Decisions behind it: [b/research/SUMMARY.md](../b/research/SUMMARY.md), owner de
 
 - **Column pair.** For a field `x`, the JSON goes in `xJson Json?` beside the existing `x String`. On every save, both are written together: the envelope and `docToMarkdown(doc)`.
 - **Reading.** Use `readStoredContent(row.xJson)`. When it returns null (no JSON yet, or a version this build does not know), show the markdown column with today's renderer.
-- **Schema version.** `CONTENT_SCHEMA_VERSION` is 1. A node change bumps it, and `readStoredContent` gains an upgrade step. Rows are never rewritten in bulk without the owner's approval.
+- **Schema version.** `CONTENT_SCHEMA_VERSION` is 2 (2 added `graph`; version 1 documents read unchanged). A node change bumps it, and `readStoredContent` gains an upgrade step. Rows are never rewritten in bulk without the owner's approval.
 - **Columns need the owner.** Each `Json` column is added in the PR that moves its field to the editor, as a migration in `prisma/schema/migrations`. The owner approves applying it with `prisma migrate deploy`, to production and to the Preview database (AGENTS.md section 4). Live columns: `Lesson.descriptionJson`.
 - **Plain fields stay plain.** Options, match pairs, reorder items and short answers stay markdown strings: they are short and need no blocks.
 
-## The node set (version 1)
+## The node set (version 2)
 
 | Node or mark | Attributes | Markdown form |
 | --- | --- | --- |
@@ -44,13 +44,13 @@ Decisions behind it: [b/research/SUMMARY.md](../b/research/SUMMARY.md), owner de
 | `image` (a block) | `src`, `alt`, `title`, `width` (`"50%"` or `"320px"`) | `![alt [50%]](src)`, today's width convention |
 | `table`, `tableRow`, `tableHeader`, `tableCell` | Tiptap defaults | GFM table |
 | `inlineMath` | `latex`, `display` (true for a `$$…$$` written mid-line) | `$…$`, or `$$…$$` when `display` |
-| `blockMath` | `latex` | `$$` on its own line, the TeX, `$$` on its own line |
+| `blockMath` | `latex` | `$` on its own line, the TeX, `$` on its own line |
+| `graph` (version 2) | `spec`: a `GraphSpec` (`src/lib/content/graph-spec.ts`): `v: 1`, `description`, `x` and `y` ranges, `grid`, up to 12 items (function `expr` in x, `point`, `segment`), each with an optional plain-text `label` and a colour | No markdown form: the copy is `[Graph: <description, or a summary of the items>]` and never reads back |
 
 - **Empty maths.** A maths node with blank TeX writes nothing to markdown. `$$` would read back as display maths. The editor removes empty maths nodes when you leave them.
 - **Importing markdown.** `\(…\)` and `\[…\]` are rewritten to dollars first. A compact `\[26\]` stays text, the mark-allocation rule in `src/lib/tex-delimiters.ts`. Maths inside code stays code. A literal `\$` stays a dollar.
 - **Images in a line.** An image mid-line ("See ![icon](…) here") becomes its own block between the two halves of the line.
 - **Planned nodes, each in its own version bump:**
-  - `graph` (spec JSON, Mafs; service `graphing`)
   - `embeddedQuestion` (only `{ questionId }`, never a copy of the question)
   - `callout`
   - `fileAttachment` (Blob URL)
@@ -63,7 +63,9 @@ Decisions behind it: [b/research/SUMMARY.md](../b/research/SUMMARY.md), owner de
 | `contentExtensions()` | `extensions.ts` | The extension list that defines the format |
 | `markdownToDoc(markdown)` | `markdown.ts` | Today's markdown and TeX to a document |
 | `docToMarkdown(doc)` | `markdown.ts` | The derived markdown copy |
-| `validateDoc(json)` | `schema.ts` | The document as the schema reads it, or null: unknown nodes, marks or nesting, or over 512 KB. Unknown attributes are dropped |
+| `validateDoc(json)` | `schema.ts` | The document as the schema reads it, or null: unknown nodes, marks or nesting, a graph whose spec fails `parseGraphSpec`, or over 512 KB. Unknown attributes are dropped |
+| `compileExpression(text)` | `expr.ts` | A graph formula in x to a function, or a plain-words error. A parser, never `eval` |
+| `parseGraphSpec(json)`, `graphSummary(spec)` | `graph-spec.ts` | The cleaned spec or null; the one-line text for markdown and screen readers |
 | `toStoredContent(doc)`, `readStoredContent(json)`, `CONTENT_SCHEMA_VERSION`, `StoredContent` | `value.ts` | The envelope |
 | `richFieldFromInput(value)` | `save.ts` | For server actions: the validated envelope (`json`), the derived `markdown` and an `empty` flag, or null to refuse the save |
 | `richFieldRefusal(value)` | `save.ts` | Why `richFieldFromInput` refused a value, for server logs. Names the rule, not the content |
@@ -108,9 +110,9 @@ In the editor:
 - Maths: `$x^2$` after a space becomes inline maths, and `$$` then space on an empty line makes a block. A TeX box shows under a selected maths node, with MathJax output above it.
 - No bubble menu or drag handle in Phase 0.
 
-`features` today: `math`, `tables`, `headings`. All default to on. Planned:
+`features` today: `math`, `tables`, `headings` (default on) and `graph` (default off). Planned:
 - `mathInput`: MathLive, when `hasService(viewer, courseId, "math-input")`.
-- `graph`: when `hasService(…, "graphing")`. Both services are on Plus per services.md.
+- `graph` (live): the Graph block, drawn with Mafs (loaded only on pages with a graph). Off by default; the lessons page turns it on when `hasService(viewer, courseId, "graphing")`. Both services are on Plus per services.md.
 - `images`: the `BlobKind` to upload with.
 
 Content made with a Plus service still renders for every reader, whatever their tier.

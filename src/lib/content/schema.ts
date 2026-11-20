@@ -9,6 +9,7 @@ import { getSchema, type JSONContent } from "@tiptap/core";
 import { Node as PMNode, type Schema } from "@tiptap/pm/model";
 
 import { contentExtensions } from "./extensions";
+import { parseGraphSpec } from "./graph-spec";
 
 /** About 50 pages of dense text. A lesson body is a few KB today. */
 export const MAX_DOC_BYTES = 512 * 1024;
@@ -29,8 +30,31 @@ export function validateDoc(doc: unknown): JSONContent | null {
     if (JSON.stringify(doc).length > MAX_DOC_BYTES) return null;
     const node = PMNode.fromJSON(contentSchema(), doc);
     node.check(); // content expressions and marks, recursively
-    return node.toJSON() as JSONContent;
+    return cleanGraphs(node.toJSON() as JSONContent);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Every graph's spec through parseGraphSpec: the schema only knows `spec` is
+ * an attribute, not what's in it. A graph that isn't valid refuses the whole
+ * document, like any other bad node.
+ */
+class BadGraph extends Error {}
+function cleanGraphs(doc: JSONContent): JSONContent | null {
+  const walk = (n: JSONContent): JSONContent => {
+    if (n.type === "graph") {
+      const spec = parseGraphSpec(n.attrs?.spec);
+      if (!spec) throw new BadGraph();
+      return { ...n, attrs: { ...n.attrs, spec } };
+    }
+    return n.content ? { ...n, content: n.content.map(walk) } : n;
+  };
+  try {
+    return walk(doc);
+  } catch (e) {
+    if (e instanceof BadGraph) return null;
+    throw e;
   }
 }

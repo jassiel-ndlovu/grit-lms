@@ -3,6 +3,47 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Graphs in lessons, `revamp/b-graphs`
+
+Owner's request; B research 03 (Mafs) and contracts/editor.md (planned
+`graph` node). Plus service `graphing`.
+
+Done:
+- **`graph` node, content schema version 2** (`src/lib/content/graph.ts`).
+  - It holds a `GraphSpec` (`graph-spec.ts`): description, x and y ranges,
+    grid, and up to 12 curves, points and segments with labels and colours.
+  - `validateDoc` runs every spec through `parseGraphSpec` and refuses a
+    bad one.
+  - The markdown copy is `[Graph: …]`.
+  - Version 1 documents read unchanged.
+- **Formulas:** `expr.ts` parses `2x^2 - 3x + 1`, `sin(x)/x`, `|x - 5|`,
+  `0,5x` and a leading `y =`. It's a parser, never `eval`, with plain-words
+  errors.
+- **Showing a graph:** `GraphFigure` shows the summary as the figure's
+  label and a key of the curves. The Mafs drawing (`graph-mafs.tsx`)
+  loads only in the browser and only where there's a graph. Fixed
+  colours (blue, red, green, amber, violet) have light and dark values.
+- **Editing:** a Graph button and slash command, off unless `features.graph`.
+  - A new graph opens a dialog with a live preview. Cancelling a new
+    graph removes it.
+  - Errors show per item; the preview keeps the last good graph while a
+    formula is half typed.
+- **Lessons page:** passes `graph: hasService(viewer, courseId,
+  "graphing")`. Graphs already in a lesson show for everyone, whatever
+  their tier.
+
+Checked:
+- `tsc` and `eslint` clean.
+- `scripts/check-graph.tsx` (new) passes, and so do `check-rich-content`
+  and `check-rich-render`.
+- In `/design-system/editor` I inserted a graph, typed a broken formula
+  (it showed "The formula ends too early." and Save was off), fixed it,
+  added a labelled point and saved. The derived markdown and
+  `validateDoc` were right.
+
+Needs A:
+- OK for the `mafs` dependency (#152).
+
 ## 2026-11-20 Error pages (404, 500, 401, 403), `revamp/b-error-pages`
 
 Owner's request: Nexa's own pages instead of Next's plain 404.

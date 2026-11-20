@@ -11,7 +11,11 @@
 
 import type { JSONContent } from "@tiptap/core";
 
-export const CONTENT_SCHEMA_VERSION = 1;
+/**
+ * 1: the Phase 0 node set. 2: adds `graph`. Version 1 documents read as
+ * they are: adding a node changes nothing in an old document.
+ */
+export const CONTENT_SCHEMA_VERSION = 2;
 
 export interface StoredContent {
   schemaVersion: number;
@@ -32,5 +36,6 @@ export function readStoredContent(value: unknown): StoredContent | null {
   const v = value as Partial<StoredContent>;
   if (typeof v.schemaVersion !== "number" || v.schemaVersion < 1 || v.schemaVersion > CONTENT_SCHEMA_VERSION) return null;
   if (!v.doc || typeof v.doc !== "object" || v.doc.type !== "doc") return null;
+  // Upgrades: 1 to 2 adds a node only, so the document is unchanged.
   return { schemaVersion: v.schemaVersion, doc: v.doc };
 }
