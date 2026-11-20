@@ -12,6 +12,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma";
 import type { Viewer } from "@/lib/viewer-core";
 
+import { assertCanAddLearners } from "@/features/billing/caps";
 import { SERVICES } from "@/features/billing/catalogue";
 
 import { planEnrollmentChanges } from "./enrollment-plan";
@@ -135,6 +136,8 @@ export async function setCourseEnrollment(
     await tx.enrollment.updateMany({ where: { id: { in: plan.close } }, data: { endedAt: at, status: "DROPPED" } });
   }
   if (plan.open.length) {
+    // A hard-stop student limit (the trial's 20) blocks going over it (design 03, section 6).
+    await assertCanAddLearners(tx, workspaceId, plan.open);
     await tx.enrollment.createMany({
       data: plan.open.map((learnerId) => ({ workspaceId, courseId, learnerId, status: "ACTIVE" as const, startedAt: at })),
     });

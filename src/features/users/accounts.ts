@@ -21,6 +21,7 @@ import "server-only";
 import bcrypt from "bcryptjs";
 
 import { syncCredentialAccount } from "@/features/auth/credential";
+import { assertCanAddLearners } from "@/features/billing/caps";
 import { newSignInCode, normaliseCode, pickUsername, placeholderEmail, usernameBase, USERNAME_RE } from "@/features/auth/codes";
 import { passwordProblem } from "@/features/auth/password-reset";
 import { prisma } from "@/lib/db";
@@ -65,6 +66,8 @@ export async function createStudentAccountFor(actorUserId: string, workspaceId: 
   if (courses.length !== new Set(input.courseIds).size) throw new Error("One of the courses isn't in this workspace");
 
   return prisma.$transaction(async (tx) => {
+    // A new learner enrolled in a course counts against a hard-stop student limit (the trial's 20).
+    if (courses.length) await assertCanAddLearners(tx, workspaceId, ["new-learner"]);
     const username = await freeUsername(tx, input.username, fullName);
     const user = await tx.user.create({
       data: { name: fullName, email: email ?? `pending-${username}@${"students.nexa-lms.invalid"}`, username, displayUsername: username, role: "STUDENT", emailIsPlaceholder: !email, emailConfirmed: true },
