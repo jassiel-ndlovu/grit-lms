@@ -3,6 +3,17 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Temporary app icon, `revamp/b-logo`
+
+The owner chose option A of six: an ink tile with a serif "Nx".
+- `src/app/favicon.ico` (16, 32, 48) replaces create-next-app's Vercel
+  triangle. `src/app/icon.png` (512) and `src/app/apple-icon.png` (180)
+  are new; Next links all three.
+- `scripts/generate-app-icon.ts` makes them from one SVG with Georgia.
+  The PNGs are committed, so builds don't need the font.
+- Checked on the dev server: the three `<link>` tags are there and each
+  file serves with status 200.
+
 ## 2026-11-20 Error pages (404, 500, 401, 403), `revamp/b-error-pages`
 
 Owner's request: Nexa's own pages instead of Next's plain 404.
