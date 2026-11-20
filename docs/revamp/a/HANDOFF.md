@@ -3,6 +3,23 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-21 Organisation and tutor mode (#192); two-factor answers (#178), `revamp/a-viewer-mode`
+
+Done:
+- **`viewer.mode`:**
+  - set only for org owners and admins who teach; defaults to organisation;
+  - tutor mode computes a tutor's grants, and `needsScope` treats them as a tutor;
+  - the `nexa_mode` cookie, switched with `switchViewerMode`;
+  - the loader counts CourseStaff per membership.
+- **`check-viewer.ts`:** the old "no mode field" checks (from the Simple/Technical decision) are replaced by 5 mode checks.
+- **#178:**
+  - two-factor `allowPasswordless`, which applies only to accounts without a password;
+  - the QR package `uqr@0.1.3` approved for B;
+  - email change with two-factor needs a session from the last 15 minutes.
+- The owner decided two-factor is **not** a hard stop for owners ("Remind me tomorrow" stays), so it isn't enforced on the server.
+
+Waiting on the owner: #191, how much restarting a cancelled workspace with no students costs.
+
 ## 2026-11-21 Read-only guard and enrolment scoping (#189); seed seat charges (F5), `revamp/a-read-only-guard`
 
 The owner confirmed production sign-in works after the cutover.

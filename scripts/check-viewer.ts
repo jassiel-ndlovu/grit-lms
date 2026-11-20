@@ -77,7 +77,7 @@ const adultGuarded = permissionsFor({ persona: "learner", membershipRole: null, 
 check("adult student pays only when visible and no guardian", [has(adultPaying, "fees.pay"), has(adultGuarded, "fees.pay")], [true, false]);
 check("none persona has nothing", permissionsFor({ persona: "none", membershipRole: null, workspaceKind: null, learnerPaymentVisible: false, hasActiveGuardian: false }), []);
 check("permissions come back in catalogue order", owner, PERMISSIONS.filter((p) => owner.includes(p)));
-check("no mode field (owner removed modes)", "mode" in tutor, false);
+// The old Simple/Technical UI modes stay removed; #192's organisation/tutor mode is a different, narrower thing (below).
 
 // Phase 1: from the tenancy tables
 const ws = (id: string, over: Partial<TenancyWorkspaceRow> = {}): TenancyWorkspaceRow => ({
@@ -123,7 +123,14 @@ const ro = buildTenancyViewer(tin({ memberships: [{ id: "m1", role: "OWNER", wor
 check("read-only billing state sets readOnly", [ro.workspace?.readOnly, ro.workspace?.trialEndsAt], [true, "2027-01-01T00:00:00.000Z"]);
 check("hasTenancy false with no rows", hasTenancy({ user: base, memberships: [], learners: [], children: [] }), false);
 check("hasTenancy true for a Nexa admin", hasTenancy({ user: { ...base, platformRole: "NEXA_ADMIN" }, memberships: [], learners: [], children: [] }), true);
-check("tenancy viewer has no mode field", "mode" in ownerV, false);
+// Organisation or tutor mode (#192): only an org owner or admin who teaches.
+check("owner who doesn't teach: no mode", ownerV.mode, null);
+const teachingOwner = (mode?: "organisation" | "tutor", kind: "ORGANISATION" | "SOLO" = "ORGANISATION") =>
+  buildTenancyViewer(tin({ memberships: [{ id: "m1", role: "OWNER", workspace: ws("a", { kind }), teams: [], teaches: true }], mode }));
+check("teaching owner defaults to organisation mode, full grants", [teachingOwner().mode, can(teachingOwner(), "billing.manage"), needsScope(teachingOwner(), "courses.edit")], ["organisation", true, false]);
+check("tutor mode: a tutor's scoped grants, no billing", [teachingOwner("tutor").mode, can(teachingOwner("tutor"), "billing.manage"), can(teachingOwner("tutor"), "members.invite"), needsScope(teachingOwner("tutor"), "courses.edit"), can(teachingOwner("tutor"), "fees.manage")], ["tutor", false, false, true, true]);
+check("solo workspace: no mode", teachingOwner("tutor", "SOLO").mode, null);
+check("a plain tutor has no mode", buildTenancyViewer(tin({ memberships: [{ id: "m1", role: "TUTOR", workspace: ws("a"), teams: [], teaches: true }], mode: "tutor" })).mode, null);
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

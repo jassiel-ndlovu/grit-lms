@@ -44,6 +44,20 @@ export const switchWorkspace = viewerActionClient
   });
 
 /**
+ * Organisation or tutor mode (#192), for an owner or admin of an
+ * organisation who also teaches. A cookie, like the workspace switch.
+ */
+export const switchViewerMode = viewerActionClient
+  .schema(z.object({ mode: z.enum(["organisation", "tutor"]) }))
+  .action(async ({ parsedInput: { mode }, ctx: { viewer } }) => {
+    if (viewer.mode === null) throw new ViewerError("FORBIDDEN");
+    const store = await cookies();
+    store.set("nexa_mode", mode, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365 });
+    revalidatePath("/", "layout");
+    return { mode };
+  });
+
+/**
  * Onboarding "Solo or Organisation" (ux/01, section 3): creates the
  * workspace with the caller as OWNER, starts the 14-day trial, and makes it
  * the active workspace. Needs a verified email. Behind BILLING=1, since the
