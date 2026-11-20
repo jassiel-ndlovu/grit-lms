@@ -1,7 +1,9 @@
 /**
  * /dashboard/fees — what students' parents owe, who has paid, and cash or
  * EFT received outside Nexa (a/ux/04 §6; contracts/billing.md section 3).
- * Behind BILLING=1 and `fees.manage`; a tutor whose permission is scoped
+ * Behind BILLING=1. Staff with `fees.manage` get the list below; a guardian
+ * (`fees.pay`) or an adult student allowed to see fees gets what they owe
+ * and pays it (section 2, FeeCheckout). a tutor whose permission is scoped
  * sees the courses they teach. `?status=OPEN|PAID|ALL` (default OPEN),
  * `?course=` and `?cursor=` go to listFeeInvoices. `?recovery=` is where the
  * refund-recovery pay link lands (section 3); refunds still being taken
@@ -14,14 +16,15 @@ import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/shell/page-header";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { feeCourses } from "@/features/courses/fee-courses";
+import { FeeCheckout, type PayableRow } from "@/features/courses/components/fee-checkout";
 import { NewFeeButton } from "@/features/courses/components/fee-dialogs";
 import { PayoutRecoveries, RecoveryNotice } from "@/features/courses/components/fee-recoveries";
 import { FeeFilters, FeesTable, feesHref, type FeeFilter } from "@/features/courses/components/fees-list";
 import { payoutErrorMessage } from "@/features/courses/lib/payouts-ui";
-import { getPayoutSettings, listFeeInvoices, listPayoutRecoveries } from "@/features/payments/fee-queries";
+import { getPayoutSettings, listFeeInvoices, listPayableInvoices, listPayoutRecoveries } from "@/features/payments/fee-queries";
 import { getUserPreferences } from "@/features/users/preferences";
-import { DEFAULT_TIME_ZONE, resolveLocale } from "@/lib/datetime";
-import { can, getViewer } from "@/lib/viewer";
+import { DEFAULT_TIME_ZONE, formatDate, resolveLocale, type DateContext } from "@/lib/datetime";
+import { can, getViewer, type Viewer } from "@/lib/viewer";
 
 export const metadata = { title: "Fees" };
 
@@ -33,7 +36,11 @@ export default async function FeesPage({ searchParams }: PageProps) {
   if (!isBillingEnabled()) notFound();
   const viewer = await getViewer();
   if (!viewer) redirect("/auth");
-  if (!viewer.workspace || !can(viewer, "fees.manage")) notFound();
+  if (!can(viewer, "fees.manage")) {
+    if (isPayer(viewer)) return <PayerFees viewer={viewer} />;
+    notFound();
+  }
+  if (!viewer.workspace) notFound();
 
   const [sp, prefs, courses] = await Promise.all([searchParams, getUserPreferences(viewer.user.id), feeCourses(viewer)]);
   const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
@@ -113,5 +120,62 @@ export default async function FeesPage({ searchParams }: PageProps) {
         firstPage={!cursor}
       />
     </>,
+  );
+}
+
+/* ───── Paying fees: guardians and adult students ───── */
+
+/** Mirrors A's checkout rule: a guardian with fees.pay, or a learner who sees their own fees. */
+function isPayer(viewer: Viewer): boolean {
+  return (viewer.children.length > 0 && can(viewer, "fees.pay")) || viewer.learner?.paymentVisible === true;
+}
+
+function dayIn(iso: string, ctx: DateContext): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: ctx.timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+}
+
+async function PayerFees({ viewer }: { viewer: Viewer }) {
+  const prefs = await getUserPreferences(viewer.user.id);
+  const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
+  const forSelf = !(viewer.children.length > 0 && can(viewer, "fees.pay"));
+  const shell = (children: React.ReactNode) => (
+    <>
+      <PageHeader breadcrumb={[{ label: "Fees" }]} />
+      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
+        <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Fees</h1>
+        {children}
+      </div>
+    </>
+  );
+
+  let items;
+  try {
+    items = await listPayableInvoices();
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    const message = (e as { message?: string }).message ?? "";
+    return shell(
+      <p role="alert" className="text-muted-foreground text-sm">
+        We couldn&apos;t load your fees. {code ? payoutErrorMessage(`${code}: ${message}`) : null}{" "}
+        <Link href="/dashboard/fees" className="text-foreground underline underline-offset-2">
+          Try again
+        </Link>
+      </p>,
+    );
+  }
+
+  const rows: PayableRow[] = items.map((i) => ({
+    ...i,
+    dueDay: dayIn(i.dueAt, ctx),
+    dueLabel: formatDate(i.dueAt, ctx),
+    lockedLabel: i.lockedUntil ? formatDate(i.lockedUntil, ctx, { hour: "2-digit", minute: "2-digit" }) : null,
+  }));
+  return shell(
+    <FeeCheckout
+      open={rows.filter((r) => r.status === "OPEN")}
+      paid={rows.filter((r) => r.status === "PAID").reverse()}
+      today={dayIn(new Date().toISOString(), ctx)}
+      forSelf={forSelf}
+    />,
   );
 }
