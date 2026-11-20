@@ -3,7 +3,9 @@
  * EFT received outside Nexa (a/ux/04 §6; contracts/billing.md section 3).
  * Behind BILLING=1 and `fees.manage`; a tutor whose permission is scoped
  * sees the courses they teach. `?status=OPEN|PAID|ALL` (default OPEN),
- * `?course=` and `?cursor=` go to listFeeInvoices.
+ * `?course=` and `?cursor=` go to listFeeInvoices. `?recovery=` is where the
+ * refund-recovery pay link lands (section 3); refunds still being taken
+ * from payouts show above the list.
  */
 
 import Link from "next/link";
@@ -13,9 +15,10 @@ import { PageHeader } from "@/components/shell/page-header";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { feeCourses } from "@/features/courses/fee-courses";
 import { NewFeeButton } from "@/features/courses/components/fee-dialogs";
+import { PayoutRecoveries, RecoveryNotice } from "@/features/courses/components/fee-recoveries";
 import { FeeFilters, FeesTable, feesHref, type FeeFilter } from "@/features/courses/components/fees-list";
 import { payoutErrorMessage } from "@/features/courses/lib/payouts-ui";
-import { getPayoutSettings, listFeeInvoices } from "@/features/payments/fee-queries";
+import { getPayoutSettings, listFeeInvoices, listPayoutRecoveries } from "@/features/payments/fee-queries";
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, resolveLocale } from "@/lib/datetime";
 import { can, getViewer } from "@/lib/viewer";
@@ -23,7 +26,7 @@ import { can, getViewer } from "@/lib/viewer";
 export const metadata = { title: "Fees" };
 
 interface PageProps {
-  searchParams: Promise<{ status?: string; course?: string; cursor?: string }>;
+  searchParams: Promise<{ status?: string; course?: string; cursor?: string; recovery?: string }>;
 }
 
 export default async function FeesPage({ searchParams }: PageProps) {
@@ -43,20 +46,26 @@ export default async function FeesPage({ searchParams }: PageProps) {
       <PageHeader breadcrumb={[{ label: "Fees" }]} actions={<NewFeeButton courses={courses} />} />
       <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
         <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Fees</h1>
+        <RecoveryNotice state={sp.recovery} />
         {children}
       </div>
     </>
   );
 
-  let list, payouts;
+  let list, payouts, recoveries;
   try {
-    [list, payouts] = await Promise.all([
+    [list, payouts, recoveries] = await Promise.all([
       listFeeInvoices({
         ...(status === "ALL" ? {} : { status }),
         ...(courseId ? { courseId } : {}),
         ...(cursor ? { cursor } : {}),
       }),
       getPayoutSettings(),
+      // Fees still show if this fails; the recoveries just don't.
+      listPayoutRecoveries().catch((e: unknown) => {
+        console.error("[fees] recoveries not loaded:", (e as Error).message);
+        return [];
+      }),
     ]);
   } catch (e) {
     const code = (e as { code?: string }).code;
@@ -93,6 +102,7 @@ export default async function FeesPage({ searchParams }: PageProps) {
           </Link>
         </div>
       ) : null}
+      <PayoutRecoveries items={recoveries} ctx={ctx} now={new Date().toISOString()} />
       <FeeFilters status={status} courseId={courseId} courses={courses} />
       <FeesTable
         list={list}

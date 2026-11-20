@@ -3,6 +3,36 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Refund recovery screens, `revamp/b-refund-recovery`
+
+From A's #137 (PR #136, contract Draft 1.12).
+
+Done:
+- **Admin** `/dashboard/admin/billing/recoveries` (new ribbon link):
+  every recovery (`adminListPayoutRecoveries`) with a status filter, the
+  payee, the refund and its reason, what is still owed, when deductions
+  start, and per-row Hold deductions, Repaid off-site and Waive. A
+  "Refund a fee invoice" form (`adminRefundFeeInvoice`) takes the fee
+  invoice id, an optional amount and a reason, labelled as quoted to the
+  tutor.
+- **Tutor** `/dashboard/fees`: active recoveries (`listPayoutRecoveries`)
+  with what is still owed, when deductions start, and a plain "Pay by
+  card" link when `payPath` is set; a message for each `?recovery=` value
+  the pay and return routes send. If the recoveries fail to load, fees
+  still show.
+- `NoteForm`, `DialogButton` and `outcome` in admin-billing-dialogs are
+  now exported and shared.
+
+Checked:
+- `tsc` and `eslint` clean; `check-recovery-ui` (new) passes.
+- A temporary sample-data page showed the tutor section, the return
+  messages and the admin table; the hold date guard and the required
+  note worked. Nothing was written.
+
+Not done:
+- Admins have no fee invoice lookup, so the refund form needs the id.
+  Asked A for a lookup by invoice number.
+
 ## 2026-11-20 Nexa admin billing, part 2 and usage limits, `revamp/b-admin-billing-2`
 
 From A's #120 (admin queries in #133) and #106 (`setUsageCap`).

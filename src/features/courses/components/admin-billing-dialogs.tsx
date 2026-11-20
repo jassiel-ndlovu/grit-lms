@@ -5,7 +5,8 @@
  * code (contracts/billing.md section 4). Each opens a dialog that says what
  * will happen and asks for the note A writes to the audit log, then
  * refreshes the page when A answers. Workspace-level actions are in
- * admin-workspace-actions.tsx.
+ * admin-workspace-actions.tsx; refund recovery ones in
+ * admin-recovery-dialogs.tsx, which reuses NoteForm and DialogButton.
  */
 
 import * as React from "react";
@@ -37,9 +38,9 @@ import {
 import { adminErrorMessage, noteProblem, refundAmount } from "../lib/admin-billing-ui";
 import { TIER_LABEL, formatRand, type TierKey } from "../lib/billing-ui";
 
-type Result = { serverError?: string; validationErrors?: unknown; data?: unknown } | undefined;
+export type Result = { serverError?: string; validationErrors?: unknown; data?: unknown } | undefined;
 
-const SELECT =
+export const SELECT =
   "border-input bg-background h-9 rounded-md border px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /**
@@ -47,11 +48,12 @@ const SELECT =
  * the buttons. `run` validates the fields and calls A, returning the toast
  * on success or an error to show.
  */
-function NoteForm({
+export function NoteForm({
   title,
   body,
   button,
   noteLabel = "Note",
+  notePlaceholder = "Why, and who asked. Kept in the audit log.",
   destructive,
   onDone,
   run,
@@ -61,6 +63,7 @@ function NoteForm({
   body: React.ReactNode;
   button: string;
   noteLabel?: string;
+  notePlaceholder?: string;
   destructive?: boolean;
   onDone: () => void;
   run: (note: string) => Promise<{ ok: string } | { error: string }>;
@@ -101,7 +104,7 @@ function NoteForm({
           onChange={(e) => setNote(e.target.value)}
           maxLength={500}
           rows={3}
-          placeholder="Why, and who asked. Kept in the audit log."
+          placeholder={notePlaceholder}
         />
       </div>
       {error ? (
@@ -123,13 +126,13 @@ function NoteForm({
 }
 
 /** A's answer → ok text or an error to show. */
-function outcome(res: Result, ok: string): { ok: string } | { error: string } {
+export function outcome(res: Result, ok: string): { ok: string } | { error: string } {
   if (res?.data) return { ok };
   return { error: res?.validationErrors ? "Check the fields and try again." : adminErrorMessage(res?.serverError) };
 }
 
 /** A button that opens one form in a dialog. */
-function DialogButton({
+export function DialogButton({
   label,
   srLabel,
   variant = "outline",
