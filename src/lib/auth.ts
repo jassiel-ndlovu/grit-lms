@@ -1,6 +1,8 @@
 /**
  * Centralized auth — single source of truth for NextAuth config and
  * session helpers usable from RSC, Route Handlers, and Server Actions.
+ * `auth()` reads Better Auth instead once AUTH_PROVIDER=better-auth (the
+ * cutover; src/lib/better-auth.ts).
  *
  * Importing this file does NOT call NextAuth(); it only exports configuration
  * and helpers. The Route Handler at /app/api/auth/[...nextauth]/route.ts wraps
@@ -12,6 +14,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 
+import { headers } from "next/headers";
+import { cache } from "react";
+
+import { authProvider, betterAuthInstance } from "@/lib/better-auth";
 import { prisma } from "@/lib/db";
 import type { Role } from "@/features/shared/enums";
 
@@ -106,8 +112,24 @@ export const authOptions: NextAuthOptions = {
  * Safe to call from RSC, Route Handlers, and Server Actions.
  */
 export async function auth(): Promise<Session | null> {
+  if (authProvider() === "better-auth") return betterAuthSession();
   return getServerSession(authOptions);
 }
+
+/**
+ * The Better Auth session in the shape the app already reads
+ * (`session.user.{id,name,email,role}`), so pages and actions don't change
+ * at the cutover. Cached per request.
+ */
+const betterAuthSession = cache(async (): Promise<Session | null> => {
+  const s = await betterAuthInstance.api.getSession({ headers: await headers() });
+  if (!s) return null;
+  const u = s.user as typeof s.user & { role?: string | null };
+  return {
+    user: { id: u.id, name: u.name, email: u.email, role: (u.role ?? "STUDENT") as Role },
+    expires: new Date(s.session.expiresAt).toISOString(),
+  } as Session;
+});
 
 /**
  * Get the current session or throw. Use in code paths that should never

@@ -22,6 +22,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { enqueueEmail, sealForQueue, sendQueuedNow } from "@/lib/email/queue";
 
+import { syncCredentialAccount } from "./credential";
+
 const TOKEN_TTL_MS = 60 * 60 * 1000;
 const THROTTLE_MS = 2 * 60 * 1000;
 const BCRYPT_ROUNDS = 10;
@@ -89,12 +91,17 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
   const hashed = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   const now = new Date();
-  await prisma.$transaction([
+  const spent = await prisma.$transaction(async (tx) => {
     // Spend this token only if no other request spent it first.
-    prisma.passwordResetToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: now } }),
-    prisma.user.update({ where: { id: row.userId }, data: { password: hashed } }),
-    // Any other outstanding links for this account stop working.
-    prisma.passwordResetToken.updateMany({ where: { userId: row.userId, usedAt: null }, data: { usedAt: now } }),
-  ]);
+    const won = await tx.passwordResetToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: now } });
+    if (won.count === 0) return false;
+    await tx.user.update({ where: { id: row.userId }, data: { password: hashed } });
+    await syncCredentialAccount(tx, row.userId, hashed);
+    // Any other outstanding links stop working, and every device is signed out.
+    await tx.passwordResetToken.updateMany({ where: { userId: row.userId, usedAt: null }, data: { usedAt: now } });
+    await tx.session.deleteMany({ where: { userId: row.userId } });
+    return true;
+  }, { timeout: 30_000 });
+  if (!spent) return { status: "invalid" };
   return { status: "reset", email: row.user.email };
 }
