@@ -310,7 +310,14 @@ The export is available until the workspace's retention date. The link is signed
 - `scripts/migrate-auth-accounts.ts` copies each `User.password` (bcrypt) into a credential `Account` and sets `emailConfirmed`; it is idempotent and refreshes a hash changed through NextAuth since. `verify` accepts bcrypt and scrypt; new hashes are scrypt.
 - Sign-up is off; plugins `username` and `twoFactor`; rate limits stored in the database (5 sign-ins a minute per IP); telemetry off; cookies prefixed `nexa`.
 
-**Stage 2 (cutover, needs the owner's go-ahead and B):** run the backfill on production; switch `getViewer`, `requireSession`, the safe-action clients and middleware to Better Auth's session; B moves the 7 client files to `auth-client.ts`; turn on sign-up and 2FA for owners and admins; remove NextAuth. Everyone signs in again once.
+**Stage 2 (built 2026-11-20, owner approved; switched on by an env var):**
+- `AUTH_PROVIDER=better-auth` (with `NEXT_PUBLIC_AUTH_PROVIDER`) makes `auth()` read Better Auth's session in the shape the app already uses, so `getViewer`, every page and the safe-action clients follow. Middleware checks the `nexa` session cookie.
+- Sign-up opens, email or Google (`docs/revamp/a/ops/google-sign-in.md`). A self sign-up has no role yet (`User.roleUnconfirmed`, migration 15; legacy role STUDENT meanwhile, which grants nothing without a workspace). They choose tutor, student or parent once on `/dashboard/welcome` (`chooseAccountRole`); a student gets a Student profile so tutors can enrol them. Only a confirmed TUTOR (or ADMIN) may create a workspace. The viewer has `user.roleConfirmed`. Email sign-ups verify first, and the link goes through our email queue. A Google account with the email of an existing user links to it.
+- The legacy Phase 0 viewer is now only for accounts created before 2026-11-20 (all backfilled into tenancy); a newer user has persona "none" until a tutor adds them or they create a workspace.
+- Every place that sets a password (reset, admin reset, change own password, creating a student) also writes the credential `Account` (`features/auth/credential.ts`); a reset signs out every device.
+- `src/lib/auth-client.ts` gives B `useAppSession`, `signInWithPassword` (email or username), `signInWithGoogle`, `signUpWithPassword` and `appSignOut`. Each works in both modes, so B can swap before the switch.
+
+**Cutover order:** B swaps its 7 client files and builds the sign-up page; run `scripts/migrate-auth-accounts.ts --apply` on production; set the two env vars and redeploy; everyone signs in once more. Then make 2FA required for owners and Nexa admins, and remove NextAuth.
 
 ## 11. Code locations
 

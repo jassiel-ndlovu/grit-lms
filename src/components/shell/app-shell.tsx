@@ -18,7 +18,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { appSignOut } from "@/lib/auth-client";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Award, BarChart3, BookOpen, Calendar, ChevronsUpDown, ClipboardList, FileText,
@@ -196,7 +196,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
           <Link href="/dashboard/settings"><Settings /> Settings</Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => void signOut({ callbackUrl: "/" })}>
+        <DropdownMenuItem onSelect={() => void appSignOut("/")}>
           <LogOut /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>

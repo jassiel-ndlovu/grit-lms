@@ -96,3 +96,27 @@ Still to do:
 - Cap preview uploads at 5 MB in `issueUploadToken` when `VERCEL_ENV !== "production"` (design 06 §3.3). This is a code change for a later PR.
 - `vercel env pull` on a laptop now gives the preview store's token, so local work no longer writes to production. Old local `.env` files may still hold production's token; delete them.
 - Emptying the preview store monthly (`scripts/blob-wipe-preview.ts`, design 06 §3.3) still needs an owner decision on a standing yes (design 06 open question 1).
+
+## End-to-end test data (`scripts/seed-preview.ts`)
+
+For full end-to-end passes (issue #148). It sits beside `seed-fake.ts`, uses the same production guard, and touches only its own rows: users `seed.*@example.test`, workspaces `seed-*` and codes `SEED*`. Each run wipes the previous seed and builds it again.
+
+```
+DATABASE_URL="<preview url>" npx tsx scripts/seed-preview.ts          # reseed
+DATABASE_URL="<preview url>" npx tsx scripts/seed-preview.ts --wipe   # remove only
+```
+
+- **One password for all 19 accounts.** It comes from `SEED_USER_PASSWORD`, or from the git-ignored `.env.test-accounts`, which is created on the first run and kept afterwards. That file also lists every account and what it is for. Never commit or post it.
+- **Accounts:**
+  - organisations that are active (with payouts), in trial, past due, read-only and cancelled;
+  - solo practices in trial and active (with payouts);
+  - an owner, an admin and two course-scoped tutors in `seed-ubuntu`;
+  - an adult student who pays their own fees, minors whose parent pays, a student with no fees, and a student in two workspaces;
+  - a parent of one child, and a parent of siblings across two workspaces.
+- **Money:**
+  - The fee payouts go to the owner's Paystack test subaccounts ("Main Branch" for `seed-ubuntu`, "Secondary Branch" for `seed-sipho`), so checkouts on Preview reach Paystack's test page.
+  - There are fee invoices that are open, overdue, paid, and partly refunded with an active recovery.
+  - There are platform invoices that are paid and past due.
+  - Nexa discount codes: live, ended, used up and off. Fee codes: live and ended.
+- **Learning:** lessons, a test with graded and in-progress submissions, an assignment with entries, and a weekly class for the active courses.
+- Accounts can sign in with NextAuth now and with Better Auth after the cutover: the seed writes both password records.

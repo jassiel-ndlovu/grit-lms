@@ -13,6 +13,7 @@
 
 "use server";
 
+import { syncCredentialAccount } from "@/features/auth/credential";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
@@ -77,6 +78,7 @@ export const createStudentUser = staffActionClient
         },
         select: { id: true, name: true, email: true },
       });
+      await syncCredentialAccount(tx, user.id, hashed);
       const student = await tx.student.create({
         data: {
           fullName: parsedInput.fullName.trim(),
@@ -112,10 +114,16 @@ export const resetUserPassword = staffActionClient
   .action(async ({ parsedInput }) => {
     const hashed = await bcrypt.hash(parsedInput.newPassword, BCRYPT_ROUNDS);
 
-    const user = await prisma.user.update({
-      where: { id: parsedInput.userId },
-      data: { password: hashed },
-      select: { id: true, name: true, email: true },
+    const user = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: parsedInput.userId },
+        data: { password: hashed },
+        select: { id: true, name: true, email: true },
+      });
+      await syncCredentialAccount(tx, u.id, hashed);
+      // A reset signs the user out everywhere (Better Auth sessions).
+      await tx.session.deleteMany({ where: { userId: u.id } });
+      return u;
     });
 
     revalidatePath("/dashboard/manage-users");
@@ -192,9 +200,9 @@ export const changeOwnPassword = authActionClient
     if (!ok) throw new Error("Current password is incorrect");
 
     const hashed = await bcrypt.hash(parsedInput.newPassword, BCRYPT_ROUNDS);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashed },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: user.id }, data: { password: hashed } });
+      await syncCredentialAccount(tx, user.id, hashed);
     });
 
     return { ok: true };

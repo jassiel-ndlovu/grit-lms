@@ -138,11 +138,17 @@ DATABASE_URL="postgresql://user:password@host:5432/nexa_lms"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="generate-with: openssl rand -base64 32"
 
-# Better Auth (stage 1 of the move off NextAuth; see src/lib/better-auth.ts).
-# /api/ba answers 404 unless BETTER_AUTH_ENABLED=1. The secret falls back to
-# NEXTAUTH_SECRET.
-# BETTER_AUTH_ENABLED="1"
+# Better Auth (src/lib/better-auth.ts). AUTH_PROVIDER and
+# NEXT_PUBLIC_AUTH_PROVIDER together choose who signs people in: unset keeps
+# NextAuth; "better-auth" is the cutover. /api/ba answers 404 unless one of
+# them is on or BETTER_AUTH_ENABLED=1. The secret falls back to NEXTAUTH_SECRET.
+# AUTH_PROVIDER="better-auth"
+# NEXT_PUBLIC_AUTH_PROVIDER="better-auth"
 # BETTER_AUTH_SECRET="generate-with: openssl rand -base64 32"
+# Google sign-in (docs/revamp/a/ops/google-sign-in.md):
+# GOOGLE_CLIENT_ID="..."
+# GOOGLE_CLIENT_SECRET="..."
+# NEXT_PUBLIC_GOOGLE_SIGN_IN="1"
 
 # Vercel Blob (used by client uploads via /api/blob/upload-token)
 # Get this from the Vercel dashboard → Storage → your Blob store → .env.local

@@ -13,7 +13,7 @@
 import React, { useMemo } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { appSignOut } from "@/lib/auth-client";
 import {
   ChevronDown,
   HelpCircle,
@@ -200,7 +200,7 @@ function ProfileMenu({ user }: { user: ShellUser }) {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          onSelect={() => signOut()}
+          onSelect={() => void appSignOut()}
           className="text-destructive focus:bg-destructive/10 focus:text-destructive"
         >
           <LogOut className="h-4 w-4" />

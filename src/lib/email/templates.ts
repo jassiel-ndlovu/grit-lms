@@ -52,9 +52,11 @@ function settingsFooter() {
 export function verificationEmail(opts: {
   to: string;
   name: string;
-  token: string;
+  /** Our own token (NextAuth era) or Better Auth's full verification link. */
+  token?: string;
+  link?: string;
 }): EmailMessage {
-  const link = absoluteUrl(`/verify-email?token=${encodeURIComponent(opts.token)}`);
+  const link = opts.link ?? absoluteUrl(`/verify-email?token=${encodeURIComponent(opts.token ?? "")}`);
   const first = opts.name.split(" ")[0] || "there";
   return {
     to: opts.to,
