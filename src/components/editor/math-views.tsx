@@ -18,6 +18,52 @@ import { MathJax } from "better-react-mathjax";
 import { BlockMath, InlineMath } from "@/lib/content/math";
 import { cn } from "@/lib/utils";
 
+import { MathField } from "./math-field";
+
+/**
+ * True when the editor offers visual maths input (features.mathInput, the
+ * Plus service `math-input`). Node views render inside EditorContent, so
+ * RichEditor's provider reaches them.
+ */
+export const MathInputContext = React.createContext(false);
+
+/** The maths box: MathLive when the course has visual input, with TeX one click away. */
+function MathBox(props: React.ComponentProps<typeof TexBox>) {
+  const visualAllowed = React.useContext(MathInputContext);
+  const [visual, setVisual] = React.useState(true);
+  if (!visualAllowed) return <TexBox {...props} />;
+  return (
+    <span className="flex items-start gap-1.5">
+      <span className="min-w-0 flex-1">
+        {visual ? (
+          <MathField
+            label="Maths"
+            value={props.latex}
+            onChange={props.onChange}
+            onDone={props.onDone}
+            onFocus={props.onFocus}
+            onBlur={props.onBlur}
+            autoFocus={props.latex === ""}
+            multiline={props.multiline}
+          />
+        ) : (
+          <TexBox {...props} />
+        )}
+      </span>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setVisual((v) => !v)}
+        aria-pressed={!visual}
+        title={visual ? "Edit as TeX" : "Edit visually"}
+        className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring shrink-0 rounded px-1.5 py-1 font-mono text-[0.6875rem] outline-none focus-visible:ring-2"
+      >
+        {visual ? "TeX" : "Visual"}
+      </button>
+    </span>
+  );
+}
+
 function TexBox({
   latex, onChange, onDone, onFocus, onBlur, multiline,
 }: {
@@ -126,7 +172,7 @@ function InlineMathView(props: ReactNodeViewProps) {
       </span>
       {open ? (
         <span contentEditable={false} className="bg-popover absolute top-full left-0 z-20 mt-1 block w-72 rounded-md border p-1.5 shadow-md">
-          <TexBox {...box} multiline={false} />
+          <MathBox {...box} multiline={false} />
         </span>
       ) : null}
     </NodeViewWrapper>
@@ -147,16 +193,19 @@ function BlockMathView(props: ReactNodeViewProps) {
       </div>
       {open ? (
         <div contentEditable={false} className="mt-1">
-          <TexBox {...box} multiline />
+          <MathBox {...box} multiline />
         </div>
       ) : null}
     </NodeViewWrapper>
   );
 }
 
-/** Keys typed in a TeX box stay there instead of reaching the editor. */
+/** Keys typed in a TeX box or maths field stay there instead of reaching the editor. */
 const viewOptions = {
-  stopEvent: ({ event }: { event: Event }) => (event.target as HTMLElement | null)?.tagName === "TEXTAREA",
+  stopEvent: ({ event }: { event: Event }) => {
+    const tag = (event.target as HTMLElement | null)?.tagName;
+    return tag === "TEXTAREA" || tag === "MATH-FIELD" || tag === "BUTTON";
+  },
 };
 
 export const EditorInlineMath = InlineMath.extend({

@@ -17,13 +17,15 @@ import { pendingNewGraph } from "./graph-view";
 export interface EditorFeatures {
   /** Maths nodes and the TeX box. On unless turned off. */
   math: boolean;
+  /** Visual maths input with MathLive (Plus service `math-input`). Off unless the page turns it on; TeX stays available. */
+  mathInput: boolean;
   /** The Graph block (Plus service `graphing`). Off unless the page turns it on. */
   graph: boolean;
   tables: boolean;
   headings: boolean;
 }
 
-export const DEFAULT_FEATURES: EditorFeatures = { math: true, graph: false, tables: true, headings: true };
+export const DEFAULT_FEATURES: EditorFeatures = { math: true, mathInput: false, graph: false, tables: true, headings: true };
 
 export interface BlockCommand {
   id: string;
