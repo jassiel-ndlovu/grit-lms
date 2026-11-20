@@ -15,14 +15,15 @@ import {
   CuidSchema,
   DateSchema,
   NonEmptyString,
-  UrlSchema,
 } from "../shared/primitives";
+import { CourseCoverSchema } from "./lib/stock-covers";
 
 export const CourseSchema = z.object({
   id: CuidSchema,
   name: NonEmptyString.max(120, "Name too long"),
   description: z.string().max(2000, "Description too long").nullable(),
-  imageUrl: UrlSchema,
+  /** An upload URL, a stock path, or "" on rows saved before stock covers. */
+  imageUrl: z.string(),
   tutorId: CuidSchema,
   createdAt: DateSchema,
 });
@@ -30,13 +31,13 @@ export type Course = z.infer<typeof CourseSchema>;
 
 /**
  * Create input. The form supplies an `imageUrl` (already uploaded via the
- * blob client) plus an optional list of student IDs to enrol on creation.
+ * blob client, or a stock cover path from lib/stock-covers) plus an optional list of student IDs to enrol on creation.
  * `tutorId` is NOT in the input — the action infers it from the session.
  */
 export const CreateCourseSchema = z.object({
   name: NonEmptyString.max(120, "Name too long"),
   description: z.string().max(2000, "Description too long").nullable(),
-  imageUrl: UrlSchema,
+  imageUrl: CourseCoverSchema,
   studentIds: z.array(CuidSchema).default([]).optional(),
 });
 export type CreateCourseInput = z.infer<typeof CreateCourseSchema>;
@@ -49,7 +50,7 @@ export const UpdateCourseSchema = z.object({
   id: CuidSchema,
   name: NonEmptyString.max(120, "Name too long").optional(),
   description: z.string().max(2000, "Description too long").nullable().optional(),
-  imageUrl: UrlSchema.optional(),
+  imageUrl: CourseCoverSchema.optional(),
   studentIds: z.array(CuidSchema).optional(),
 });
 export type UpdateCourseInput = z.infer<typeof UpdateCourseSchema>;
