@@ -19,7 +19,8 @@ model User {
   id            String       @id @default(cuid())
   name          String
   email         String       @unique
-  password      String
+  /// bcrypt hash for NextAuth. Better Auth keeps passwords in Account and never writes this, so it defaults to "" (matches no password). Dropped after the cutover.
+  password      String       @default("")
   role          Role         @default(STUDENT)
   createdAt     DateTime     @default(now())
   // Set once the user clicks the link in their verification email.
@@ -29,6 +30,17 @@ model User {
   // workspace comes from Membership, Learner and Guardianship, not `role`,
   // which stays until the app stops reading it.
   platformRole  PlatformRole @default(USER)
+
+  // Better Auth (design 02; stage 1, not yet used for sign-in). Its
+  // emailVerified boolean is mapped to emailConfirmed so the DateTime above
+  // keeps working until the cutover.
+  emailConfirmed   Boolean  @default(false)
+  image            String?
+  updatedAt        DateTime @default(now()) @updatedAt
+  /// Lower case; for tutor-created students who sign in without an email.
+  username         String?  @unique
+  displayUsername  String?
+  twoFactorEnabled Boolean? @default(false)
 
   preferences             UserPreferences?
   activities              ActivityLog[]
@@ -45,6 +57,10 @@ model User {
   auditImpersonating AuditLog[]     @relation("AuditImpersonator")
   tutorProfile       Tutor?
   studentProfile     Student?
+
+  authSessions Session[]
+  authAccounts Account[]
+  twoFactors   TwoFactor[]
 }
 
 enum PlatformRole {
@@ -200,4 +216,85 @@ model PasswordResetToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/**
+ * -------------------------------------------------------------------------
+ * Better Auth tables (design 02, section 2). Stage 1: created and backfilled
+ * alongside NextAuth; sign-in moves to them at the cutover.
+ * -------------------------------------------------------------------------
+ */
+
+/// A signed-in device. Database sessions, so they can be revoked.
+model Session {
+  id             String   @id @default(cuid())
+  expiresAt      DateTime
+  token          String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  /// Set by the admin plugin while a Nexa admin impersonates (later).
+  impersonatedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// A way to sign in. providerId "credential" holds the password hash (bcrypt carried over from User.password, scrypt after the next sign-in).
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model TwoFactor {
+  id                      String    @id @default(cuid())
+  secret                  String
+  backupCodes             String
+  userId                  String
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([secret])
+  @@index([userId])
+}
+
+/// Better Auth's rate limiter (storage "database", since serverless has no shared memory).
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
 }
