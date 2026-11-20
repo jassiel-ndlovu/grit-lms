@@ -13,6 +13,7 @@ import { can, needsScope } from "@/lib/viewer-core";
 import { listPayableInvoicesFor } from "./checkout";
 import { listFeeInvoicesFor, payoutSettingsFor } from "./fees";
 import { getProvider } from "./provider";
+import { listRecoveriesFor } from "./recovery";
 
 export async function getPayoutSettings() {
   assertBillingEnabled();
@@ -53,4 +54,21 @@ export async function listPayableInvoices(input: { status?: "OPEN" | "PAID" } = 
   const selfVisible = viewer.learner?.paymentVisible === true;
   if (childUserIds.length === 0 && !selfVisible) throw new ViewerError("FORBIDDEN");
   return listPayableInvoicesFor({ userId: viewer.user.id, email: viewer.user.email, childUserIds, selfVisible }, input);
+}
+
+/**
+ * Refunds being recovered from the viewer's payouts: a tutor's own account
+ * in PER_TUTOR mode; owners and admins see every payout account.
+ */
+export async function listPayoutRecoveries() {
+  assertBillingEnabled();
+  const viewer = await requireViewer({ workspace: true });
+  if (!can(viewer, "payouts.connect") && !can(viewer, "fees.manage")) throw new ViewerError("FORBIDDEN");
+  const ws = viewer.workspace!.id;
+  const owner = viewer.membership?.role === "OWNER" || viewer.membership?.role === "ADMIN";
+  const accounts = await prisma.payoutAccount.findMany({
+    where: { workspaceId: ws, ...(owner ? {} : { membershipId: viewer.membership?.id ?? "-" }) },
+    select: { id: true },
+  });
+  return listRecoveriesFor(accounts.map((a) => a.id));
 }

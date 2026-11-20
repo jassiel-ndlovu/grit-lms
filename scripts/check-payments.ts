@@ -8,6 +8,7 @@
 import { randomBytes } from "node:crypto";
 
 import { planCheckout, proportional } from "../src/features/payments/checkout-math";
+import { RECOVERY, recoveryOwed, takeDeductions } from "../src/features/payments/recovery-math";
 import { decryptSecret, encryptSecret } from "../src/features/payments/secrets";
 import {
   addCalendarMonths,
@@ -109,6 +110,14 @@ const same = planCheckout([
 check("two invoices for one tutor: one split entry", same.splits.length === 1 && same.allocations.length === 2, true);
 check("largest remainder adds up exactly", proportional(100, [1, 1, 1]), [34, 33, 33]);
 check("Nexa nets its 2% after a proportional fee", Math.round(plan.nexaShareCents * (1 - plan.estimatedFeeCents / plan.totalCents)) >= plan.commissionCents, true);
+
+// Refund recovery (owner decision 2026-11-20).
+check("recovery: payee owes their share of a full refund", recoveryOwed(10000, { amountCents: 10000, shareCents: 9800 }), 9800);
+check("recovery: partial refund in proportion", recoveryOwed(3000, { amountCents: 10000, shareCents: 9800 }), 2940);
+check("recovery: grace, cap and invoice timing", [RECOVERY.graceDays, RECOVERY.maxShareBps, RECOVERY.invoiceAfterDays], [7, 5000, 60]);
+check("deductions: at most half of one payout, oldest first", takeDeductions(10000, [{ id: "a", outstandingCents: 3000 }, { id: "b", outstandingCents: 9800 }]), [{ id: "a", amountCents: 3000 }, { id: "b", amountCents: 2000 }]);
+check("deductions: nothing owed takes nothing", takeDeductions(10000, [{ id: "a", outstandingCents: 0 }]), []);
+check("deductions: small debt taken whole", takeDeductions(10000, [{ id: "a", outstandingCents: 150 }]), [{ id: "a", amountCents: 150 }]);
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

@@ -9,6 +9,7 @@ import { deleteWorkspaceData, planRetention, retentionDeletesEnabled } from "@/f
 import { BillingError } from "@/features/billing/errors";
 import { getCourseTiersFor, getPlatformInvoiceFor, listPlatformInvoicesFor } from "@/features/billing/queries";
 import { lifetimeVolume } from "@/features/payments/reconcile";
+import { listRecoveriesFor } from "@/features/payments/recovery";
 import { prisma } from "@/lib/db";
 import { requireViewer, type BillingState } from "@/lib/viewer";
 
@@ -175,4 +176,18 @@ export async function adminListDiscountCodes(input: { active?: boolean; cursor?:
     })),
     nextCursor: rows.length > limit ? page[page.length - 1].id : null,
   };
+}
+
+/** Refund recoveries across Nexa, newest first, with what is left on each. `status` filters. */
+export async function adminListPayoutRecoveries(input: { status?: "AWAITING_REFUND" | "ACTIVE" | "RECOVERED" | "CANCELLED" | "WAIVED"; workspaceId?: string } = {}) {
+  await requireViewer({ permission: "admin.console" });
+  const accounts = await prisma.payoutAccount.findMany({
+    where: { ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}), recoveries: { some: input.status ? { status: input.status } : {} } },
+    select: { id: true, workspaceId: true, businessName: true },
+  });
+  const byId = new Map(accounts.map((a) => [a.id, a]));
+  const rows = await listRecoveriesFor(accounts.map((a) => a.id), new Date(), { includeAwaiting: true });
+  return rows
+    .filter((r) => !input.status || r.status === input.status)
+    .map((r) => ({ ...r, workspaceId: byId.get(r.payoutAccountId)?.workspaceId ?? null, payeeName: byId.get(r.payoutAccountId)?.businessName ?? "" }));
 }
