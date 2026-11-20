@@ -121,10 +121,10 @@ const STUDENT_QUICK: QuickCard[] = [
 
 const TUTOR_QUICK: QuickCard[] = [
   {
-    href: "/dashboard/manage-users",
+    href: "/dashboard/students",
     icon: <BookOpen className="size-5" />,
     title: "Add a student",
-    description: "Create a sign-in account in one submit.",
+    description: "Create an account and hand over a sign-in card.",
   },
   {
     href: "/dashboard/tutor-tests",
