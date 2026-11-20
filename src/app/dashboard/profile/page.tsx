@@ -11,7 +11,6 @@
  * server actions.
  */
 
-import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
@@ -22,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { ProfileForm } from "@/features/users/components/profile-form";
 import { PasswordForm } from "@/features/users/components/password-form";
+import HeaderProfile from "@/components/illustrations/generated/header-profile";
 
 export const metadata = { title: "Profile" };
 
@@ -106,14 +106,8 @@ export default async function ProfilePage() {
               </div>
             </div>
           </div>
-          <div className="relative hidden h-32 w-40 shrink-0 md:block">
-            <Image
-              src="/illustrations/about-us-page.svg"
-              alt=""
-              fill
-              priority
-              className="object-contain"
-            />
+          <div className="illustration-paper hidden h-32 w-40 shrink-0 items-end justify-center md:flex">
+            <HeaderProfile className="h-full w-auto" />
           </div>
         </div>
       </section>

@@ -3,6 +3,40 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-21 Open Peeps everywhere, coloured nav icons, `revamp/b-peeps-nav-colour`
+
+Done:
+- **Storyset is gone.** All 59 Storyset SVGs (and `_originals/`) are deleted
+  from `public/illustrations/`. The dashboard page headers (analytics,
+  assignments, grades, help, manage users, profile, settings, tests) and the
+  landing page now use Open Peeps, generated as before by
+  `scripts/generate-illustrations.ts` (12 new scenes). On the primary panel
+  the figures keep light paper through a new `illustration-paper` class.
+- **401 and 403** get their own figure (`unauthorized`); 404 and 500 keep
+  `not-found` and `error`.
+- **Transhumans ship as WebP** (six spots, 85 KB in all, down from 247 KB of
+  PNG), shown at 240 px or less on a white panel. The landing steps and
+  audience cards use them. sharp comes with next; no new dependency.
+- **Nav icons have colour.** One fixed hue per destination, as `--nav-*`
+  tokens in `globals.css` (light and dark), resolved by `navHue()` in
+  `nav-config.ts`. Both shells use them: `SidebarItem` takes `iconColor`, the
+  legacy `models/nav.tsx` items carry a `hue`. Labels keep the text colours.
+  Lowest contrast: 3.8:1 on the light sidebar or active row, 6.2:1 in dark.
+  The active row keeps its fill and weight (and the terracotta tab in the
+  legacy shell).
+- Licences: the asset folders hold no licence files. Open Peeps and
+  Transhumans are CC0, so no credit is needed; recorded in the illustrations
+  README.
+
+Next:
+- The legacy shell was not checked in a browser (it needs a signed-in
+  session). Look at it on Preview.
+- The command palette icons are still muted. They could use the same hues.
+
+Blocked on the other agent: none.
+
+Questions for the owner: none.
+
 ## 2026-11-20 Owner decisions after the Preview pass
 
 - **`REVAMP_UI` on Preview:** yes, to start testing the revamp for its

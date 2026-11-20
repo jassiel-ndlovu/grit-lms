@@ -18,6 +18,15 @@ export type NavIcon =
   | "home" | "book" | "calendar" | "test" | "assignment" | "grades"
   | "gradebook" | "analytics" | "users" | "settings" | "help" | "inbox" | "billing" | "fees";
 
+/**
+ * Each destination's icon colour: a CSS variable set in globals.css
+ * (`--nav-*`, light and dark). Keyed by destination kind, never by position,
+ * so Tests is the same teal in every role's sidebar. "profile" is used only by
+ * the legacy shell.
+ */
+export type NavHue = NavIcon | "profile";
+export const navHue = (key: NavHue) => `var(--nav-${key})`;
+
 export interface NavLink {
   label: string;
   href: string;

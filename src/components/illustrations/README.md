@@ -1,16 +1,23 @@
 # Illustrations
 
-Line-art people for empty states, onboarding, success and error screens, plus
-default avatars. Preview: `/design-system/illustrations` (dev, or `REVAMP_UI=1`).
+Line-art people for empty states, onboarding, success and error screens,
+dashboard page headers and the landing page, plus default avatars. Preview:
+`/design-system/illustrations` (dev, or `REVAMP_UI=1`).
+
+These replaced the Storyset SVGs on 2026-11-21. Nothing in the app uses
+Storyset any more, and its files are gone from `public/illustrations/`.
 
 ## Source and licence
 
 - [Open Peeps](https://www.openpeeps.com/) by Pablo Stanley, CC0. Flat Assets
   `Templates/` (Bust, Standing, Sitting).
-- Transhumans by Pablo Stanley, CC0. Four PNGs, 400 px on the long side.
+- [Transhumans](https://www.transhumans.xyz/) by Pablo Stanley, CC0. Six
+  PNGs, 400 px on the long side, shipped as WebP (about 15 KB each).
 
-No credit is required for either. Zanzi (marketing only) and Medical Icons are
-not used here.
+No credit is required for either. The owner's asset folders carry no licence
+file of their own (checked 2026-11-21); the CC0 terms come from the packs'
+sites and the revamp plan. Zanzi (marketing only) and Medical Icons are not
+used here.
 
 ## Using them
 
@@ -29,14 +36,18 @@ import EmptyCourses from "@/components/illustrations/generated/empty-courses";
   inherit the `<svg>`'s fill, `var(--illustration-surface, var(--background))`.
   On a card, set `[--illustration-surface:var(--card)]` on an ancestor.
   In dark mode the figures stay light (dark ink on `#F7F7F5` paper), set on
-  the `<svg>` by `illustrations.css`; they are not inverted.
+  the `<svg>` by `illustrations.css`; they are not inverted. Where the text
+  colour is light in both modes (the dashboard page headers on the primary
+  panel, the landing page's closing panel), put `illustration-paper` on the
+  wrapper to pin the same light figure.
 - **Avatars.** `<PeepAvatar userId={id} size={40} />` is an async server
   component that picks one of 32 busts with `avatarIndexFor(id)` (FNV-1a, see
   `scripts/check-avatar-index.ts`). From a client component, call
   `avatars[avatarIndexFor(id)]()` and render the result.
-- **Spot art.** `<SpotIllustration name="study" />` renders a Transhumans PNG
-  through `next/image`, capped at 240 px wide. Raster, so it cannot follow the
-  theme: it always sits on a white panel.
+- **Spot art.** `<SpotIllustration name="study" />` renders a Transhumans WebP
+  through `next/image`, capped at 240 px wide (`maxHeight` caps tall ones).
+  Raster, so it cannot follow the theme: it always sits on a white panel. Keep
+  it small; never use it as a hero.
 
 ## Adding or changing one
 
@@ -44,13 +55,15 @@ import EmptyCourses from "@/components/illustrations/generated/empty-courses";
    Append busts at the end: changing the list reshuffles default avatars.
 2. Run `npx tsx scripts/generate-illustrations.ts [path/to/Illustrations]`
    (defaults to `~/Documents/Illustrations`). It runs `npx svgo` with
-   `scripts/illustrations/svgo.config.mjs`, rewrites `generated/` and copies
-   the PNGs to `public/illustrations/`. Do not edit `generated/` by hand.
+   `scripts/illustrations/svgo.config.mjs`, rewrites `generated/` and writes
+   the spots to `public/illustrations/` as WebP with sharp (it comes with
+   next). Do not edit `generated/` by hand.
 3. Run `npx tsx scripts/check-avatar-index.ts` and look at the preview page.
 
 The SVGO pass strips Sketch titles, ids, groups and metadata, maps black to
 `currentColor`, and drops white fills so they inherit. It refuses any other
-colour. 46 SVGs went from 1911 KB to 612 KB (68% smaller).
+colour. 58 SVGs went from 2507 KB to 819 KB (67% smaller); the six spots went
+from 247 KB of PNG to 85 KB of WebP.
 
 ## Mapping
 
@@ -69,12 +82,26 @@ colour. 46 SVGs went from 1911 KB to 612 KB (68% smaller).
 | `onboarding-courses` | Open Peeps `Templates/Standing/peep-standing-26.svg` |
 | `success-submitted` | Open Peeps `Templates/Standing/peep-standing-12.svg` |
 | `not-found` | Open Peeps `Templates/Standing/peep-standing-22.svg` |
-| `error` | Open Peeps `Templates/Standing/peep-standing-16.svg` |
+| `error` | Open Peeps `Templates/Standing/peep-standing-16.svg` (500) |
+| `unauthorized` | Open Peeps `Templates/Standing/peep-standing-10.svg` (401, 403) |
+| `header-analytics` | Open Peeps `Templates/Standing/peep-standing-17.svg` |
+| `header-assignments` | Open Peeps `Templates/Standing/peep-standing-23.svg` |
+| `header-grades` | Open Peeps `Templates/Standing/peep-standing-11.svg` |
+| `header-help` | Open Peeps `Templates/Standing/peep-standing-14.svg` |
+| `header-people` | Open Peeps `Templates/Sitting/peep-sitting-14.svg` (Manage users) |
+| `header-profile` | Open Peeps `Templates/Standing/peep-standing-7.svg` |
+| `header-settings` | Open Peeps `Templates/Sitting/peep-sitting-11.svg` |
+| `header-tests` | Open Peeps `Templates/Sitting/peep-sitting-10.svg` |
+| `landing-tutor` | Open Peeps `Templates/Standing/peep-standing-24.svg` (landing hero) |
+| `landing-student` | Open Peeps `Templates/Sitting/peep-sitting-12.svg` (landing hero) |
+| `landing-launch` | Open Peeps `Templates/Standing/peep-standing-25.svg` (landing closing panel) |
 | `avatar-01` to `avatar-32` | Open Peeps `Templates/Bust/peep-N.svg`, N = 6, 8, 10, 11, 13, 14, 17, 19, 26, 31, 33, 34, 37, 38, 39, 43, 46, 47, 51, 57, 59, 63, 66, 76, 78, 79, 87, 93, 96, 99, 100, 102 (in order) |
-| `spot-study` | Transhumans `Growth-Study.png` (login) |
-| `spot-school-run` | Transhumans `School-Run-Innocent.png` (sign-up) |
-| `spot-team` | Transhumans `Team-Cooperation.png` (sign-up, invites) |
+| `spot-study` | Transhumans `Growth-Study.png` (login; landing, for students) |
+| `spot-school-run` | Transhumans `School-Run-Innocent.png` (sign-up; landing step 1) |
+| `spot-team` | Transhumans `Team-Cooperation.png` (sign-up, invites; landing step 3) |
 | `spot-celebrate` | Transhumans `Chaos-Good-Dance.png` (test submitted) |
+| `spot-focus` | Transhumans `Perserverance-Dedication-Focus.png` (landing step 2) |
+| `spot-reading` | Transhumans `Chill-Sitting.png` (landing, for tutors) |
 
 Busts left out on purpose: monster faces, knives, eye patches, scowls, shirts
 with text, and three files with stray colours or masks.

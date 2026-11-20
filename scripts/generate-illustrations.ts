@@ -40,17 +40,36 @@ const SCENES: Record<string, string> = {
   "success-submitted": "Standing/peep-standing-12.svg",
   "not-found": "Standing/peep-standing-22.svg",
   error: "Standing/peep-standing-16.svg",
+  unauthorized: "Standing/peep-standing-10.svg",
+  // Dashboard page headers (they sit on the primary panel).
+  "header-analytics": "Standing/peep-standing-17.svg",
+  "header-assignments": "Standing/peep-standing-23.svg",
+  "header-grades": "Standing/peep-standing-11.svg",
+  "header-help": "Standing/peep-standing-14.svg",
+  "header-people": "Sitting/peep-sitting-14.svg",
+  "header-profile": "Standing/peep-standing-7.svg",
+  "header-settings": "Sitting/peep-sitting-11.svg",
+  "header-tests": "Sitting/peep-sitting-10.svg",
+  // Landing page.
+  "landing-tutor": "Standing/peep-standing-24.svg",
+  "landing-student": "Sitting/peep-sitting-12.svg",
+  "landing-launch": "Standing/peep-standing-25.svg",
 };
 const BUSTS = [
   6, 8, 10, 11, 13, 14, 17, 19, 26, 31, 33, 34, 37, 38, 39, 43, 46, 47, 51, 57, 59, 63, 66, 76, 78, 79, 87, 93, 96,
   99, 100, 102,
 ];
-/** Public name -> Transhumans file. Raster, so they cannot follow the theme. */
+/**
+ * Public name -> Transhumans file. Raster, so they cannot follow the theme.
+ * Written as WebP (sharp, from next's dependencies) at the source's 400 px.
+ */
 const SPOTS: Record<string, string> = {
   "spot-study": "Growth-Study.png",
   "spot-school-run": "School-Run-Innocent.png",
   "spot-team": "Team-Cooperation.png",
   "spot-celebrate": "Chaos-Good-Dance.png",
+  "spot-focus": "Perserverance-Dedication-Focus.png",
+  "spot-reading": "Chill-Sitting.png",
 };
 
 const pascal = (name: string) => name.replace(/(^|-)(\w)/g, (_, __, c: string) => c.toUpperCase());
@@ -120,13 +139,30 @@ fs.writeFileSync(
     `export const AVATAR_COUNT = ${avatarNames.length};\n`,
 );
 
-fs.mkdirSync(PUBLIC_OUT, { recursive: true });
-for (const [name, file] of Object.entries(SPOTS)) {
-  fs.copyFileSync(path.join(SRC, "Transhumans", file), path.join(PUBLIC_OUT, `${name}.png`));
-  table.push(`| \`${name}\` | Transhumans \`${file}\` (PNG) |`);
-}
 fs.rmSync(tmp, { recursive: true, force: true });
 
 const kb = (n: number) => `${(n / 1024).toFixed(1)} KB`;
 console.log(`${entries.length} SVGs: ${kb(before)} -> ${kb(after)} (${Math.round((1 - after / before) * 100)}% smaller)`);
-console.log(table.join("\n"));
+
+async function writeSpots() {
+  // sharp ships with next (optional dependency); it is not a direct dependency.
+  const { default: sharp } = await import("sharp");
+  fs.mkdirSync(PUBLIC_OUT, { recursive: true });
+  let pngBytes = 0;
+  let webpBytes = 0;
+  for (const [name, file] of Object.entries(SPOTS)) {
+    const source = path.join(SRC, "Transhumans", file);
+    const out = path.join(PUBLIC_OUT, `${name}.webp`);
+    const info = await sharp(source).webp({ quality: 80, alphaQuality: 90, effort: 6 }).toFile(out);
+    pngBytes += fs.statSync(source).size;
+    webpBytes += info.size;
+    table.push(`| \`${name}\` | Transhumans \`${file}\` (WebP, ${info.width} x ${info.height}) |`);
+  }
+  console.log(`${Object.keys(SPOTS).length} spots: ${kb(pngBytes)} PNG -> ${kb(webpBytes)} WebP`);
+  console.log(table.join("\n"));
+}
+
+writeSpots().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
+});
