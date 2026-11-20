@@ -39,6 +39,7 @@ import { CreateCourseSchema, UpdateCourseSchema } from "../schemas";
 import { createCourse, updateCourse } from "../actions";
 import { CoverUploader } from "./cover-uploader";
 import { StudentPicker } from "./student-picker";
+import { actionError, BILLING_PATH, isStudentLimitError } from "../lib/account-ui";
 import type { StudentListItem } from "@/features/students/queries";
 
 /**
@@ -94,6 +95,16 @@ export function CourseForm({
 
   const isEdit = Boolean(defaultValues?.id);
 
+  /** A student limit (#178) gets a link to billing; any other error shows its message. */
+  function failed(serverError: string) {
+    const message = actionError({ serverError });
+    if (isStudentLimitError(serverError)) {
+      toast.error(message, { duration: 12_000, action: { label: "Billing", onClick: () => router.push(BILLING_PATH) } });
+    } else {
+      toast.error(message);
+    }
+  }
+
   async function onSubmit(values: FormValues) {
     setPending(true);
     try {
@@ -106,9 +117,7 @@ export function CourseForm({
           studentIds: values.studentIds,
         });
         const result = await updateCourse(parsed);
-        if (result?.serverError) {
-          throw new Error(result.serverError);
-        }
+        if (result?.serverError) return failed(result.serverError);
         toast.success("Course updated");
       } else {
         const parsed = CreateCourseSchema.parse({
@@ -118,9 +127,7 @@ export function CourseForm({
           studentIds: values.studentIds,
         });
         const result = await createCourse(parsed);
-        if (result?.serverError) {
-          throw new Error(result.serverError);
-        }
+        if (result?.serverError) return failed(result.serverError);
         toast.success("Course created");
       }
       onSuccess?.();

@@ -3,7 +3,7 @@
  * Run: npx tsx scripts/check-account-screens.ts
  */
 
-import { actionError, parseEmails } from "../src/features/courses/lib/account-ui";
+import { actionError, isStudentLimitError, parseEmails } from "../src/features/courses/lib/account-ui";
 
 let failures = 0;
 function check(name: string, got: unknown, want: unknown) {
@@ -21,6 +21,11 @@ check("coded server error shows its message", actionError({ serverError: "STUDEN
 check("plain server error as is", actionError({ serverError: "That username is taken" }), "That username is taken");
 check("validation errors", actionError({ validationErrors: {} }), "Check the details and try again.");
 check("nothing", actionError(undefined), "Something went wrong. Try again.");
+
+check("trial cap is a limit error", isStudentLimitError("TRIAL_CAP_REACHED: The trial allows 20 students. Pay for your first 30 days to add more."), true);
+check("own limit is a limit error", isStudentLimitError("FORBIDDEN: This workspace's limit is 40 active students. Raise it in billing to add more."), true);
+check("other FORBIDDEN is not", isStudentLimitError("FORBIDDEN: Unknown time zone"), false);
+check("plain error is not", isStudentLimitError("That username is taken"), false);
 
 console.log(failures ? `\n${failures} FAILURE(S)` : "\nALL PASS");
 process.exit(failures ? 1 : 0);

@@ -20,3 +20,16 @@ export function actionError(res: { serverError?: string; validationErrors?: unkn
   const coded = /^[A-Z_]+:\s*(.+)$/.exec(m);
   return coded ? coded[1] : m;
 }
+
+/** Where a student-limit error sends people (#178). */
+export const BILLING_PATH = "/dashboard/settings/billing";
+
+/**
+ * True when a server error is a student limit (A's assertCanAddLearners):
+ * TRIAL_CAP_REACHED, or FORBIDDEN for the workspace's own limit. These get
+ * a link to billing.
+ */
+export function isStudentLimitError(serverError: string | null | undefined): boolean {
+  const m = serverError?.trim() ?? "";
+  return m.startsWith("TRIAL_CAP_REACHED:") || (m.startsWith("FORBIDDEN:") && /limit/i.test(m) && /student/i.test(m));
+}
