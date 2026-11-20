@@ -7,6 +7,10 @@
  * close to the due date watched "43:00" on the clock while the cron closed
  * the attempt underneath them. Every caller (cron, runner, pre-test page)
  * now asks this one function, so the clock and the cutoff can't disagree.
+ *
+ * A student's extra time (TimeAccommodation, copied onto the attempt)
+ * stretches the time limit, or removes it. The due date still closes the
+ * test for everyone; a tutor who wants more extends the due date.
  */
 
 export type DeadlineReason = "timeLimit" | "dueDate";
@@ -24,9 +28,14 @@ export function attemptDeadline(input: {
   startedAt: Date | number;
   timeLimit: number | null | undefined;
   dueDate: Date | number | null | undefined;
+  /** The attempt's extra time, as a share of the limit (25 = +25%). */
+  extraTimePercent?: number | null;
+  /** The attempt has no time limit (an accommodation). */
+  noTimeLimit?: boolean | null;
 }): AttemptDeadline {
   const start = typeof input.startedAt === "number" ? input.startedAt : input.startedAt.getTime();
-  const limitEnd = input.timeLimit != null ? start + input.timeLimit * 60_000 : null;
+  const minutes = effectiveTimeLimit(input.timeLimit, input);
+  const limitEnd = minutes != null ? start + minutes * 60_000 : null;
   const due =
     input.dueDate == null
       ? null
@@ -46,3 +55,16 @@ export function attemptDeadline(input: {
  * whatever was last autosaved, so let the client win when it is online.
  */
 export const AUTO_SUBMIT_GRACE_MS = 2 * 60_000;
+
+/**
+ * The time limit in minutes once a student's extra time is applied, or null
+ * when the attempt is untimed. May be fractional: 30 minutes +25% is 37.5.
+ */
+export function effectiveTimeLimit(
+  timeLimit: number | null | undefined,
+  extra: { extraTimePercent?: number | null; noTimeLimit?: boolean | null } = {},
+): number | null {
+  if (timeLimit == null || extra.noTimeLimit) return null;
+  const pct = Math.max(0, extra.extraTimePercent ?? 0);
+  return (timeLimit * (100 + pct)) / 100;
+}

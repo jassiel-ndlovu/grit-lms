@@ -103,6 +103,8 @@ export default async function TestRunnerPage({ params }: PageProps) {
         dueDate={test.dueDate}
         exitHref={`/dashboard/courses/${test.courseId}`}
         stickyTop={stickyTop}
+        extraTimePercent={submission.extraTimePercent}
+        noTimeLimit={submission.noTimeLimit}
       />
     </div>
   );

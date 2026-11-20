@@ -30,6 +30,7 @@ import {
   tutorActionClient,
 } from "@/lib/safe-action";
 import { emitNotification, notifyHandIn } from "@/features/notifications/server";
+import { getExtraTime } from "./accommodations";
 import { autoGradeSubmission } from "./lib/auto-grade";
 import { loadTestFingerprint, STALE_TEST_MESSAGE } from "./lib/test-fingerprint";
 
@@ -425,6 +426,7 @@ export const startTestSubmission = studentActionClient
       select: {
         id: true,
         isActive: true,
+        courseId: true,
         course: { select: { enrollments: enrollmentFor(student.id) } },
       },
     });
@@ -439,6 +441,8 @@ export const startTestSubmission = studentActionClient
       select: { id: true },
     });
 
+    // The student's extra time on this course goes onto the attempt, so the
+    // clock and the auto-submit job read one row (lib/attempt-deadline.ts).
     const submission =
       existing ??
       (await prisma.testSubmission.create({
@@ -448,6 +452,7 @@ export const startTestSubmission = studentActionClient
           startedAt: new Date(),
           status: "IN_PROGRESS",
           answers: Prisma.JsonNull,
+          ...(await getExtraTime(test.courseId, student.id)),
         },
         select: { id: true },
       }));

@@ -72,7 +72,7 @@ import {
 } from "../actions";
 import { QuestionRenderer, type RendererQuestion } from "./question-renderer";
 import { labelTree, normalizeScheme } from "@/lib/enum-labels";
-import { attemptDeadline } from "../lib/attempt-deadline";
+import { attemptDeadline, effectiveTimeLimit } from "../lib/attempt-deadline";
 import {
   flagStorageKey,
   runnerKey,
@@ -120,6 +120,10 @@ export interface TestRunnerProps {
   labelScheme?: string[];
   /** Where "Save and exit" goes (a sitting only). Omit to hide the button. */
   exitHref?: string;
+  /** The attempt's extra time (TimeAccommodation copied at start). */
+  extraTimePercent?: number;
+  /** The attempt has no time limit (an accommodation). */
+  noTimeLimit?: boolean;
   /** Sticky offset classes for the header in a sitting. Default "top-0"
    *  (the revamp shell has no top bar on this route). */
   stickyTop?: string;
@@ -160,6 +164,8 @@ export function TestRunner({
   labelScheme,
   exitHref,
   stickyTop = "top-0",
+  extraTimePercent = 0,
+  noTimeLimit = false,
 }: TestRunnerProps) {
   const labels = React.useMemo(
     () => labelTree(questions, normalizeScheme(labelScheme), (q) => q.id, (q) => q.subQuestions),
@@ -198,7 +204,10 @@ export function TestRunner({
   // the server won't honour.
   const end = preview
     ? null
-    : attemptDeadline({ startedAt, timeLimit, dueDate: dueDate ?? null });
+    : attemptDeadline({ startedAt, timeLimit, dueDate: dueDate ?? null, extraTimePercent, noTimeLimit });
+  // The limit this student gets (null: untimed, or untimed for them).
+  const ownLimit = preview ? timeLimit : effectiveTimeLimit(timeLimit, { extraTimePercent, noTimeLimit });
+  const extraTime = !preview && timeLimit != null && (noTimeLimit || extraTimePercent > 0);
   const deadline = end?.at ?? null;
   const [expired, setExpired] = React.useState(
     () => deadline != null && Date.now() >= deadline,
@@ -575,8 +584,9 @@ export function TestRunner({
               <Countdown
                 deadline={deadline}
                 onExpire={onExpire}
-                alwaysShow={timeLimit != null}
+                alwaysShow={ownLimit != null}
                 cutShort={end?.cutShort ?? false}
+                extraTime={extraTime}
               />
             )}
             {!preview && exitHref && (
@@ -890,6 +900,7 @@ function Countdown({
   onExpire,
   alwaysShow,
   cutShort,
+  extraTime = false,
 }: {
   deadline: number;
   onExpire: () => void;
@@ -897,6 +908,8 @@ function Countdown({
   alwaysShow: boolean;
   /** The due date ends this attempt before its time limit would. */
   cutShort: boolean;
+  /** The student has extra time on this test; the clock includes it. */
+  extraTime?: boolean;
 }) {
   const [now, setNow] = React.useState<number | null>(null);
   const [announce, setAnnounce] = React.useState("");
@@ -931,7 +944,9 @@ function Countdown({
           title={
             cutShort || !alwaysShow
               ? "The test closes at its due time, so this is less than the full time limit."
-              : "Time left"
+              : extraTime
+                ? "Time left, including your extra time"
+                : "Time left"
           }
         >
           <span className="sr-only">Time left </span>

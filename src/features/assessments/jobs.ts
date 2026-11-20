@@ -33,6 +33,8 @@ export async function runAutoSubmit() {
     select: {
       id: true,
       startedAt: true,
+      extraTimePercent: true,
+      noTimeLimit: true,
       test: { select: { dueDate: true, timeLimit: true } },
     },
   });
@@ -46,6 +48,8 @@ export async function runAutoSubmit() {
       startedAt: sub.startedAt,
       timeLimit: sub.test.timeLimit,
       dueDate: sub.test.dueDate,
+      extraTimePercent: sub.extraTimePercent,
+      noTimeLimit: sub.noTimeLimit,
     });
     return at != null && at <= cutoff;
   });

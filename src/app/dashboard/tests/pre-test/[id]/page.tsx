@@ -31,7 +31,9 @@ import {
 } from "@/features/assessments/queries";
 import { BeginTestButton } from "@/features/assessments/components/begin-test-button";
 import LessonMarkdown from "@/app/components/markdown";
-import { attemptDeadline } from "@/features/assessments/lib/attempt-deadline";
+import { getExtraTime } from "@/features/assessments/accommodations";
+import { attemptDeadline, effectiveTimeLimit } from "@/features/assessments/lib/attempt-deadline";
+import { hasExtraTime, minutesLabel } from "@/features/assessments/lib/extra-time";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -94,11 +96,17 @@ export default async function PreTestPage({ params }: PageProps) {
   // Starting now: does the due date end the attempt before the time limit?
   // The auto-submit cron closes attempts at the due date, so say so up
   // front instead of letting the clock promise time that won't be given.
+  // With the student's extra time on this course, if any (decision 7).
+  const extra = await getExtraTime(test.courseId, student.id);
+  const ownLimit = effectiveTimeLimit(test.timeLimit, extra);
+  const extraApplies = test.timeLimit != null && hasExtraTime(extra);
+  const limitText = ownLimit != null ? minutesLabel(ownLimit) : null;
   const now = Date.now();
   const ifStartedNow = attemptDeadline({
     startedAt: now,
     timeLimit: test.timeLimit,
     dueDate: test.dueDate,
+    ...extra,
   });
   const minutesIfStartedNow =
     ifStartedNow.at != null ? Math.max(0, Math.floor((ifStartedNow.at - now) / 60_000)) : null;
@@ -144,7 +152,15 @@ export default async function PreTestPage({ params }: PageProps) {
           <Stat
             icon={<Hourglass className="size-4" />}
             label="Time limit"
-            value={test.timeLimit ? `${test.timeLimit} min` : "Untimed"}
+            value={
+              test.timeLimit == null
+                ? "Untimed"
+                : extraApplies
+                  ? limitText
+                    ? `${limitText}, with your extra time`
+                    : "No limit for you"
+                  : `${test.timeLimit} min`
+            }
           />
         </Card>
 
@@ -157,7 +173,7 @@ export default async function PreTestPage({ params }: PageProps) {
             <p className="text-foreground text-sm">
               This test closes at its due time ({dateFmt.format(test.dueDate)}). If you
               start now you&apos;ll have <strong>{minutesIfStartedNow} minutes</strong>, not
-              the full {test.timeLimit}. Your answers are submitted automatically when it
+              the full {limitText}. Your answers are submitted automatically when it
               closes.
             </p>
           </div>
@@ -176,9 +192,11 @@ export default async function PreTestPage({ params }: PageProps) {
         <Card className="space-y-4 p-6">
           <p className="text-muted-foreground text-sm">
             Once you begin the timer starts immediately
-            {test.timeLimit
-              ? ` and you have ${ifStartedNow.cutShort ? minutesIfStartedNow : test.timeLimit} minutes.`
-              : "."}{" "}
+            {limitText
+              ? ` and you have ${ifStartedNow.cutShort ? `${minutesIfStartedNow} min` : limitText}${extraApplies ? ", including your extra time" : ""}.`
+              : extraApplies
+                ? ". You have no time limit on this test, but it still closes at its due time."
+                : "."}{" "}
             Drafts auto-save every few seconds, so you can refresh or
             navigate away and resume.
           </p>
