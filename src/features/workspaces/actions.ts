@@ -3,20 +3,35 @@
 /**
  * Workspace actions (Agent A). Contract: docs/revamp/contracts/viewer.md.
  *
- * Phase 0: there is one workspace (LEGACY_WORKSPACE), so switching only
- * accepts its id. The cookie is already written so the switcher UI and its
- * links work unchanged when Phase 1 adds real workspaces.
+ * switchWorkspace accepts any workspace the viewer belongs to.
+ * createWorkspace and updateWorkspaceProfile are onboarding (./onboarding.ts).
  */
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { assertBillingEnabled } from "@/features/billing/errors";
 import { viewerActionClient } from "@/lib/safe-action";
-import { ViewerError } from "@/lib/viewer";
+import { requireViewer, ViewerError } from "@/lib/viewer";
+import { can } from "@/lib/viewer-core";
+
+import { createWorkspaceFor, updateWorkspaceProfileFor } from "./onboarding";
 
 // Not exported: a "use server" module may only export async functions.
 const ACTIVE_WORKSPACE_COOKIE = "nexa_ws";
+
+async function setActiveWorkspace(workspaceId: string) {
+  const store = await cookies();
+  store.set(ACTIVE_WORKSPACE_COOKIE, workspaceId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  revalidatePath("/", "layout");
+}
 
 export const switchWorkspace = viewerActionClient
   .schema(z.object({ workspaceId: z.string().min(1) }))
@@ -24,14 +39,39 @@ export const switchWorkspace = viewerActionClient
     if (!viewer.workspaces.some((w) => w.id === workspaceId)) {
       throw new ViewerError("FORBIDDEN");
     }
-    const store = await cookies();
-    store.set(ACTIVE_WORKSPACE_COOKIE, workspaceId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 365,
-    });
-    revalidatePath("/", "layout");
+    await setActiveWorkspace(workspaceId);
     return { workspaceId };
+  });
+
+/**
+ * Onboarding "Solo or Organisation" (ux/01, section 3): creates the
+ * workspace with the caller as OWNER, starts the 14-day trial, and makes it
+ * the active workspace. Needs a verified email. Behind BILLING=1, since the
+ * trial is part of billing.
+ */
+export const createWorkspace = viewerActionClient
+  .schema(z.object({
+    kind: z.enum(["SOLO", "ORGANISATION"]),
+    name: z.string().trim().min(2).max(80).optional(),
+    timezone: z.string().min(1).max(64).optional(),
+  }))
+  .action(async ({ parsedInput, ctx: { viewer } }) => {
+    assertBillingEnabled();
+    const r = await createWorkspaceFor(
+      { id: viewer.user.id, name: viewer.user.name, email: viewer.user.email, emailVerified: viewer.user.emailVerified },
+      parsedInput,
+    );
+    await setActiveWorkspace(r.workspaceId);
+    return r;
+  });
+
+/** Onboarding step 1 and workspace settings: name and time zone. Needs `workspace.settings`. */
+export const updateWorkspaceProfile = viewerActionClient
+  .schema(z.object({ name: z.string().max(80).optional(), timezone: z.string().min(1).max(64).optional() }))
+  .action(async ({ parsedInput }) => {
+    const viewer = await requireViewer({ workspace: true });
+    if (!can(viewer, "workspace.settings")) throw new ViewerError("FORBIDDEN");
+    const r = await updateWorkspaceProfileFor(viewer.user.id, viewer.workspace!.id, parsedInput);
+    revalidatePath("/", "layout");
+    return r;
   });

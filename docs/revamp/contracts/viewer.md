@@ -15,6 +15,8 @@ Model behind it: [a/design/01-tenancy-roles.md](../a/design/01-tenancy-roles.md)
 | `can(viewer, permission)` | `src/lib/viewer-core.ts` (re-exported from `src/lib/viewer.ts`) | Both (pure function over the `Viewer` object) |
 | `canIn(viewer, permission, scope)` | `src/lib/viewer.ts` | Server only (checks the database) |
 | `switchWorkspace(workspaceId)` | `src/features/workspaces/actions.ts` | Server action |
+| `createWorkspace({ kind, name?, timezone? })` | `src/features/workspaces/actions.ts` | Server action (onboarding) |
+| `updateWorkspaceProfile({ name?, timezone? })` | `src/features/workspaces/actions.ts` | Server action (onboarding step 1, settings) |
 | Safe-action clients `viewerActionClient`, `staffActionClient`, `guardianActionClient`, `adminActionClient` | `src/lib/safe-action.ts` | Server; each adds `ctx.viewer` |
 
 ## Types
@@ -142,6 +144,10 @@ export function canIn(
 
 `switchWorkspace(workspaceId)` sets the `nexa_ws` cookie after checking membership or learner rows, then revalidates the layout. Pages read the new context on the next render.
 
+`createWorkspace({ kind: "SOLO" | "ORGANISATION", name?, timezone? })` (ux/01, section 3) makes the caller the OWNER of a new workspace, starts the 14-day trial (Subscription billed to the caller's email; trial caps 20 active students and 100 AI marks), switches to it, and returns `{ workspaceId, slug, name, kind, trialEndsAt }`. The name defaults to "Thandi's practice" or "Thandi's organisation" from the caller's first name; the time zone to `Africa/Johannesburg`. Refused when the email is not verified, or when the caller already owns 3 workspaces. Behind `BILLING=1`.
+
+`updateWorkspaceProfile({ name?, timezone? })` needs `workspace.settings`; names are 2 to 80 characters and the time zone must be an IANA name. Returns `{ id, name, timezone }`.
+
 ## Rules for B
 
 1. Pages and layouts call `getViewer()` (or `requireViewer()`) once at the top. Components below receive the parts they need as props; they do not call it again (it is cached, but props keep client components serialisable).
@@ -182,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-20 | Draft 1.3. `createWorkspace` and `updateWorkspaceProfile` (onboarding) |
 | 2026-11-16 | Draft 1. No `mode` field (owner decision, plan revision 3) |
 | 2026-11-16 | Draft 1.2. Client components import types and `can()` from `@/lib/viewer-core`, because `viewer.ts` is server-only. Phase 0 bridge: one comped organisation until Phase 1 (PR #63) |
 | 2026-11-16 | Draft 1.1. Added `messages.announce` and `messages.direct` (A2 messaging design) |

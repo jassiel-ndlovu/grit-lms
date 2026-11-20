@@ -3,6 +3,19 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Onboarding: create a workspace with its trial, `revamp/a-onboarding`
+
+Done:
+- `workspaces/onboarding.ts` and actions `createWorkspace`, `updateWorkspaceProfile` (viewer contract Draft 1.3).
+- `createWorkspace` makes the caller OWNER and starts the 14-day trial: a Subscription billed to the owner's email and TRIAL caps (20 active students, 100 AI marks). It also switches the active workspace.
+- Refused without a verified email, or past 3 owned workspaces (each with its own trial). Behind `BILLING=1`.
+- A one-off run on preview passed 10 checks; rows removed. No migration.
+- Branch cleanup (#135): the owner approved; A's 47 branches deleted and "Automatically delete head branches" turned on.
+
+Not yet:
+- Switching on services for courses created during the trial. Design 03 says every Pro service is on in the trial; services.md rule 9 says rows are switched on at creation. That needs course creation (B) or `setUpCourseTenancy` to switch them on, and a rule for what happens to them at the first payment.
+- Staff invites, and tutor-created student and parent accounts (ux/01, sections 5 and 6).
+
 ## 2026-11-20 Discount codes on parent invoices, `revamp/a-fee-discounts`
 
 Done:
