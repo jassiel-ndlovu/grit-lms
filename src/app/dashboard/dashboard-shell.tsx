@@ -17,8 +17,10 @@ import { LegacyProviders } from './legacy-providers';
  *     from the header below that.
  *   - No page footer — its content lives at the foot of the nav.
  *   - With REVAMP_UI the layout renders AppShell instead (components/shell).
+ *   - `banner`: A's AccountBanners (past due, read-only, verify email…),
+ *     under the header, as in AppShell.
  */
-export default function DashboardShell({ children, user }: { children: ReactNode; user: ShellUser | null }) {
+export default function DashboardShell({ children, user, banner }: { children: ReactNode; user: ShellUser | null; banner?: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -30,6 +32,7 @@ export default function DashboardShell({ children, user }: { children: ReactNode
           instead of widening the page past the viewport. */}
       <main className="flex min-w-0 flex-1 flex-col bg-background">
         <Header user={user} onOpenMenu={() => setMenuOpen(true)} />
+        {banner}
           <div className="flex-1 pb-12">
             {children}
           </div>
