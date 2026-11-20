@@ -3,6 +3,29 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Production switched to Better Auth, `revamp/a-auth-cutover`
+
+The owner and B finished the Preview pass (`docs/revamp/b/testing/preview-e2e-2026-11-20.md`). Sign-in worked for every role after #175; no finding blocks the switch.
+
+Done:
+- Backup branch `backup-auth-cutover-20261120`.
+- `scripts/migrate-auth-accounts.ts --apply --confirm-existing` on production: 9 credential accounts created and 9 emails marked confirmed.
+  - The new `--confirm-existing` option exists because 7 of 9 existing users never verified their email. NextAuth didn't require it, so Better Auth would have locked them out. `emailVerified` stays empty, so notification email still waits for verification.
+- `AUTH_PROVIDER` and `NEXT_PUBLIC_AUTH_PROVIDER` set to `better-auth` for Production, and production redeployed.
+- Checked live:
+  - `/api/ba/ok`;
+  - a wrong password gets 401, and a foreign origin gets INVALID_ORIGIN;
+  - Google sign-in sends people to Google with the live site's return address;
+  - signed-out visitors go to sign-in;
+  - the sign-in page shows "Continue with Google" and the username field.
+
+Next:
+- #189: read-only guard and enrolment scoping.
+- F5: the seed lacks advance seat charges.
+- F8: a message for minors' fees.
+- Two-factor required for owners and admins; email change with two-factor.
+- Remove NextAuth.
+
 ## 2026-11-20 Email change, `revamp/a-email-change`
 
 Design 02, section 8. Viewer contract Draft 1.9.

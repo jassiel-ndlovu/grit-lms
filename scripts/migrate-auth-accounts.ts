@@ -4,6 +4,13 @@
  *
  *   npx tsx scripts/migrate-auth-accounts.ts            # dry run: counts only
  *   npx tsx scripts/migrate-auth-accounts.ts --apply    # writes
+ *   ... --apply --confirm-existing                      # at the cutover
+ *
+ * --confirm-existing: accounts that exist before the cutover signed in
+ * without verifying their email under NextAuth. Better Auth requires a
+ * confirmed email to sign in, so mark them confirmed (emailConfirmed) or
+ * they'd be locked out. Their emailVerified date stays empty, so
+ * notification emails still wait until they verify.
  *
  * Idempotent: a user who already has a credential Account gets its hash
  * refreshed only when User.password changed since (a NextAuth-era reset).
@@ -14,6 +21,7 @@
 import { PrismaClient } from "../src/generated/prisma";
 
 const apply = process.argv.includes("--apply");
+const confirmExisting = process.argv.includes("--confirm-existing");
 const prisma = new PrismaClient();
 
 async function main() {
@@ -25,7 +33,7 @@ async function main() {
   });
   let create = 0, refresh = 0, same = 0, noPassword = 0, confirm = 0;
   for (const u of users) {
-    if (u.emailVerified && !u.emailConfirmed) {
+    if ((u.emailVerified || (confirmExisting && u.password)) && !u.emailConfirmed) {
       confirm++;
       if (apply) await prisma.user.update({ where: { id: u.id }, data: { emailConfirmed: true } });
     }
