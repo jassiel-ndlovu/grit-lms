@@ -15,6 +15,12 @@ const SAMPLES: RendererQuestion[] = [
     question: "Put the steps for solving $x^2 + 3x + 2 = 0$ in order.",
     reorderItems: ["Write the equation in standard form", "Factorise: $(x + 1)(x + 2) = 0$", "Set each factor to zero", "Solve: $x = -1$ or $x = -2$"],
   },
+  {
+    ...BASE,
+    id: "q-essay",
+    type: "ESSAY",
+    question: "Show that $x^2 - 4x + 4 \\geq 0$ for every real $x$. Use **Insert maths** for your working.",
+  },
 ];
 
 export function QuestionsDemo() {

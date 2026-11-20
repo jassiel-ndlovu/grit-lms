@@ -47,6 +47,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
+import { AnswerText } from "@/components/content/answer-text";
 
 import {
   getTestDetailById,
@@ -641,16 +642,14 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
   switch (type) {
     case "MULTIPLE_CHOICE":
     case "TRUE_FALSE":
-    case "SHORT_ANSWER":
     case "NUMERIC":
       return <div className="text-foreground"><LessonMarkdown content={String(value)} className="prose-sm" /></div>;
+    // Typed answers: shown as written, with any $…$ maths typeset (B design 01, phase 1).
+    case "SHORT_ANSWER":
     case "ESSAY":
+      return <AnswerText text={String(value)} className="text-foreground" />;
     case "CODE":
-      return (
-        <div className={type === "CODE" ? "font-mono text-xs whitespace-pre-wrap text-foreground" : "text-foreground whitespace-pre-wrap"}>
-          {String(value)}
-        </div>
-      );
+      return <div className="font-mono text-xs whitespace-pre-wrap text-foreground">{String(value)}</div>;
     case "MULTI_SELECT": {
       const arr = Array.isArray(value) ? (value as string[]) : [];
       return (

@@ -17,7 +17,7 @@
  */
 
 import * as React from "react";
-import { FileText, Loader2, Trash2, Upload } from "lucide-react";
+import { FileText, Loader2, Sigma, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ import { toFileAnswers, type TestFileAnswer } from "../lib/file-answers";
 import { choiceSeed, seededShuffle, shuffleAwayFromOriginal } from "../lib/shuffle";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
+import { AnswerText } from "@/components/content/answer-text";
+import { MathField } from "@/components/editor/math-field";
+import { hasAnswerMaths, inlineMaths } from "@/lib/content/answer-maths";
 
 type QuestionType =
   | "MULTIPLE_CHOICE"
@@ -228,15 +231,95 @@ function Numeric({ value, onChange, disabled }: QuestionRendererProps) {
 
 function LongText({ question, value, onChange, disabled }: QuestionRendererProps) {
   const isCode = question.type === "CODE";
+  if (!isCode) return <EssayInput question={question} value={value} onChange={onChange} disabled={disabled} />;
   return (
     <Textarea
-      rows={isCode ? 12 : 8}
+      rows={12}
       value={typeof value === "string" ? value : ""}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
-      placeholder={isCode ? "// Write your code here" : "Write your answer..."}
-      className={cn(isCode && "font-mono text-sm")}
+      placeholder="// Write your code here"
+      className="font-mono text-sm"
     />
+  );
+}
+
+/**
+ * An essay box with "Insert maths" (B design 01, phase 1): the maths field
+ * from the lesson editor, inserted at the cursor as `$…$`. When the answer
+ * holds maths, a preview shows it typeset, as the tutor will see it.
+ */
+function EssayInput({ value, onChange, disabled }: Pick<QuestionRendererProps, "question" | "value" | "onChange" | "disabled">) {
+  const text = typeof value === "string" ? value : "";
+  const ref = React.useRef<HTMLTextAreaElement>(null);
+  const caret = React.useRef<{ start: number; end: number } | null>(null);
+  const [open, setOpen] = React.useState(false);
+  const [tex, setTex] = React.useState("");
+  const showPreview = React.useMemo(() => hasAnswerMaths(text), [text]);
+
+  function openMaths() {
+    const el = ref.current;
+    caret.current = el ? { start: el.selectionStart, end: el.selectionEnd } : null;
+    setTex("");
+    setOpen(true);
+  }
+
+  function insert() {
+    const body = tex.trim();
+    setOpen(false);
+    if (!body) return;
+    const at = caret.current ?? { start: text.length, end: text.length };
+    const before = text.slice(0, at.start);
+    const after = text.slice(at.end);
+    const pad = before && !/\s$/.test(before) ? " " : "";
+    const snippet = `${pad}${inlineMaths(body)}`;
+    onChange(before + snippet + after);
+    const pos = before.length + snippet.length;
+    // After the maths field has gone (MathLive finishes its own Enter
+    // handling first), put the cursor back just after the formula.
+    window.setTimeout(() => {
+      ref.current?.focus();
+      ref.current?.setSelectionRange(pos, pos);
+    }, 120);
+  }
+
+  return (
+    <div className="space-y-2">
+      <Textarea
+        ref={ref}
+        rows={8}
+        value={text}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        placeholder="Write your answer..."
+      />
+      {!disabled ? (
+        open ? (
+          <div className="border-border space-y-2 rounded-md border p-3">
+            <MathField label="Maths to insert" value={tex} onChange={setTex} onDone={insert} autoFocus />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" size="sm" onClick={insert} disabled={!tex.trim()}>
+                Insert
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button type="button" variant="outline" size="sm" onClick={openMaths}>
+            <Sigma aria-hidden className="size-4" />
+            Insert maths
+          </Button>
+        )
+      ) : null}
+      {showPreview ? (
+        <div className="bg-muted/40 border-border rounded-md border p-3 text-sm">
+          <p className="text-muted-foreground mb-1 text-xs font-medium">Preview</p>
+          <AnswerText text={text} className="text-foreground" />
+        </div>
+      ) : null}
+    </div>
   );
 }
 

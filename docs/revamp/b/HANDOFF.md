@@ -3,6 +3,40 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Maths in answers, phase 1, `revamp/b-maths-answers-1`
+
+Design `b/design/01-maths-in-answers.md`, phase 1 (no schema change).
+
+Done:
+- **`splitAnswerMaths`** (`src/lib/content/answer-maths.ts`) finds `$…$`,
+  `$$…$$`, `\(…\)` and `\[…\]` in a typed answer. A `$…$` pair needs
+  non-space inside both dollars, and the next bare `$` must close it, so
+  "$5 and $10" stays text. `\$` is a literal dollar.
+- **`AnswerText`** (`src/components/content/answer-text.tsx`) shows a
+  typed answer as written. Only the maths spans go to MathJax; the rest
+  is plain text (no markdown), marked `mathjax_ignore`.
+- Used for short answers and essays in the tutor's grading form, the
+  student's grade page and the test review page. Code answers are
+  unchanged. Short answers on the review page no longer go through
+  markdown.
+- **Essays: "Insert maths"** opens the MathLive field (from #157) and
+  inserts `$…$` at the cursor, then puts the cursor back after it. A
+  preview shows the answer typeset when it holds maths. Every tier, as
+  decided.
+- `/design-system/questions` now has an essay sample.
+
+Checked:
+- `tsc` and `eslint` clean. `scripts/check-answer-maths.ts` (new, 14
+  cases) passes.
+- In `/design-system/questions`, typed "It costs $5 and $10. So it gives",
+  inserted (x-2)^2. The preview typeset only the formula, and focus came
+  back to the essay box.
+- Not checked: the grading and review pages with real submissions (no
+  local sign-in). They use the same `AnswerText`.
+
+Next: phase 2 (the Maths expression question type) once A's #164 is
+applied.
+
 ## 2026-11-20 Visual maths input (MathLive), `revamp/b-math-input`
 
 Owner's request; B research 02; Plus service `math-input`. Stacked on
