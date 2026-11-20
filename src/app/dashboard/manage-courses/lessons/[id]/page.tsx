@@ -35,10 +35,13 @@ export default async function ManageLessonsPage({ params, searchParams }: PagePr
     selectedLessonParam && lessons.some((l) => l.id === selectedLessonParam) ? selectedLessonParam : null;
   const selectedLesson = selectedLessonId ? await getLessonDetailById(selectedLessonId) : null;
 
-  // Graphs are a Plus service (contracts/services.md): the block is offered
-  // only where the course has it. Graphs already in a lesson still show.
+  // Graphs and visual maths input are Plus services (contracts/services.md),
+  // offered only where the course has them. Graphs already in a lesson still
+  // show, and TeX input stays for everyone.
   const viewer = await getViewer();
-  const graph = viewer ? await hasService(viewer, courseId, "graphing") : false;
+  const [graph, mathInput] = viewer
+    ? await Promise.all([hasService(viewer, courseId, "graphing"), hasService(viewer, courseId, "math-input")])
+    : [false, false];
 
-  return <LessonsWorkspace course={course} lessons={lessons} selectedLesson={selectedLesson} editorFeatures={{ graph }} />;
+  return <LessonsWorkspace course={course} lessons={lessons} selectedLesson={selectedLesson} editorFeatures={{ graph, mathInput }} />;
 }

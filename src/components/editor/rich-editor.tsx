@@ -34,7 +34,7 @@ import "@/components/content/rich-content.css";
 import "./editor.css";
 import { DEFAULT_FEATURES, commandsFor, type EditorFeatures } from "./commands";
 import { EditorGraph } from "./graph-view";
-import { EditorBlockMath, EditorInlineMath } from "./math-views";
+import { EditorBlockMath, EditorInlineMath, MathInputContext } from "./math-views";
 import { SlashMenu, SlashMenuExtension, type SlashState } from "./slash-menu";
 import { EditorToolbar } from "./toolbar";
 
@@ -125,7 +125,9 @@ export function RichEditor({
       {editor ? (
         <>
           {editable ? <EditorToolbar editor={editor} features={features} label={label} /> : null}
-          <EditorContent editor={editor} />
+          <MathInputContext.Provider value={features.math && features.mathInput}>
+            <EditorContent editor={editor} />
+          </MathInputContext.Provider>
           <SlashMenu editor={editor} state={slash} listId={listId} />
         </>
       ) : (

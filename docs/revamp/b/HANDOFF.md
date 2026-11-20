@@ -3,6 +3,39 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Visual maths input (MathLive), `revamp/b-math-input`
+
+Owner's request; B research 02; Plus service `math-input`. Stacked on
+`revamp/b-graphs` (#155).
+
+Done:
+- **`src/components/editor/math-field.tsx`**: `MathField` around MathLive's
+  `<math-field>`.
+  - It loads MathLive on first use and shows a plain TeX box until then.
+  - Fonts come from `mathlive/fonts.css` (bundled), with no sounds.
+  - Enter or Escape goes back to the text.
+  - It takes focus when inserted, after Tiptap's own refocus.
+- **Editor:** with `features.mathInput`, a maths node's box is the MathLive
+  field (fractions, powers, roots, and its on-screen keyboard). A "TeX"
+  button switches to the TeX box and back. The stored content is still TeX.
+- **Lessons page:** `mathInput: hasService(viewer, courseId, "math-input")`,
+  beside `graph`.
+
+Checked:
+- `tsc` and `eslint` clean.
+- In `/design-system/editor`: inserted inline maths, the field took
+  focus, typed `x^2 + 1/2` (typeset as you type), and the derived markdown
+  updated. Escape went back to the text.
+
+Not done:
+- Maths in **students' answers**. Short answers are plain strings that
+  auto-marking compares exactly, and the grading view shows them as plain
+  text. Adding maths there needs a decision on how a maths answer is
+  stored and compared. Raised with the owner.
+
+Needs A:
+- OK for the `mathlive` dependency (#152).
+
 ## 2026-11-20 Graphs in lessons, `revamp/b-graphs`
 
 Owner's request; B research 03 (Mafs) and contracts/editor.md (planned

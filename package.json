@@ -51,6 +51,7 @@
     "framer-motion": "^12.23.6",
     "lucide-react": "^0.525.0",
     "mafs": "^0.21.0",
+    "mathlive": "^0.111.4",
     "next": "^15.5.15",
     "next-auth": "^4.24.12",
     "next-safe-action": "^8.5.2",

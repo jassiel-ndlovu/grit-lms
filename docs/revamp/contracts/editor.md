@@ -110,8 +110,8 @@ In the editor:
 - Maths: `$x^2$` after a space becomes inline maths, and `$$` then space on an empty line makes a block. A TeX box shows under a selected maths node, with MathJax output above it.
 - No bubble menu or drag handle in Phase 0.
 
-`features` today: `math`, `tables`, `headings` (default on) and `graph` (default off). Planned:
-- `mathInput`: MathLive, when `hasService(viewer, courseId, "math-input")`.
+`features` today: `math`, `tables`, `headings` (default on), and `graph` and `mathInput` (default off). Planned:
+- `mathInput` (live): the maths box under a selected maths node is a MathLive field, with a TeX button to switch back to the TeX box. MathLive loads with the first field; its fonts come from `mathlive/fonts.css`, with no CDN. Off by default; the lessons page turns it on when `hasService(viewer, courseId, "math-input")`. Stored content is unchanged: still TeX.
 - `graph` (live): the Graph block, drawn with Mafs (loaded only on pages with a graph). Off by default; the lessons page turns it on when `hasService(viewer, courseId, "graphing")`. Both services are on Plus per services.md.
 - `images`: the `BlobKind` to upload with.
 
