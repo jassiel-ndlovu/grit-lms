@@ -69,13 +69,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
   const tutor = teacherFrom(session.user);
 
   const owns = await courseBelongsToTutor(courseId, tutor.id);
-  if (!owns) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        You don&apos;t teach this course.
-      </div>
-    );
-  }
+  if (!owns) notFound();
 
   const book = await getCourseGradebook(courseId);
   if (!book) notFound();

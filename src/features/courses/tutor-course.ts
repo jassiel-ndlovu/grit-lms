@@ -28,7 +28,8 @@ export async function loadTutorCourse(id: string): Promise<TutorCourseResult> {
 
   const [course, owns] = await Promise.all([getCourseDetailById(id), courseBelongsToTutor(id, tutor.id)]);
   if (!course) notFound();
-  if (!owns) return { ok: false, message: "You don't own this course." };
+  // Someone else's course looks the same as a missing one (the 404 page).
+  if (!owns) notFound();
 
   return { ok: true, course, tutorId: tutor.id, userId: session.user.id };
 }
