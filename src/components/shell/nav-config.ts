@@ -70,7 +70,15 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Analytics", href: "/dashboard/analytics", icon: "analytics", keywords: ["performance"], requires: "grades.view" },
       ],
     },
-    { label: "People", items: [{ label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["students", "accounts"], requires: "learners.invite" }] },
+    {
+      label: "People",
+      items: [
+        { label: "Students", href: "/dashboard/students", icon: "users", keywords: ["learners", "parents", "sign-in code", "accounts"], requires: "learners.invite" },
+        { label: "Members", href: "/dashboard/settings/members", icon: "users", keywords: ["tutors", "admins", "staff", "invite", "team"], requires: "members.invite" },
+        // Legacy provisioning page; stays until the owner has tested Students.
+        { label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["accounts", "passwords"], requires: "learners.invite" },
+      ],
+    },
     {
       label: "Workspace",
       items: [

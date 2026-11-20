@@ -17,7 +17,7 @@ import { stepHref, type OnboardingStep } from "../lib/onboarding-ui";
 
 type Item = { key: OnboardingStep; label: string; done: boolean };
 
-const ACTION: Record<OnboardingStep, string> = { business: "Name", course: "Create", payouts: "Connect" };
+const ACTION: Record<OnboardingStep, string> = { business: "Name", course: "Create", students: "Add", payouts: "Connect" };
 
 export function SetupChecklist({ workspaceId, items }: { workspaceId: string; items: Item[] }) {
   const key = `nexa.setup.dismissed.${workspaceId}`;

@@ -1,0 +1,81 @@
+"use client";
+
+/**
+ * "Join" on /auth/invite/[token], for a signed-in person (#174; A's
+ * acceptInvite). The invite only works for the address it was sent to;
+ * on WRONG_ACCOUNT we say which one, masked, and offer to switch accounts.
+ */
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+
+import { acceptInvite } from "@/features/auth/invite-actions";
+import { appSignOut } from "@/lib/auth-client";
+
+const REASON: Record<string, string> = {
+  INVALID: "This invite link isn't valid.",
+  EXPIRED: "This invite has expired. Ask for a new one.",
+  ACCEPTED: "This invite has already been used.",
+  REVOKED: "This invite was cancelled.",
+};
+
+export function AcceptInvite({ token, workspaceName, signedInAs, emailMasked }: { token: string; workspaceName: string; signedInAs: string; emailMasked: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [wrongAccount, setWrongAccount] = React.useState<string | null>(null);
+
+  async function join() {
+    setBusy(true);
+    setError(null);
+    const res = await acceptInvite({ token });
+    const r = res?.data as { ok: boolean; reason?: string; emailMasked?: string } | undefined;
+    if (r?.ok) {
+      router.replace("/dashboard");
+      router.refresh();
+      return;
+    }
+    setBusy(false);
+    if (r?.reason === "WRONG_ACCOUNT") return setWrongAccount(r.emailMasked ?? emailMasked);
+    setError((r?.reason && REASON[r.reason]) || res?.serverError || "Something went wrong. Try again.");
+  }
+
+  if (wrongAccount) {
+    return (
+      <div className="space-y-4 text-sm text-slate-700">
+        <p role="alert">
+          This invite is for <span className="font-medium text-slate-900">{wrongAccount}</span>. You&apos;re signed in as{" "}
+          <span className="font-medium text-slate-900">{signedInAs}</span>.
+        </p>
+        <button
+          type="button"
+          onClick={() => appSignOut(`/auth?callbackUrl=${encodeURIComponent(`/auth/invite/${token}`)}`)}
+          className="w-full rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          Sign in with {wrongAccount}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate-600">
+        Signed in as <span className="font-medium text-slate-900">{signedInAs}</span>.
+      </p>
+      <button
+        type="button"
+        onClick={join}
+        disabled={busy}
+        className="w-full rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+      >
+        {busy ? "Joining…" : `Join ${workspaceName}`}
+      </button>
+      {error ? (
+        <p role="alert" className="text-sm text-red-600">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}

@@ -180,11 +180,16 @@ function SignInCard() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className={INPUT}
-                  placeholder="you@example.com"
+                  placeholder={signUpOpen ? "you@example.com or your username" : "you@example.com"}
                 />
               </Field>
 
-              <Field id="password" label="Password" icon={<Lock className="size-4" />}>
+              <Field
+                id="password"
+                label="Password"
+                icon={<Lock className="size-4" />}
+                hint={signUpOpen ? "First time? Use the sign-in code from your tutor." : undefined}
+              >
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}

@@ -15,6 +15,7 @@
  */
 
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 
 import { PreferencesProvider } from "@/components/preferences-provider";
 import { AppShell, type ShellUser } from "@/components/shell/app-shell";
@@ -32,6 +33,8 @@ import { LegacyProviders } from "./legacy-providers";
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const [session, viewer] = await Promise.all([auth(), getViewer()]);
+  // Signed in with a tutor's sign-in code: choose a password first (#174).
+  if (viewer?.user.mustChangePassword) redirect("/set-password");
   const prefs = session?.user ? await getUserPreferences(session.user.id) : null;
 
   // The revamp nav goes by viewer.persona and permissions. `role` is only
