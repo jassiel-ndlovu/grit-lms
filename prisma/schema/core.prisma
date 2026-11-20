@@ -75,7 +75,8 @@ model User {
   authAccounts      Account[]
   twoFactors        TwoFactor[]
   calendarFeedToken CalendarFeedToken?
-  invitesSent       Invite[]           @relation("InviteInvitedBy")
+  invitesSent       Invite[]             @relation("InviteInvitedBy")
+  emailChanges      EmailChangeRequest[]
 }
 
 enum PlatformRole {
@@ -312,4 +313,23 @@ model RateLimit {
   key         String @unique
   count       Int
   lastRequest BigInt
+}
+
+/// A change of email address (design 02, section 8). The confirm link goes to the new address (1 hour); once confirmed, the old address gets a link that undoes it (7 days). Only hashes of the tokens are stored.
+model EmailChangeRequest {
+  id               String    @id @default(cuid())
+  userId           String
+  oldEmail         String
+  newEmail         String
+  confirmTokenHash String    @unique
+  expiresAt        DateTime
+  confirmedAt      DateTime?
+  revertTokenHash  String?   @unique
+  revertExpiresAt  DateTime?
+  revertedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

@@ -3,6 +3,22 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Email change, `revamp/a-email-change`
+
+Design 02, section 8. Viewer contract Draft 1.9.
+
+Done:
+- Migration `21_email_change`: the `EmailChangeRequest` table.
+- `features/auth/email-change.ts`: the password is re-checked (credential Account or User.password, bcrypt or scrypt).
+  - The confirm link goes to the new address and lasts 1 hour.
+  - On confirm: the email is verified, the legacy profiles are updated, and all sessions end.
+  - The old address gets an undo link that lasts 7 days.
+  - Emails `account:email-confirm` and `account:email-changed`, with sealed tokens that are removed after sending.
+- Checks: an end-to-end run on preview passed 12 checks; rows removed.
+- The owner approved deleting 5 old Neon backups. Kept: `backup-invites-20261120`, `backup-account-deletion-20261120`.
+
+Not yet: two-factor re-authentication. It comes with required two-factor after the Better Auth cutover.
+
 ## 2026-11-20 POPIA rights: data export and account deletion, `revamp/a-popia-rights`
 
 Design 02, section 8. Viewer contract Draft 1.8.

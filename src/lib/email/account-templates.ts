@@ -13,6 +13,8 @@ import { button, escapeHtml, layout } from "./templates";
 export type InviteData = { inviterName: string; workspaceName: string; role: "ADMIN" | "TUTOR"; expiresOn: string };
 export type GuardianLinkedData = { tutorName: string; studentName: string; workspaceName: string };
 export type DeletionData = { name: string; deleteOn: string };
+export type EmailConfirmData = { name: string };
+export type EmailChangedData = { name: string; newEmail: string };
 
 const p = (t: string) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;">${escapeHtml(t)}</p>`;
 
@@ -51,5 +53,27 @@ export function renderDeletionEmail(d: DeletionData, token: string): Rendered {
     subject: heading,
     html: layout({ heading, bodyHtml: paragraphs.map(p).join("") + button(url, "Cancel the deletion"), footer: "You're receiving this because someone asked to delete this Nexa account." }),
     text: `${heading}\n\n${paragraphs.join("\n\n")}\n\nCancel: ${url}\n`,
+  };
+}
+
+export function renderEmailConfirmEmail(d: EmailConfirmData, token: string): Rendered {
+  const heading = "Confirm your new email address";
+  const url = absoluteUrl(`/account/confirm-email?token=${encodeURIComponent(token)}`);
+  const paragraphs = [`Hi ${d.name.split(" ")[0] || "there"}, confirm that you want to use this address for your Nexa account. The link works for 1 hour.`, "If you didn't ask for this, ignore this email and nothing changes."];
+  return {
+    subject: heading,
+    html: layout({ heading, bodyHtml: paragraphs.map(p).join("") + button(url, "Confirm this address"), footer: "You're receiving this because someone entered this address on a Nexa account." }),
+    text: `${heading}\n\n${paragraphs.join("\n\n")}\n\nConfirm: ${url}\n`,
+  };
+}
+
+export function renderEmailChangedEmail(d: EmailChangedData, token: string): Rendered {
+  const heading = "Your Nexa email address was changed";
+  const url = absoluteUrl(`/account/revert-email?token=${encodeURIComponent(token)}`);
+  const paragraphs = [`Hi ${d.name.split(" ")[0] || "there"}, the email address on your Nexa account was changed to ${d.newEmail}.`, "If this wasn't you, put this address back within 7 days. That also signs everyone out of the account."];
+  return {
+    subject: heading,
+    html: layout({ heading, bodyHtml: paragraphs.map(p).join("") + button(url, "This wasn't me"), footer: "You're receiving this because this address was on a Nexa account." }),
+    text: `${heading}\n\n${paragraphs.join("\n\n")}\n\nThis wasn't me: ${url}\n`,
   };
 }
