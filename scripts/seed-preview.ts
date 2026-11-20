@@ -374,6 +374,21 @@ async function seed(password: string) {
     }
   }
 
+  // Seats already paid for in each paid workspace's period, as a real
+  // first payment records them (settle.ts, markInvoicePaid); without them
+  // billing counts every seeded student as "added during the period" (F5).
+  for (const w of [U, S, L, SI]) {
+    const period = await prisma.billingPeriod.findFirst({ where: { workspaceId: w.ws.id }, orderBy: { start: "asc" }, select: { id: true, openedByInvoiceId: true } });
+    if (!period?.openedByInvoiceId) continue;
+    const enrols = await prisma.enrollment.findMany({ where: { workspaceId: w.ws.id, endedAt: null }, select: { courseId: true, learnerId: true } });
+    if (enrols.length) {
+      await prisma.seatCharge.createMany({
+        data: enrols.map((e) => ({ workspaceId: w.ws.id, billingPeriodId: period.id, courseId: e.courseId, learnerId: e.learnerId, tierKey: "PRO" as const, kind: "ADVANCE" as const, invoiceId: period.openedByInvoiceId! })),
+        skipDuplicates: true,
+      });
+    }
+  }
+
   // Discount codes.
   const nexa = { issuerWorkspaceId: null, createdByUserId: P.ubuntuOwner.id };
   await prisma.discountCode.createMany({ data: [

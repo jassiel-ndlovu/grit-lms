@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-21 | Draft 1.10. Read-only workspaces (#189): staff lose every write permission except billing, fees, payouts and workspace settings (`READ_ONLY_STAFF_KEEPS`); `tutorActionClient` and `staffActionClient` refuse with `READ_ONLY: …`; `tutorReadActionClient` for exports that stay allowed. Enrolment outside the legacy workspace takes only the workspace's own students |
 | 2026-11-20 | Draft 1.9. Email change: `requestEmailChange({ password, newEmail })`, `confirmEmailChange({ token })`, `revertEmailChange({ token })` in `@/features/auth/email-change-actions` (see "Privacy") |
 | 2026-11-20 | Draft 1.8. POPIA rights: data export and account deletion (see "Privacy" below) |
 | 2026-11-20 | Draft 1.7. `user.twoFactorEnabled` now read from the account; `user.twoFactorRequired` is true for workspace owners and Nexa admins without two-factor sign-in (design 02, section 7). After the Better Auth cutover, send them to set it up (`authClient.twoFactor.enable`) |
