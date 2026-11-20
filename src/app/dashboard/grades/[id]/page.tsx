@@ -32,7 +32,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import LessonMarkdown from "@/app/components/markdown";
-import { AnswerText } from "@/components/content/answer-text";
+import { AnswerText, MathsAnswerText } from "@/components/content/answer-text";
 
 import {
   getGradeWithDetails,
@@ -399,6 +399,9 @@ function AnswerView({
     case "SHORT_ANSWER":
     case "ESSAY":
       return wrap("Your answer", <AnswerText text={String(value)} className="text-foreground text-sm" />);
+
+    case "MATH_EXPRESSION":
+      return wrap("Your answer", <MathsAnswerText tex={String(value)} className="text-foreground text-sm" />);
 
     case "CODE":
       return wrap("Your answer", (

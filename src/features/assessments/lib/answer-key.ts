@@ -51,6 +51,7 @@ const KEYABLE = new Set([
   "TRUE_FALSE",
   "SHORT_ANSWER",
   "NUMERIC",
+  "MATH_EXPRESSION",
   "FILL_IN_THE_BLANK",
   "MATCHING",
   "REORDER",
@@ -132,6 +133,7 @@ export function answerToKeyPatch(
 
     case "SHORT_ANSWER":
     case "NUMERIC":
+    case "MATH_EXPRESSION":
     case "ESSAY":
     case "CODE": {
       if (answer == null) return { ok: true, patch: { answer: null } };
@@ -242,6 +244,7 @@ export function seedAnswerFromKey(
     case "TRUE_FALSE":
     case "SHORT_ANSWER":
     case "NUMERIC":
+    case "MATH_EXPRESSION":
     case "ESSAY":
     case "CODE":
       return typeof question.answer === "string"

@@ -20,6 +20,9 @@ import {
   SubmissionStatusSchema,
 } from "../shared/enums";
 
+/** How a MATH_EXPRESSION answer is marked (null means EQUIVALENT). */
+export const MathModeSchema = z.enum(["EQUIVALENT", "FORM", "MARGIN"]);
+
 /* ─── Test ──────────────────────────────────────────────────────────────── */
 
 export const TestSchema = z.object({
@@ -68,6 +71,7 @@ export type TestQuestion = {
   matchPairs: unknown | null;
   reorderItems: string[];
   blankCount: number | null;
+  mathMode?: z.infer<typeof MathModeSchema> | null;
   createdAt: Date;
   subQuestions: TestQuestion[];
 };
@@ -87,6 +91,7 @@ export const TestQuestionSchema: z.ZodType<TestQuestion> = z.lazy(() =>
     matchPairs: z.unknown().nullable(),
     reorderItems: z.array(z.string()).default([]),
     blankCount: z.number().int().positive().nullable(),
+    mathMode: MathModeSchema.nullable().optional(),
     createdAt: DateSchema,
     subQuestions: z.array(TestQuestionSchema).default([]),
   }),
@@ -105,6 +110,7 @@ export const CreateTestQuestionSchema = z.object({
   matchPairs: z.unknown().optional(),
   reorderItems: z.array(z.string()).default([]),
   blankCount: z.number().int().positive().optional(),
+  mathMode: MathModeSchema.nullable().optional(),
 });
 export type CreateTestQuestionInput = z.infer<typeof CreateTestQuestionSchema>;
 
@@ -178,6 +184,7 @@ export type CreateTestQuestionTree = {
   matchPairs?: unknown;
   reorderItems?: string[];
   blankCount?: number | null;
+  mathMode?: z.infer<typeof MathModeSchema> | null;
   subQuestions?: CreateTestQuestionTree[];
 };
 
@@ -195,6 +202,7 @@ export const CreateTestQuestionTreeSchema: z.ZodType<CreateTestQuestionTree> =
       matchPairs: z.unknown().optional(),
       reorderItems: z.array(z.string()).default([]),
       blankCount: z.number().int().positive().nullable().optional(),
+      mathMode: MathModeSchema.nullable().optional(),
       subQuestions: z.array(CreateTestQuestionTreeSchema).default([]),
     }),
   );

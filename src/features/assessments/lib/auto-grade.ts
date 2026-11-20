@@ -27,6 +27,9 @@
 
 import { numericMatches } from "./numeric";
 
+/** "equal", "not-equal" or "undecided": the shape of maths-check.ts, passed in so this file stays dependency-free. */
+export type MathsChecker = (answer: unknown, key: unknown, mode: string | null | undefined) => "equal" | "not-equal" | "undecided";
+
 /* ─── Types ────────────────────────────────────────────────────────────── */
 
 /** Minimum question shape needed for auto-marking. Matches what
@@ -42,6 +45,8 @@ export interface AutoGradeQuestion {
   matchPairs: unknown;
   reorderItems: string[];
   blankCount: number | null;
+  /** MATH_EXPRESSION only: EQUIVALENT (null), FORM or MARGIN. */
+  mathMode?: string | null;
 }
 
 export interface AutoGradeResult {
@@ -75,6 +80,9 @@ const AUTO_MARKABLE = new Set([
   "MATCHING",
   "REORDER",
   "FILL_IN_THE_BLANK",
+  // Marked by maths-check.ts when the caller passes a checker; an
+  // undecided answer is left for the tutor.
+  "MATH_EXPRESSION",
 ]);
 
 /**
@@ -162,6 +170,7 @@ function hasKey(q: AutoGradeQuestion): boolean {
     case "MULTIPLE_CHOICE":
     case "TRUE_FALSE":
     case "SHORT_ANSWER":
+    case "MATH_EXPRESSION":
       return typeof q.answer === "string" && q.answer.trim() !== "";
     case "NUMERIC":
       return (
@@ -192,6 +201,7 @@ function hasKey(q: AutoGradeQuestion): boolean {
 export function autoGradeSubmission(
   allQuestions: readonly AutoGradeQuestion[],
   answers: Record<string, unknown>,
+  opts: { checkMaths?: MathsChecker } = {},
 ): AutoGradeResult {
   const grades: AutoGradeResult["grades"] = [];
   let autoScore = 0;
@@ -210,7 +220,19 @@ export function autoGradeSubmission(
     }
 
     const outOf = q.points;
-    const correct = isCorrect(q, answers[q.id]);
+    let correct: boolean;
+    if (q.type === "MATH_EXPRESSION") {
+      // Owner decision 2: an answer the checker can't decide goes to the
+      // tutor, never counted wrong. No checker (a client) means the same.
+      const verdict = opts.checkMaths ? opts.checkMaths(answers[q.id], q.answer, q.mathMode) : "undecided";
+      if (verdict === "undecided") {
+        pendingCount += 1;
+        continue;
+      }
+      correct = verdict === "equal";
+    } else {
+      correct = isCorrect(q, answers[q.id]);
+    }
     const score = correct ? outOf : 0;
 
     grades.push({

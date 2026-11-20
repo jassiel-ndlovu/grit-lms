@@ -47,7 +47,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
-import { AnswerText } from "@/components/content/answer-text";
+import { AnswerText, MathsAnswerText } from "@/components/content/answer-text";
 
 import {
   getTestDetailById,
@@ -648,6 +648,8 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
     case "SHORT_ANSWER":
     case "ESSAY":
       return <AnswerText text={String(value)} className="text-foreground" />;
+    case "MATH_EXPRESSION":
+      return <MathsAnswerText tex={String(value)} className="text-foreground" />;
     case "CODE":
       return <div className="font-mono text-xs whitespace-pre-wrap text-foreground">{String(value)}</div>;
     case "MULTI_SELECT": {
@@ -746,6 +748,11 @@ function hasKey(q: QuestionRow): boolean {
 
 function CorrectAnswerView({ q }: { q: QuestionRow }) {
   switch (q.type) {
+    case "MATH_EXPRESSION":
+      if (typeof q.answer !== "string" || q.answer.trim() === "") {
+        return <p className="text-muted-foreground italic text-xs">Tutor-only — graded manually.</p>;
+      }
+      return <MathsAnswerText tex={q.answer} className="text-foreground" />;
     case "MULTIPLE_CHOICE":
     case "TRUE_FALSE":
     case "SHORT_ANSWER":

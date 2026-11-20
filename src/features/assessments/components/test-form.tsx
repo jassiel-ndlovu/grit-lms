@@ -122,6 +122,7 @@ function toServerTree(qs: EditorQuestion[]): unknown[] {
     matchPairs: q.matchPairs.length > 0 ? q.matchPairs : undefined,
     reorderItems: q.reorderItems,
     blankCount: q.blankCount,
+    mathMode: q.type === "MATH_EXPRESSION" ? q.mathMode ?? "EQUIVALENT" : null,
     subQuestions: toServerTree(q.subQuestions),
   }));
 }

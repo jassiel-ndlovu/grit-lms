@@ -62,6 +62,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { preloadMathLive } from "@/components/editor/math-field";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
 
@@ -171,6 +172,12 @@ export function TestRunner({
     () => labelTree(questions, normalizeScheme(labelScheme), (q) => q.id, (q) => q.subQuestions),
     [questions, labelScheme],
   );
+  // Fetch MathLive as the attempt opens, so the first maths answer box is ready.
+  React.useEffect(() => {
+    const hasMaths = (list: RunnerQuestion[]): boolean =>
+      list.some((q) => q.type === "MATH_EXPRESSION" || hasMaths(q.subQuestions));
+    if (hasMaths(questions)) preloadMathLive();
+  }, [questions]);
   const router = useRouter();
   const preview = mode === "preview";
 
