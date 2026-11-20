@@ -53,6 +53,8 @@ model TestQuestion {
   blankCount   Int?
   /// For AI-assisted marking: { criteria: [{ id, label, max }], notes? }. Without it, the question's points are one criterion.
   rubric       Json?
+  /// How a maths answer is marked. Null keeps exact matching; MATH_EXPRESSION defaults to EQUIVALENT in code (B design 01-maths-in-answers).
+  mathMode     MathMode?
   createdAt    DateTime     @default(now())
 
   // Relations
@@ -87,6 +89,13 @@ model TestSubmission {
   uploadedFiles    UploadedFile[]
 }
 
+/// EQUIVALENT: mathematically equal. FORM: equal and in the asked form. MARGIN: numerically within a margin.
+enum MathMode {
+  EQUIVALENT
+  FORM
+  MARGIN
+}
+
 enum QuestionType {
   MULTIPLE_CHOICE
   TRUE_FALSE
@@ -99,6 +108,8 @@ enum QuestionType {
   REORDER
   FILL_IN_THE_BLANK
   NUMERIC
+  /// A maths answer, typed in a maths field; answers and keys are TeX in the existing JSON (B design 01-maths-in-answers).
+  MATH_EXPRESSION
   // Context-only — parent questions that group sub-questions but aren't
   // themselves answerable. Tutor authoring should reject NONE for any
   // question without subQuestions.
