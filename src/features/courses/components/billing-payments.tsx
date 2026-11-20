@@ -114,9 +114,6 @@ export function PaymentsList({
 export function PaymentDetail({ invoice: inv, ctx, canManage }: { invoice: InvoiceDetail; ctx: DateContext; canManage: boolean }) {
   const d = dates(ctx);
   const chip = invoiceChip(inv.status, inv.paidAt ? d.short(inv.paidAt) : null);
-  // A writes discounts, credit and VAT as lines of their own ("Discount LAUNCH10",
-  // "VAT 15%"), after the charges, so the lines are shown as they are.
-  const lines = inv.lines;
 
   return (
     <div className="space-y-8">
@@ -136,31 +133,7 @@ export function PaymentDetail({ invoice: inv, ctx, canManage }: { invoice: Invoi
 
       {inv.status === "OPEN" && canManage ? <PayButton invoiceId={inv.id} label={`Pay ${formatRand(inv.totalCents)}`} /> : null}
 
-      <section aria-labelledby="lines-heading" className="space-y-2">
-        <h2 id="lines-heading" className="text-foreground text-sm font-semibold">
-          What it covers
-        </h2>
-        <ul className="divide-border divide-y text-sm">
-          {lines.map((l, i) => (
-            <li key={i} className="flex items-baseline justify-between gap-4 py-2">
-              <span className="text-muted-foreground">
-                {l.description}
-                {l.quantity > 1 && l.unitPriceCents ? (
-                  <span className="tabular-nums">
-                    {" "}
-                    · {l.quantity} × {formatRand(l.unitPriceCents)}
-                  </span>
-                ) : null}
-              </span>
-              <span className="tabular-nums">{formatRand(l.amountCents)}</span>
-            </li>
-          ))}
-          <li className="text-foreground flex items-baseline justify-between gap-4 py-2 font-semibold">
-            <span>Total</span>
-            <span className="tabular-nums">{formatRand(inv.totalCents)}</span>
-          </li>
-        </ul>
-      </section>
+      <InvoiceLines lines={inv.lines} totalCents={inv.totalCents} />
 
       <section aria-labelledby="payments-heading" className="space-y-2">
         <h2 id="payments-heading" className="text-foreground text-sm font-semibold">
@@ -192,5 +165,40 @@ export function PaymentDetail({ invoice: inv, ctx, canManage }: { invoice: Invoi
         </Link>
       </p>
     </div>
+  );
+}
+
+/**
+ * An invoice's lines in A's order, then its total. A writes discounts,
+ * credit and VAT as lines of their own ("Discount LAUNCH10", "VAT 15%"),
+ * after the charges, so nothing is added up here.
+ */
+export function InvoiceLines({ lines, totalCents }: { lines: InvoiceDetail["lines"]; totalCents: number }) {
+  return (
+    <section aria-labelledby="lines-heading" className="space-y-2">
+      <h2 id="lines-heading" className="text-foreground text-sm font-semibold">
+        What it covers
+      </h2>
+      <ul className="divide-border divide-y text-sm">
+        {lines.map((l, i) => (
+          <li key={i} className="flex items-baseline justify-between gap-4 py-2">
+            <span className="text-muted-foreground">
+              {l.description}
+              {l.quantity > 1 && l.unitPriceCents ? (
+                <span className="tabular-nums">
+                  {" "}
+                  · {l.quantity} × {formatRand(l.unitPriceCents)}
+                </span>
+              ) : null}
+            </span>
+            <span className="tabular-nums">{formatRand(l.amountCents)}</span>
+          </li>
+        ))}
+        <li className="text-foreground flex items-baseline justify-between gap-4 py-2 font-semibold">
+          <span>Total</span>
+          <span className="tabular-nums">{formatRand(totalCents)}</span>
+        </li>
+      </ul>
+    </section>
   );
 }

@@ -3,7 +3,8 @@
  * billed meter's total, what it adds to the bill so far, its limit and a
  * daily chart. Pure display of what getUsage returns; the page loads it.
  *
- * Setting a limit waits for A's setUsageCap (billing.md 1, not built yet).
+ * In the current period an owner (billing.manage) can set or remove their
+ * own limit per meter (A's setUsageCap); it is shown, not yet enforced.
  */
 
 import Link from "next/link";
@@ -14,6 +15,7 @@ import { formatDate, type DateContext } from "@/lib/datetime";
 import { USAGE_METERS, countLabel, formatRand, peakDay } from "../lib/billing-ui";
 import { CapBar, billingRoutes } from "./billing-overview";
 import { UsageChart } from "./usage-chart";
+import { UsageLimit } from "./usage-limit";
 
 export type UsageData = Awaited<ReturnType<typeof getUsage>>;
 type Meter = (typeof USAGE_METERS)[number];
@@ -24,6 +26,7 @@ export function BillingUsage({
   ctx,
   periods,
   periodStart,
+  canManage,
 }: {
   /** One per USAGE_METERS entry, in that order. */
   usage: UsageData[];
@@ -34,6 +37,8 @@ export function BillingUsage({
   periods: string[];
   /** The period asked for, or null for the current one. */
   periodStart: string | null;
+  /** Can set limits (billing.manage); only offered for the current period. */
+  canManage: boolean;
 }) {
   const day = (iso: string, year = true) =>
     formatDate(new Date(iso), ctx, year ? { day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short" });
@@ -71,7 +76,7 @@ export function BillingUsage({
         </div>
       ) : null}
 
-      {USAGE_METERS.map((m, i) => (usage[i] ? <MeterSection key={m.meter} meter={m} usage={usage[i]} trial={trial} ctx={ctx} /> : null))}
+      {USAGE_METERS.map((m, i) => (usage[i] ? <MeterSection key={m.meter} meter={m} usage={usage[i]} trial={trial} ctx={ctx} canSetLimit={canManage && !periodStart} /> : null))}
 
       <p className="text-muted-foreground text-xs">
         Each course is billed per active student for the period. On Pro courses, AI marking includes an allowance per
@@ -81,7 +86,19 @@ export function BillingUsage({
   );
 }
 
-function MeterSection({ meter, usage: u, trial, ctx }: { meter: Meter; usage: UsageData; trial: boolean; ctx: DateContext }) {
+function MeterSection({
+  meter,
+  usage: u,
+  trial,
+  ctx,
+  canSetLimit,
+}: {
+  meter: Meter;
+  usage: UsageData;
+  trial: boolean;
+  ctx: DateContext;
+  canSetLimit: boolean;
+}) {
   const id = `meter-${meter.meter}`;
   const days = u.days.map((d) => ({
     ...d,
@@ -118,6 +135,13 @@ function MeterSection({ meter, usage: u, trial, ctx }: { meter: Meter; usage: Us
         </span>
       </p>
       {u.cap ? <CapBar cap={u.cap} label={u.cap.source === "TRIAL" ? "Trial limit" : "Limit this period"} /> : null}
+      {canSetLimit ? (
+        <UsageLimit
+          meter={meter.meter}
+          unit={meter.unit}
+          current={u.cap?.source === "TUTOR" ? u.cap.limit : null}
+        />
+      ) : null}
       <UsageChart days={days} unit={meter.unit} summary={summary} />
     </section>
   );

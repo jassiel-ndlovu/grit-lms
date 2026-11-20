@@ -74,3 +74,55 @@ export function normaliseCode(input: string): string | null {
   const code = input.trim().toUpperCase();
   return /^[A-Z0-9_-]{3,32}$/.test(code) ? code : null;
 }
+
+/** What a discount code takes off: "10% off" or "R50 off". */
+export function discountLabel(c: { kind: string; percentBps: number | null; amountCents: number | null }, formatRand: (cents: number) => string): string {
+  if (c.kind === "PERCENT" && c.percentBps != null) return `${percentFromBps(c.percentBps)} off`;
+  if (c.amountCents != null) return `${formatRand(c.amountCents)} off`;
+  return "—";
+}
+
+/**
+ * A discount code's chip, in order: switched off, not started, ended, used
+ * up, else live. `now` is an ISO instant.
+ */
+export function codeStatus(
+  c: { active: boolean; startsAt: string; endsAt: string | null; maxRedemptions: number | null; redemptions: number },
+  now: string,
+): { label: string; tone: "neutral" | "info" | "success" | "warning" | "danger"; live: boolean } {
+  if (!c.active) return { label: "Off", tone: "neutral", live: false };
+  if (c.startsAt > now) return { label: "Starts later", tone: "info", live: false };
+  if (c.endsAt != null && c.endsAt <= now) return { label: "Ended", tone: "neutral", live: false };
+  if (c.maxRedemptions != null && c.redemptions >= c.maxRedemptions) return { label: "Used up", tone: "warning", live: false };
+  return { label: "Live", tone: "success", live: true };
+}
+
+/** "2 courses, 14 learners, 31 files; 512 rows in all" for a retention dry run. */
+export function retentionSummary(counts: Record<string, number>): string {
+  const n = (k: string) => counts[k] ?? 0;
+  const plural = (v: number, one: string, many: string) => `${v.toLocaleString("en-ZA").replace(/\u00a0/g, " ")} ${v === 1 ? one : many}`;
+  const rows = Object.entries(counts)
+    .filter(([k]) => k !== "files")
+    .reduce((sum, [, v]) => sum + (Number.isFinite(v) ? v : 0), 0);
+  return `${plural(n("courses"), "course", "courses")}, ${plural(n("learners"), "learner", "learners")}, ${plural(n("files"), "file", "files")}; ${plural(rows, "row", "rows")} in all`;
+}
+
+/**
+ * The refund amount an admin typed, checked against what can still be
+ * refunded. Empty means the whole refundable amount.
+ */
+export function refundAmount(input: string, refundableCents: number): { cents: number } | { error: string } {
+  if (input.trim() === "") return { cents: refundableCents };
+  const cents = parseRandToCents(input);
+  if (cents == null) return { error: "Enter an amount in rand, for example 250 or 99,50." };
+  if (cents > refundableCents) return { error: "That's more than can be refunded on this payment." };
+  return { cents };
+}
+
+/** A usage limit typed by an owner: a whole number from 1 to 10 000 000, else null. */
+export function parseLimit(input: string): number | null {
+  const s = input.trim().replace(/[\s\u00a0]/g, "");
+  if (!/^\d+$/.test(s)) return null;
+  const n = Number(s);
+  return n >= 1 && n <= 10_000_000 ? n : null;
+}

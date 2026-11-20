@@ -3,6 +3,45 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Nexa admin billing, part 2 and usage limits, `revamp/b-admin-billing-2`
+
+From A's #120 (admin queries in #133) and #106 (`setUsageCap`).
+
+Done:
+- **Workspace page** `/dashboard/admin/billing/workspaces/[id]`
+  (`adminGetWorkspaceBilling`): state, renewal, overdue, the existing
+  workspace actions; courses with billed tier, override or hold, seats and
+  a per-course tier override (`adminOverrideCourseTier`); the 20 newest
+  invoices. Workspace names in the list now link here.
+- **Invoice page** `/dashboard/admin/billing/invoices/[id]`
+  (`adminGetPlatformInvoice`): lines (shared `InvoiceLines`), payments,
+  refunds on card payments (`adminRefundPayment`, amount optional, capped
+  at what is refundable), and on an open invoice "Mark paid off-site"
+  (full total only, a past date) and "Void". Every action needs a note.
+- **Discount codes:** the list (`adminListDiscountCodes`) with All/On/Off,
+  paging, status chips (Live, Starts later, Ended, Used up, Off) and Turn
+  off (`adminDeactivateDiscountCode`), above the existing form.
+- **Retention** `/dashboard/admin/billing/retention`
+  (`adminRetentionPreview`): a dry run, with a banner saying whether
+  deletes are on.
+- **Usage limits** on `/dashboard/settings/billing/usage`: owners
+  (billing.manage) can set, change or remove their own limit per meter in
+  the current period. Sent with `hardStop: false`, and the copy says Nexa
+  doesn't stop anything at the limit yet (caps aren't enforced, A #106).
+
+Checked:
+- `tsc` and `eslint` clean; `check-admin-billing-ui` passes with new
+  checks for code status, discount labels, retention summary, refund
+  amounts and limits.
+- A temporary sample-data page showed every new section at desktop and
+  mobile width; the refund guard, the required note and the limit form's
+  validation worked, and unauthenticated saves were refused; nothing was
+  written.
+
+Not done:
+- Not checked against real admin data on Preview.
+- If A later enforces caps, the limit copy and `hardStop` need revisiting.
+
 ## 2026-11-20 Extra time per student, `revamp/b-extra-time` (#134)
 
 Owner decision 7; the owner asked for the field in chat ("Yes, create the
