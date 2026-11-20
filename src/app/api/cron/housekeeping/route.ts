@@ -1,9 +1,10 @@
 /**
  * /api/cron/housekeeping — daily. Prunes JobRun rows older than 30 days
- * (design 06 §5). Retention deletes (design 06 §6.1) join this or their own
- * job once billing records the last payment (Phase 2).
+ * (design 06 §5), and anonymises accounts whose 14-day deletion grace has
+ * ended (design 02 §8; only with ACCOUNT_DELETIONS=1).
  */
 
+import { anonymiseDueAccounts } from "@/features/users/deletion";
 import { prisma } from "@/lib/db";
 import { defineJob } from "@/lib/jobs/define";
 
@@ -14,7 +15,7 @@ const KEEP_DAYS = 30;
 const job = defineJob("housekeeping", async () => {
   const before = new Date(Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000);
   const { count } = await prisma.jobRun.deleteMany({ where: { startedAt: { lt: before } } });
-  return { prunedJobRuns: count };
+  return { prunedJobRuns: count, accountDeletions: await anonymiseDueAccounts() };
 });
 export const GET = job.GET;
 export const POST = job.POST;

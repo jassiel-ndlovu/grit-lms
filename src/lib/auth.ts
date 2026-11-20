@@ -44,6 +44,9 @@ export const authOptions: NextAuthOptions = {
         if (!user) {
           throw new Error("No user found with this email.");
         }
+        if (user.deletionRequestedAt || user.deletedAt) {
+          throw new Error("This account is being deleted. Use the link in the email we sent to cancel.");
+        }
 
         const isValid =
           (await bcrypt.compare(credentials.password, user.password)) ||
