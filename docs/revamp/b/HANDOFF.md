@@ -3,6 +3,51 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-20 Workspace setup (onboarding), `revamp/b-onboarding`
+
+From A's #142 (`createWorkspace`, `updateWorkspaceProfile`; viewer
+contract Draft 1.3) and a/ux/01, sections 3 and 4.
+
+Done:
+- **`/dashboard/onboarding`** ("How will you use Nexa?"): Solo practice
+  or Organisation. Choosing one calls `createWorkspace` with the browser's
+  time zone and goes to the steps. If the email isn't verified, it says so
+  instead.
+- **`/dashboard/onboarding/[step]`**, with no sidebar (`isFocusRoute`),
+  the Nexa logo, the trial chip and the step list:
+  - **business:** name and time zone (`updateWorkspaceProfile`); required.
+  - **course:** the existing course form (cover, name, description; the
+    student picker is hidden with the new `showStudents` prop) via
+    `createCourse`; can be skipped.
+  - **payouts:** the existing `PayoutConnect`, or "I'll collect fees
+    myself". People without `payouts.connect` see "Your owner connects
+    payouts".
+- **Way in:** "Create a workspace" in the account menu, when billing is on,
+  the email is verified, and the viewer is staff or has no workspace.
+- **"Finish setting up"** on the tutor home for whoever runs a workspace
+  in its trial. It works out what's done from the workspace (name changed
+  from the placeholder, a course exists, payouts connected). The × hides
+  it in that browser.
+
+Checked:
+- `tsc` and `eslint` clean; `check-onboarding-ui` (new) and
+  `check-shell-nav` (now with onboarding) pass.
+- A temporary sample-data page showed the chooser, the business step
+  with its frame and name check, and the checklist, whose × stays hidden
+  after a reload. Nothing was written.
+
+Not done, waiting on A:
+- The design's subjects and students steps: no `Workspace.subjects`
+  storage or `createStudents` action yet.
+- Web address (slug) on the business step: `updateWorkspaceProfile`
+  doesn't take one.
+- `getOnboarding` / `dismissOnboarding`, which would replace the derived
+  checklist and the browser-only dismiss.
+- New sign-ups: `createCourse` still checks the old TUTOR role, so a new
+  owner without it can't create a course. Asked A on #142.
+- The design puts setup at `/auth/onboarding` (A's path); B's pages are
+  under `/dashboard/onboarding`. A redirect from there would be A's.
+
 ## 2026-11-20 Fees, part 2: parents pay, `revamp/b-fees-pay`
 
 From A's #125 (parent checkout, contract section 2, Draft 1.10 to 1.13).

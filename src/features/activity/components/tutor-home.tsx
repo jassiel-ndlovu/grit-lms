@@ -77,12 +77,15 @@ export function TutorHome({
   filter,
   now,
   dateCtx,
+  setup,
 }: {
   firstName: string;
   data: TutorHomeData;
   filter: AttentionFilter;
   now: Date;
   dateCtx: DateCtx;
+  /** "Finish setting up" for a workspace in its trial, when there's anything left. */
+  setup?: React.ReactNode;
 }) {
   const rows = filterRows(data.rows, filter);
   const today = formatDate(now, dateCtx, { weekday: "long", day: "numeric", month: "long" });
@@ -112,6 +115,8 @@ export function TutorHome({
             {today} · {summary(data.stats)}
           </p>
         </header>
+
+        {setup}
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
           <section aria-labelledby="attention-heading" className="min-w-0 space-y-3">

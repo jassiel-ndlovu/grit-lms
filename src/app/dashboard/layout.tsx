@@ -45,6 +45,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         role,
         workspaces: viewer.workspaces.map((w) => ({ id: w.id, name: w.name, as: w.as })),
         workspaceId: viewer.workspace?.id ?? null,
+        canCreateWorkspace:
+          isBillingEnabled() && viewer.user.emailVerified && (viewer.persona === "staff" || viewer.persona === "none"),
       }
     : null;
 
