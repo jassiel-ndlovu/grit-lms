@@ -41,6 +41,10 @@ model Course {
   tierOverride CourseTierOverride?
   feeSchedules FeeSchedule[]
 
+  // Join requests back-relations only (Agent A, tenancy.prisma, #206).
+  listing      CourseListing?
+  joinRequests JoinRequest[]
+
   @@index([workspaceId])
 }
 

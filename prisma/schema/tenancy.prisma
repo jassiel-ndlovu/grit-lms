@@ -61,24 +61,29 @@ enum GuardianshipStatus {
 
 /// The tenant: an organisation with tutor teams, or a solo practice.
 model Workspace {
-  id           String        @id @default(cuid())
-  kind         WorkspaceKind
-  name         String
-  slug         String        @unique
-  timezone     String        @default("Africa/Johannesburg")
-  logoUrl      String?
-  accentColor  String?
-  billingState BillingState  @default(TRIAL)
-  trialEndsAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  kind            WorkspaceKind
+  name            String
+  slug            String        @unique
+  timezone        String        @default("Africa/Johannesburg")
+  logoUrl         String?
+  accentColor     String?
+  billingState    BillingState  @default(TRIAL)
+  trialEndsAt     DateTime?
+  /// Set when an organisation switched teaching off (owner decision 2026-11-21): its owners and admins no longer teach, and it has no tutor mode. Only a Nexa admin clears it. Null means it may teach.
+  teachingOffAt   DateTime?
+  teachingOffById String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  teams       Team[]
-  memberships Membership[]
-  learners    Learner[]
-  auditLogs   AuditLog[]
-  courses     Course[]
-  enrollments Enrollment[]
+  teams          Team[]
+  memberships    Membership[]
+  learners       Learner[]
+  auditLogs      AuditLog[]
+  courses        Course[]
+  enrollments    Enrollment[]
+  courseListings CourseListing[]
+  joinRequests   JoinRequest[]
 
   // Billing and payments (billing.prisma, Phase 2).
   subscription        Subscription?
@@ -277,4 +282,51 @@ model Invite {
 
   @@index([workspaceId, kind])
   @@index([email])
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CANCELLED
+}
+
+/// A course students and parents can find and ask to join (#206). No row: the course isn't listed.
+model CourseListing {
+  courseId    String   @id
+  workspaceId String
+  listedById  String
+  listedAt    DateTime @default(now())
+
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+/// A student, or a parent for their child, asking to join a listed course (#206). Staff approve (which adds the Learner and the enrolment) or decline. One PENDING request per course and student, enforced by a partial unique index in the migration.
+model JoinRequest {
+  id              String            @id @default(cuid())
+  workspaceId     String
+  courseId        String
+  requesterUserId String
+  /// The student to enrol: the requester, or their child.
+  studentUserId   String
+  message         String?
+  status          JoinRequestStatus @default(PENDING)
+  decidedById     String?
+  decidedAt       DateTime?
+  declineReason   String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  requester User      @relation("JoinRequestRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  student   User      @relation("JoinRequestStudent", fields: [studentUserId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([courseId, status])
+  @@index([requesterUserId, createdAt])
+  @@index([studentUserId])
 }

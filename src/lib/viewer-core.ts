@@ -70,7 +70,18 @@ export type ViewerWorkspace = {
   billingState: BillingState;
   trialEndsAt: string | null;
   readOnly: boolean;
+  /**
+   * False once an organisation has switched teaching off (#206): its owners
+   * and admins only run the organisation, there is no tutor mode, and they
+   * aren't listed as tutors. Only a Nexa admin switches it back on. Always
+   * true for a solo workspace.
+   */
+  teaches: boolean;
 };
+
+/** Colour themes (#206). CALM, the mostly grey theme, is the default. */
+export const UI_THEMES = ["CALM", "BRIGHT"] as const;
+export type UiTheme = (typeof UI_THEMES)[number];
 
 export type Viewer = {
   user: {
@@ -87,6 +98,8 @@ export type Viewer = {
     mustChangePassword: boolean;
     /** Owners and Nexa admins must use two-factor sign-in (design 02, section 7): true until they set it up. */
     twoFactorRequired: boolean;
+    /** The colour theme picked in settings (#206). */
+    theme: UiTheme;
   };
   workspaces: WorkspaceSummary[];
   workspace: ViewerWorkspace | null;
@@ -243,6 +256,7 @@ export const LEGACY_WORKSPACE: ViewerWorkspace = {
   billingState: "COMPED",
   trialEndsAt: null,
   readOnly: false,
+  teaches: true,
 };
 
 export type LegacyRole = "STUDENT" | "TUTOR" | "ADMIN" | "PARENT";
@@ -259,6 +273,7 @@ export function buildLegacyViewer(input: {
   };
   /** Tutor.id when role is TUTOR, Student.id when STUDENT. */
   profileId: string | null;
+  theme?: UiTheme;
 }): Viewer {
   const { user, profileId } = input;
   const ws = LEGACY_WORKSPACE;
@@ -301,6 +316,7 @@ export function buildLegacyViewer(input: {
       roleConfirmed: true,
       mustChangePassword: false,
       twoFactorRequired: false,
+      theme: input.theme ?? "CALM",
     },
     workspaces,
     workspace,
@@ -334,6 +350,7 @@ export type TenancyWorkspaceRow = {
   accentColor: string | null;
   billingState: BillingState;
   trialEndsAt: Date | null;
+  teachingOffAt?: Date | null;
 };
 
 export type TenancyInput = {
@@ -348,6 +365,7 @@ export type TenancyInput = {
     roleConfirmed?: boolean;
     mustChangePassword?: boolean;
     twoFactorEnabled?: boolean;
+    theme?: UiTheme;
   };
   memberships: Array<{
     id: string;
@@ -387,6 +405,7 @@ function toViewerWorkspace(w: TenancyWorkspaceRow): ViewerWorkspace {
     billingState: w.billingState,
     trialEndsAt: w.trialEndsAt ? w.trialEndsAt.toISOString() : null,
     readOnly: w.billingState === "READ_ONLY" || w.billingState === "CANCELLED",
+    teaches: w.kind === "SOLO" || !w.teachingOffAt,
   };
 }
 
@@ -427,9 +446,10 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
   const workspace = workspaceRow ? toViewerWorkspace(workspaceRow) : null;
 
   // Organisation or tutor mode (#192): only for an owner or admin of an
-  // organisation who also teaches. Tutor mode uses a tutor's grants.
+  // organisation who also teaches. Tutor mode uses a tutor's grants. None
+  // once the organisation has switched teaching off (#206).
   const mode: ViewerMode | null =
-    persona === "staff" && m && (m.role === "OWNER" || m.role === "ADMIN") && m.workspace.kind === "ORGANISATION" && m.teaches
+    persona === "staff" && m && (m.role === "OWNER" || m.role === "ADMIN") && m.workspace.kind === "ORGANISATION" && m.teaches && !m.workspace.teachingOffAt
       ? (input.mode === "tutor" ? "tutor" : "organisation")
       : null;
 
@@ -466,6 +486,7 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
       roleConfirmed: user.roleConfirmed ?? true,
       mustChangePassword: user.mustChangePassword ?? false,
       twoFactorRequired: !(user.twoFactorEnabled ?? false) && (user.platformRole === "NEXA_ADMIN" || input.memberships.some((x) => x.role === "OWNER")),
+      theme: user.theme ?? "CALM",
     },
     workspaces,
     workspace,

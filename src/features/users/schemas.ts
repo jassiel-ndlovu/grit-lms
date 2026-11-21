@@ -5,6 +5,8 @@
 
 import { z } from "zod";
 
+import { UI_THEMES } from "@/lib/viewer-core";
+
 import { isValidTimeZone, LANGUAGES } from "@/lib/datetime";
 
 import { CuidSchema, EmailSchema, NonEmptyString } from "../shared/primitives";
@@ -37,6 +39,7 @@ export const UserPreferencesSchema = z.object({
   notifyOnGrades: z.boolean().default(true),
   notifyOnMessages: z.boolean().default(true),
   darkMode: z.boolean().default(false),
+  theme: z.enum(UI_THEMES).default("CALM"),
   preferredLanguage: z.string().default("EN"),
   timeZone: z.string().nullable(),
   preferredView: PreferredViewSchema.default("GRID"),
@@ -141,6 +144,8 @@ export const UpdateOwnPreferencesSchema = z.object({
   notifyOnGrades: z.boolean().optional(),
   notifyOnMessages: z.boolean().optional(),
   darkMode: z.boolean().optional(),
+  /** Colour theme (#206). */
+  theme: z.enum(UI_THEMES).optional(),
   preferredLanguage: z
     .string()
     .refine((v) => LANGUAGES.some((l) => l.value === v), "Unsupported language")

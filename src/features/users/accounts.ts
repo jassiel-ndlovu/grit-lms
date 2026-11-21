@@ -18,6 +18,8 @@
 
 import "server-only";
 
+import { UserError } from "@/lib/user-error";
+
 import bcrypt from "bcryptjs";
 
 import { syncCredentialAccount } from "@/features/auth/credential";
@@ -37,8 +39,8 @@ type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 async function freeUsername(tx: Tx, wanted: string | undefined, fullName: string): Promise<string> {
   if (wanted) {
     const u = wanted.trim().toLowerCase();
-    if (!USERNAME_RE.test(u)) throw new Error("Usernames are 3 to 30 lower-case letters, digits, dots or underscores");
-    if (await tx.user.findUnique({ where: { username: u }, select: { id: true } })) throw new Error("That username is taken");
+    if (!USERNAME_RE.test(u)) throw new UserError("Usernames are 3 to 30 lower-case letters, digits, dots or underscores");
+    if (await tx.user.findUnique({ where: { username: u }, select: { id: true } })) throw new UserError("That username is taken");
     return u;
   }
   const base = usernameBase(fullName);
@@ -58,12 +60,12 @@ export type NewStudent = { fullName: string; email?: string | null; username?: s
 
 export async function createStudentAccountFor(actorUserId: string, workspaceId: string, input: NewStudent, now: Date = new Date()) {
   const fullName = input.fullName.trim();
-  if (fullName.length < 2) throw new Error("Enter the student's full name");
-  if (input.isMinor && !input.consentAttested) throw new Error("Confirm you have a parent's or guardian's consent for this student");
+  if (fullName.length < 2) throw new UserError("Enter the student's full name");
+  if (input.isMinor && !input.consentAttested) throw new UserError("Confirm you have a parent's or guardian's consent for this student");
   const email = input.email?.trim().toLowerCase() || null;
-  if (email && (await prisma.user.findUnique({ where: { email }, select: { id: true } }))) throw new Error("An account with that email already exists. Add them to your course instead");
+  if (email && (await prisma.user.findUnique({ where: { email }, select: { id: true } }))) throw new UserError("An account with that email already exists. Ask them to find your course on Nexa and request to join");
   const courses = await prisma.course.findMany({ where: { id: { in: input.courseIds }, workspaceId }, select: { id: true } });
-  if (courses.length !== new Set(input.courseIds).size) throw new Error("One of the courses isn't in this workspace");
+  if (courses.length !== new Set(input.courseIds).size) throw new UserError("One of the courses isn't in this workspace");
 
   return prisma.$transaction(async (tx) => {
     // A new learner enrolled in a course counts against a hard-stop student limit (the trial's 20).
@@ -92,7 +94,7 @@ export async function createStudentAccountFor(actorUserId: string, workspaceId: 
 /** A new sign-in code for an account a tutor manages. Old code and sessions stop working. */
 export async function issueSignInCodeFor(actorUserId: string, workspaceId: string, userId: string, now: Date = new Date()) {
   const recent = await prisma.auditLog.count({ where: { actorUserId, action: "learner.code_reset", at: { gte: new Date(now.getTime() - 60 * 60 * 1000) } } });
-  if (recent >= RESETS_PER_HOUR) throw new Error("Too many new codes in the last hour. Try again later");
+  if (recent >= RESETS_PER_HOUR) throw new UserError("Too many new codes in the last hour. Try again later");
   return prisma.$transaction(async (tx) => {
     const u = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { username: true, email: true, emailIsPlaceholder: true } });
     const out = await setCode(tx, userId, now);
@@ -107,7 +109,7 @@ export async function setOwnPasswordFor(userId: string, newPassword: string) {
   const problem = passwordProblem(newPassword);
   if (problem) throw new Error(problem);
   const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { mustChangePassword: true } });
-  if (!u.mustChangePassword) throw new Error("Change your password in settings instead");
+  if (!u.mustChangePassword) throw new UserError("Change your password in settings instead");
   const hash = await bcrypt.hash(newPassword, ROUNDS);
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: userId }, data: { password: hash, mustChangePassword: false, initialCodeExpiresAt: null } });
@@ -125,10 +127,10 @@ export type ParentInput = { learnerId: string; name: string; email?: string | nu
  */
 export async function linkParentFor(actor: { userId: string; name: string }, workspaceId: string, input: ParentInput, now: Date = new Date()) {
   const learner = await prisma.learner.findFirst({ where: { id: input.learnerId, workspaceId }, select: { userId: true, user: { select: { name: true } }, workspace: { select: { name: true } } } });
-  if (!learner) throw new Error("Student not found");
+  if (!learner) throw new UserError("Student not found");
   const email = input.email?.trim().toLowerCase() || null;
   const existing = email ? await prisma.user.findUnique({ where: { email }, select: { id: true, email: true } }) : null;
-  if (existing?.id === learner.userId) throw new Error("That's the student's own email");
+  if (existing?.id === learner.userId) throw new UserError("That's the student's own email");
 
   return prisma.$transaction(async (tx) => {
     let parentId: string;
@@ -137,7 +139,7 @@ export async function linkParentFor(actor: { userId: string; name: string }, wor
       parentId = existing.id;
     } else {
       const name = input.name.trim();
-      if (name.length < 2) throw new Error("Enter the parent's name");
+      if (name.length < 2) throw new UserError("Enter the parent's name");
       const username = await freeUsername(tx, undefined, name);
       const user = await tx.user.create({
         data: { name, email: email ?? `pending-${username}@students.nexa-lms.invalid`, username, displayUsername: username, role: "PARENT", emailIsPlaceholder: !email, emailConfirmed: true },

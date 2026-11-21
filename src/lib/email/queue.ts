@@ -26,6 +26,7 @@ import { renderBillingEmail, type BillingTemplate, type BillingTemplateData, typ
 import { renderFeeEmail, type FeeTemplate, type FeeTemplateData } from "./fee-templates";
 import { renderDeletionEmail, renderEmailChangedEmail, renderEmailConfirmEmail, renderGuardianLinkedEmail, renderInviteEmail, type DeletionData, type EmailChangedData, type EmailConfirmData, type GuardianLinkedData, type InviteData } from "./account-templates";
 import { renderAbsenceEmail, type AbsenceData } from "./attendance-templates";
+import { renderJoinEmail, type JoinTemplate, type JoinTemplateData } from "./join-templates";
 import { renderPayoutEmail, type PayoutTemplate, type PayoutTemplateData } from "./payout-templates";
 import { recipientAllowed, sendEmail } from "./send";
 import { digestEmail, notificationEmail, passwordResetEmail, verificationEmail, type EmailNotificationItem } from "./templates";
@@ -104,6 +105,10 @@ function renderRow(template: string, to: string, data: unknown): Rendered {
   if (template.startsWith("fees:")) {
     const t = template.slice("fees:".length) as FeeTemplate;
     return renderFeeEmail(t, data as FeeTemplateData[typeof t]);
+  }
+  if (template.startsWith("join:")) {
+    const t = template.slice("join:".length) as JoinTemplate;
+    return renderJoinEmail(t, data as JoinTemplateData[typeof t]);
   }
   if (template === "attendance:absence") return renderAbsenceEmail(data as AbsenceData);
   if (template === "guardian:linked") return renderGuardianLinkedEmail(data as GuardianLinkedData);

@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1, 2026-11-16.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.12, 2026-11-21** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-21 | Draft 1.12. Owner decisions of 21 Nov (#206): `workspace.teaches`, `switchTeachingOff` and `adminSwitchTeachingOn`; course listings and join requests; `user.theme` and `updateOwnPreferences({ theme })`. Action errors written for the user (`UserError`) now reach `serverError` as written, instead of "Something went wrong" |
 | 2026-11-21 | Draft 1.11. `viewer.mode` ("organisation" \| "tutor" \| null) and `switchViewerMode({ mode })` for owners and admins of an organisation who also teach (#192, owner decision). Tutor mode uses a tutor's grants, scoped to their courses. Two-factor setup works for Google-only accounts (`allowPasswordless`); email change with two-factor on needs a sign-in in the last 15 minutes |
 | 2026-11-21 | Draft 1.10. Read-only workspaces (#189): staff lose every write permission except billing, fees, payouts and workspace settings (`READ_ONLY_STAFF_KEEPS`); `tutorActionClient` and `staffActionClient` refuse with `READ_ONLY: …`; `tutorReadActionClient` for exports that stay allowed. Enrolment outside the legacy workspace takes only the workspace's own students |
 | 2026-11-20 | Draft 1.9. Email change: `requestEmailChange({ password, newEmail })`, `confirmEmailChange({ token })`, `revertEmailChange({ token })` in `@/features/auth/email-change-actions` (see "Privacy") |
@@ -262,3 +263,50 @@ Owner decision, 2026-11-20 (#192).
 - **Organisation mode** (the default) gives the full owner or admin grants.
 - **Tutor mode** gives exactly a tutor's grants, with `needsScope` true for the scoped ones. They see and edit only their own courses, collect fees for their own students (fees.manage, scoped), and lose billing, members, teams and workspace settings.
 - **Switching:** `switchViewerMode({ mode })` in `@/features/workspaces/actions` sets the `nexa_mode` cookie. It is FORBIDDEN when `viewer.mode` is null.
+
+## Teaching, join requests and themes (Draft 1.12)
+
+Owner decisions of 2026-11-21 (#206). Server code: `src/features/workspaces/teaching.ts` and `join-requests.ts`.
+
+### Whether an organisation teaches
+
+- **`viewer.workspace.teaches`** is false once an organisation has switched teaching off. It's always true for a solo workspace.
+- **While it's off:**
+  - `viewer.mode` is null, so there's no organisation/tutor switch;
+  - owners and admins never become course staff. A course an owner creates has them as its owner but no lead, so they assign a tutor;
+  - an admin invited with courses joins without teaching them.
+  Plain tutors keep teaching.
+- **Tutor lists:** list people who teach a course (CourseStaff), as now. An organisation that doesn't teach has no owner or admin among them, so it isn't listed as a tutor.
+
+| Name | Where | Who | Input | Returns |
+| --- | --- | --- | --- | --- |
+| `switchTeachingOff` | `@/features/workspaces/actions` | the OWNER of an organisation | `{ confirmName }`: the organisation's name, typed | `{ teaches: false, since }`. Audited. Refused, with a message naming the courses, while an owner or admin still teaches one: hand them to a tutor first |
+| `adminSwitchTeachingOn` | `@/features/admin/workspace-actions` | Nexa admin (`admin.override`) | `{ workspaceId, note }` | `{ teaches: true }`. Audited. `adminListWorkspaceBilling` rows carry `teachingOffAt` |
+
+Show a strong warning before `switchTeachingOff`: only Nexa support can undo it.
+
+### Course listings and join requests
+
+Students and parents find listed courses and ask to join; staff approve or decline. Tutors can't search for self-registered students. When a tutor tries to add a student whose email already has an account, the error now tells them to ask the student to find the course and request to join.
+
+| Name | Where | Who | Input | Returns |
+| --- | --- | --- | --- | --- |
+| `setCourseListed` | `@/features/workspaces/join-request-actions` | `courses.edit` (tutors: their courses); not in a read-only workspace | `{ courseId, listed }` | `{ listed }` |
+| `browseCourses` | same | signed in | `{ q?, workspaceId?, cursor? }` | `{ courses: ListedCourse[], nextCursor }`, 24 a page. `ListedCourse` is `{ courseId, name, description, imageUrl, workspace: { id, name, kind, logoUrl }, tutors: string[], listedAt }`. Read-only and cancelled workspaces are hidden |
+| `requestToJoin` | same | a student (for themself) or a parent (`studentUserId` = a linked child) | `{ courseId, studentUserId?, message? }` | `{ id, status: "PENDING" }`. Emails the course's lead staff |
+| `cancelJoinRequest` | same | whoever asked | `{ requestId }` | `{ status: "CANCELLED" }` |
+| `listMyJoinRequests` | same | signed in | `{}` | requests they made or that were made for them: `{ id, status, message, declineReason, createdAt, decidedAt, course: { id, name, imageUrl }, workspaceName, student: { id, name }, madeByMe }` |
+| `listJoinRequests` | same | `learners.invite` (tutors, and owners in tutor mode: their courses) | `{ status? = "PENDING" }` | `{ id, status, message, declineReason, createdAt, decidedAt, course: { id, name }, studentName, parentName }`. `parentName` is set when a parent asked |
+| `approveJoinRequest` | same | `learners.invite` on that course; not read-only | `{ requestId, isMinor, consentAttested? }` | `{ status: "APPROVED", learnerId }`. Adds the student to the workspace and enrols them; the student limit applies (`TRIAL_CAP_REACHED`). Emails whoever asked |
+| `declineJoinRequest` | same | the same | `{ requestId, reason? }` | `{ status: "DECLINED" }`. The note (300 characters) goes into the email |
+
+- **Consent:** a parent's request counts as consent for a minor. When a minor asked for themself, staff must tick that they hold a parent's consent (`consentAttested`), as in `createStudentAccount`.
+- **Limits:** 5 open requests a person, 10 a day. One open request per course and student. The errors are written for the user.
+- **Pages the emails link to (B's):** `/dashboard/join-requests` (staff inbox) and `/dashboard/courses/browse` (browse). Tell A if you choose other paths.
+- **Server components** can call `listListedCourses`, `listMyJoinRequests` and `listJoinRequestsForStaff` from `@/features/workspaces/join-requests` directly.
+
+### Colour theme
+
+- **`viewer.user.theme`** is `"CALM"` (the default, mostly grey) or `"BRIGHT"`. The list is `UI_THEMES` in `@/lib/viewer-core`.
+- **Changing it:** `updateOwnPreferences({ theme })`, the existing settings action.
+- **New themes:** ask A to add a value before you ship one. It's a database enum.

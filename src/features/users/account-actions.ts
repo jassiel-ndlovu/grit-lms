@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { viewerActionClient } from "@/lib/safe-action";
 import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 import { can, needsScope } from "@/lib/viewer-core";
+import { UserError } from "@/lib/user-error";
 
 import { createStudentAccountFor, issueSignInCodeFor, linkParentFor, parentsOf, revokeGuardianshipFor, setOwnPasswordFor } from "./accounts";
 
@@ -51,7 +52,7 @@ export const createStudentAccount = viewerActionClient
     const ws = workspaceOf(viewer);
     if (!can(viewer, "learners.invite")) throw new ViewerError("FORBIDDEN");
     if (needsScope(viewer, "learners.invite")) {
-      if (parsedInput.courseIds.length === 0) throw new Error("Choose at least one of your courses");
+      if (parsedInput.courseIds.length === 0) throw new UserError("Choose at least one of your courses");
       for (const courseId of parsedInput.courseIds) if (!(await canIn(viewer, "learners.invite", { courseId }))) throw new ViewerError("FORBIDDEN");
     }
     const r = await createStudentAccountFor(viewer.user.id, ws, parsedInput);

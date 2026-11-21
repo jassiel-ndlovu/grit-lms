@@ -3,6 +3,38 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-21 Teaching switch, join requests and colour themes (#206), `revamp/a-206-teaching-joins-themes`
+
+Owner decisions of 2026-11-21, relayed by B in #206. Viewer contract Draft 1.12. Stacked on `revamp/a-restart-and-nextauth` (PR #202).
+
+Done:
+- **Migration `22_teaching_join_requests_theme`**, additive only:
+  - `Workspace.teachingOffAt` and `teachingOffById`;
+  - `CourseListing` and `JoinRequest`, with one open request per course and student (a partial unique index);
+  - `UserPreferences.theme` (`UiTheme`: CALM, BRIGHT).
+  Applied on Preview; production not yet.
+- **Back-relations on `Course`** in B's `learning.prisma` (`listing`, `joinRequests`), like the billing ones. No columns. For B's review.
+- **Teaching switch** (`workspaces/teaching.ts`):
+  - `switchTeachingOff` is owner only and needs the organisation's name. It's refused while an owner or admin still teaches.
+  - `adminSwitchTeachingOn` needs `admin.override` and a note.
+  - `viewer.workspace.teaches`; the mode is null while teaching is off.
+  - `setUpCourseTenancy` and invite acceptance skip CourseStaff for owners and admins while it's off (`mayTeach`).
+- **Join requests** (`workspaces/join-requests.ts` and `join-request-actions.ts`):
+  - listing, browse, request, cancel, inbox, approve and decline;
+  - three emails (`join:requested`, `join:approved`, `join:declined`);
+  - limits: 5 open, 10 a day.
+- **Tutors can't search for self-registered students.** The enrol picker was already limited to the workspace. The "account already exists" error now points to join requests.
+- **`viewer.user.theme`**, saved with `updateOwnPreferences({ theme })`.
+- **`UserError`** (`src/lib/user-error.ts`): the safe-action layer now passes its message through. Before this, every plain `Error` from A's account, invite and email-change code reached users as "Something went wrong". Those throws now use `UserError`.
+
+Tested:
+- A throwaway script ran 42 checks against Preview: teaching off and on, the viewer, listings, every request path, consent, limits and emails. All passed and the data was removed.
+- Types and lint pass.
+
+Next:
+- Push after PR #202 merges (Vercel deploy limit), then migrate production (backup first, AGENTS.md 4.1).
+- B builds the browse page, the staff inbox, the theme picker and the teaching switch in settings.
+
 ## 2026-11-21 Restarting cancelled workspaces (#191); NextAuth removed from A's code, `revamp/a-restart-and-nextauth`
 
 Owner decision (2026-11-21): restarting with no students is free with a card on file.

@@ -34,6 +34,7 @@ export const DEFAULT_PREFERENCES: ResolvedPreferences = {
   notifyOnSubmissions: true,
   notifyOnGradingQueue: true,
   lastDigestSentAt: null,
+  theme: "CALM",
 };
 
 export function withDefaults(
