@@ -83,6 +83,7 @@ model Workspace {
   courses        Course[]
   enrollments    Enrollment[]
   courseListings CourseListing[]
+  managedUsers   User[]          @relation("ManagedUsers")
   joinRequests   JoinRequest[]
 
   // Billing and payments (billing.prisma, Phase 2).

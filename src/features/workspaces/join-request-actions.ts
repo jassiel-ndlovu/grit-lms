@@ -17,9 +17,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { prisma } from "@/lib/db";
 import { staffActionClient, viewerActionClient } from "@/lib/safe-action";
-import { ViewerError } from "@/lib/viewer";
+import { canIn, ViewerError } from "@/lib/viewer";
 import { can, needsScope, type Permission, type Viewer } from "@/lib/viewer-core";
 
 import * as j from "./join-requests";
@@ -32,17 +31,16 @@ function staffScope(viewer: Viewer, permission: Permission): { workspaceId: stri
   return { workspaceId: viewer.workspace.id, teachingMembershipId: needsScope(viewer, permission) ? (viewer.membership?.id ?? "none") : null };
 }
 
-async function assertTeaches(membershipId: string | null, courseId: string) {
-  if (!membershipId) return;
-  const ok = await prisma.courseStaff.findUnique({ where: { courseId_membershipId: { courseId, membershipId } }, select: { courseId: true } });
-  if (!ok) throw new ViewerError("FORBIDDEN", "You don't teach this course.");
+/** For a scoped viewer: they may act on this course (they teach or own it), as canIn decides everywhere else. */
+async function assertMayActOn(viewer: Viewer, permission: Permission, courseId: string) {
+  if (!(await canIn(viewer, permission, { courseId }))) throw new ViewerError("FORBIDDEN", "You don't teach this course.");
 }
 
 export const setCourseListed = staffActionClient
   .schema(z.object({ courseId: id, listed: z.boolean() }))
   .action(async ({ parsedInput, ctx: { viewer } }) => {
     const s = staffScope(viewer, "courses.edit");
-    await assertTeaches(s.teachingMembershipId, parsedInput.courseId);
+    await assertMayActOn(viewer, "courses.edit", parsedInput.courseId);
     const r = await j.setCourseListedFor(viewer.user.id, s.workspaceId, parsedInput.courseId, parsedInput.listed);
     revalidatePath("/dashboard", "layout");
     return r;
@@ -85,7 +83,7 @@ export const approveJoinRequest = staffActionClient
     const s = staffScope(viewer, "learners.invite");
     const req = await j.joinRequestCourse(s.workspaceId, parsedInput.requestId);
     if (!req) throw new j.JoinRequestError("Request not found");
-    await assertTeaches(s.teachingMembershipId, req.courseId);
+    await assertMayActOn(viewer, "learners.invite", req.courseId);
     const r = await j.approveJoinRequestFor(viewer.user.id, s.workspaceId, parsedInput.requestId, parsedInput);
     revalidatePath("/dashboard", "layout");
     return r;
@@ -97,7 +95,7 @@ export const declineJoinRequest = staffActionClient
     const s = staffScope(viewer, "learners.invite");
     const req = await j.joinRequestCourse(s.workspaceId, parsedInput.requestId);
     if (!req) throw new j.JoinRequestError("Request not found");
-    await assertTeaches(s.teachingMembershipId, req.courseId);
+    await assertMayActOn(viewer, "learners.invite", req.courseId);
     const r = await j.declineJoinRequestFor(viewer.user.id, s.workspaceId, parsedInput.requestId, parsedInput.reason ?? null);
     revalidatePath("/dashboard", "layout");
     return r;

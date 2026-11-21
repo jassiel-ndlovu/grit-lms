@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/db";
 import { actionClient, viewerActionClient } from "@/lib/safe-action";
+import { assertWorkspaceManages } from "@/lib/user-error";
 import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 import { can, needsScope } from "@/lib/viewer-core";
 
@@ -43,7 +44,7 @@ async function assertManagesAccount(viewer: Viewer, userId: string) {
   const target = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      platformRole: true, memberships: { where: { status: "ACTIVE" }, select: { id: true } },
+      platformRole: true, managedByWorkspaceId: true, memberships: { where: { status: "ACTIVE" }, select: { id: true } },
       learners: { where: { workspaceId: ws }, select: { enrollments: { where: { endedAt: null }, select: { courseId: true } } } },
       guardianOf: { where: { status: "ACTIVE" }, select: { student: { select: { learners: { where: { workspaceId: ws }, select: { enrollments: { where: { endedAt: null }, select: { courseId: true } } } } } } } },
     },
@@ -53,9 +54,12 @@ async function assertManagesAccount(viewer: Viewer, userId: string) {
   const inWorkspace = target.learners.length > 0 || target.guardianOf.some((g) => g.student.learners.length > 0);
   if (!inWorkspace) throw new ViewerError("FORBIDDEN");
   if (needsScope(viewer, "learners.invite")) {
-    for (const c of courseIds) if (await canIn(viewer, "learners.invite", { courseId: c })) return ws;
-    throw new ViewerError("FORBIDDEN");
+    let ok = false;
+    for (const c of courseIds) if (await canIn(viewer, "learners.invite", { courseId: c })) { ok = true; break; }
+    if (!ok) throw new ViewerError("FORBIDDEN");
   }
+  // Someone who signed up themself deletes their own account (settings).
+  assertWorkspaceManages(target, ws);
   return ws;
 }
 

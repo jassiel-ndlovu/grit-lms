@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.12, 2026-11-21** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.13, 2026-11-21** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-21 | Draft 1.13. Staff manage only the accounts their workspace made (`User.managedByWorkspaceId`, migration 23): `resetUserPassword`, `issueSignInCode` and `requestStudentAccountDeletion` refuse a self-made account with a `UserError` saying the person manages it themself. Tutors invoice or set fees only for a student on that course. `changeOwnPassword` works for accounts made since the cutover |
 | 2026-11-21 | Draft 1.12. Owner decisions of 21 Nov (#206): `workspace.teaches`, `switchTeachingOff` and `adminSwitchTeachingOn`; course listings and join requests; `user.theme` and `updateOwnPreferences({ theme })`. Action errors written for the user (`UserError`) now reach `serverError` as written, instead of "Something went wrong" |
 | 2026-11-21 | Draft 1.11. `viewer.mode` ("organisation" \| "tutor" \| null) and `switchViewerMode({ mode })` for owners and admins of an organisation who also teach (#192, owner decision). Tutor mode uses a tutor's grants, scoped to their courses. Two-factor setup works for Google-only accounts (`allowPasswordless`); email change with two-factor on needs a sign-in in the last 15 minutes |
 | 2026-11-21 | Draft 1.10. Read-only workspaces (#189): staff lose every write permission except billing, fees, payouts and workspace settings (`READ_ONLY_STAFF_KEEPS`); `tutorActionClient` and `staffActionClient` refuse with `READ_ONLY: …`; `tutorReadActionClient` for exports that stay allowed. Enrolment outside the legacy workspace takes only the workspace's own students |
@@ -310,3 +311,10 @@ Students and parents find listed courses and ask to join; staff approve or decli
 - **`viewer.user.theme`** is `"CALM"` (the default, mostly grey) or `"BRIGHT"`. The list is `UI_THEMES` in `@/lib/viewer-core`.
 - **Changing it:** `updateOwnPreferences({ theme })`, the existing settings action.
 - **New themes:** ask A to add a value before you ship one. It's a database enum.
+
+### Who manages an account (Draft 1.13)
+
+- **Managed accounts:** a student or parent made by a workspace's staff (`createStudentAccount`, `linkParent` for a new parent, the older admin form) is managed by that workspace. Its staff may reset the password, issue sign-in codes and delete the account on a parent's request, as before.
+- **Self-made accounts:** someone who signed up themself, even after a join request, manages their own account. Staff get "This person manages their own account…" from `resetUserPassword`, `issueSignInCode` and `requestStudentAccountDeletion`. Hide or disable those buttons when the account isn't managed by the workspace. Ask A for a field on your student queries if you need one.
+- **Another workspace's accounts:** a managed student who also joined another workspace is managed only by the first.
+- **On Preview,** the seeded adult student (`seed.adult`) stands in for a self-made account.

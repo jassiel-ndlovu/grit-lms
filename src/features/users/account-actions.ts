@@ -13,7 +13,7 @@ import { prisma } from "@/lib/db";
 import { viewerActionClient } from "@/lib/safe-action";
 import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 import { can, needsScope } from "@/lib/viewer-core";
-import { UserError } from "@/lib/user-error";
+import { assertWorkspaceManages, UserError } from "@/lib/user-error";
 
 import { createStudentAccountFor, issueSignInCodeFor, linkParentFor, parentsOf, revokeGuardianshipFor, setOwnPasswordFor } from "./accounts";
 
@@ -68,7 +68,7 @@ export const issueSignInCode = viewerActionClient
     const ws = workspaceOf(viewer);
     const target = await prisma.user.findUnique({
       where: { id: userId },
-      select: { platformRole: true, memberships: { where: { status: "ACTIVE" }, select: { id: true } }, learners: { where: { workspaceId: ws }, select: { id: true } }, guardianOf: { where: { status: "ACTIVE" }, select: { student: { select: { learners: { where: { workspaceId: ws }, select: { id: true } } } } } } },
+      select: { platformRole: true, managedByWorkspaceId: true, memberships: { where: { status: "ACTIVE" }, select: { id: true } }, learners: { where: { workspaceId: ws }, select: { id: true } }, guardianOf: { where: { status: "ACTIVE" }, select: { student: { select: { learners: { where: { workspaceId: ws }, select: { id: true } } } } } } },
     });
     if (!target || target.platformRole === "NEXA_ADMIN" || target.memberships.length) throw new ViewerError("FORBIDDEN");
     const learnerIds = [...target.learners.map((l) => l.id), ...target.guardianOf.flatMap((g) => g.student.learners.map((l) => l.id))];
@@ -83,6 +83,7 @@ export const issueSignInCode = viewerActionClient
       }
     }
     if (!allowed) throw new ViewerError("FORBIDDEN");
+    assertWorkspaceManages(target, ws);
     return issueSignInCodeFor(viewer.user.id, ws, userId);
   });
 

@@ -9,3 +9,15 @@ export class UserError extends Error {
     this.name = "UserError";
   }
 }
+
+/**
+ * Refusal for staff acting on an account their workspace didn't make (a
+ * student or parent who signed up themselves, or one another workspace
+ * made). Only the owner of the account, or the workspace that made it,
+ * may reset its password, issue sign-in codes or delete it.
+ */
+export function assertWorkspaceManages(account: { managedByWorkspaceId: string | null }, workspaceId: string): void {
+  if (account.managedByWorkspaceId !== workspaceId) {
+    throw new UserError("This person manages their own account. They can reset their password from the sign-in page, or delete the account in their settings.");
+  }
+}

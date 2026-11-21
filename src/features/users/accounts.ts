@@ -72,7 +72,7 @@ export async function createStudentAccountFor(actorUserId: string, workspaceId: 
     if (courses.length) await assertCanAddLearners(tx, workspaceId, ["new-learner"]);
     const username = await freeUsername(tx, input.username, fullName);
     const user = await tx.user.create({
-      data: { name: fullName, email: email ?? `pending-${username}@${"students.nexa-lms.invalid"}`, username, displayUsername: username, role: "STUDENT", emailIsPlaceholder: !email, emailConfirmed: true },
+      data: { name: fullName, email: email ?? `pending-${username}@${"students.nexa-lms.invalid"}`, username, displayUsername: username, role: "STUDENT", emailIsPlaceholder: !email, emailConfirmed: true, managedByWorkspaceId: workspaceId },
       select: { id: true },
     });
     if (!email) await tx.user.update({ where: { id: user.id }, data: { email: placeholderEmail(user.id) } });
@@ -142,7 +142,7 @@ export async function linkParentFor(actor: { userId: string; name: string }, wor
       if (name.length < 2) throw new UserError("Enter the parent's name");
       const username = await freeUsername(tx, undefined, name);
       const user = await tx.user.create({
-        data: { name, email: email ?? `pending-${username}@students.nexa-lms.invalid`, username, displayUsername: username, role: "PARENT", emailIsPlaceholder: !email, emailConfirmed: true },
+        data: { name, email: email ?? `pending-${username}@students.nexa-lms.invalid`, username, displayUsername: username, role: "PARENT", emailIsPlaceholder: !email, emailConfirmed: true, managedByWorkspaceId: workspaceId },
         select: { id: true },
       });
       if (!email) await tx.user.update({ where: { id: user.id }, data: { email: placeholderEmail(user.id) } });

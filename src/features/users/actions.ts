@@ -14,6 +14,7 @@
 "use server";
 
 import { syncCredentialAccount } from "@/features/auth/credential";
+import { checkPassword } from "@/features/auth/email-change";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
@@ -23,6 +24,7 @@ import { z } from "zod";
 import { sendVerificationEmail } from "@/features/auth/verification";
 import { ensureLearner, workspaceIdFor } from "@/features/workspaces/tenancy";
 import { prisma } from "@/lib/db";
+import { assertWorkspaceManages, UserError } from "@/lib/user-error";
 import { ViewerError } from "@/lib/viewer";
 import { can, needsScope, type Viewer } from "@/lib/viewer-core";
 import {
@@ -77,6 +79,7 @@ export const createStudentUser = staffActionClient
           email,
           password: hashed,
           role: "STUDENT",
+          managedByWorkspaceId: workspaceIdFor(ctx.viewer),
         },
         select: { id: true, name: true, email: true },
       });
@@ -121,7 +124,7 @@ async function assertMayResetPassword(viewer: Viewer, userId: string): Promise<v
   const denied = () => new ViewerError("FORBIDDEN", "You can't reset that password.");
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, role: true, platformRole: true, memberships: { where: { status: "ACTIVE" }, select: { id: true }, take: 1 } },
+    select: { id: true, role: true, platformRole: true, managedByWorkspaceId: true, memberships: { where: { status: "ACTIVE" }, select: { id: true }, take: 1 } },
   });
   if (!target || target.id === viewer.user.id) throw denied();
 
@@ -146,6 +149,8 @@ async function assertMayResetPassword(viewer: Viewer, userId: string): Promise<v
     select: { id: true },
   });
   if (!learner) throw denied();
+  // A student who signed up themself (or another workspace's) manages their own password.
+  assertWorkspaceManages(target, viewer.workspace.id);
 }
 
 /**
@@ -193,12 +198,12 @@ export const updateOwnProfile = authActionClient
 
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
-        where: { email },
+        where: { id: ctx.session.user.id },
         data: { name: fullName },
       });
 
       if (ctx.session.user.role === "STUDENT") {
-        await tx.student.update({
+        await tx.student.updateMany({
           where: { email },
           data: {
             fullName,
@@ -208,7 +213,7 @@ export const updateOwnProfile = authActionClient
           },
         });
       } else if (ctx.session.user.role === "TUTOR") {
-        await tx.tutor.update({
+        await tx.tutor.updateMany({
           where: { email },
           data: {
             fullName,
@@ -233,20 +238,18 @@ export const updateOwnProfile = authActionClient
 export const changeOwnPassword = authActionClient
   .schema(ChangeOwnPasswordSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const email = ctx.session.user.email.toLowerCase();
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true, password: true },
-    });
-    if (!user) throw new Error("Account not found");
-
-    const ok = await bcrypt.compare(parsedInput.currentPassword, user.password);
-    if (!ok) throw new Error("Current password is incorrect");
+    const userId = ctx.session.user.id;
+    // Checks Better Auth's credential account too: since the cutover,
+    // new accounts have no User.password, so comparing only that column
+    // refused every one of them.
+    if (!(await checkPassword(userId, parsedInput.currentPassword))) {
+      throw new UserError("Current password is incorrect");
+    }
 
     const hashed = await bcrypt.hash(parsedInput.newPassword, BCRYPT_ROUNDS);
     await prisma.$transaction(async (tx) => {
-      await tx.user.update({ where: { id: user.id }, data: { password: hashed } });
-      await syncCredentialAccount(tx, user.id, hashed);
+      await tx.user.update({ where: { id: userId }, data: { password: hashed, mustChangePassword: false, initialCodeExpiresAt: null } });
+      await syncCredentialAccount(tx, userId, hashed);
     });
 
     return { ok: true };

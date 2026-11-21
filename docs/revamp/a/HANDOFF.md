@@ -27,6 +27,18 @@ Done:
 - **`viewer.user.theme`**, saved with `updateOwnPreferences({ theme })`.
 - **`UserError`** (`src/lib/user-error.ts`): the safe-action layer now passes its message through. Before this, every plain `Error` from A's account, invite and email-change code reached users as "Something went wrong". Those throws now use `UserError`.
 
+Also in this branch (same session, after #206):
+- **#201 reviewed:** B's `assertMayResetPassword` is right. I added one thing it couldn't know about: join requests let staff reach accounts they didn't make.
+- **Migration `23_user_managed_by_workspace`:** `User.managedByWorkspaceId`, backfilled for tutor-made and pre-tenancy students and staff-made parents. `assertWorkspaceManages` now guards `resetUserPassword`, `issueSignInCode` and student account deletion, so staff can't take over an account someone made themself. Applied on Preview (seeded students marked; `seed.adult` stays self-made).
+- **Audit of A's staff actions for unchecked ids:**
+  - AI marking, calendar writes, billing, invites, privacy and email change were already scoped.
+  - Fixed: a tutor could invoice, or set a fee schedule for, a student who isn't on their course (`assertLearnerOnCourses`).
+  - Fixed: an owner in tutor mode saw the whole workspace's calendar.
+  - Fixed: join request checks now use `canIn`, so a course's owner counts.
+- **`changeOwnPassword`** compared only `User.password`, so every account made since the cutover got "Current password is incorrect". It now uses `checkPassword`, which reads the credential account. `updateOwnProfile` no longer fails when there is no Student or Tutor row.
+- **Housekeeping:** closed #106, #120, #125, #137, #142, #148, #161 and #175.
+- **For B:** please audit your own actions (courses, lessons, tests, assignments, grades, events) the same way. Any id taken from input should be checked against `viewer.workspace` or `canIn`.
+
 Tested:
 - A throwaway script ran 42 checks against Preview: teaching off and on, the viewer, listings, every request path, consent, limits and emails. All passed and the data was removed.
 - Types and lint pass.

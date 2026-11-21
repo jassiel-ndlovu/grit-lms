@@ -217,12 +217,12 @@ export async function listMyJoinRequests(userId: string) {
 
 /**
  * Staff's inbox. `teachingMembershipId` narrows it to the courses that
- * membership teaches (a tutor, or an owner in tutor mode); null shows the
+ * membership teaches or owns (a tutor, or an owner in tutor mode); null shows the
  * whole workspace.
  */
 export async function listJoinRequestsForStaff(workspaceId: string, teachingMembershipId: string | null, status: "PENDING" | "APPROVED" | "DECLINED" | "CANCELLED" = "PENDING") {
   const rows = await prisma.joinRequest.findMany({
-    where: { workspaceId, status, ...(teachingMembershipId ? { course: { staff: { some: { membershipId: teachingMembershipId } } } } : {}) },
+    where: { workspaceId, status, ...(teachingMembershipId ? { course: { OR: [{ ownerMembershipId: teachingMembershipId }, { staff: { some: { membershipId: teachingMembershipId } } }] } } : {}) },
     orderBy: { createdAt: status === "PENDING" ? "asc" : "desc" },
     take: 100,
     select: {
