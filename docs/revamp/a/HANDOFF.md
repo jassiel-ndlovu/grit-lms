@@ -3,6 +3,32 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 Phase 1: the import and export engine, `revamp/a-imports`
+
+Phase 1 of the backlog (#216). New contract `contracts/imports.md`, Draft 1. New A feature folder `src/features/imports/`.
+
+Done:
+- **Migration `25_import_jobs`** (additive): `ImportJob` and `ImportStatus`. Rows live on the job as JSON; sign-in codes are sealed on it until they expire; jobs are deleted after 30 days.
+- **Engine** (`imports/engine.ts`): create (parse and check), edit (re-check every row), confirm (check again; `consentAttested` where needed; optionally skip error rows), apply in batches under a lease, and undo within 24 hours, newest row first.
+  - Rows commit one by one, so a bad row fails alone and a long import survives timeouts.
+  - Applying is driven by `after()` on confirm, by the screen's poll, and by the hourly notifications job.
+- **CSV** (`imports/csv.ts`): quoting, line breaks in quotes, byte-order mark, comma, semicolon or tab, header aliases, and formula-safe export. Checked by `scripts/check-imports-csv.ts`, which runs in CI.
+- **Students importer:** students with parents, sign-in codes and courses by name.
+  - A student the workspace manages is updated; anyone with their own account is skipped (they use join requests).
+  - Tutors import only into their own courses.
+  - Undo removes accounts that never signed in.
+- **Staff importer:** invitations per row, with only owners inviting admins. Undo revokes invitations not yet accepted.
+- **Sign-in cards:** `getSignInCards`, audited. **Students export:** `GET /api/exports/students`, in the template's columns.
+- **Actions** for B in `imports/actions.ts`.
+
+Tested:
+- An end-to-end script against Preview (34 checks) covered every row type, edits, consent, applying, cards, the export, undo (including keeping a student who had signed in), tutor course limits and the staff import. All data was removed afterwards.
+- The CSV checks, types, lint and the build pass.
+
+Notes:
+- Local test runs need `NEXTAUTH_SECRET`, because codes are sealed with the email queue's key. Preview and production have it.
+- Next for A in phase 1: calendar import (.ics), then the other phase 1 items in #216.
+
 ## 2026-11-22 B's requests and NextAuth's removal, `revamp/a-admin-batch`
 
 Clears what was waiting on A before phase 1 of the backlog (#216). Viewer contract Draft 1.14.
