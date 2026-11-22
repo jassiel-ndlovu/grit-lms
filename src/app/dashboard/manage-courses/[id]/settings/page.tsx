@@ -42,7 +42,7 @@ export default async function ManageCourseSettingsPage({ params }: PageProps) {
 
   return (
     <CourseFrame course={course} page="Settings" type="settings">
-      <PageTitle title="Settings" description="Cover image, name, description, enrolled students and extra time." />
+      <PageTitle title="Settings" description="Cover image, name, description, curriculum, enrolled students and extra time." />
       <Card className="p-6">
         <CourseForm
           students={students}
@@ -52,6 +52,7 @@ export default async function ManageCourseSettingsPage({ params }: PageProps) {
             description: course.description,
             imageUrl: course.imageUrl,
             studentIds: course.students.map((s) => s.id),
+            curriculum: { curriculum: course.curriculum, subject: course.subject, gradeLevel: course.gradeLevel },
           }}
         />
       </Card>

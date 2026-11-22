@@ -76,6 +76,7 @@ function buildEditorTree(all: TestDetail["questions"]): EditorQuestion[] {
       blankCount: q.blankCount,
       mathMode: q.mathMode ?? null,
       rubric: readRubric(q.rubric),
+      topics: q.topics,
       subQuestions: build(q.id),
     }));
   }
@@ -130,7 +131,7 @@ export default async function EditTestPage({ params }: PageProps) {
             servicesHref={isBillingEnabled() ? courseRoutes.services(test.courseId) : null}
           />
         }
-        courses={courses.map((c) => ({ id: c.id, name: c.name }))}
+        courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel } }))}
         defaultValues={{
           id: test.id,
           title: test.title,

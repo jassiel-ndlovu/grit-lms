@@ -68,6 +68,7 @@ import { cn } from "@/lib/utils";
 import { MathField } from "@/components/editor/math-field";
 import { rubricAllowed, rubricTotal, type Rubric } from "../lib/rubric";
 import { RubricEditor } from "./rubric-editor";
+import { TopicPicker } from "@/features/courses/components/topic-picker";
 
 /* ─── Shape ────────────────────────────────────────────────────────────── */
 
@@ -102,6 +103,8 @@ export interface EditorQuestion {
   mathMode?: MathModeValue | null;
   /** Written types only: marks split into criteria (lib/rubric.ts). */
   rubric?: Rubric | null;
+  /** Curriculum topic codes (contracts/curriculum.md). */
+  topics?: string[];
   subQuestions: EditorQuestion[];
 }
 
@@ -142,6 +145,7 @@ export function blankQuestion(): EditorQuestion {
     blankCount: null,
     mathMode: null,
     rubric: null,
+    topics: [],
     subQuestions: [],
   };
 }
@@ -472,6 +476,10 @@ export function TestQuestionEditor({
             onChange({ ...question, rubric, points: rubric ? rubricTotal(rubric) : question.points })
           }
         />
+      )}
+
+      {!isContext && (
+        <TopicPicker value={question.topics ?? []} onChange={(topics) => onChange({ ...question, topics })} />
       )}
 
       {question.subQuestions.length > 0 && (

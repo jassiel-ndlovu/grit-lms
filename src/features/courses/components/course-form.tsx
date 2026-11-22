@@ -35,7 +35,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import { CreateCourseSchema, UpdateCourseSchema } from "../schemas";
+import { CourseCurriculumInputSchema, CreateCourseSchema, UpdateCourseSchema } from "../schemas";
+import { CurriculumFields } from "./curriculum-fields";
 import { createCourse, updateCourse } from "../actions";
 import { CoverUploader } from "./cover-uploader";
 import { StockCoverPicker } from "./stock-cover-picker";
@@ -55,6 +56,7 @@ import type { StudentListItem } from "@/features/students/queries";
 const FormSchema = CreateCourseSchema.extend({
   id: z.string().optional(),
   imageUrl: CourseCoverSchema.or(z.literal("")),
+  curriculum: CourseCurriculumInputSchema,
 });
 type FormValues = z.infer<typeof FormSchema>;
 
@@ -98,6 +100,7 @@ export function CourseForm({
       // An old row's "" or bare file name starts empty, so it saves as a stock cover.
       imageUrl: isValidCover(defaultValues?.imageUrl) ? defaultValues.imageUrl : "",
       studentIds: defaultValues?.studentIds ?? [],
+      curriculum: defaultValues?.curriculum ?? { curriculum: null, subject: null, gradeLevel: null },
     },
   });
 
@@ -125,6 +128,7 @@ export function CourseForm({
           description: values.description,
           imageUrl,
           studentIds: values.studentIds,
+          curriculum: values.curriculum,
         });
         const result = await updateCourse(parsed);
         if (result?.serverError) return failed(result.serverError);
@@ -135,6 +139,7 @@ export function CourseForm({
           description: values.description,
           imageUrl,
           studentIds: values.studentIds,
+          curriculum: values.curriculum,
         });
         const result = await createCourse(parsed);
         if (result?.serverError) return failed(result.serverError);
@@ -206,6 +211,17 @@ export function CourseForm({
                   name={field.name}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="curriculum"
+          render={({ field }) => (
+            <FormItem>
+              <CurriculumFields value={field.value} onChange={field.onChange} disabled={pending} />
               <FormMessage />
             </FormItem>
           )}

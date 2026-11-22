@@ -35,6 +35,7 @@ import { getExtraTime } from "./accommodations";
 import { autoGradeSubmission } from "./lib/auto-grade";
 import { checkMaths } from "./lib/maths-check";
 import { criterionMarksToStore, readRubric, rubricToStore, rubricTotal } from "./lib/rubric";
+import { topicsToStore } from "@/features/courses/lib/curriculum";
 import { hasService } from "@/features/billing/services";
 import { getViewer } from "@/lib/viewer";
 import { loadTestFingerprint, STALE_TEST_MESSAGE } from "./lib/test-fingerprint";
@@ -94,6 +95,7 @@ async function createQuestionTree(
         blankCount: node.blankCount ?? null,
         mathMode: node.type === "MATH_EXPRESSION" ? node.mathMode ?? "EQUIVALENT" : null,
         ...rubricColumns(node),
+        topics: topicsToStore(node.topics),
       },
       select: { id: true },
     });
@@ -174,6 +176,7 @@ async function upsertQuestionTree(
         blankCount: node.blankCount ?? null,
         mathMode: node.type === "MATH_EXPRESSION" ? node.mathMode ?? "EQUIVALENT" : null,
         ...rubricColumns(node),
+        topics: topicsToStore(node.topics),
       };
 
       let currentId: string;

@@ -55,6 +55,8 @@ model TestQuestion {
   rubric       Json?
   /// How a maths answer is marked. Null keeps exact matching; MATH_EXPRESSION defaults to EQUIVALENT in code (B design 01-maths-in-answers).
   mathMode     MathMode?
+  /// Curriculum topic codes, e.g. "caps:mathematics:10:functions" (contracts/curriculum.md).
+  topics       String[]     @default([])
   createdAt    DateTime     @default(now())
 
   // Relations

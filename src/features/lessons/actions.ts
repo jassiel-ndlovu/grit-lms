@@ -18,6 +18,7 @@
 
 "use server";
 
+import { topicsToStore } from "@/features/courses/lib/curriculum";
 import { revalidatePath } from "next/cache";
 
 import { Prisma } from "@/generated/prisma";
@@ -141,6 +142,7 @@ export const createLesson = tutorActionClient
         order: parsedInput.order ?? 0,
         duration: isGroup ? null : parsedInput.duration ?? null,
         videoUrl: isGroup ? [] : parsedInput.videoUrl ?? [],
+        topics: isGroup ? [] : topicsToStore(parsedInput.topics),
         type: parsedInput.type,
         ...(parsedInput.parentId ? { parent: { connect: { id: parsedInput.parentId } } } : {}),
         course: { connect: { id: parsedInput.courseId } },
@@ -220,6 +222,7 @@ export const updateLesson = tutorActionClient
     if (parsedInput.order !== undefined) data.order = parsedInput.order;
     if (parsedInput.duration !== undefined) data.duration = parsedInput.duration;
     if (parsedInput.videoUrl !== undefined) data.videoUrl = parsedInput.videoUrl;
+    if (parsedInput.topics !== undefined) data.topics = topicsToStore(parsedInput.topics);
     if (parsedInput.type !== undefined) data.type = parsedInput.type;
     if (parsedInput.parentId !== undefined) {
       if (parsedInput.parentId === null) {

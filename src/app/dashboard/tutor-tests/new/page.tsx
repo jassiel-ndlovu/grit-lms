@@ -50,7 +50,7 @@ export default async function NewTestPage() {
     <PageFrame type="editor" breadcrumb={[{ label: "Tests", href: "/dashboard/tutor-tests" }, { label: "New test" }]}>
       <PageTitle title="New test" description="Draft first, publish when ready. Publishing sends a notification to enrolled students." />
 
-      <TestForm courses={courses.map((c) => ({ id: c.id, name: c.name }))} />
+      <TestForm courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel } }))} />
     </PageFrame>
   );
 }

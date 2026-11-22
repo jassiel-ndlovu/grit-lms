@@ -189,6 +189,8 @@ export type CreateTestQuestionTree = {
   mathMode?: z.infer<typeof MathModeSchema> | null;
   /** Written types only; anything else is dropped on save (lib/rubric.ts). */
   rubric?: unknown;
+  /** Curriculum topic codes (contracts/curriculum.md); unknown codes are dropped on save. */
+  topics?: string[];
   subQuestions?: CreateTestQuestionTree[];
 };
 
@@ -208,6 +210,7 @@ export const CreateTestQuestionTreeSchema: z.ZodType<CreateTestQuestionTree> =
       blankCount: z.number().int().positive().nullable().optional(),
       mathMode: MathModeSchema.nullable().optional(),
       rubric: RubricSchema.nullable().optional(),
+      topics: z.array(z.string().max(120)).max(20).optional(),
       subQuestions: z.array(CreateTestQuestionTreeSchema).default([]),
     }),
   );

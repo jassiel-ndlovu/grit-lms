@@ -14,6 +14,8 @@ import { SIDE_PANEL_STICKY_CLASS } from "@/lib/ui-layout";
 import { cn } from "@/lib/utils";
 import { CreateLessonButton } from "./create-lesson-button";
 import { LessonActions } from "./lesson-actions";
+import { TopicsProvider } from "@/features/courses/components/topic-picker";
+import { topicsFor, type CourseCurriculum } from "@/features/courses/lib/curriculum";
 import { LessonForm } from "./lesson-form";
 import { LessonSidebar } from "./lesson-sidebar";
 import { LessonTreeFold } from "./lesson-tree-fold";
@@ -29,7 +31,7 @@ import type { EditorFeatures } from "@/components/editor/commands";
 import type { getLessonDetailById, listLessonsByCourseId } from "../queries";
 
 export interface LessonsWorkspaceProps {
-  course: { id: string; name: string; lessonLabelScheme: string[] };
+  course: { id: string; name: string; lessonLabelScheme: string[] } & CourseCurriculum;
   lessons: Awaited<ReturnType<typeof listLessonsByCourseId>>;
   selectedLesson: Awaited<ReturnType<typeof getLessonDetailById>>;
   /** Editor blocks this course may use, for example the Plus graph block. */
@@ -54,8 +56,11 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
   const editParentOptions = parentOptions.filter((p) => !blocked.has(p.id));
   const selectedLabel = selectedLessonId ? flat.find((f) => f.lesson.id === selectedLessonId)?.label : undefined;
   const isGroup = selectedLesson?.type === "NONE";
+  // The topics lessons can be tagged with (contracts/curriculum.md).
+  const topics = topicsFor(course);
 
   return (
+    <TopicsProvider topics={topics}>
     <CourseFrame course={course} page="Lessons" type="editor">
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-0">
         {/* The tree stays in view while a long lesson scrolls. */}
@@ -128,6 +133,7 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
                   order: selectedLesson.order,
                   duration: selectedLesson.duration,
                   videoUrl: selectedLesson.videoUrl,
+                  topics: selectedLesson.topics,
                   attachments: selectedLesson.attachmentUrls.map((a) => ({ title: a.title, url: a.url })),
                 }}
               />
@@ -161,5 +167,6 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
         </section>
       </div>
     </CourseFrame>
+    </TopicsProvider>
   );
 }

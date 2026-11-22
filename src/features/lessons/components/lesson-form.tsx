@@ -58,6 +58,7 @@ import { CreateLessonSchema, UpdateLessonSchema } from "../schemas";
 import { createLesson, updateLesson } from "../actions";
 import { AttachmentManager } from "./attachment-manager";
 import { VideoUrlList } from "./video-url-list";
+import { TopicPicker } from "@/features/courses/components/topic-picker";
 import { cn } from "@/lib/utils";
 
 /**
@@ -138,6 +139,7 @@ export function LessonForm({
       attachments: defaultValues?.attachments ?? [],
       type: defaultValues?.type ?? "CONTENT",
       parentId: defaultValues?.parentId ?? null,
+      topics: defaultValues?.topics ?? [],
     },
   });
 
@@ -166,6 +168,7 @@ export function LessonForm({
           attachments: cleanAttachments,
           type: values.type,
           parentId: values.parentId ?? null,
+          topics: values.topics ?? [],
         });
         const result = await updateLesson(parsed);
         if (result?.serverError) throw new Error(result.serverError);
@@ -182,6 +185,7 @@ export function LessonForm({
           attachments: cleanAttachments,
           type: values.type,
           parentId: values.parentId ?? null,
+          topics: values.topics ?? [],
         });
         const result = await createLesson(parsed);
         if (result?.serverError) throw new Error(result.serverError);
@@ -307,6 +311,19 @@ export function LessonForm({
           />
           )}
     </>
+  );
+  // Curriculum topics (contracts/curriculum.md), when the course has a topic list.
+  const topicsField = isGroup ? null : (
+    <FormField
+      control={form.control}
+      name="topics"
+      render={({ field }) => (
+        <FormItem>
+          <TopicPicker what="lesson" value={field.value ?? []} onChange={field.onChange} disabled={pending} />
+          <FormMessage />
+        </FormItem>
+      )}
+    />
   );
   const orderAndDuration = (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -443,6 +460,7 @@ export function LessonForm({
                 Details
               </h2>
               {kindAndParent}
+              {topicsField}
               {orderAndDuration}
               {media}
             </section>
@@ -451,6 +469,7 @@ export function LessonForm({
           <>
             {kindAndParent}
             {content}
+            {topicsField}
             {orderAndDuration}
             {media}
           </>

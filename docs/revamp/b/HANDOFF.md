@@ -3,6 +3,33 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 CAPS and IEB topic tagging and the coverage map (#216, phase 2), `revamp/b-caps-tags`
+
+Done:
+- **Contract note** `docs/revamp/contracts/curriculum.md` (Draft 1) for A:
+  fields, code format, catalogue helpers and what A may read.
+- **Schema**, migration `27_curriculum_topics` (additive): `Course`
+  gets `curriculum` (`CAPS`, `IEB`, `OTHER`), `subject` and `gradeLevel`;
+  `Lesson` and `TestQuestion` get `topics String[]`.
+- **Catalogue** in `src/features/courses/lib/curriculum.ts`: CAPS
+  Mathematics, Grades 10 to 12. IEB uses the same list for now. Codes look
+  like `caps:mathematics:10:functions` and never change once shipped.
+- **Course settings** (and new course): Curriculum, Subject and Grade.
+- **Tagging:** a topic picker on each test question (not context blocks)
+  and on each lesson, shown only when the course has a topic list. The
+  server keeps known codes only, at most 10. JSON test import and export
+  carry topics.
+- **Coverage tab** on a course (`/dashboard/manage-courses/[id]/coverage`):
+  per topic, the lessons, questions and marks, with Covered / No questions
+  / No lessons / Not yet. Courses without a topic list link to Settings.
+- Checks: `npx tsx scripts/check-curriculum.ts`.
+
+Production needs `migrate deploy` for migration 27 (owner's OK first).
+
+Next (B-only): more subjects in the catalogue (Physical Sciences, Life
+Sciences, Accounting), then the question bank and randomised tests, which
+can filter by topic. Term reports wait on A's PDF helper.
+
 ## 2026-11-23 Criterion marks and data saver (#216, phase 1), `revamp/b-backlog-2`
 
 Closed #211 and #174 (finished in #225).

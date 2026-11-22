@@ -17,6 +17,7 @@ import type {
 } from "../schemas";
 import type { TestDetail } from "../queries";
 import { RubricSchema, rubricToStore, rubricTotal, type Rubric } from "./rubric";
+import { topicsToStore } from "@/features/courses/lib/curriculum";
 
 /* ------------------------------------------------------------------------- */
 /* Import schema                                                              */
@@ -56,6 +57,8 @@ type ImportQuestion = {
   blankCount?: number | null;
   mathMode?: "EQUIVALENT" | "FORM" | "MARGIN" | null;
   rubric?: Rubric | null;
+  /** Curriculum topic codes (contracts/curriculum.md); unknown codes are dropped. */
+  topics?: string[] | null;
   subQuestions?: ImportQuestion[] | null;
 };
 
@@ -77,6 +80,7 @@ const ImportQuestionSchema: z.ZodType<ImportQuestion> = z.lazy(() =>
     blankCount: z.number().int().positive().nullable().optional(),
     mathMode: z.enum(["EQUIVALENT", "FORM", "MARGIN"]).nullable().optional(),
     rubric: RubricSchema.nullable().optional(),
+    topics: z.array(z.string()).nullable().optional(),
     subQuestions: z.array(ImportQuestionSchema).nullable().optional(),
   }),
 );
@@ -138,6 +142,7 @@ function toCreateTree(q: ImportQuestion): CreateTestQuestionTree {
     blankCount: q.blankCount ?? null,
     mathMode: q.type === "MATH_EXPRESSION" ? q.mathMode ?? "EQUIVALENT" : null,
     rubric,
+    topics: topicsToStore(q.topics),
     subQuestions: (q.subQuestions ?? []).map(toCreateTree),
   }; 
 }
@@ -228,6 +233,7 @@ type SerializedQuestion = {
   blankCount?: number;
   mathMode?: "EQUIVALENT" | "FORM" | "MARGIN";
   rubric?: Rubric;
+  topics?: string[];
 };
 
 /** Types that carry a list of choices. */
@@ -298,6 +304,10 @@ function serializeQuestion(
   const rubric = rubricToStore(q.type, q.rubric);
   if (rubric) {
     out.rubric = rubric;
+  }
+  const topics = topicsToStore(q.topics);
+  if (topics.length) {
+    out.topics = topics;
   }
 
   return out;
