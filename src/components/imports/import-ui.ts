@@ -35,11 +35,31 @@ export function fieldLabel(field: string): string {
   return words ? words[0].toUpperCase() + words.slice(1).toLowerCase() : field;
 }
 
-/** The columns to show: every field the rows carry, the template's order first, then the rest as first seen. */
+/**
+ * The columns to show: every field the rows carry, in the template's order
+ * first, then the rest as first seen. Template headers are display names
+ * ("Full name", "Relationship") and fields are keys ("full_name",
+ * "parent_relationship"), so they match ignoring case and punctuation,
+ * exactly first and then by ending.
+ */
 export function columnsOf(rows: Array<Pick<ImportRow, "data">>, order: string[] = []): string[] {
   const seen = new Set<string>();
   for (const r of rows) for (const k of Object.keys(r.data)) seen.add(k);
-  return [...order.filter((h) => seen.has(h)), ...[...seen].filter((k) => !order.includes(k))];
+  const keys = [...seen];
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const used = new Set<string>();
+  const slots: Array<string | undefined> = order.map((h) => {
+    const k = keys.find((k) => !used.has(k) && norm(k) === norm(h));
+    if (k) used.add(k);
+    return k;
+  });
+  order.forEach((h, i) => {
+    if (slots[i] || !norm(h)) return;
+    const k = keys.find((k) => !used.has(k) && norm(k).endsWith(norm(h)));
+    if (k) used.add(k);
+    slots[i] = k;
+  });
+  return [...slots.filter((k): k is string => !!k), ...keys.filter((k) => !used.has(k))];
 }
 
 /** The worst issue for one cell (errors before warnings), or null. */
