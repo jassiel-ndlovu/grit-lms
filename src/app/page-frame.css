@@ -15,6 +15,8 @@
                runner 28 px. `--shell-top` is the shell's own top bar above
                them: 48 px below 1024 px (the mobile bar), 0 from 1024 px.
                AppShell's focus mode (the test runner) sets it to 0.
+     Strip     the theme's signature strip, 3 px, hanging under the lowest
+               sticky header (components/shell/signature-strip.tsx).
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -29,6 +31,7 @@
   --header-secondary: 40px;
   --header-runner: 28px;
   --shell-top: 48px;
+  --strip-height: 3px;
 }
 
 @media (min-width: 640px) {
@@ -50,4 +53,10 @@
 /* The test runner has no shell bar above its header. */
 [data-shell="focus"] {
   --shell-top: 0px;
+}
+
+/* One signature strip at a time: under the Ribbon while it shows, else
+   under the PageHeader (the Ribbon slides away on phones). */
+[data-slot="page-header"]:has(+ [data-slot="ribbon"]:not([data-hidden])) > [data-slot="signature-strip"] {
+  display: none;
 }

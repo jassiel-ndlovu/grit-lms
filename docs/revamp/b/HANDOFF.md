@@ -3,6 +3,60 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 Filled nav icons, three more themes, the signature strip, `claude/b-colour-touches-f66f7a`
+
+The owner's three colour asks of 22 Nov, in one PR.
+
+Done:
+- **Filled nav icons, both shells.** The `--nav-*` hue is now the outline and
+  the fill is the same hue mixed into the sidebar (`navFill` in
+  `nav-config.ts`, `color-mix` by `--nav-fill-mix`, 42% light / 38% dark), so
+  the outline is the darker shade in light mode and the lighter one in dark,
+  in every theme, with no colour in code. The active row mixes in more
+  (`--nav-fill-mix-active`, 70% / 55%) on top of its fill and weight.
+  `SidebarItem` takes `iconFill`; the legacy `NavRow` sets `fill`. Checked
+  every icon filled: all read except the bar chart (its open axis fills as a
+  triangle), so Analytics is `ChartPie` in both shells.
+- **Three themes:** Ocean (cool blue-green), Sunset (warm earth) and High
+  contrast (black and white with violet), light and dark, in `themes.css`,
+  each with its own nav hues and strip. The list, names and data-theme ids
+  are in the new `src/lib/ui-themes.ts`. The picker shows all five with a
+  preview (now with the filled icons and the strip), one column below
+  420 px. **Calm dark fix:** `--destructive` was #c53030, 3.21:1 as text on
+  the page; now #f07068 with dark text on it.
+- **A's enum has only CALM and BRIGHT**, so Ocean, Sunset and High contrast
+  are kept on the device (`nexa-device-theme`) and the account goes to Calm;
+  the picker says so. `effectiveTheme()` lets a device theme win only over
+  Calm. The boot script applies any known theme before paint. When A adds
+  the ids to `UI_THEMES`, they save on the account with no B change. Asked in
+  #217 (`needs-a`).
+- **Signature strip:** `SignatureStrip`, 3 px, aria-hidden, absolute under
+  its header, so it's sticky with it and moves nothing. PageHeader and
+  Ribbon each render one, and `page-frame.css` hides the header's while a
+  visible Ribbon follows. **Choice:** the strip runs under the lowest
+  header, so under the ribbon when there is one; that reads as one band
+  closing the header block instead of a line between the two bars. When
+  the ribbon slides away on a phone, the header's strip comes back. Runner:
+  1 px at 60%; Pro lockdown has no header, so no strip. Colours are
+  `--strip-1..3` per theme and mode (Calm in revamp-tokens, Inkwell in
+  globals).
+- **Checks:** `scripts/check-themes.ts` now covers all five themes, light
+  and dark (reads oklch too), plus the Inkwell nav hues for the legacy
+  shell, the strip tokens and the wiring. Lowest: text 4.76 (Calm light),
+  outlines 3.25 (Calm light), nav icon outlines 3.85 (Inkwell) / 3.91
+  (Bright light). `/design-system/frame` takes `?theme=` any id and
+  `&dark=1`. Local screenshots: every theme, light and dark, 375 and 1280.
+- **Testing:** section G of `testing/preview-recheck-2026-11-22.md`, not run.
+
+Next:
+- Run the Preview rechecks (A to G).
+- The command palette icons are still muted; they could take the fills.
+
+Blocked on the other agent:
+- #217: add OCEAN, SUNSET and CONTRAST to `UiTheme` and `UI_THEMES`.
+
+Questions for the owner: none.
+
 ## 2026-11-22 Page frame rollout (#205 steps 2 to 5), `claude/b-frame-rollout-588b5d`
 
 Every page under `src/app/dashboard/**` now renders `PageFrame` (directly or

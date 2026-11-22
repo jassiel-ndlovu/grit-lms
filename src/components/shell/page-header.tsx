@@ -5,6 +5,8 @@ import { ChevronRight, HelpCircle } from "lucide-react";
 import { HEADER_TOP_CLASS } from "@/lib/ui-layout";
 import { cn } from "@/lib/utils";
 
+import { SignatureStrip } from "./signature-strip";
+
 /**
  * PageHeader — the primary header of the page frame (#205,
  * contracts/navigation.md): breadcrumb on the left, then the page's one
@@ -14,6 +16,9 @@ import { cn } from "@/lib/utils";
  * (PageTitle), not here.
  *
  * `density="runner"`: the test runner's strip, 28 px, small text, no help.
+ *
+ * The theme's signature strip hangs under it (SignatureStrip), quieter on
+ * the runner.
  *
  * Server-safe. The last crumb is the current page and is not a link.
  */
@@ -80,6 +85,7 @@ export function PageHeader({ breadcrumb, status, actions, helpHref = "/dashboard
           <HelpCircle className="size-4" />
         </Link>
       ) : null}
+      <SignatureStrip subtle={runner} />
     </header>
   );
 }

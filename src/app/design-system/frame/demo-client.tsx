@@ -10,25 +10,28 @@ import * as React from "react";
 import Link from "next/link";
 
 import { ThemePicker } from "@/features/courses/components/theme-picker";
-import type { UiTheme } from "@/lib/viewer-core";
+import type { ColorTheme } from "@/lib/ui-themes";
 import { cn } from "@/lib/utils";
 
-export function ThemePickerDemo({ initial = "CALM" }: { initial?: UiTheme }) {
-  const [theme, setTheme] = React.useState<UiTheme>(initial);
+export function ThemePickerDemo({ initial = "CALM" }: { initial?: ColorTheme }) {
+  const [theme, setTheme] = React.useState<ColorTheme>(initial);
   return <ThemePicker value={theme} onChange={setTheme} />;
 }
 
-/** Sets data-theme on <html> while the page is open, from `?theme=bright`. */
-export function PageTheme({ theme }: { theme: "calm" | "bright" }) {
+/** Sets data-theme (and, with `dark`, the dark class) on <html> while the page is open. */
+export function PageTheme({ theme, dark = false }: { theme: string; dark?: boolean }) {
   React.useEffect(() => {
     const root = document.documentElement;
     const before = root.dataset.theme;
+    const wasDark = root.classList.contains("dark");
     root.dataset.theme = theme;
+    root.classList.toggle("dark", dark);
     return () => {
       if (before) root.dataset.theme = before;
       else delete root.dataset.theme;
+      root.classList.toggle("dark", wasDark);
     };
-  }, [theme]);
+  }, [theme, dark]);
   return null;
 }
 

@@ -138,3 +138,22 @@ F.1, F.4 and F.9 with it off (the legacy shell).
 | F.8 | `seed.ubuntu.owner` | Settings, Members, Payouts, Billing, Fees (payer view), Profile, Help: 720 wide; Fees (staff), Discounts: list width | ⏭ |
 | F.9 | a platform admin (owner) | Admin › Billing › an invoice and a workspace: B's frame (breadcrumb Admin › Billing ›…, title in the page). The admin home is A's and is unchanged | ⏭ |
 | F.10 | any, at 375 px | Notifications and a course: the ribbon hides on scroll down and returns on scroll up; the header stays; nothing scrolls sideways. Pages with no data ("No student profile…") show a framed message, not a bare line | ⏭ |
+
+## G. Filled nav icons, three more themes, the signature strip (22 Nov)
+
+Checked locally on `/design-system/frame` (`?theme=ocean|sunset|contrast|bright`,
+`&dark=1`) and a temporary page with every nav icon, a header with and
+without a ribbon and the picker, in all five themes, light and dark, at 375
+and 1280 px. Contrast is in `scripts/check-themes.ts` (every pair, every
+theme, both modes). Not checked with real accounts, in the legacy shell, or
+on a real device. Run with REVAMP_UI on, except G.6.
+
+| # | Account | Check | Result |
+| --- | --- | --- | --- |
+| G.1 | `seed.ubuntu.tutor1` | Sidebar: every icon has a tinted fill and a darker outline (light) or a deeper fill and a lighter outline (dark). The current page's row has the fill and its icon is the boldest. Analytics is a pie | ⏭ |
+| G.2 | `seed.student.two` | Settings › Colour theme: five cards (Calm, Bright, Ocean, Sunset, High contrast) with previews. Ocean, Sunset and High contrast apply at once and say "saved on this device for now"; Calm and Bright say "Saved to your account" | ⏭ |
+| G.3 | `seed.student.two` | Pick Ocean, reload, open another dashboard page: still Ocean, no flash of Calm on load. Pick Bright, then sign in on another browser: Bright. Pick Sunset: the other browser shows Calm (device-only until A's enum has it) | ⏭ |
+| G.4 | `seed.student.two` | Each theme with dark mode on in Settings: readable text, visible inputs and focus rings, error and success messages readable | ⏭ |
+| G.5 | `seed.ubuntu.tutor1`, at 1280 and 375 px | A page without a ribbon (Settings): a 3 px colour strip under the header, sticky with it, in the theme's colours. A course (with ribbon): the strip is under the ribbon only. At 375, scroll down: the ribbon slides away and the strip shows under the header; nothing jumps | ⏭ |
+| G.6 | `seed.student.two` with REVAMP_UI off | Legacy sidebar: icons filled the same way; active row keeps the terracotta tab | ⏭ |
+| G.7 | `seed.student.two` | Start a test: the runner header has a faint 1 px strip. **Don't submit a seeded test** | ⏭ |

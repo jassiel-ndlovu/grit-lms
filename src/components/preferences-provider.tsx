@@ -14,13 +14,18 @@
 import * as React from "react";
 
 import { DEFAULT_TIME_ZONE, type DateContext } from "@/lib/datetime";
+import { COLOR_THEMES, DEVICE_THEME_STORAGE_KEY, effectiveTheme, themeAttr } from "@/lib/ui-themes";
 
 export interface ClientPreferences {
   /** IANA zone the user chose, or null to follow the browser. */
   timeZone: string | null;
   locale: string;
   darkMode: boolean;
-  /** Colour theme (#206): CALM (default) or BRIGHT. Applied as data-theme on <html>. */
+  /**
+   * The account's colour theme (#206, A's UiTheme). Applied as data-theme
+   * on <html>, unless it is CALM and this device keeps a newer theme the
+   * account can't store yet (src/lib/ui-themes.ts).
+   */
   theme?: "CALM" | "BRIGHT";
   preferredView: "LIST" | "GRID" | "TIMELINE";
 }
@@ -50,7 +55,13 @@ export function PreferencesProvider({
     root.classList.toggle("dark", value.darkMode);
     root.style.colorScheme = value.darkMode ? "dark" : "light";
     root.lang = value.locale;
-    const colour = value.theme === "BRIGHT" ? "bright" : "calm";
+    let device: string | null = null;
+    try {
+      device = localStorage.getItem(DEVICE_THEME_STORAGE_KEY);
+    } catch {
+      // No storage: the account's theme it is.
+    }
+    const colour = themeAttr(effectiveTheme(value.theme, device));
     root.dataset.theme = colour;
     try {
       localStorage.setItem(THEME_STORAGE_KEY, value.darkMode ? "dark" : "light");
@@ -91,4 +102,5 @@ export function useMounted(): boolean {
  * Inline script for <head>: applies the last-known theme before React
  * hydrates, avoiding a light flash for dark-mode users.
  */
-export const themeBootScript = `try{if(localStorage.getItem("${THEME_STORAGE_KEY}")==="dark"){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}if(localStorage.getItem("${COLOR_THEME_STORAGE_KEY}")==="bright"){document.documentElement.dataset.theme="bright"}}catch(e){}`;
+const BOOT_THEMES = JSON.stringify(COLOR_THEMES.filter((t) => t !== "CALM").map(themeAttr));
+export const themeBootScript = `try{if(localStorage.getItem("${THEME_STORAGE_KEY}")==="dark"){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}var t=localStorage.getItem("${COLOR_THEME_STORAGE_KEY}");if(${BOOT_THEMES}.indexOf(t)>=0){document.documentElement.dataset.theme=t}}catch(e){}`;

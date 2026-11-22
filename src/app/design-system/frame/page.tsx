@@ -2,7 +2,8 @@
  * /design-system/frame — the page frame (#205, step 1) for every page type:
  * home, list, record, editor, runner and settings. `?type=` picks one,
  * `?lockdown=1` hides the runner's header (Pro lockdown tests) and
- * `?theme=bright` previews the Bright colour theme (#206).
+ * `?theme=bright|ocean|sunset|contrast` previews a colour theme (#206) and
+ * `?dark=1` its dark mode.
  *
  * The shell's sidebar shows an organisation owner who teaches, so the
  * Organisation / Tutor switch sits under the workspace switcher. It calls
@@ -25,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { PropertyList, PropertyRow } from "@/components/ui/property-list";
 import { canPreviewDesignSystem } from "@/lib/ui-flags";
 import { PAGE_TYPES, type PageType } from "@/lib/ui-layout";
+import { COLOR_THEMES, THEME_INFO, themeAttr, themeFromAttr } from "@/lib/ui-themes";
 import { buildLegacyViewer } from "@/lib/viewer-core";
 
 import { PageTheme, ThemePickerDemo, TypeSwitcher } from "./demo-client";
@@ -50,21 +52,25 @@ const ROWS = [
 export default async function FramePreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; lockdown?: string; theme?: string }>;
+  searchParams: Promise<{ type?: string; lockdown?: string; theme?: string; dark?: string }>;
 }) {
   if (!canPreviewDesignSystem()) notFound();
   const sp = await searchParams;
   const type: PageType = (PAGE_TYPES as readonly string[]).includes(sp.type ?? "") ? (sp.type as PageType) : "record";
-  const theme = sp.theme === "bright" ? "bright" : "calm";
-  const href = (t: string) => `${HERE}?type=${t}${theme === "bright" ? "&theme=bright" : ""}`;
-  const switcher = <TypeSwitcher types={PAGE_TYPES} current={type} base={HERE} query={theme === "bright" ? "&theme=bright" : ""} />;
+  const colour = themeFromAttr(sp.theme) ?? "CALM";
+  const theme = themeAttr(colour);
+  const dark = sp.dark === "1";
+  const query = (c: string, d: boolean) => `${c === "calm" ? "" : `&theme=${c}`}${d ? "&dark=1" : ""}`;
+  const q = query(theme, dark);
+  const href = (t: string) => `${HERE}?type=${t}${q}`;
+  const switcher = <TypeSwitcher types={PAGE_TYPES} current={type} base={HERE} query={q} />;
 
   // The runner has no shell: the page alone, like AppShell's focus mode.
   if (type === "runner") {
     const lockdown = sp.lockdown === "1";
     return (
       <div data-ui="revamp" data-theme={theme} data-shell="focus" className="bg-background text-foreground min-h-screen font-sans">
-        <PageTheme theme={theme} />
+        <PageTheme theme={theme} dark={dark} />
         <PageFrame
           type="runner"
           lockdown={lockdown}
@@ -97,7 +103,7 @@ export default async function FramePreviewPage({
 
   return (
     <div data-ui="revamp" data-theme={theme} className="font-sans">
-      <PageTheme theme={theme} />
+      <PageTheme theme={theme} dark={dark} />
       <AppShell
         user={{
           name: "Nomsa Mahlangu",
@@ -272,11 +278,21 @@ export default async function FramePreviewPage({
             {switcher}
             <PageTitle icon={<Settings />} title="Settings" description="Reading width: forms and prose stay at 720 px." />
             <PageSection id="appearance" title="Appearance">
-              <ThemePickerDemo initial={theme === "bright" ? "BRIGHT" : "CALM"} />
-              <p className="text-muted-foreground text-xs">
-                Preview the whole page:{" "}
-                <Link className="text-link underline" href={`${HERE}?type=settings${theme === "bright" ? "" : "&theme=bright"}`}>
-                  {theme === "bright" ? "Calm" : "Bright"}
+              <ThemePickerDemo initial={colour} />
+              <p className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                <span>Preview the whole page:</span>
+                {COLOR_THEMES.map((c) => (
+                  <Link
+                    key={c}
+                    className="text-link underline"
+                    aria-current={c === colour ? "page" : undefined}
+                    href={`${HERE}?type=settings${query(themeAttr(c), dark)}`}
+                  >
+                    {THEME_INFO[c].label}
+                  </Link>
+                ))}
+                <Link className="text-link underline" href={`${HERE}?type=settings${query(theme, !dark)}`}>
+                  {dark ? "Light" : "Dark"}
                 </Link>
               </p>
             </PageSection>

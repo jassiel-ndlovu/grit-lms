@@ -136,6 +136,19 @@
   --nav-help: oklch(0.55 0.091 200);
   --nav-billing: oklch(0.55 0.112 160);
   --nav-fees: oklch(0.55 0.112 120);
+
+  /* Filled nav icons (22 Nov): the --nav-* hue is the outline, and the fill
+     is that hue mixed into the sidebar (navFill in nav-config.ts), so it is
+     a lighter tint of the outline in light mode and a deeper shade in dark
+     mode. The active row mixes in more, so its icon is the boldest. */
+  --nav-fill-mix: 42%;
+  --nav-fill-mix-active: 70%;
+
+  /* The signature strip under the page header (decorative): Inkwell's
+     terracotta, gold and slate. Themes set their own in themes.css. */
+  --strip-1: oklch(0.611 0.122 42);
+  --strip-2: oklch(0.700 0.130 67);
+  --strip-3: oklch(0.450 0.060 257);
 }
 
 /*
@@ -208,6 +221,10 @@
   --nav-help: oklch(0.76 0.078 200);
   --nav-billing: oklch(0.76 0.096 160);
   --nav-fees: oklch(0.76 0.096 120);
+
+  /* Deeper shades under the lighter outlines. */
+  --nav-fill-mix: 38%;
+  --nav-fill-mix-active: 55%;
 
   --success: oklch(0.620 0.070 137);
   --warning: oklch(0.700 0.130 67);
