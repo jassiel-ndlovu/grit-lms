@@ -149,9 +149,7 @@ export default async function ProfilePage() {
               <li>Use at least 8 characters — a passphrase is easiest.</li>
               <li>Never share your password. Tutors will never ask for it.</li>
               <li>
-                Forgot it? Ask your tutor to reset it from{" "}
-                <span className="text-foreground">/dashboard/manage-users</span>
-                .
+                Forgot it? Ask your tutor for a new sign-in code.
               </li>
             </ul>
           </div>

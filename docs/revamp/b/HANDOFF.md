@@ -53,6 +53,40 @@ Blocked on the other agent:
   `api/submission-entry/[id]` DELETE. An owner gets "another tutor's
   assignment" there.
 
+## 2026-11-21 Stock course covers, `revamp/b-stock-covers`
+
+Follows the owner's decision of 2026-11-20 (cover stays required, add stock
+covers) for F11 in `b/testing/preview-e2e-2026-11-20.md`.
+
+Done:
+- **Six stock covers** in `public/covers/` (Horizon, Shapes, Waves, Arcs,
+  Facets, Orbit): original abstract SVGs in the brand palette, no text or
+  subject imagery. Typed list in `features/courses/lib/stock-covers.ts`.
+- **Course form**: a stock-cover row under the upload box. Picking one sets
+  the cover; picking it again clears it. With nothing picked or uploaded
+  the form names the cover it will use and saves it: `stockCoverFor(name)`,
+  an FNV-1a hash of the trimmed, lowercased name, so it is stable. "Must be
+  a valid URL" can no longer appear for an empty cover.
+- **Schema**: `CourseCoverSchema` accepts an absolute URL (an upload) or
+  exactly one of the stock paths; any other relative string is refused with
+  "Upload a cover or pick one of the stock covers". Create and update use
+  it. The upload flow (`BlobKind.CourseCover`) is unchanged.
+- **Display**: course cards, the student course page hero and the
+  gradebook list use `courseCoverSrc`, which shows the name's stock cover
+  when `imageUrl` is empty or not a valid cover (seeded rows have `""`).
+  Their settings open with an empty cover and save with the stock one.
+- `updateCourse` and `deleteCourse` no longer try to delete a stock cover
+  as a blob.
+- Check: `scripts/check-stock-covers.ts` (pure).
+
+Next:
+- Owner recheck on Preview: New course with no cover, then settings of a
+  seeded course (6.3, `seed.thuto.owner`).
+- `src/app/dashboard/components/course-card.tsx` (legacy, unused) still
+  builds `/images/<imageUrl>`; delete it with the other legacy pages.
+
+Blocked on the other agent: none.
+
 Questions for the owner: none.
 
 ## 2026-11-20 Owner decisions after the Preview pass

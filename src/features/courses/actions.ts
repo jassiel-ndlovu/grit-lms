@@ -29,6 +29,7 @@ import { tutorActionClient } from "@/lib/safe-action";
 import { getViewer } from "@/lib/viewer";
 import { setCourseEnrollment, setUpCourseTenancy } from "@/features/workspaces/tenancy";
 import { deleteBlob } from "@/lib/blob/server";
+import { isStockCover } from "@/features/courses/lib/stock-covers";
 import { emitNotification } from "@/features/notifications/server";
 
 import {
@@ -140,10 +141,12 @@ export const updateCourse = tutorActionClient
       { timeout: 15_000 },
     );
 
-    // Best-effort cleanup of the previous cover blob.
+    // Best-effort cleanup of the previous cover blob. Stock covers are
+    // files in public/, not blobs.
     if (
       parsedInput.imageUrl !== undefined &&
-      parsedInput.imageUrl !== existing.imageUrl
+      parsedInput.imageUrl !== existing.imageUrl &&
+      !isStockCover(existing.imageUrl)
     ) {
       await deleteBlob(existing.imageUrl);
     }
@@ -178,7 +181,7 @@ export const deleteCourse = tutorActionClient
     }
 
     await prisma.course.delete({ where: { id: parsedInput.id } });
-    await deleteBlob(existing.imageUrl);
+    if (!isStockCover(existing.imageUrl)) await deleteBlob(existing.imageUrl);
 
     revalidatePath("/dashboard/manage-courses");
     revalidatePath("/dashboard/courses");

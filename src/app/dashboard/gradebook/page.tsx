@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 
 import { listGradebookCoursesForTutor } from "@/features/grades/gradebook";
 import { getCourseScope } from "@/features/courses/course-access";
+import { courseCoverSrc } from "@/features/courses/lib/stock-covers";
 
 export const metadata = { title: "Gradebook" };
 
@@ -55,17 +56,13 @@ export default async function GradebookIndexPage() {
               <Link href={`/dashboard/gradebook/${c.id}`} className="block">
                 <Card className="hover:border-brand-terracotta/40 flex items-center gap-4 p-5 transition-colors">
                   <div className="bg-muted relative size-12 shrink-0 overflow-hidden rounded-md">
-                    {c.imageUrl ? (
-                      <Image
-                        src={c.imageUrl}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                    ) : (
-                      <BookOpen className="text-muted-foreground absolute inset-0 m-auto size-5" />
-                    )}
+                    <Image
+                      src={courseCoverSrc(c)}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="48px"
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-foreground">
