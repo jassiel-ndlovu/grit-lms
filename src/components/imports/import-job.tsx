@@ -61,10 +61,11 @@ export function ImportJob({ initial, headers = [] }: { initial: ImportView; head
     };
   }, [view]);
 
-  // When it finishes, the rest of the dashboard (Students, Members) has changed.
+  // On any change of state, refresh the server parts: the header's status
+  // chip, and Students or Members once an import finishes.
   const prevStatus = React.useRef(view.status);
   React.useEffect(() => {
-    if (isWorking(prevStatus.current) && !isWorking(view.status)) router.refresh();
+    if (prevStatus.current !== view.status) router.refresh();
     prevStatus.current = view.status;
   }, [view.status, router]);
 
@@ -92,7 +93,7 @@ export function ImportJob({ initial, headers = [] }: { initial: ImportView; head
 
   return (
     <div className="space-y-6">
-      <Counts view={view} />
+      {view.status === "CANCELLED" ? null : <Counts view={view} />}
       {view.status === "PREVIEW" ? <Preview view={view} headers={headers} busy={busy} run={run} /> : null}
       {isWorking(view.status) ? <Progress view={view} /> : null}
       {view.status === "DONE" || view.status === "UNDONE" ? <Outcome view={view} headers={headers} busy={busy} run={run} /> : null}
