@@ -27,7 +27,8 @@ import { cache } from "react";
 import type { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
-import { enrolledStudent, ownerTutor, taughtByUser } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, ownerTutor } from "@/features/courses/lib/tenancy-where";
+import { manageableBy, type CourseScope } from "@/features/courses/lib/course-access";
 
 /* ------------------------------------------------------------------------- */
 /* List queries                                                              */
@@ -46,9 +47,9 @@ export type TestListItem = Awaited<
  * Tests owned by a tutor (across all their courses), newest due-date first.
  * Includes question + submission counts for the manage list status pills.
  */
-export const listTestsByTutorId = cache(async (teacherUserId: string) => {
+export const listTestsByTutorId = cache(async (scope: CourseScope) => {
   return prisma.test.findMany({
-    where: { course: taughtByUser(teacherUserId) },
+    where: { course: manageableBy(scope) },
     orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
     include: tutorListInclude,
   });
@@ -193,8 +194,8 @@ export const listSubmissionsForStudentInCourse = cache(
  * Used by update/delete/grade actions before mutating.
  */
 export const testBelongsToTutor = cache(
-  async (testId: string, teacherUserId: string) => {
-    const n = await prisma.test.count({ where: { id: testId, course: taughtByUser(teacherUserId) } });
+  async (testId: string, scope: CourseScope) => {
+    const n = await prisma.test.count({ where: { id: testId, course: manageableBy(scope) } });
     return n > 0;
   },
 );

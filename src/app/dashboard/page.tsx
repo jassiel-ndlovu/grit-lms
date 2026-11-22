@@ -61,7 +61,7 @@ import { getTutorHome } from "@/features/activity/tutor-home";
 import { SetupChecklist } from "@/features/courses/components/setup-checklist";
 import { setupChecklistFor } from "@/features/courses/setup-checklist";
 import { getViewer } from "@/lib/viewer";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 export const metadata = { title: "Dashboard" };
 
@@ -83,12 +83,12 @@ export default async function DashboardLanding({
 
   const userFirstName = (session.user.name ?? "").split(" ")[0] || "there";
   if (session.user.role === "TUTOR") {
-    const tutor = teacherFrom(session.user);
+    const scope = await getCourseScope(session.user.id);
     const [prefs, { show }] = await Promise.all([getUserPreferences(session.user.id), searchParams]);
     const dateCtx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
     const now = new Date();
     const [data, setup] = await Promise.all([
-      getTutorHome(tutor.id, now, dateCtx.timeZone),
+      getTutorHome(scope, now, dateCtx.timeZone),
       getViewer().then(setupChecklistFor),
     ]);
     return (

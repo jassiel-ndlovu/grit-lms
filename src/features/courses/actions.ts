@@ -37,6 +37,8 @@ import {
   DeleteCourseSchema,
   UpdateCourseSchema,
 } from "./schemas";
+import { getCourseScope } from "@/features/courses/course-access";
+import { managesCourse } from "@/features/courses/lib/course-access";
 
 /**
  * Create a course.
@@ -108,7 +110,7 @@ export const updateCourse = tutorActionClient
     if (!existing) {
       throw new Error("Course not found");
     }
-    if (existing.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing)) {
       throw new Error("You don't own this course");
     }
 
@@ -174,7 +176,7 @@ export const deleteCourse = tutorActionClient
     if (!existing) {
       throw new Error("Course not found");
     }
-    if (existing.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing)) {
       throw new Error("You don't own this course");
     }
 

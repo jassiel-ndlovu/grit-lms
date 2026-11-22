@@ -33,6 +33,8 @@ import {
 } from "@/features/grades/components/charts";
 import { teacherFrom } from "@/features/courses/lib/teacher";
 import HeaderAnalytics from "@/components/illustrations/generated/header-analytics";
+// Personal analytics: the courses this user teaches, owners included (#192).
+import { tutorScope } from "@/features/courses/lib/course-access";
 
 export const metadata = { title: "Analytics" };
 
@@ -48,7 +50,7 @@ export default async function TutorAnalyticsPage() {
 
   const tutor = teacherFrom(session.user);
 
-  const courses = await listCoursesByTutorId(tutor.id);
+  const courses = await listCoursesByTutorId(tutorScope(tutor.id));
   const gradesByCourse = await Promise.all(
     courses.map(async (c) => ({
       course: c,

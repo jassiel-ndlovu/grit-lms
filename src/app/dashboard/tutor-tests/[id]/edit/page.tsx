@@ -26,7 +26,7 @@ import type {
   EditorQuestionType,
 } from "@/features/assessments/components/test-question-editor";
 import { prisma } from "@/lib/db";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -81,9 +81,9 @@ export default async function EditTestPage({ params }: PageProps) {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = teacherFrom(session.user);
+  const scope = await getCourseScope(session.user.id);
 
-  const owns = await testBelongsToTutor(testId, tutor.id);
+  const owns = await testBelongsToTutor(testId, scope);
   if (!owns) {
     return (
       <div className="text-muted-foreground p-8 text-sm">
@@ -98,7 +98,7 @@ export default async function EditTestPage({ params }: PageProps) {
   const baseFingerprint = await loadTestFingerprint(prisma, testId);
   const [test, courses] = await Promise.all([
     getTestDetailById(testId),
-    listCoursesByTutorId(tutor.id),
+    listCoursesByTutorId(scope),
   ]);
   if (!test) notFound();
 

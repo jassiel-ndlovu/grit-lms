@@ -1,5 +1,6 @@
 /**
- * /dashboard/manage-courses — tutor's listing of their own courses.
+ * /dashboard/manage-courses — the tutor's courses; for an owner or admin,
+ * every course in the workspace, each card naming its teacher (#192).
  *
  * Server Component: fetches the tutor's courses (and the student catalogue
  * for the create-course form) directly from the DB, then renders cards.
@@ -21,7 +22,7 @@ import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { getUserPreferences } from "@/features/users/preferences";
 import { CourseActions } from "@/features/courses/components/course-actions";
 import { CreateCourseButton } from "@/features/courses/components/create-course-button";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 export const metadata = { title: "Manage courses" };
 
@@ -30,12 +31,11 @@ export default async function ManageCoursesPage() {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  // The Tutor row is keyed by email — same lookup the legacy POST used.
-  const tutor = teacherFrom(session.user);
-
+  // Courses this user teaches; owners and admins see the whole workspace (#192).
+  const scope = await getCourseScope(session.user.id);
 
   const [courses, students] = await Promise.all([
-    listCoursesByTutorId(tutor.id),
+    listCoursesByTutorId(scope),
     getViewer().then((v) => listWorkspaceStudents(v ? workspaceIdFor(v) : null)),
   ]);
 
