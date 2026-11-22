@@ -92,6 +92,10 @@ export function sealForQueue(secret: string): string {
 function unseal(sealed: string): string {
   return decryptSecret(sealed, queueKey());
 }
+/** Opens a value sealed with sealForQueue (import sign-in codes, #216). */
+export function unsealFromQueue(sealed: string): string {
+  return unseal(sealed);
+}
 
 type VerifyData = { name: string; tokenSealed?: string; urlSealed?: string };
 type NotificationData = { item: EmailNotificationItem; notificationIds: string[] };

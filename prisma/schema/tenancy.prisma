@@ -92,6 +92,7 @@ model Workspace {
   courses        Course[]
   enrollments    Enrollment[]
   courseListings CourseListing[]
+  importJobs     ImportJob[]
   managedUsers   User[]          @relation("ManagedUsers")
   joinRequests   JoinRequest[]
 
@@ -339,4 +340,55 @@ model JoinRequest {
   @@index([courseId, status])
   @@index([requesterUserId, createdAt])
   @@index([studentUserId])
+}
+
+enum ImportStatus {
+  /// Parsed and checked; waiting for the person to fix rows and confirm.
+  PREVIEW
+  /// Confirmed; rows are being applied in batches.
+  APPLYING
+  DONE
+  /// Stopped by an error that isn't about one row.
+  FAILED
+  /// Undo was asked for; rows are being reversed in batches.
+  UNDOING
+  UNDONE
+  CANCELLED
+}
+
+/// One import (#216, phase 1): a file read into rows, previewed, fixed, confirmed and applied row by row, with an undo log. The rows live here as JSON until the job is cleared (30 days). Contract: docs/revamp/contracts/imports.md.
+model ImportJob {
+  id              String       @id @default(cuid())
+  workspaceId     String
+  /// The importer's key, for example "students" or "staff".
+  kind            String
+  status          ImportStatus @default(PREVIEW)
+  fileName        String
+  createdById     String
+  rowCount        Int          @default(0)
+  /// Every row: { n, data, action, issues, outcome?, undo? }.
+  rows            Json
+  /// Choices made at confirm time, for example { consentAttested: true }.
+  options         Json?
+  /// Counts by outcome, filled while applying.
+  summary         Json?
+  /// The next row to apply.
+  cursor          Int          @default(0)
+  /// Whoever holds this may apply rows until then.
+  leaseUntil      DateTime?
+  /// Sign-in codes made by the import, sealed, for the printable cards. Removed when they expire.
+  secretsSealed   String?
+  secretsExpireAt DateTime?
+  error           String?
+  createdAt       DateTime     @default(now())
+  confirmedAt     DateTime?
+  finishedAt      DateTime?
+  /// Undo is offered until then (24 hours after finishing).
+  undoUntil       DateTime?
+  undoneAt        DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([status, leaseUntil])
 }
