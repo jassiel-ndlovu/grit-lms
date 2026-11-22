@@ -20,6 +20,13 @@ model Course {
   // scheme. See src/lib/enum-labels.ts.
   lessonLabelScheme  String[]            @default([])
 
+  /// Curriculum tagging (#216, contracts/curriculum.md): the topic list the
+  /// course's lessons and questions are tagged from. Null = not set.
+  curriculum Curriculum?
+  /// Catalogue subject key, e.g. "mathematics" (src/features/courses/lib/curriculum.ts).
+  subject    String?
+  gradeLevel Int?
+
   // Tenancy (Agent A, design 01; added in A's tenancy part 2 with the
   // owner's go-ahead, for B to review). Nullable until a later migration
   // makes them required. Teaching is CourseStaff and enrolment is
@@ -60,6 +67,8 @@ model Lesson {
   createdAt       DateTime           @default(now())
   duration        Int?
   videoUrl        String[]           @default([])
+  /// Curriculum topic codes, e.g. "caps:mathematics:10:functions" (contracts/curriculum.md).
+  topics          String[]           @default([])
   attachmentUrls  Attachment[]
   course          Course             @relation(fields: [courseId], references: [id])
   completions     LessonCompletion[]
@@ -71,6 +80,12 @@ model Lesson {
   parentId String?
   parent   Lesson?    @relation("LessonGroups", fields: [parentId], references: [id], onDelete: SetNull)
   children Lesson[]   @relation("LessonGroups")
+}
+
+enum Curriculum {
+  CAPS
+  IEB
+  OTHER
 }
 
 enum LessonType {

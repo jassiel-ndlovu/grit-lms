@@ -54,6 +54,8 @@ import {
 } from "@/components/ui/select";
 
 import { createTest, updateTest } from "../actions";
+import { TopicsContext } from "@/features/courses/components/topic-picker";
+import { topicsFor, type CourseCurriculum } from "@/features/courses/lib/curriculum";
 import {
   TestQuestionEditor,
   blankQuestion,
@@ -64,6 +66,8 @@ import { TestMemoFiles } from "./test-memo-files";
 export interface TestFormCourse {
   id: string;
   name: string;
+  /** Picks the topics questions can be tagged with (contracts/curriculum.md). */
+  curriculum?: CourseCurriculum;
 }
 
 export interface TestFormProps {
@@ -126,6 +130,7 @@ function toServerTree(qs: EditorQuestion[]): unknown[] {
     blankCount: q.blankCount,
     mathMode: q.type === "MATH_EXPRESSION" ? q.mathMode ?? "EQUIVALENT" : null,
     rubric: q.rubric ?? null,
+    topics: q.topics ?? [],
     subQuestions: toServerTree(q.subQuestions),
   }));
 }
@@ -205,6 +210,9 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
   const [courseId, setCourseId] = React.useState(
     defaultValues?.courseId ?? courses[0]?.id ?? "",
   );
+  // The topics questions can be tagged with: the chosen course's list.
+  const topicCourse = courses.find((c) => c.id === courseId);
+  const topics = React.useMemo(() => topicsFor(topicCourse?.curriculum), [topicCourse]);
   const [dateStr, setDateStr] = React.useState(initialSplit.date);
   const [timeStr, setTimeStr] = React.useState(initialSplit.time);
   const [timeLimit, setTimeLimit] = React.useState<string>(
@@ -390,6 +398,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
   }
 
   return (
+    <TopicsContext.Provider value={topics}>
     <div className="space-y-6 pb-40">
       <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this test" />
 
@@ -681,5 +690,6 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
       </div>
 
     </div>
+    </TopicsContext.Provider>
   );
 }

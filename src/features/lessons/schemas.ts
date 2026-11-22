@@ -94,6 +94,8 @@ export const CreateLessonSchema = z.object({
   type: LessonTypeSchema.default("CONTENT"),
   /** Parent lesson (a group or another lesson) in the same course. */
   parentId: CuidSchema.nullable().default(null),
+  /** Curriculum topic codes (contracts/curriculum.md); unknown codes are dropped on save. */
+  topics: z.array(z.string().max(120)).max(20).default([]),
 });
 export type CreateLessonInput = z.infer<typeof CreateLessonSchema>;
 
@@ -113,6 +115,7 @@ export const UpdateLessonSchema = z.object({
   attachments: z.array(CreateAttachmentSchema).optional(),
   type: LessonTypeSchema.optional(),
   parentId: CuidSchema.nullable().optional(),
+  topics: z.array(z.string().max(120)).max(20).optional(),
 });
 export type UpdateLessonInput = z.infer<typeof UpdateLessonSchema>;
 

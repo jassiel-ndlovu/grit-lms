@@ -39,6 +39,7 @@ import {
 } from "./schemas";
 import { getCourseScope } from "@/features/courses/course-access";
 import { managesCourse } from "@/features/courses/lib/course-access";
+import { curriculumToStore } from "@/features/courses/lib/curriculum";
 
 /**
  * Create a course.
@@ -59,6 +60,7 @@ export const createCourse = tutorActionClient
             name: parsedInput.name,
             description: parsedInput.description,
             imageUrl: parsedInput.imageUrl,
+            ...(parsedInput.curriculum ? curriculumToStore(parsedInput.curriculum) : {}),
           },
           select: { id: true, name: true },
         });
@@ -119,6 +121,7 @@ export const updateCourse = tutorActionClient
     if (parsedInput.description !== undefined)
       data.description = parsedInput.description;
     if (parsedInput.imageUrl !== undefined) data.imageUrl = parsedInput.imageUrl;
+    if (parsedInput.curriculum !== undefined) Object.assign(data, curriculumToStore(parsedInput.curriculum));
 
     const viewer = await getViewer();
     if (!viewer) throw new Error("Not signed in");

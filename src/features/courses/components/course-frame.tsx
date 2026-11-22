@@ -1,7 +1,7 @@
 /**
  * The frame of a tutor's course pages (UI draft "Course page"): a record
  * PageFrame (#205) with the course's views in the ribbon. Overview,
- * Lessons, Services (billing on) and Settings are separate routes, so each
+ * Lessons, Coverage, Services (billing on) and Settings are separate routes, so each
  * view has its own URL. The lesson editor passes `type="editor"`, the
  * settings views `type="settings"`.
  *
@@ -21,6 +21,7 @@ export const courseRoutes = {
     `/dashboard/manage-courses/lessons/${id}${lessonId ? `?lesson=${lessonId}` : ""}`,
   settings: (id: string) => `/dashboard/manage-courses/${id}/settings`,
   services: (id: string) => `/dashboard/manage-courses/${id}/services`,
+  coverage: (id: string) => `/dashboard/manage-courses/${id}/coverage`,
 };
 
 export function CourseFrame({
@@ -54,6 +55,7 @@ export function CourseFrame({
           links={[
             { label: "Overview", href: courseRoutes.overview(course.id) },
             { label: "Lessons", href: courseRoutes.lessons(course.id) },
+            { label: "Coverage", href: courseRoutes.coverage(course.id) },
             // Premium services exist only with billing on (BILLING=1).
             ...(isBillingEnabled() ? [{ label: "Services", href: courseRoutes.services(course.id) }] : []),
             { label: "Settings", href: courseRoutes.settings(course.id) },
