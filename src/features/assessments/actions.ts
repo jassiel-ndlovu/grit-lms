@@ -96,6 +96,7 @@ async function createQuestionTree(
         mathMode: node.type === "MATH_EXPRESSION" ? node.mathMode ?? "EQUIVALENT" : null,
         ...rubricColumns(node),
         topics: topicsToStore(node.topics),
+        bankQuestionId: node.bankQuestionId ?? null,
       },
       select: { id: true },
     });
@@ -177,6 +178,7 @@ async function upsertQuestionTree(
         mathMode: node.type === "MATH_EXPRESSION" ? node.mathMode ?? "EQUIVALENT" : null,
         ...rubricColumns(node),
         topics: topicsToStore(node.topics),
+        bankQuestionId: node.bankQuestionId ?? null,
       };
 
       let currentId: string;

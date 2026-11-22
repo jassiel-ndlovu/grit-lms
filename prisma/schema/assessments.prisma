@@ -38,26 +38,28 @@ model Test {
 }
 
 model TestQuestion {
-  id           String       @id @default(uuid())
-  testId       String
-  parentId     String?
-  order        Int?
-  question     String
-  type         QuestionType
-  points       Int
-  options      String[]
-  answer       Json?
-  language     String?
-  matchPairs   Json?
-  reorderItems String[]
-  blankCount   Int?
+  id             String       @id @default(uuid())
+  testId         String
+  parentId       String?
+  order          Int?
+  question       String
+  type           QuestionType
+  points         Int
+  options        String[]
+  answer         Json?
+  language       String?
+  matchPairs     Json?
+  reorderItems   String[]
+  blankCount     Int?
   /// For AI-assisted marking: { criteria: [{ id, label, max }], notes? }. Without it, the question's points are one criterion.
-  rubric       Json?
+  rubric         Json?
   /// How a maths answer is marked. Null keeps exact matching; MATH_EXPRESSION defaults to EQUIVALENT in code (B design 01-maths-in-answers).
-  mathMode     MathMode?
+  mathMode       MathMode?
   /// Curriculum topic codes, e.g. "caps:mathematics:10:functions" (contracts/curriculum.md).
-  topics       String[]     @default([])
-  createdAt    DateTime     @default(now())
+  topics         String[]     @default([])
+  /// The question bank item this was copied from (contracts/question-bank.md). No foreign key: deleting the bank item keeps the copy.
+  bankQuestionId String?
+  createdAt      DateTime     @default(now())
 
   // Relations
   test         Test           @relation(fields: [testId], references: [id], onDelete: Cascade)
@@ -299,4 +301,28 @@ model AiMarkSuggestion {
   @@unique([testSubmissionId, questionId])
   @@index([status, createdAt])
   @@index([questionId])
+}
+
+/// A tutor's saved question, copied into tests on use (contracts/question-bank.md, Plus service "question-bank").
+/// `data` is one question tree in the test JSON format (lib/test-io.ts), sub-questions included.
+model BankQuestion {
+  id           String       @id @default(cuid())
+  /// Tenancy scope: the workspace of the course it was saved from. No foreign key (Workspace is A's model).
+  workspaceId  String
+  /// The user who saved it; only they see it.
+  ownerUserId  String
+  /// Plain-text start of the question, for lists and search.
+  stem         String
+  type         QuestionType
+  /// Marks for the whole tree.
+  points       Int
+  topics       String[]     @default([])
+  /// From the source course's curriculum, for filtering.
+  subject      String?
+  gradeLevel   Int?
+  data         Json
+  sourceTestId String?
+  createdAt    DateTime     @default(now())
+
+  @@index([workspaceId, ownerUserId, createdAt])
 }

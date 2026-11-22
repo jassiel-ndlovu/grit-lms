@@ -115,7 +115,7 @@ export function CurriculumFields({
       <p className="text-muted-foreground text-xs">
         {value.curriculum === "OTHER"
           ? "Topic tagging covers CAPS and IEB subjects for now."
-          : "Lessons and questions can then be tagged with the curriculum's topics, and the course shows which topics are covered. IEB courses use the CAPS topics. Mathematics, Grades 10 to 12, for now."}
+          : "Lessons and questions can then be tagged with the curriculum's topics, and the course shows which topics are covered. IEB courses use the CAPS topics. Grades 10 to 12: Mathematics, Physical Sciences, Life Sciences and Accounting."}
       </p>
     </div>
   );

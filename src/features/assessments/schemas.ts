@@ -191,6 +191,8 @@ export type CreateTestQuestionTree = {
   rubric?: unknown;
   /** Curriculum topic codes (contracts/curriculum.md); unknown codes are dropped on save. */
   topics?: string[];
+  /** The bank item this question was copied from; provenance only. */
+  bankQuestionId?: string | null;
   subQuestions?: CreateTestQuestionTree[];
 };
 
@@ -211,6 +213,7 @@ export const CreateTestQuestionTreeSchema: z.ZodType<CreateTestQuestionTree> =
       mathMode: MathModeSchema.nullable().optional(),
       rubric: RubricSchema.nullable().optional(),
       topics: z.array(z.string().max(120)).max(20).optional(),
+      bankQuestionId: z.string().max(40).nullable().optional(),
       subQuestions: z.array(CreateTestQuestionTreeSchema).default([]),
     }),
   );

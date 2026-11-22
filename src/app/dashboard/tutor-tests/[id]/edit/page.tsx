@@ -77,6 +77,7 @@ function buildEditorTree(all: TestDetail["questions"]): EditorQuestion[] {
       mathMode: q.mathMode ?? null,
       rubric: readRubric(q.rubric),
       topics: q.topics,
+      bankQuestionId: q.bankQuestionId,
       subQuestions: build(q.id),
     }));
   }
@@ -114,6 +115,9 @@ export default async function EditTestPage({ params }: PageProps) {
   // AI-suggested marks (#150) need the course's `ai-marking` service (Pro).
   const viewer = await getViewer();
   const aiAvailable = viewer ? await hasService(viewer, test.courseId, "ai-marking") : false;
+  // The Plus question bank, per course (contracts/question-bank.md).
+  const withBank = viewer ? await Promise.all(courses.map(async (c) => ((await hasService(viewer, c.id, "question-bank")) ? c.id : null))) : [];
+  const bank = new Set(withBank.filter(Boolean));
 
   const editorQuestions = buildEditorTree(test.questions);
 
@@ -131,7 +135,7 @@ export default async function EditTestPage({ params }: PageProps) {
             servicesHref={isBillingEnabled() ? courseRoutes.services(test.courseId) : null}
           />
         }
-        courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel } }))}
+        courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel }, questionBank: bank.has(c.id) }))}
         defaultValues={{
           id: test.id,
           title: test.title,

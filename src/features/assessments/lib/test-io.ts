@@ -45,7 +45,7 @@ const MatchPairSchema = z.object({
 });
 
 // Question schema is recursive; declare the TS type first, then z.lazy().
-type ImportQuestion = {
+export type ImportQuestion = {
   type: (typeof QUESTION_TYPES)[number];
   question: string;
   points?: number | null;
@@ -67,7 +67,7 @@ type ImportQuestion = {
 // from a DB row can legitimately carry an explicit `null` (Prisma stores
 // matchPairs/blankCount/language as nullable columns). Rejecting null here
 // is what broke export -> import round-tripping.
-const ImportQuestionSchema: z.ZodType<ImportQuestion> = z.lazy(() =>
+export const ImportQuestionSchema: z.ZodType<ImportQuestion> = z.lazy(() =>
   z.object({
     type: z.enum(QUESTION_TYPES),
     question: z.string(),
