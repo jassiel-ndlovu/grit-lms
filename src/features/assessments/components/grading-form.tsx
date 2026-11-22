@@ -1089,8 +1089,16 @@ function CriterionMarks({
         ))}
       </ul>
       {disagrees ? (
-        <p className="text-muted-foreground text-xs">
-          These add up to {total}, not the Score, so they won&apos;t be saved. Change a criterion to use them again.
+        <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
+          These add up to {total}, not the Score, so they won&apos;t be saved.
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange({ ...marks })}
+            className="text-foreground font-medium underline underline-offset-2 disabled:opacity-60"
+          >
+            Use {total} as the Score
+          </button>
         </p>
       ) : null}
       {rubric.notes ? <p className="text-muted-foreground text-xs whitespace-pre-line">{rubric.notes}</p> : null}
