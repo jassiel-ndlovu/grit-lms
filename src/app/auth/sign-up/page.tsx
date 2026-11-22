@@ -5,12 +5,14 @@
  * of 10+ characters through signUpWithPassword, or "Continue with Google".
  * An email sign-up must verify its address, so success shows "Check your
  * email"; the link lands on /dashboard/welcome, where a new account
- * chooses tutor, student or parent. Before the Better Auth cutover,
- * sign-up is closed.
+ * chooses tutor, student or parent, or on `?callbackUrl=` when it is a
+ * same-site path (the invite page passes its own, #174). Before the Better
+ * Auth cutover, sign-up is closed.
  */
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck, User } from "lucide-react";
 
 import { googleSignInAvailable, signUpWithPassword } from "@/lib/auth-client";
@@ -23,12 +25,24 @@ type Phase = "form" | "creating" | "sent";
 export default function SignUpPage() {
   return (
     <AuthFrame title="Create your Nexa account" lead="For tutors, students and parents.">
-      {signUpOpen ? <SignUpCard /> : <ClosedCard />}
+      {signUpOpen ? (
+        <React.Suspense fallback={null}>
+          <SignUpCard />
+        </React.Suspense>
+      ) : (
+        <ClosedCard />
+      )}
     </AuthFrame>
   );
 }
 
+/** Same-site paths only ("/x", not "//host"); anything else goes to the welcome page. */
+function backTo(v: string | null): string | undefined {
+  return v && /^\/(?![/\\])/.test(v) ? v : undefined;
+}
+
 function SignUpCard() {
+  const callbackUrl = backTo(useSearchParams().get("callbackUrl"));
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -45,7 +59,7 @@ function SignUpCard() {
     }
     setPhase("creating");
     try {
-      const r = await signUpWithPassword({ name: name.trim(), email: email.trim(), password });
+      const r = await signUpWithPassword({ name: name.trim(), email: email.trim(), password, callbackUrl });
       if (r.ok) {
         setPhase("sent");
         return;
@@ -88,7 +102,7 @@ function SignUpCard() {
           <div className="space-y-4">
             {googleSignInAvailable ? (
               <>
-                <GoogleButton callbackUrl="/dashboard/welcome" />
+                <GoogleButton callbackUrl={callbackUrl ?? "/dashboard/welcome"} />
                 <OrDivider />
               </>
             ) : null}
