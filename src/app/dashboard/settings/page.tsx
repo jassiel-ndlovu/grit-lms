@@ -86,6 +86,17 @@ export default async function SettingsPage() {
         </div>
       </section>
 
+      <Link
+        href="/dashboard/settings/account"
+        className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+      >
+        <span>
+          <span className="text-foreground block font-semibold">Account</span>
+          <span className="text-muted-foreground">Your email address, a copy of your data, and deleting your account.</span>
+        </span>
+        <span aria-hidden className="text-muted-foreground">→</span>
+      </Link>
+
       {showBilling ? (
         <Link
           href="/dashboard/settings/billing"

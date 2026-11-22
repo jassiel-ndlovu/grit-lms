@@ -3,9 +3,11 @@
 /**
  * Two-factor setup for owners and Nexa admins (#178; design 02, section 7;
  * viewer.user.twoFactorRequired). Better Auth only:
- *   1. password → authClient.twoFactor.enable → an otpauth:// link
- *   2. add it to an authenticator app (open the link on a phone, or type the
- *      key), then enter a code → authClient.twoFactor.verifyTotp
+ *   1. password → authClient.twoFactor.enable → an otpauth:// link. Accounts
+ *      without a password (Google sign-ups) skip the password: the server's
+ *      `allowPasswordless` lets them enable it without one.
+ *   2. add it to an authenticator app (scan the QR code, open the link on a
+ *      phone, or type the key), then enter a code → authClient.twoFactor.verifyTotp
  *   3. save the backup codes.
  * "Remind me tomorrow" skips it for a day (remindTwoFactorLater).
  */
@@ -14,6 +16,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Copy, KeyRound, Lock, Smartphone } from "lucide-react";
 import { toast } from "sonner";
+import { renderSVG } from "uqr";
 
 import { authClient } from "@/lib/auth-client";
 
@@ -34,7 +37,48 @@ const QUIET = "w-full rounded-md py-2 text-sm text-slate-600 hover:text-slate-90
 
 type Step = { kind: "password" } | { kind: "scan"; uri: string; backupCodes: string[] } | { kind: "codes"; backupCodes: string[] };
 
-export function TwoFactorSetup({ remindLater }: { remindLater: () => Promise<void> }) {
+/** The otpauth:// link as an SVG QR code (uqr, no dependencies). Empty if it can't be drawn. */
+export function totpQrSvg(uri: string): string {
+  try {
+    return renderSVG(uri, { border: 2, ecc: "M" });
+  } catch {
+    return "";
+  }
+}
+
+/** Step 2's body: the QR code next to the setup key, and the link for phones. */
+export function TotpKeyBlock({ uri }: { uri: string }) {
+  const secret = secretFromTotpUri(uri);
+  const qr = totpQrSvg(uri);
+  return (
+    <>
+      Add Nexa to your authenticator app. Scan the QR code with the app,{" "}
+      <a href={uri} className="inline-flex items-center gap-1 font-medium text-slate-900 underline underline-offset-2">
+        <Smartphone className="size-3.5" /> open it in the app
+      </a>{" "}
+      on this phone, or choose &quot;Enter a setup key&quot; in the app and type the key.
+      <span className="mt-3 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+        {qr ? (
+          <span
+            role="img"
+            aria-label="QR code for your authenticator app"
+            data-testid="totp-qr"
+            className="block size-40 shrink-0 rounded-md border border-slate-200 bg-white p-1 [&_svg]:size-full"
+            dangerouslySetInnerHTML={{ __html: qr }}
+          />
+        ) : null}
+        <span className="block min-w-0 flex-1">
+          <span className="block text-xs text-slate-500">Setup key</span>
+          <span className="mt-1 block rounded-md bg-slate-100 px-3 py-2 font-mono text-sm tracking-wider break-all text-slate-900" data-testid="totp-secret">
+            {secret}
+          </span>
+        </span>
+      </span>
+    </>
+  );
+}
+
+export function TwoFactorSetup({ remindLater, hasPassword = true }: { remindLater: () => Promise<void>; hasPassword?: boolean }) {
   const router = useRouter();
   const [step, setStep] = React.useState<Step>({ kind: "password" });
   const [password, setPassword] = React.useState("");
@@ -45,9 +89,10 @@ export function TwoFactorSetup({ remindLater }: { remindLater: () => Promise<voi
   async function start(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!password) return setError("Enter your password.");
+    if (hasPassword && !password) return setError("Enter your password.");
     setBusy(true);
-    const r = await authClient.twoFactor.enable({ password });
+    // No password on the account (Google sign-up): the server allows enabling without one.
+    const r = await authClient.twoFactor.enable((hasPassword ? { password } : {}) as { password: string });
     setBusy(false);
     if (r.error || !r.data || r.data.method !== "totp") {
       return setError(
@@ -100,19 +145,23 @@ export function TwoFactorSetup({ remindLater }: { remindLater: () => Promise<voi
         <p className="text-sm text-slate-600">
           You&apos;ll need an authenticator app on your phone, such as Google Authenticator, Microsoft Authenticator or 1Password.
         </p>
-        <Field id="2fa-password" label="Your password" icon={<Lock className="size-4" />}>
-          <input
-            id="2fa-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={INPUT}
-          />
-        </Field>
+        {hasPassword ? (
+          <Field id="2fa-password" label="Your password" icon={<Lock className="size-4" />}>
+            <input
+              id="2fa-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={INPUT}
+            />
+          </Field>
+        ) : (
+          <p className="text-sm text-slate-600">You sign in with Google, so there&apos;s no password to enter.</p>
+        )}
         {alert}
         <button type="submit" disabled={busy} className={BUTTON}>
-          {busy ? "Starting…" : "Continue"}
+          {busy ? "Starting…" : hasPassword ? "Continue" : "Start setup"}
         </button>
         <button type="button" onClick={later} disabled={busy} className={QUIET}>
           Remind me tomorrow
@@ -122,19 +171,11 @@ export function TwoFactorSetup({ remindLater }: { remindLater: () => Promise<voi
   }
 
   if (step.kind === "scan") {
-    const secret = secretFromTotpUri(step.uri);
     return (
       <form onSubmit={verify} className={card} noValidate>
         <ol className="list-decimal space-y-3 pl-5 text-sm text-slate-700">
           <li>
-            Add Nexa to your authenticator app.{" "}
-            <a href={step.uri} className="inline-flex items-center gap-1 font-medium text-slate-900 underline underline-offset-2">
-              <Smartphone className="size-3.5" /> Open in the app
-            </a>{" "}
-            on this phone, or choose &quot;Enter a setup key&quot; in the app and type:
-            <span className="mt-2 block rounded-md bg-slate-100 px-3 py-2 font-mono text-sm tracking-wider break-all text-slate-900" data-testid="totp-secret">
-              {secret}
-            </span>
+            <TotpKeyBlock uri={step.uri} />
           </li>
           <li>Enter the 6-digit code the app shows.</li>
         </ol>

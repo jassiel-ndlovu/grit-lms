@@ -65,7 +65,11 @@ export default async function StudentsPage() {
                         {s.courses.length ? ` · ${s.courses.map((c) => c.name).join(", ")}` : ""}
                       </span>
                     </span>
-                    {s.awaitingFirstSignIn ? <Badge variant="outline">Hasn&apos;t signed in yet</Badge> : null}
+                    {s.deleteOn ? (
+                      <Badge variant="destructive">Deletion pending</Badge>
+                    ) : s.awaitingFirstSignIn ? (
+                      <Badge variant="outline">Hasn&apos;t signed in yet</Badge>
+                    ) : null}
                   </Link>
                 </li>
               ))}

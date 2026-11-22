@@ -7,6 +7,7 @@
 
 import { redirect } from "next/navigation";
 
+import { accountHasPassword } from "@/components/account/queries";
 import { AuthFrame } from "@/components/auth/auth-parts";
 import { TwoFactorSetup } from "@/components/auth/two-factor-setup";
 import { authProvider } from "@/lib/better-auth";
@@ -21,12 +22,16 @@ export default async function TwoFactorSetupPage() {
   if (!viewer) redirect("/auth");
   if (authProvider() !== "better-auth" || !viewer.user.twoFactorRequired) redirect("/dashboard");
 
+  // Google-only accounts have no password; they enable two-factor without one (#178, allowPasswordless).
+  const hasPassword = await accountHasPassword(viewer.user.id);
+
   return (
     <AuthFrame
       title="Protect your account"
       lead="As an owner you can see fees and student records, so Nexa asks for a code from your phone when you sign in."
     >
-      <TwoFactorSetup remindLater={remindTwoFactorLater} />
+      <TwoFactorSetup remindLater={remindTwoFactorLater} hasPassword={hasPassword} />
     </AuthFrame>
   );
 }
+

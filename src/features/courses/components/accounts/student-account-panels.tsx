@@ -43,6 +43,7 @@ export function SignInPanel({
   username,
   email,
   awaitingFirstSignIn,
+  managed = true,
 }: {
   userId: string;
   name: string;
@@ -50,6 +51,8 @@ export function SignInPanel({
   username: string | null;
   email: string | null;
   awaitingFirstSignIn: boolean;
+  /** False for someone who signed up themself: no new codes (viewer contract Draft 1.13). */
+  managed?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
@@ -77,7 +80,11 @@ export function SignInPanel({
         <dd>{awaitingFirstSignIn ? "Still the sign-in code: they haven't chosen a password yet." : "Their own."}</dd>
       </dl>
 
-      {card ? (
+      {!managed ? (
+        <p className="text-muted-foreground text-sm">
+          {name} manages their own account, so you can&apos;t give them a sign-in code. They can reset their password from the sign-in page.
+        </p>
+      ) : card ? (
         <SignInCard card={card} onDone={() => setCard(null)} />
       ) : (
         <AlertDialog>

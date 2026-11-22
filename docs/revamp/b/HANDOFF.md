@@ -3,6 +3,61 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 Account, privacy and two-factor screens, `claude/b-account-privacy-3baeb1`
+
+Clears B's `needs-b` inbox: #182, #185, #178 and #174.
+
+Done:
+- **Settings › Account (#182, #185):** `/dashboard/settings/account`, framed
+  (Settings, Reading width), linked from Settings.
+  - Email address: `requestEmailChange` with a password, then "Check your
+    new inbox" with `sentTo`. Placeholder accounts get "Add your email
+    address"; Google-only accounts get a note instead of the form. Errors
+    show as the server writes them.
+  - Your data: `GET /api/account/export` from a button, so a 429 reads as
+    "the next one is possible from …" instead of raw JSON.
+  - Delete: `getAccountDeletionStatus` first (sole owners are told to hand
+    over), then a dialog that needs DELETE typed in capitals,
+    `requestAccountDeletion`, and `/account/deletion-requested?on=<date>`
+    (only the date in the URL). The words list what the contract's
+    housekeeping does; guardians are told their children's accounts stay;
+    under-18s are told to talk to a parent first.
+  - No pending-deletion banner: the contract defines none, and the user is
+    signed out and can't sign in while one is pending.
+- **Emailed-link pages (B's, signed out, framed):** `/account/cancel-deletion`,
+  `/account/confirm-email`, `/account/revert-email`. Each acts only on a
+  button click, and handles every status the contract lists.
+- **Student profile:** an Account tab with Export data
+  (`?userId=`), Delete account (parent's request, typed DELETE) and Cancel
+  deletion. A "Deletion pending" chip on the profile and a badge in the
+  Students list. Self-made accounts (Draft 1.13) get no delete and no
+  new-code button. `RosterStudent` has `managed` and `deleteOn`.
+- **Two-factor (#178):** `uqr@0.1.3` pinned exactly (A's OK on #178). The
+  scan step shows a QR code beside the setup key (`TotpKeyBlock`).
+  Accounts without a password skip the password step (`allowPasswordless`).
+  "Remind me tomorrow" stays.
+- **#174:** `actionError` already passes `UserError` messages through (it
+  only drops a `CODE:` prefix), so Students, invites and the account tabs
+  show A's words. `signUpWithPassword` still has no `callbackURL`, so the
+  invite page keeps its note; asked again on #174.
+- **Checks:** `scripts/check-account-privacy.ts` (31). Local preview with
+  temporary fake-data pages, every screen at 1280 and 375 px, no console or
+  server errors; the temporary pages are deleted.
+- **Testing:** section C of `testing/preview-recheck-2026-11-22.md`.
+
+Next:
+- Run the Preview rechecks (sections A to C).
+- #205 steps 2 to 4, then #149 and #150.
+
+Blocked on the other agent:
+- #185: `requestEmailChange` throws its two-factor message as a plain
+  `Error`, so users get "Something went wrong". Asked A to make it a
+  `UserError`. Same for the sole-owner throw in `deletion.ts` (the screen
+  checks first, so only a race reaches it).
+- #174: an optional `callbackURL` on `signUpWithPassword`.
+
+Questions for the owner: none.
+
 ## 2026-11-22 Join requests, `revamp/b-join-requests`
 
 Done:

@@ -7,6 +7,7 @@ import "server-only";
  * (account-actions.ts) check permissions again for every change.
  */
 
+import { DELETION_GRACE_DAYS } from "@/features/users/deletion";
 import { prisma } from "@/lib/db";
 import { can, needsScope, type Viewer } from "@/lib/viewer-core";
 
@@ -25,6 +26,10 @@ export interface RosterStudent {
   isMinor: boolean;
   /** Still on the tutor-issued code: hasn't set their own password. */
   awaitingFirstSignIn: boolean;
+  /** Made by this workspace's staff (viewer contract Draft 1.13). False: they manage it themself. */
+  managed: boolean;
+  /** When a pending deletion takes effect (ISO), or null. */
+  deleteOn: string | null;
   courses: RosterCourse[];
 }
 
@@ -51,17 +56,24 @@ function learnerWhere(viewer: Viewer, courseIds: string[] | null) {
   };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const learnerSelect = {
   id: true,
   isMinor: true,
-  user: { select: { id: true, name: true, email: true, emailIsPlaceholder: true, username: true, mustChangePassword: true } },
+  workspaceId: true,
+  user: { select: { id: true, name: true, email: true, emailIsPlaceholder: true, username: true, mustChangePassword: true, managedByWorkspaceId: true, deletionRequestedAt: true } },
   enrollments: { where: { endedAt: null }, select: { course: { select: { id: true, name: true } } } },
 } as const;
 
 type LearnerRow = {
   id: string;
   isMinor: boolean;
-  user: { id: string; name: string; email: string; emailIsPlaceholder: boolean; username: string | null; mustChangePassword: boolean };
+  workspaceId: string;
+  user: {
+    id: string; name: string; email: string; emailIsPlaceholder: boolean; username: string | null; mustChangePassword: boolean;
+    managedByWorkspaceId: string | null; deletionRequestedAt: Date | null;
+  };
   enrollments: Array<{ course: { id: string; name: string } }>;
 };
 
@@ -75,6 +87,8 @@ function toStudent(l: LearnerRow, scope: string[] | null): RosterStudent {
     username: l.user.username,
     isMinor: l.isMinor,
     awaitingFirstSignIn: l.user.mustChangePassword,
+    managed: l.user.managedByWorkspaceId === l.workspaceId,
+    deleteOn: l.user.deletionRequestedAt ? new Date(l.user.deletionRequestedAt.getTime() + DELETION_GRACE_DAYS * DAY_MS).toISOString() : null,
     courses: l.enrollments.map((e) => e.course).filter((c) => !scope || scope.includes(c.id)),
   };
 }
