@@ -30,11 +30,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useMeetingProvider } from "@/components/shell/workspace-access";
 import { editCourseEventOccurrence } from "@/features/calendar/actions";
 import { cn } from "@/lib/utils";
 
 import { createCourseEvent, updateCourseEvent } from "../actions";
-import { meetingProvider, NEW_MEET_URL, splitInZone, wallToInstant } from "../lib/calendar-ui";
+import { MEETING_PROVIDER_INFO, meetingProvider, splitInZone, wallToInstant } from "../lib/calendar-ui";
 import { describeRecurrence, type RepeatFrequency } from "../lib/recurrence";
 
 const WEEKDAYS: Array<{ value: number; short: string; label: string }> = [
@@ -187,6 +188,8 @@ export function EventForm({ courseId, timeZone, initialDate, series, occurrence,
   const repeatUntil = form.watch("repeatUntil");
   const repeatCount = form.watch("repeatCount");
   const provider = meetingProvider(form.watch("link")?.trim());
+  // The workspace's provider (#211) picks the "New … meeting" button.
+  const newMeeting = MEETING_PROVIDER_INFO[useMeetingProvider()];
   const repeats = repeatFrequency !== "NONE";
 
   const summary = React.useMemo(
@@ -410,10 +413,12 @@ export function EventForm({ courseId, timeZone, initialDate, series, occurrence,
                     onChange={field.onChange}
                   />
                 </FormControl>
-                <Button type="button" variant="outline" className="shrink-0" onClick={() => window.open(NEW_MEET_URL, "_blank", "noopener")}>
-                  <Video className="size-4" />
-                  New Google Meet
-                </Button>
+                {newMeeting.newUrl ? (
+                  <Button type="button" variant="outline" className="shrink-0" onClick={() => window.open(newMeeting.newUrl!, "_blank", "noopener")}>
+                    <Video className="size-4" />
+                    {newMeeting.newLabel}
+                  </Button>
+                ) : null}
               </div>
               <FormDescription>
                 {provider ? `${provider} link. ` : ""}Paste a Meet, Zoom or Teams link. Learners get a Join button 15 minutes before the start.

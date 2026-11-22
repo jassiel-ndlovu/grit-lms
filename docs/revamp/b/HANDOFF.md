@@ -3,6 +3,47 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Backlog: imports, meeting app, reading settings, invite sign-up, `revamp/b-backlog`
+
+Preview rechecks are in `docs/revamp/b/testing/preview-recheck-2026-11-22.md`.
+A's items from them are in #223 (A picks them up 2026-11-24). Replied on #216:
+the landing page split is confirmed. A's pieces are needed in this order:
+plan prices, then the enquiry backend, then search setup and analytics.
+
+Done:
+- **Import screens** on A's engine (#221, contract `contracts/imports.md`).
+  - `/dashboard/imports`: choose a kind, download a template, pick a CSV
+    (read in the browser, 1 MB). Below that, the recent imports.
+  - `/dashboard/imports/[jobId]`, one screen per state:
+    - **Preview:** cells are edited in place, sending only changed cells;
+      rows can be removed; there's an "Only rows with problems" filter.
+    - **Confirm:** the `needs` tick boxes and "skip the rows with errors".
+    - **Applying or undoing:** a progress bar polling `getImport` every
+      2 s.
+    - **Done:** results per row and undo while `undoUntil` holds.
+    - **Failed or cancelled:** a message saying what happened.
+  - `/dashboard/imports/[jobId]/cards`: the A4 sign-in sheet. The codes
+    are fetched client-side and kept only in memory.
+  - Entry points: Students has "Import students" and "Export CSV"; Members
+    has "Import staff".
+  - Helpers are in `components/imports/import-ui.ts`, checked by
+    `scripts/check-import-ui.ts`.
+- **Meeting app (#211).** Settings › Online classes (`workspace.settings`)
+  calls A's `setMeetingProvider`. The session form's "New … meeting" button
+  follows it; "Something else" shows no button. The provider reaches client
+  components through `useMeetingProvider()` in `workspace-access.tsx`.
+- **Reading settings save to the account** (A's #220). The account value
+  wins; the device value is used only while the account is DEFAULT
+  (`effectiveReading`).
+- **Sign-up from an invite (#174).** The invite page links to
+  `/auth/sign-up?callbackUrl=<invite>`. Sign-up passes it to
+  `signUpWithPassword` and Google, same-site paths only.
+
+Checked on Preview as tutor1, with test rows only: preview, fixing cells, skip
+errors, confirm, sign-in sheet (3 cards, nothing in storage) and undo. The
+imported students were removed again. The table now follows the template's
+column order; the engine's row data has its own key order.
+
 ## 2026-11-22 Rubrics and reading settings (#216, phase 1), `revamp/b-rubrics-a11y`
 
 The first B-only items from A's backlog (#216). Replied on #216: rubrics,

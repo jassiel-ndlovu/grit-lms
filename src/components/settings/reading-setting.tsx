@@ -2,16 +2,19 @@
 
 /**
  * Settings › Reading (#216, accessibility): text size and a
- * dyslexia-friendly font. Changes apply at once and are kept on this
- * device until A's preferences can store them (src/lib/ui-a11y.ts).
+ * dyslexia-friendly font. Changes apply at once and save to the account
+ * (updateOwnPreferences), so they follow the user to every device.
  */
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { updateOwnPreferences } from "@/features/users/actions";
 import {
-  READING_FONT_STORAGE_KEY, TEXT_SIZES, TEXT_SIZE_LABEL, TEXT_SIZE_STORAGE_KEY, applyReading, readReadingFont, readTextSize,
+  READING_FONT_STORAGE_KEY, TEXT_SIZES, TEXT_SIZE_LABEL, TEXT_SIZE_STORAGE_KEY, applyReading, effectiveReading,
   type ReadingFont, type TextSize,
 } from "@/lib/ui-a11y";
 import { cn } from "@/lib/utils";
@@ -19,29 +22,49 @@ import { cn } from "@/lib/utils";
 /** Sample size of each choice, relative to the default 14 px copy. */
 const SAMPLE: Record<TextSize, string> = { DEFAULT: "text-sm", LARGE: "text-base", LARGER: "text-lg" };
 
-export function ReadingSetting() {
-  const [size, setSize] = React.useState<TextSize>("DEFAULT");
-  const [font, setFont] = React.useState<ReadingFont>("DEFAULT");
+export function ReadingSetting({ initial }: { initial: { textSize: TextSize; readingFont: ReadingFont } }) {
+  const router = useRouter();
+  const [size, setSize] = React.useState<TextSize>(initial.textSize);
+  const [font, setFont] = React.useState<ReadingFont>(initial.readingFont);
+  const [, start] = React.useTransition();
   const refs = React.useRef<Array<HTMLButtonElement | null>>([]);
 
+  // A choice kept on this device (before the account could store it) shows
+  // while the account is at the defaults; the next pick saves it.
   React.useEffect(() => {
     try {
-      setSize(readTextSize(localStorage.getItem(TEXT_SIZE_STORAGE_KEY)));
-      setFont(readReadingFont(localStorage.getItem(READING_FONT_STORAGE_KEY)));
+      const r = effectiveReading(initial, {
+        textSize: localStorage.getItem(TEXT_SIZE_STORAGE_KEY),
+        readingFont: localStorage.getItem(READING_FONT_STORAGE_KEY),
+      });
+      setSize(r.textSize);
+      setFont(r.readingFont);
     } catch {
-      // No storage: the defaults.
+      // No storage: the account's settings.
     }
-  }, []);
+  }, [initial]);
 
+  const save = (nextSize: TextSize, nextFont: ReadingFont) => {
+    const before = { size, font };
+    setSize(nextSize);
+    setFont(nextFont);
+    applyReading(nextSize, nextFont);
+    start(async () => {
+      const res = await updateOwnPreferences({ textSize: nextSize, readingFont: nextFont });
+      if (res?.data) {
+        router.refresh();
+        return;
+      }
+      setSize(before.size);
+      setFont(before.font);
+      applyReading(before.size, before.font);
+      toast.error("Couldn't save your reading settings. Try again.");
+    });
+  };
   const pickSize = (next: TextSize) => {
-    setSize(next);
-    applyReading(next, font);
+    if (next !== size) save(next, font);
   };
-  const pickFont = (on: boolean) => {
-    const next: ReadingFont = on ? "DYSLEXIA" : "DEFAULT";
-    setFont(next);
-    applyReading(size, next);
-  };
+  const pickFont = (on: boolean) => save(size, on ? "DYSLEXIA" : "DEFAULT");
   const onKey = (e: React.KeyboardEvent, i: number) => {
     const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
     if (!step) return;
@@ -55,7 +78,7 @@ export function ReadingSetting() {
     <Card className="space-y-5 p-6">
       <div>
         <h2 className="text-foreground text-sm font-medium">Reading</h2>
-        <p className="text-muted-foreground text-xs">Saved on this device. Works with every theme.</p>
+        <p className="text-muted-foreground text-xs">Saved to your account, so it follows you to every device. Works with every theme.</p>
       </div>
 
       <div>

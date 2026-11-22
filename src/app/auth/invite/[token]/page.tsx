@@ -75,11 +75,11 @@ export default async function InvitePage({ params }: PageProps) {
             </Link>
             {signUpOpen ? (
               <>
-                <Link href="/auth/sign-up" className={secondary}>
+                <Link href={`/auth/sign-up?callbackUrl=${encodeURIComponent(back)}`} className={secondary}>
                   Create an account
                 </Link>
                 <p className="text-xs text-slate-500">
-                  New to Nexa? Create an account with the invited email and verify it, then open this link again.
+                  New to Nexa? Create an account with the invited email. The link in the verification email brings you back here to accept.
                 </p>
               </>
             ) : null}

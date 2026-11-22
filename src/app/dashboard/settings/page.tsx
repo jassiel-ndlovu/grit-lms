@@ -24,6 +24,7 @@ import { can, getViewer } from "@/lib/viewer";
 import { isRevampUi } from "@/lib/ui-flags";
 import { ThemeSetting } from "@/features/courses/components/theme-picker";
 import { ReadingSetting } from "@/components/settings/reading-setting";
+import { MeetingProviderSetting } from "@/features/events/components/meeting-provider-setting";
 import HeaderSettings from "@/components/illustrations/generated/header-settings";
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 
@@ -46,6 +47,8 @@ export default async function SettingsPage() {
   const showMembers = viewer?.workspace != null && can(viewer, "members.invite");
   // The teaching switch (#206): organisations, for owners and admins.
   const showOrganisation = viewer?.workspace?.kind === "ORGANISATION" && can(viewer, "workspace.settings");
+  // The meeting app (#211): any workspace, for owners and admins.
+  const showMeetings = viewer?.workspace != null && can(viewer, "workspace.settings");
   const showPayouts =
     isBillingEnabled() && viewer?.workspace != null && (can(viewer, "payouts.connect") || can(viewer, "fees.manage"));
   const defaults: SettingsFormValues = {
@@ -140,8 +143,10 @@ export default async function SettingsPage() {
         </Link>
       ) : null}
 
+      {showMeetings ? <MeetingProviderSetting initial={viewer?.workspace?.meetingProvider ?? "GOOGLE_MEET"} /> : null}
+
       {isRevampUi() ? <ThemeSetting initial={viewer?.user.theme ?? "CALM"} /> : null}
-      <ReadingSetting />
+      <ReadingSetting initial={{ textSize: viewer?.user.textSize ?? "DEFAULT", readingFont: viewer?.user.readingFont ?? "DEFAULT" }} />
 
       <SettingsForm
         role={session.user.role}

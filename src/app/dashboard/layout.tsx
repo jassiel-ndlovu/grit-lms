@@ -91,9 +91,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         darkMode: prefs?.darkMode ?? false,
         theme: viewer?.user.theme ?? "CALM",
         preferredView: prefs?.preferredView ?? "GRID",
+        textSize: viewer?.user.textSize ?? "DEFAULT",
+        readingFont: viewer?.user.readingFont ?? "DEFAULT",
       }}
     >
-      <WorkspaceAccessProvider readOnly={readOnly}>{shell}</WorkspaceAccessProvider>
+      <WorkspaceAccessProvider readOnly={readOnly} meetingProvider={viewer?.workspace?.meetingProvider ?? "GOOGLE_MEET"}>{shell}</WorkspaceAccessProvider>
     </PreferencesProvider>
   );
 }
