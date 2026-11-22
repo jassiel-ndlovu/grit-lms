@@ -316,8 +316,14 @@ export function GradingForm({
       return { ...prev, [s.questionId]: { score: String(total), feedback: cur.feedback.trim() ? cur.feedback : (s.feedbackToStudent ?? "") } };
     });
   }, []);
-  const clearScore = React.useCallback((questionId: string) => {
-    setPerQ((prev) => ({ ...prev, [questionId]: { feedback: prev[questionId]?.feedback ?? "", score: "" } }));
+  // Takes the AI's mark back out, and its draft feedback too while the tutor
+  // hasn't changed it: a rejected suggestion's words must not reach the student.
+  const clearAi = React.useCallback((s: AiSuggestion) => {
+    setPerQ((prev) => {
+      const feedback = prev[s.questionId]?.feedback ?? "";
+      const aiDraft = (s.feedbackToStudent ?? "").trim();
+      return { ...prev, [s.questionId]: { score: "", feedback: aiDraft && feedback.trim() === aiDraft ? "" : feedback } };
+    });
   }, []);
   const acceptSuggestion = React.useCallback(
     (s: AiSuggestion) => {
@@ -341,21 +347,21 @@ export function GradingForm({
   // Rejecting or undoing takes the AI's mark back out of the box.
   const rejectSuggestion = React.useCallback(
     (s: AiSuggestion) => {
-      if (decided[s.id] === "ACCEPTED" || decided[s.id] === "EDITED") clearScore(s.questionId);
+      if (decided[s.id] === "ACCEPTED" || decided[s.id] === "EDITED") clearAi(s);
       setDecided((d) => ({ ...d, [s.id]: "REJECTED" }));
     },
-    [decided, clearScore],
+    [decided, clearAi],
   );
   const undoSuggestion = React.useCallback(
     (s: AiSuggestion) => {
-      if (decided[s.id] === "ACCEPTED" || decided[s.id] === "EDITED") clearScore(s.questionId);
+      if (decided[s.id] === "ACCEPTED" || decided[s.id] === "EDITED") clearAi(s);
       setDecided((d) => {
         const next = { ...d };
         delete next[s.id];
         return next;
       });
     },
-    [decided, clearScore],
+    [decided, clearAi],
   );
   const acceptMany = React.useCallback(
     (ids: string[]) => {
