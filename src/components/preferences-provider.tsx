@@ -15,6 +15,9 @@ import * as React from "react";
 
 import { DEFAULT_TIME_ZONE, type DateContext } from "@/lib/datetime";
 import type { UiTheme } from "@/lib/viewer-core";
+import {
+  READING_FONT_STORAGE_KEY, TEXT_SIZE_STORAGE_KEY, applyReading, effectiveReading, type ReadingFont, type TextSize,
+} from "@/lib/ui-a11y";
 import { COLOR_THEME_STORAGE_KEY, DEVICE_THEME_STORAGE_KEY, THEME_STORAGE_KEY, effectiveTheme, themeAttr } from "@/lib/ui-themes";
 
 // The keys and the boot script live in a plain module: the root layout is a
@@ -34,6 +37,9 @@ export interface ClientPreferences {
    */
   theme?: UiTheme;
   preferredView: "LIST" | "GRID" | "TIMELINE";
+  /** Reading settings (#216), from the account. */
+  textSize?: TextSize;
+  readingFont?: ReadingFont;
 }
 
 const DEFAULTS: ClientPreferences = {
@@ -72,6 +78,17 @@ export function PreferencesProvider({
       // Storage can be unavailable (private mode); the class is still set.
     }
   }, [value.darkMode, value.locale, value.theme]);
+
+  React.useEffect(() => {
+    let device: { textSize?: string | null; readingFont?: string | null } = {};
+    try {
+      device = { textSize: localStorage.getItem(TEXT_SIZE_STORAGE_KEY), readingFont: localStorage.getItem(READING_FONT_STORAGE_KEY) };
+    } catch {
+      // No storage: the account's settings.
+    }
+    const r = effectiveReading({ textSize: value.textSize, readingFont: value.readingFont }, device);
+    applyReading(r.textSize, r.readingFont);
+  }, [value.textSize, value.readingFont]);
 
   return (
     <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>

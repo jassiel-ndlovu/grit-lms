@@ -141,7 +141,7 @@ export default async function SettingsPage() {
       ) : null}
 
       {isRevampUi() ? <ThemeSetting initial={viewer?.user.theme ?? "CALM"} /> : null}
-      <ReadingSetting />
+      <ReadingSetting initial={{ textSize: viewer?.user.textSize ?? "DEFAULT", readingFont: viewer?.user.readingFont ?? "DEFAULT" }} />
 
       <SettingsForm
         role={session.user.role}

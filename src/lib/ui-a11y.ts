@@ -6,9 +6,11 @@
  *   data-text-size="large" | "larger"   (absent: the default size)
  *   data-reading-font="dyslexia"        (absent: the theme's font)
  *
- * Kept on the device (localStorage) until A's UserPreferences has fields
- * for them (asked on #216). The boot script in preferences-provider sets
- * the attributes before first paint; the Settings card changes them.
+ * Saved on the account (A's UserPreferences.textSize / readingFont, viewer
+ * Draft 1.14) and mirrored to localStorage, so the boot script in the root
+ * layout can set the attributes before first paint. A choice made on a
+ * device before the account could store it still applies while the
+ * account is at the default (effectiveReading).
  *
  * Pure: safe in server and client components and in scripts.
  */
@@ -40,6 +42,19 @@ export function readTextSize(v: string | null | undefined): TextSize {
 export function readReadingFont(v: string | null | undefined): ReadingFont {
   const up = (v ?? "").toUpperCase();
   return (READING_FONTS as readonly string[]).includes(up) ? (up as ReadingFont) : "DEFAULT";
+}
+
+/** The account's settings, unless they're the defaults and this device kept others. */
+export function effectiveReading(
+  account: { textSize?: TextSize; readingFont?: ReadingFont },
+  device: { textSize?: string | null; readingFont?: string | null },
+): { textSize: TextSize; readingFont: ReadingFont } {
+  const size = account.textSize ?? "DEFAULT";
+  const font = account.readingFont ?? "DEFAULT";
+  return {
+    textSize: size === "DEFAULT" ? readTextSize(device.textSize) : size,
+    readingFont: font === "DEFAULT" ? readReadingFont(device.readingFont) : font,
+  };
 }
 
 /** Sets (or clears) the reading attributes on <html> and remembers them on this device. */
