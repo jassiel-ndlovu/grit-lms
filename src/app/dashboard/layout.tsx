@@ -95,7 +95,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         readingFont: viewer?.user.readingFont ?? "DEFAULT",
       }}
     >
-      <WorkspaceAccessProvider readOnly={readOnly}>{shell}</WorkspaceAccessProvider>
+      <WorkspaceAccessProvider readOnly={readOnly} meetingProvider={viewer?.workspace?.meetingProvider ?? "GOOGLE_MEET"}>{shell}</WorkspaceAccessProvider>
     </PreferencesProvider>
   );
 }

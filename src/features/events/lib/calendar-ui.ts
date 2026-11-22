@@ -8,6 +8,8 @@
  * `listCalendarOccurrences` returns them.
  */
 
+import type { MeetingProvider } from "@/lib/viewer-core";
+
 export type CalendarViewMode = "month" | "week" | "day" | "agenda";
 
 export const CALENDAR_VIEWS: Array<{ value: CalendarViewMode; label: string }> = [
@@ -223,6 +225,18 @@ export function meetingProvider(link: string | null | undefined): string | null 
 
 /** Where a tutor starts a new Google Meet (the default provider) to paste back. */
 export const NEW_MEET_URL = "https://meet.google.com/new";
+
+/**
+ * The workspace's meeting provider (#211, A's Workspace.meetingProvider):
+ * the name in Settings, and where the event form's "New … meeting" button
+ * starts one to paste back. OTHER has no button.
+ */
+export const MEETING_PROVIDER_INFO: Record<MeetingProvider, { label: string; newLabel: string | null; newUrl: string | null }> = {
+  GOOGLE_MEET: { label: "Google Meet", newLabel: "New Google Meet", newUrl: NEW_MEET_URL },
+  ZOOM: { label: "Zoom", newLabel: "New Zoom meeting", newUrl: "https://zoom.us/start/videomeeting" },
+  TEAMS: { label: "Microsoft Teams", newLabel: "New Teams meeting", newUrl: "https://teams.microsoft.com/l/meeting/new" },
+  OTHER: { label: "Something else", newLabel: null, newUrl: null },
+};
 
 /** Event types that take attendance. */
 const ATTENDANCE_TYPES = new Set(["LECTURE", "LIVE", "MEETING"]);

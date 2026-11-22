@@ -16,14 +16,32 @@ import { Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { READ_ONLY_REASON } from "@/features/courses/lib/teaching-ui";
+import type { MeetingProvider } from "@/lib/viewer-core";
 
 export { READ_ONLY_REASON };
 
-const WorkspaceAccess = React.createContext<{ readOnly: boolean }>({ readOnly: false });
+const WorkspaceAccess = React.createContext<{ readOnly: boolean; meetingProvider: MeetingProvider }>({
+  readOnly: false,
+  meetingProvider: "GOOGLE_MEET",
+});
 
-export function WorkspaceAccessProvider({ readOnly, children }: { readOnly: boolean; children: React.ReactNode }) {
-  const value = React.useMemo(() => ({ readOnly }), [readOnly]);
+export function WorkspaceAccessProvider({
+  readOnly,
+  meetingProvider = "GOOGLE_MEET",
+  children,
+}: {
+  readOnly: boolean;
+  /** The workspace's meeting provider (#211), for the event form. */
+  meetingProvider?: MeetingProvider;
+  children: React.ReactNode;
+}) {
+  const value = React.useMemo(() => ({ readOnly, meetingProvider }), [readOnly, meetingProvider]);
   return <WorkspaceAccess.Provider value={value}>{children}</WorkspaceAccess.Provider>;
+}
+
+/** The workspace's meeting provider (#211); Google Meet outside a workspace. */
+export function useMeetingProvider(): MeetingProvider {
+  return React.useContext(WorkspaceAccess).meetingProvider;
 }
 
 /** True for staff while the active workspace is read-only. */
