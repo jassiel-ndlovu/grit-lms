@@ -10,6 +10,7 @@
 
 import { redirect } from "next/navigation";
 
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { auth } from "@/lib/auth";
 
 import { listCoursesByTutorId } from "@/features/courses/queries";
@@ -40,18 +41,12 @@ export default async function ManageCoursesPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-            Manage courses
-          </h1>
-          <p className="text-muted-foreground mt-1.5 text-sm">
-            Create courses, manage enrolment, and edit content.
-          </p>
-        </div>
-        <CreateCourseButton students={students} />
-      </div>
+    <PageFrame
+      type="list"
+      breadcrumb={[{ label: "Courses" }]}
+      actions={<CreateCourseButton students={students} />}
+    >
+      <PageTitle title="Manage courses" description="Create courses, manage enrolment, and edit content." />
 
       <CourseGrid
         view={(await getUserPreferences(session.user.id)).preferredView}
@@ -76,6 +71,6 @@ export default async function ManageCoursesPage() {
           />
         ))}
       </CourseGrid>
-    </div>
+    </PageFrame>
   );
 }

@@ -7,8 +7,9 @@
 
 import Link from "next/link";
 
-import { PageHeader, type Crumb } from "@/components/shell/page-header";
-import { Ribbon, RibbonNav } from "@/components/shell/ribbon";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import type { Crumb } from "@/components/shell/page-header";
+import { RibbonNav } from "@/components/shell/ribbon";
 import { StatusChip } from "@/components/shell/status-chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { adminGetPaymentVolume, adminListWorkspaceBilling } from "@/features/admin/billing-queries";
@@ -31,13 +32,27 @@ export const adminBillingRoutes = {
 
 export const BILLING_STATES: BillingState[] = ["TRIAL", "ACTIVE", "PAST_DUE", "READ_ONLY", "COMPED", "CANCELLED"];
 
-export function AdminBillingFrame({ page, title, children }: { page?: Crumb[]; title: string; children: React.ReactNode }) {
+/**
+ * The billing admin pages' PageFrame (#205): Billing admin › page, the
+ * Workspaces / Discount codes / Recoveries / Retention ribbon, and the
+ * page's title. Lists by default; a workspace or an invoice is a record.
+ */
+export function AdminBillingFrame({
+  page,
+  title,
+  type = "list",
+  children,
+}: {
+  page?: Crumb[];
+  title: string;
+  type?: "list" | "record";
+  children: React.ReactNode;
+}) {
   return (
-    <>
-      <PageHeader
-        breadcrumb={[page?.length ? { label: "Billing admin", href: adminBillingRoutes.workspaces } : { label: "Billing admin" }, ...(page ?? [])]}
-      />
-      <Ribbon>
+    <PageFrame
+      type={type}
+      breadcrumb={[page?.length ? { label: "Billing admin", href: adminBillingRoutes.workspaces } : { label: "Billing admin" }, ...(page ?? [])]}
+      secondary={
         <RibbonNav
           label="Billing admin"
           links={[
@@ -47,12 +62,11 @@ export function AdminBillingFrame({ page, title, children }: { page?: Crumb[]; t
             { label: "Retention", href: adminBillingRoutes.retention },
           ]}
         />
-      </Ribbon>
-      <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
-        <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">{title}</h1>
-        {children}
-      </div>
-    </>
+      }
+    >
+      <PageTitle title={title} />
+      {children}
+    </PageFrame>
   );
 }
 

@@ -32,6 +32,8 @@ import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 
 import { listCoursesByStudentId } from "@/features/courses/queries";
 import {
@@ -122,11 +124,7 @@ export default async function DashboardLanding({
     select: { id: true, fullName: true },
   });
   if (!student) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No student profile found for this account.
-      </div>
-    );
+    return <PageMessage breadcrumb={[{ label: "Home" }]}>No student profile found for this account.</PageMessage>;
   }
 
   const prefs = await getUserPreferences(session.user.id);
@@ -226,29 +224,23 @@ export default async function DashboardLanding({
   const greeting = greetingFor(new Date(), dateCtx.timeZone);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground rounded-lg overflow-hidden">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-primary-foreground/70 text-sm">
-              {greeting}, {firstName}.
-            </p>
-            <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
-              Welcome back to your studies.
-            </h1>
-            <p className="text-primary-foreground/70 mt-3 max-w-xl text-sm">
-              {courses.length === 0
-                ? "Browse the catalogue to enrol in your first course."
-                : `${courses.length} ${courses.length === 1 ? "course" : "courses"} in motion. ${completedLessons} ${completedLessons === 1 ? "lesson" : "lessons"} completed.`}
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
-            <HeroStat icon={<TrendingUp className="size-4" />} label="Progress" value={`${averageProgress}%`} />
-            <HeroStat icon={<Target className="size-4" />} label="Up next" value={String(upNext.length)} />
-            <HeroStat icon={<GraduationCap className="size-4" />} label="Average" value={overall != null ? `${overall}%` : "-"} />
-          </div>
-        </div>
-      </section>
+    <PageFrame type="home" breadcrumb={[{ label: "Home" }]}>
+      <PageTitle
+        eyebrow={`${greeting}, ${firstName}`}
+        title="Welcome back to your studies"
+        description={
+          courses.length === 0
+            ? "Browse the catalogue to enrol in your first course."
+            : `${courses.length} ${courses.length === 1 ? "course" : "courses"} in motion. ${completedLessons} ${completedLessons === 1 ? "lesson" : "lessons"} completed.`
+        }
+        properties={
+          <StatTiles>
+            <StatTile icon={<TrendingUp />} label="Progress" value={`${averageProgress}%`} />
+            <StatTile icon={<Target />} label="Up next" value={String(upNext.length)} />
+            <StatTile icon={<GraduationCap />} label="Average" value={overall != null ? `${overall}%` : "-"} />
+          </StatTiles>
+        }
+      />
 
       {progressByCourse.length > 0 && (
         <section className="space-y-4">
@@ -368,26 +360,14 @@ export default async function DashboardLanding({
           </Card>
         </section>
       </div>
-    </div>
-  );
-}
-
-function HeroStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="bg-primary-foreground/8 backdrop-blur-sm min-w-0 rounded-lg p-2.5 border border-primary-foreground/15 sm:p-3">
-      <div className="text-primary-foreground/70 flex min-w-0 items-center gap-1.5 truncate text-xs">
-        {icon}
-        {label}
-      </div>
-      <p className="font-display mt-1 text-xl tabular-nums sm:text-2xl">{value}</p>
-    </div>
+    </PageFrame>
   );
 }
 
 function SectionHeader({ title, href, label }: { title: string; href: string; label: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">{title}</h2>
+      <h2 className="text-foreground text-base font-semibold">{title}</h2>
       <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
         <Link href={href}>
           {label}

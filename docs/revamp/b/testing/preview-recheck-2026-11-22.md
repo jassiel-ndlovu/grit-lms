@@ -113,3 +113,28 @@ no written questions: E.1 adds one.
 | E.9 | `seed.ubuntu.tutor1` | A failed or skipped answer says why and "Mark it yourself" | ⏭ |
 | E.10 | `seed.thuto.owner` (read-only) | The switch, Mark with AI, Accept, Edit, Reject, Accept all and Save grade are disabled with the read-only reason | ⏭ |
 | E.11 | any tutor, at 375 px | Grading page: header keeps the score; the ribbon hides on scroll down and returns on scroll up; nothing scrolls sideways | ⏭ |
+
+## F. Every dashboard page on the frame (#205, steps 2 to 5)
+
+Checked locally on a temporary page (the real `TutorHome`, `CourseOverview`,
+`CourseFrame`, `BillingFrame`, a list and a focus-mode runner with sample
+data in `AppShell`) at 375, 768 and 1280 px. Widths: home, list and record
+1120; editor full; runner and settings 720. Padding 16 / 24 / 32, gap 32,
+one h1 per page, nothing scrolling sideways. Scroll test: at 375 the header
+stays under the shell bar and the ribbon hides on scroll down and returns on
+scroll up; at 768 and 1280 both stay pinned. Runner strip 28 px at the top.
+Not checked with real accounts or data. Run with REVAMP_UI on, then spot-check
+F.1, F.4 and F.9 with it off (the legacy shell).
+
+| # | Account | Check | Result |
+| --- | --- | --- | --- |
+| F.1 | `seed.ubuntu.tutor1` | Home: one 48 px header (breadcrumb, New, help); "Good morning" is the page title, not in the header. Courses, Tests, Assignments, Students, Gradebook, Analytics, Notifications: the same header, title in the page, list width (gradebook for a course goes full width) | ⏭ |
+| F.2 | `seed.ubuntu.tutor1` | A course: header has Edit lessons; ribbon Overview / Lessons / Settings. Lessons: the tree stays beside the editor on scroll (1280), text at reading width. Settings and Services: 720 wide | ⏭ |
+| F.3 | `seed.ubuntu.tutor1` | Test designer, New test, New assignment and Edit assignment: full width, save bar lines up with the page padding, title in the page | ⏭ |
+| F.4 | `seed.student.two` | Home: title and stat tiles in the page, no brand banner. My courses › a course: cover image beside the title (768 and up), Continue with… in the header, Overview / Lessons ribbon. A lesson: Previous / Next / Mark complete in the header, outline sticky at 1280 | ⏭ |
+| F.5 | `seed.student.two` | Tests, Assignments, Grades, a grade: illustration beside the title from 768, hidden at 375. A test's pre-test and review pages: 720 wide, status chip in the header | ⏭ |
+| F.6 | `seed.student.two` | Start a test: the runner's strip is about 28 px; the question bar sticks under it on scroll; no sidebar. **Don't submit a seeded test** unless it's one you added | ⏭ |
+| F.7 | `seed.parent.siblings` | Home and a child's page: title, stat tiles, no banner; record width | ⏭ |
+| F.8 | `seed.ubuntu.owner` | Settings, Members, Payouts, Billing, Fees (payer view), Profile, Help: 720 wide; Fees (staff), Discounts: list width | ⏭ |
+| F.9 | a platform admin (owner) | Admin › Billing › an invoice and a workspace: B's frame (breadcrumb Admin › Billing ›…, title in the page). The admin home is A's and is unchanged | ⏭ |
+| F.10 | any, at 375 px | Notifications and a course: the ribbon hides on scroll down and returns on scroll up; the header stays; nothing scrolls sideways. Pages with no data ("No student profile…") show a framed message, not a bare line | ⏭ |

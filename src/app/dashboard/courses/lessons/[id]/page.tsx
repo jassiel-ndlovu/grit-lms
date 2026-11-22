@@ -12,7 +12,7 @@
 
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -22,6 +22,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MobileCollapsible } from "@/components/mobile-collapsible";
+import { PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { StudentCourseFrame, studentCourseRoutes } from "@/features/courses/components/student-course-frame";
+import { SIDE_PANEL_STICKY_CLASS } from "@/lib/ui-layout";
+import { cn } from "@/lib/utils";
 
 import { getCourseDetailById } from "@/features/courses/queries";
 import {
@@ -62,11 +66,7 @@ export default async function CourseLessonsPage({
     select: { id: true },
   });
   if (!student) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No student profile found for this account.
-      </div>
-    );
+    return <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: "Lessons" }]}>No student profile found for this account.</PageMessage>;
   }
 
   const [course, lessons, completions] = await Promise.all([
@@ -81,9 +81,9 @@ export default async function CourseLessonsPage({
   const isEnrolled = course.students.some((s) => s.id === student.id);
   if (!isEnrolled) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: course.name }]}>
         You aren&apos;t enrolled in this course.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -119,131 +119,106 @@ export default async function CourseLessonsPage({
       ? readable[selectedIndex + 1].lesson.id
       : null;
 
-  return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-6 px-4 sm:px-6 py-6 sm:py-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-      {/* Sidebar — sticky at the top of the viewport (with its own overflow)
-          so long lesson bodies never orphan the lesson list. The height cap
-          gives the internal <ul> room to scroll while the back-button and
-          progress bar above stay visible. */}
-      <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/courses/${courseId}`}>
-            <ArrowLeft className="size-4" /> Back to course
+  const lessonHref = (id: string) => studentCourseRoutes.lessons(courseId, id);
+
+  // Previous, Next and Mark complete sit in the sticky header, so they stay
+  // in reach through a long lesson on every screen size.
+  const actions = selectedLesson ? (
+    <>
+      <Button asChild variant="outline" size="sm" disabled={!prevLessonId}>
+        {prevLessonId ? (
+          <Link href={lessonHref(prevLessonId)} aria-label="Previous lesson">
+            <ChevronLeft className="size-4" /> <span className="hidden sm:inline">Previous</span>
           </Link>
-        </Button>
-        <div>
-          <h1 className="font-display text-lg leading-tight tracking-tight text-foreground">
-            {course.name}
-          </h1>
-          <p className="text-muted-foreground text-xs">
-            with {tutorOf(course)?.fullName ?? "your tutor"}
-          </p>
-        </div>
-        <div className="bg-muted/50 space-y-2 rounded-md p-3">
-          <div className="flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium tabular-nums">
-              {completedCount}/{total} ({progressPct}%)
-            </span>
-          </div>
-          <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-            <div
-              className="bg-brand-terracotta h-full transition-all"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-        </div>
-        <Separator className="hidden lg:block" />
-        {/* Collapsed on phones so the lesson itself comes first. */}
-        <MobileCollapsible label={`All lessons (${total})`}>
-          <LessonSidebar
-            courseId={courseId}
-            lessons={lessons}
-            selectedLessonId={selectedLessonId}
-            mode="student"
-            labelScheme={course.lessonLabelScheme}
-            completedLessonIds={completedIds}
-          />
-        </MobileCollapsible>
-      </aside>
-
-      {/* Main pane */}
-      <main className="min-w-0 space-y-6">
-        {selectedLesson ? (
-          <>
-            {/* Sticky lesson header — badge, title, prev/next, mark-complete.
-                Stays pinned as the student reads through long lessons. The
-                backdrop keeps it legible over content that scrolls under it.
-                Desktop only: on a phone this block is a third of the screen,
-                so it scrolls away with the page instead. */}
-            <div className="bg-background/95 -mx-1 space-y-3 px-1 pt-2 pb-3 backdrop-blur lg:sticky lg:top-20 lg:z-20">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">
-                  Lesson {selectedLabel ?? selectedIndex + 1} · {selectedIndex + 1} of {total}
-                </Badge>
-                {selectedLesson.duration != null && (
-                  <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                    <Clock className="size-3" />
-                    {selectedLesson.duration} min
-                  </span>
-                )}
-              </div>
-              <h2 className="font-display text-2xl leading-tight sm:text-3xl tracking-tight text-foreground">
-                {selectedLesson.title}
-              </h2>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    disabled={!prevLessonId}
-                  >
-                    {prevLessonId ? (
-                      <Link
-                        href={`/dashboard/courses/lessons/${courseId}?lesson=${prevLessonId}`}
-                      >
-                        <ChevronLeft className="size-4" /> Previous
-                      </Link>
-                    ) : (
-                      <span>
-                        <ChevronLeft className="size-4" /> Previous
-                      </span>
-                    )}
-                  </Button>
-                  <Button asChild size="sm" disabled={!nextLessonId}>
-                    {nextLessonId ? (
-                      <Link
-                        href={`/dashboard/courses/lessons/${courseId}?lesson=${nextLessonId}`}
-                      >
-                        Next <ChevronRight className="size-4" />
-                      </Link>
-                    ) : (
-                      <span>
-                        Next <ChevronRight className="size-4" />
-                      </span>
-                    )}
-                  </Button>
-                </div>
-                <MarkCompleteButton
-                  lessonId={selectedLesson.id}
-                  initialCompleted={completedIds.has(selectedLesson.id)}
-                />
-              </div>
-            </div>
-
-            <LessonContent lesson={selectedLesson} />
-          </>
         ) : (
-          <Card className="flex min-h-[400px] items-center justify-center p-8 sm:p-12">
-            <EmptyState
-              illustration={<Scene name="empty-lessons" />}
-              title="No lessons yet"
-              description="Your tutor hasn't published any lessons for this course yet. Check back soon."
-            />
-          </Card>
+          <span aria-label="Previous lesson">
+            <ChevronLeft className="size-4" /> <span className="hidden sm:inline">Previous</span>
+          </span>
         )}
-      </main>
-    </div>
+      </Button>
+      <Button asChild variant="outline" size="sm" disabled={!nextLessonId}>
+        {nextLessonId ? (
+          <Link href={lessonHref(nextLessonId)} aria-label="Next lesson">
+            <span className="hidden sm:inline">Next</span> <ChevronRight className="size-4" />
+          </Link>
+        ) : (
+          <span aria-label="Next lesson">
+            <span className="hidden sm:inline">Next</span> <ChevronRight className="size-4" />
+          </span>
+        )}
+      </Button>
+      <MarkCompleteButton lessonId={selectedLesson.id} initialCompleted={completedIds.has(selectedLesson.id)} />
+    </>
+  ) : undefined;
+
+  return (
+    <StudentCourseFrame course={course} page="Lessons" type="editor" actions={actions}>
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
+        {/* The lesson list stays in view (with its own overflow) so long
+            lessons never orphan it; collapsed on phones so the lesson
+            itself comes first. */}
+        <aside aria-label="Lessons" className={cn(SIDE_PANEL_STICKY_CLASS, "space-y-4 lg:pr-1")}>
+          <div className="bg-muted/50 space-y-2 rounded-md p-3">
+            <p className="text-muted-foreground text-xs">with {tutorOf(course)?.fullName ?? "your tutor"}</p>
+            <div className="flex items-baseline justify-between text-xs">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium tabular-nums">
+                {completedCount}/{total} ({progressPct}%)
+              </span>
+            </div>
+            <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+              <div className="bg-brand-terracotta h-full transition-all" style={{ width: `${progressPct}%` }} />
+            </div>
+          </div>
+          <Separator className="hidden lg:block" />
+          <MobileCollapsible label={`All lessons (${total})`}>
+            <LessonSidebar
+              courseId={courseId}
+              lessons={lessons}
+              selectedLessonId={selectedLessonId}
+              mode="student"
+              labelScheme={course.lessonLabelScheme}
+              completedLessonIds={completedIds}
+            />
+          </MobileCollapsible>
+        </aside>
+
+        {/* The lesson text at Reading width (#205). */}
+        <div className="flex max-w-(--frame-reading) min-w-0 flex-col gap-6">
+          {selectedLesson ? (
+            <>
+              <PageTitle
+                eyebrow={
+                  <span className="inline-flex flex-wrap items-center gap-2 tracking-normal normal-case">
+                    <Badge variant="secondary">
+                      Lesson {selectedLabel ?? selectedIndex + 1} · {selectedIndex + 1} of {total}
+                    </Badge>
+                    {selectedLesson.duration != null ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="size-3" />
+                        {selectedLesson.duration} min
+                      </span>
+                    ) : null}
+                  </span>
+                }
+                title={selectedLesson.title}
+              />
+              <LessonContent lesson={selectedLesson} />
+            </>
+          ) : (
+            <>
+              <PageTitle eyebrow="Lessons" title={course.name} />
+              <Card className="flex min-h-[400px] items-center justify-center p-8 sm:p-12">
+                <EmptyState
+                  illustration={<Scene name="empty-lessons" />}
+                  title="No lessons yet"
+                  description="Your tutor hasn't published any lessons for this course yet. Check back soon."
+                />
+              </Card>
+            </>
+          )}
+        </div>
+      </div>
+    </StudentCourseFrame>
   );
 }

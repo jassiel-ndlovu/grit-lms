@@ -10,6 +10,8 @@ import { BookOpenText } from "lucide-react";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import type { ReorderNode } from "@/components/tree-reorder-dialog";
 import { CourseFrame } from "@/features/courses/components/course-frame";
+import { SIDE_PANEL_STICKY_CLASS } from "@/lib/ui-layout";
+import { cn } from "@/lib/utils";
 import { CreateLessonButton } from "./create-lesson-button";
 import { LessonActions } from "./lesson-actions";
 import { LessonForm } from "./lesson-form";
@@ -54,12 +56,12 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
   const isGroup = selectedLesson?.type === "NONE";
 
   return (
-    <CourseFrame course={course} page="Lessons">
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-start gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-0">
+    <CourseFrame course={course} page="Lessons" type="editor">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-0">
         {/* The tree stays in view while a long lesson scrolls. */}
         <aside
           aria-label="Lesson tree"
-          className="lg:sticky lg:top-16 lg:max-h-[calc(100vh-5rem)] lg:self-start lg:overflow-y-auto lg:pr-6"
+          className={cn(SIDE_PANEL_STICKY_CLASS, "lg:pr-6")}
         >
           {/* Folded on phones once a lesson is open (lesson-tree-fold.tsx). */}
           <LessonTreeFold

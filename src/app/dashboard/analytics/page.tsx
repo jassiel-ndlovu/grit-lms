@@ -33,6 +33,8 @@ import {
 } from "@/features/grades/components/charts";
 import { teacherFrom } from "@/features/courses/lib/teacher";
 import HeaderAnalytics from "@/components/illustrations/generated/header-analytics";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 // Personal analytics: the courses this user teaches, owners included (#192).
 import { tutorScope } from "@/features/courses/lib/course-access";
 
@@ -128,54 +130,20 @@ export default async function TutorAnalyticsPage() {
     .sort((a, b) => b.values.length - a.values.length);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-xl">
-            <p className="text-primary-foreground/70 text-sm">
-              {tutor.fullName.split(" ")[0]}&apos;s teaching analytics
-            </p>
-            <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
-              Class performance
-            </h1>
-            <p className="text-primary-foreground/70 mt-3 text-sm">
-              How your students are doing across every course you teach.
-              Distribution charts help you spot items that need re-teaching.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-6 text-sm">
-              <div>
-                <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                  Students graded
-                </p>
-                <p className="font-display text-2xl tabular-nums">
-                  {studentSet.size}
-                </p>
-              </div>
-              <div>
-                <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                  Grades issued
-                </p>
-                <p className="font-display text-2xl tabular-nums">
-                  {allGrades.length}
-                </p>
-              </div>
-              {overall != null && (
-                <div>
-                  <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                    Overall class avg
-                  </p>
-                  <p className="font-display text-2xl tabular-nums">
-                    {overall}%
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
-            <HeaderAnalytics className="h-full w-auto" />
-          </div>
-        </div>
-      </section>
+    <PageFrame type="list" breadcrumb={[{ label: "Analytics" }]}>
+      <PageTitle
+        eyebrow={`${tutor.fullName.split(" ")[0]}'s teaching analytics`}
+        title="Class performance"
+        description="How your students are doing across every course you teach. Distribution charts help you spot items that need re-teaching."
+        illustration={<HeaderAnalytics />}
+        properties={
+          <StatTiles>
+            <StatTile label="Students graded" value={studentSet.size} />
+            <StatTile label="Grades issued" value={allGrades.length} />
+            {overall != null ? <StatTile label="Overall class avg" value={`${overall}%`} /> : null}
+          </StatTiles>
+        }
+      />
 
       {allGrades.length === 0 ? (
         <Card className="flex min-h-70 flex-col items-center justify-center gap-4 p-8 sm:p-12 text-center">
@@ -289,6 +257,6 @@ export default async function TutorAnalyticsPage() {
           </section>
         </>
       )}
-    </div>
+    </PageFrame>
   );
 }

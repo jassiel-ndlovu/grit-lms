@@ -10,6 +10,8 @@
 import { prisma } from "@/lib/db";
 import { CourseOverview } from "@/features/courses/components/course-overview";
 import { lessonSummary, sortWork, type WorkItem } from "@/features/courses/lib/course-overview";
+import { PageMessage } from "@/components/shell/page-frame";
+import { courseRoutes } from "@/features/courses/components/course-frame";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
 import { otherTeacherName } from "@/features/courses/lib/course-access";
 import { describeRecurrence, occurrencesOf } from "@/features/events/lib/recurrence";
@@ -28,7 +30,7 @@ const DAY = 24 * 60 * 60 * 1000;
 export default async function ManageCourseOverviewPage({ params }: PageProps) {
   const { id } = await params;
   const loaded = await loadTutorCourse(id);
-  if (!loaded.ok) return <div className="text-muted-foreground p-8 text-sm">{loaded.message}</div>;
+  if (!loaded.ok) return <PageMessage breadcrumb={[{ label: "Courses", href: courseRoutes.list }, { label: "Course" }]}>{loaded.message}</PageMessage>;
   const { course, userId } = loaded;
 
   const [prefs, assignments] = await Promise.all([

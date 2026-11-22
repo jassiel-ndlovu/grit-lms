@@ -20,11 +20,12 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronRight, Users } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -85,55 +86,19 @@ export default async function CourseGradebookPage({ params }: PageProps) {
   const maxBand = Math.max(1, ...stats.distribution);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href="/dashboard/gradebook">← All courses</Link>
-        </Button>
-      </div>
-
-      <header className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-4 p-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-primary-foreground/70 text-xs">Gradebook</p>
-            <h1 className="font-display mt-1 text-2xl leading-tight tracking-tight">
-              {book.course.name}
-            </h1>
-            <p className="text-primary-foreground/70 mt-2 inline-flex items-center gap-1 text-sm">
-              <Users className="size-4" />
-              {book.students.length}{" "}
-              {book.students.length === 1 ? "student" : "students"} ·{" "}
-              {book.assessments.length} assessments
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-6 text-sm">
-            <div>
-              <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                Class average
-              </p>
-              <p className="font-display text-2xl tabular-nums">
-                {fmt(stats.mean)}
-              </p>
-            </div>
-            <div>
-              <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                Median
-              </p>
-              <p className="font-display text-2xl tabular-nums">
-                {fmt(stats.median)}
-              </p>
-            </div>
-            <div>
-              <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                Range
-              </p>
-              <p className="font-display text-2xl tabular-nums">
-                {stats.min == null ? "—" : `${fmt(stats.min)}–${fmt(stats.max)}`}
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <PageFrame type="list" width="full" breadcrumb={[{ label: "Gradebook", href: "/dashboard/gradebook" }, { label: book.course.name }]}>
+      <PageTitle
+        eyebrow="Gradebook"
+        title={book.course.name}
+        description={`${book.students.length} ${book.students.length === 1 ? "student" : "students"} · ${book.assessments.length} assessments`}
+        properties={
+          <StatTiles>
+            <StatTile label="Class average" value={fmt(stats.mean)} />
+            <StatTile label="Median" value={fmt(stats.median)} />
+            <StatTile label="Range" value={stats.min == null ? "—" : `${fmt(stats.min)}–${fmt(stats.max)}`} />
+          </StatTiles>
+        }
+      />
 
       {/* ───── Distribution ───── */}
       <Card className="p-5">
@@ -312,6 +277,6 @@ export default async function CourseGradebookPage({ params }: PageProps) {
           </p>
         </Card>
       )}
-    </div>
+    </PageFrame>
   );
 }

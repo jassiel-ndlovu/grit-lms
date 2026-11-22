@@ -16,7 +16,6 @@ import { notFound, redirect } from "next/navigation";
 import { Receipt } from "lucide-react";
 
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
-import { PageHeader } from "@/components/shell/page-header";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { feeCourses } from "@/features/courses/fee-courses";
 import { FeeCheckout, type PayableRow } from "@/features/courses/components/fee-checkout";
@@ -57,26 +56,24 @@ export default async function FeesPage({ searchParams }: PageProps) {
   const cursor = typeof sp.cursor === "string" && sp.cursor.length <= 64 ? sp.cursor : null;
 
   const shell = (children: React.ReactNode) => (
-    <>
-      <PageHeader
-        breadcrumb={[{ label: "Fees" }]}
-        actions={
-          <>
-            {needsScope(viewer, "fees.manage") ? null : (
-              <Button asChild variant="outline" size="sm">
-                <Link href="/dashboard/fees/discounts">Discount codes</Link>
-              </Button>
-            )}
-            <NewFeeButton courses={courses} />
-          </>
-        }
-      />
-      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
-        <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Fees</h1>
-        <RecoveryNotice state={sp.recovery} />
-        {children}
-      </div>
-    </>
+    <PageFrame
+      type="list"
+      breadcrumb={[{ label: "Fees" }]}
+      actions={
+        <>
+          {needsScope(viewer, "fees.manage") ? null : (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/fees/discounts">Discount codes</Link>
+            </Button>
+          )}
+          <NewFeeButton courses={courses} />
+        </>
+      }
+    >
+      <PageTitle icon={<Receipt />} title="Fees" />
+      <RecoveryNotice state={sp.recovery} />
+      {children}
+    </PageFrame>
   );
 
   let list, payouts, recoveries;
@@ -159,13 +156,10 @@ async function PayerFees({ viewer }: { viewer: Viewer }) {
   const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
   const forSelf = !(viewer.children.length > 0 && can(viewer, "fees.pay"));
   const shell = (children: React.ReactNode) => (
-    <>
-      <PageHeader breadcrumb={[{ label: "Fees" }]} />
-      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
-        <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Fees</h1>
-        {children}
-      </div>
-    </>
+    <PageFrame type="settings" breadcrumb={[{ label: "Fees" }]}>
+      <PageTitle icon={<Receipt />} title="Fees" />
+      {children}
+    </PageFrame>
   );
 
   let items;

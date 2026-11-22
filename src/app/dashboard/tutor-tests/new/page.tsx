@@ -7,11 +7,11 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/shell/page-header";
+import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TestForm } from "@/features/assessments/components/test-form";
@@ -29,40 +29,28 @@ export default async function NewTestPage() {
   const courses = await listCoursesByTutorId(scope);
   if (courses.length === 0) {
     return (
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-10">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href="/dashboard/tutor-tests">
-            <ArrowLeft className="size-4" /> Back to tests
-          </Link>
-        </Button>
-        <div className="border-input mt-6 rounded-md border border-dashed p-8 sm:p-12 text-center">
-          <h1 className="font-display text-xl text-foreground">
-            No courses yet
-          </h1>
-          <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-sm">
-            Create a course first — tests live inside a course.
-          </p>
-          <Button asChild className="mt-6">
-            <Link href="/dashboard/manage-courses">Go to manage courses</Link>
-          </Button>
-        </div>
-      </div>
+      <PageFrame type="settings" breadcrumb={[{ label: "Tests", href: "/dashboard/tutor-tests" }, { label: "New test" }]}>
+        <PageTitle title="New test" />
+        <EmptyState
+          className="border-input rounded-lg border border-dashed"
+          illustration={<Scene name="empty-courses" />}
+          title="No courses yet"
+          description="Create a course first: tests live inside a course."
+          action={
+            <Button asChild>
+              <Link href="/dashboard/manage-courses">Go to your courses</Link>
+            </Button>
+          }
+        />
+      </PageFrame>
     );
   }
 
   return (
-    <>
-      <PageHeader breadcrumb={[{ label: "Tests", href: "/dashboard/tutor-tests" }, { label: "New test" }]} />
-      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
-        <header>
-          <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">New test</h1>
-          <p className="text-muted-foreground mt-1.5 text-sm">
-            Draft first, publish when ready. Publishing sends a notification to enrolled students.
-          </p>
-        </header>
+    <PageFrame type="editor" breadcrumb={[{ label: "Tests", href: "/dashboard/tutor-tests" }, { label: "New test" }]}>
+      <PageTitle title="New test" description="Draft first, publish when ready. Publishing sends a notification to enrolled students." />
 
-        <TestForm courses={courses.map((c) => ({ id: c.id, name: c.name }))} />
-      </div>
-    </>
+      <TestForm courses={courses.map((c) => ({ id: c.id, name: c.name }))} />
+    </PageFrame>
   );
 }

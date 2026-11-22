@@ -20,10 +20,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarClock, Download, EyeOff, FileText, Loader2, Upload, X } from "lucide-react";
+import { CalendarClock, Download, EyeOff, FileText, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { PageTitle } from "@/components/shell/page-frame";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -230,29 +231,14 @@ export function AssignmentForm({
   }
 
   return (
-    <div className="bg-background">
-      <div className="bg-card border-border border-b">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <div className="flex h-14 items-center">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href={isEditing ? assignmentRoutes.detail(id) : assignmentRoutes.index}>
-                <ArrowLeft className="size-4" /> {isEditing ? "Back to assignment" : "Back to assignments"}
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} noValidate className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-40 sm:px-6 sm:py-10">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">
-              {isEditing ? "Edit assignment" : "New assignment"}
-            </h1>
-            <p className="text-muted-foreground mt-1.5 text-sm">
-              {isEditing ? "Update the assignment details." : "Set up a new assignment for your students."}
-            </p>
-          </div>
+    // Framed by AssignmentEditorPage (PageFrame, #205): no back bar or widths here.
+    <div>
+      <form onSubmit={handleSubmit} noValidate className="space-y-6 pb-40">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <PageTitle
+            title={isEditing ? "Edit assignment" : "New assignment"}
+            description={isEditing ? "Update the assignment details." : "Set up a new assignment for your students."}
+          />
           <div className="border-border bg-card flex items-center gap-3 rounded-md border px-3 py-2">
             <Badge variant={formData.isActive ? "soft" : "secondary"}>{formData.isActive ? "Active" : "Draft"}</Badge>
             <span className="text-muted-foreground text-xs">Visible to students</span>
@@ -262,7 +248,7 @@ export function AssignmentForm({
               aria-label="Visible to students"
             />
           </div>
-        </header>
+        </div>
 
         <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this assignment" />
 
@@ -496,7 +482,7 @@ export function AssignmentForm({
         )}
 
         <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-(--frame-pad) py-4">
             <DraftStatus draft={draft} />
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild type="button" variant="ghost">

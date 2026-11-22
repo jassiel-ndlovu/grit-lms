@@ -28,7 +28,7 @@ export default async function AdminWorkspaceBillingPage({ params }: PageProps) {
     throw e;
   }
   return (
-    <AdminBillingFrame page={[{ label: "Workspaces", href: adminBillingRoutes.workspaces }, { label: ws.name }]} title={ws.name}>
+    <AdminBillingFrame page={[{ label: "Workspaces", href: adminBillingRoutes.workspaces }, { label: ws.name }]} title={ws.name} type="record">
       <WorkspaceDetail ws={ws} ctx={ctx} canOverride={canOverride} />
     </AdminBillingFrame>
   );

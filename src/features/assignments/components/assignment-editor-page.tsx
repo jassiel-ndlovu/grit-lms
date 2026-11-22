@@ -13,7 +13,9 @@ import { notFound, redirect } from "next/navigation";
 
 import "server-only";
 
+import { PageFrame } from "@/components/shell/page-frame";
 import { AssignmentForm, type AssignmentFormValues } from "@/features/assignments/components/assignment-form";
+import { assignmentRoutes } from "@/features/assignments/routes";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { getSubmissionDetailById, submissionBelongsToTutor } from "@/features/assignments/queries";
 import { getViewer } from "@/lib/viewer";
@@ -51,10 +53,20 @@ export async function AssignmentEditorPage({ id }: { id?: string }) {
     : null;
 
   return (
-    <AssignmentForm
-      id={submission?.id ?? null}
-      initial={initial}
-      courses={courses.map((c) => ({ id: c.id, name: c.name }))}
-    />
+    // An editor, but a form of fields rather than a document: Standard width.
+    <PageFrame
+      type="editor"
+      width="standard"
+      breadcrumb={[
+        { label: "Assignments", href: assignmentRoutes.index },
+        ...(submission ? [{ label: submission.title, href: assignmentRoutes.detail(submission.id) }, { label: "Edit" }] : [{ label: "New assignment" }]),
+      ]}
+    >
+      <AssignmentForm
+        id={submission?.id ?? null}
+        initial={initial}
+        courses={courses.map((c) => ({ id: c.id, name: c.name }))}
+      />
+    </PageFrame>
   );
 }

@@ -24,6 +24,8 @@ import { listAllUsers } from "@/features/users/queries";
 import { CreateUserForm } from "@/features/users/components/create-user-form";
 import { UserList } from "@/features/users/components/user-list";
 import HeaderPeople from "@/components/illustrations/generated/header-people";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 
 export const metadata = { title: "Manage users" };
 
@@ -38,40 +40,19 @@ export default async function ManageUsersPage() {
   const tutorCount = users.filter((u) => u.role === "TUTOR").length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-xl">
-            <p className="text-primary-foreground/70 text-sm">Administration</p>
-            <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
-              Manage users
-            </h1>
-            <p className="text-primary-foreground/70 mt-3 text-sm">
-              Provision student accounts and reset passwords when someone
-              forgets. This replaces the old seed route.
-            </p>
-            <div className="mt-4 flex gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <Users className="size-4" />
-                <span className="text-primary-foreground/90">
-                  <span className="font-semibold">{studentCount}</span>{" "}
-                  {studentCount === 1 ? "student" : "students"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <UserPlus className="size-4" />
-                <span className="text-primary-foreground/90">
-                  <span className="font-semibold">{tutorCount}</span>{" "}
-                  {tutorCount === 1 ? "tutor" : "tutors"}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
-            <HeaderPeople className="h-full w-auto" />
-          </div>
-        </div>
-      </section>
+    <PageFrame type="list" breadcrumb={[{ label: "Manage users" }]}>
+      <PageTitle
+        eyebrow="Administration"
+        title="Manage users"
+        description="Provision student accounts and reset passwords when someone forgets. This replaces the old seed route."
+        illustration={<HeaderPeople />}
+        properties={
+          <StatTiles>
+            <StatTile icon={<Users />} label={studentCount === 1 ? "Student" : "Students"} value={studentCount} />
+            <StatTile icon={<UserPlus />} label={tutorCount === 1 ? "Tutor" : "Tutors"} value={tutorCount} />
+          </StatTiles>
+        }
+      />
 
       <section className="grid gap-6 lg:grid-cols-5">
         <Card className="p-6 lg:col-span-2">
@@ -104,6 +85,6 @@ export default async function ManageUsersPage() {
           <UserList users={users} />
         </Card>
       </section>
-    </div>
+    </PageFrame>
   );
 }

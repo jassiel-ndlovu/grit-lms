@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { Bell, ChevronRight, GraduationCap, MessageSquare, Receipt, Users } from "lucide-react";
 
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { ChildSummary } from "@/features/activity/child-overview";
@@ -25,21 +26,15 @@ type Learner = Viewer["children"][number] & { summary: ChildSummary };
 
 export function ParentDashboard({ firstName, learners }: { firstName: string; learners: Learner[] }) {
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="p-8">
-          <p className="text-primary-foreground/70 text-sm">Welcome, {firstName}.</p>
-          <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
-            Follow your learners&apos; progress.
-          </h1>
-          <p className="text-primary-foreground/70 mt-3 max-w-xl text-sm">
-            Marks, deadlines and course updates for the students you look after, in one place.
-          </p>
-        </div>
-      </section>
+    <PageFrame type="home" breadcrumb={[{ label: "Home" }]}>
+      <PageTitle
+        eyebrow={`Welcome, ${firstName}`}
+        title="Follow your learners' progress"
+        description="Marks, deadlines and course updates for the students you look after, in one place."
+      />
 
       <section className="space-y-4">
-        <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">
+        <h2 className="text-foreground text-base font-semibold">
           Your learners
         </h2>
         {learners.length === 0 ? (
@@ -91,7 +86,7 @@ export function ParentDashboard({ firstName, learners }: { firstName: string; le
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="space-y-4">
-          <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">
+          <h2 className="text-foreground text-base font-semibold">
             Coming soon
           </h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -108,7 +103,7 @@ export function ParentDashboard({ firstName, learners }: { firstName: string; le
         </section>
 
         <section className="space-y-4">
-          <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">
+          <h2 className="text-foreground text-base font-semibold">
             Shortcuts
           </h2>
           <Card className="divide-border divide-y p-0">
@@ -129,7 +124,7 @@ export function ParentDashboard({ firstName, learners }: { firstName: string; le
           </Card>
         </section>
       </div>
-    </div>
+    </PageFrame>
   );
 }
 

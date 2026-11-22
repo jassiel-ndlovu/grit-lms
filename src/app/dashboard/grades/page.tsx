@@ -31,6 +31,8 @@ import {
   type BarDatum,
 } from "@/features/grades/components/charts";
 import HeaderGrades from "@/components/illustrations/generated/header-grades";
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 
 export const metadata = { title: "Grades" };
 
@@ -56,9 +58,9 @@ export default async function StudentGradesPage() {
   });
   if (!student) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Grades" }]}>
         No student profile found for this account.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -113,34 +115,20 @@ export default async function StudentGradesPage() {
     .reduce((s, g) => s + g.outOf, 0);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-xl">
-            <p className="text-primary-foreground/70 text-sm">
-              {student.fullName.split(" ")[0]}&apos;s transcript
-            </p>
-            <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
-              Grades &amp; performance
-            </h1>
-            <p className="text-primary-foreground/70 mt-3 text-sm">
-              Track your progress across every course. Click any row to see
-              per-question feedback from your tutor.
-            </p>
-            {overall != null && (
-              <div className="mt-4">
-                <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                  Overall average
-                </p>
-                <p className="font-display text-3xl tabular-nums">{overall}%</p>
-              </div>
-            )}
-          </div>
-          <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
-            <HeaderGrades className="h-full w-auto" />
-          </div>
-        </div>
-      </section>
+    <PageFrame type="list" breadcrumb={[{ label: "Grades" }]}>
+      <PageTitle
+        eyebrow={`${student.fullName.split(" ")[0]}'s transcript`}
+        title="Grades & performance"
+        description="Track your progress across every course. Click any row to see per-question feedback from your tutor."
+        illustration={<HeaderGrades />}
+        properties={
+          overall != null ? (
+            <StatTiles>
+              <StatTile icon={<Award />} label="Overall average" value={`${overall}%`} />
+            </StatTiles>
+          ) : undefined
+        }
+      />
 
       {grades.length === 0 ? (
         <Card className="flex min-h-70 flex-col items-center justify-center gap-4 p-8 sm:p-12 text-center">
@@ -292,6 +280,6 @@ export default async function StudentGradesPage() {
           </section>
         </>
       )}
-    </div>
+    </PageFrame>
   );
 }

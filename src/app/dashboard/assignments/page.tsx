@@ -6,6 +6,7 @@
  * client components in one role-branched RSC page.
  */
 
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 import { redirect } from "next/navigation";
 import { parentLanding } from "@/features/activity/lib/child-overview";
 import { getViewer } from "@/lib/viewer";
@@ -54,9 +55,9 @@ export default async function SubmissionsIndexPage() {
     });
     if (!student) {
       return (
-        <div className="text-muted-foreground p-8 text-sm">
+        <PageMessage breadcrumb={[{ label: "Assignments" }]}>
           No student profile found for this account.
-        </div>
+        </PageMessage>
       );
     }
 
@@ -132,23 +133,13 @@ export default async function SubmissionsIndexPage() {
     }
 
     return (
-      <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-        <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-          <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-xl">
-              <p className="text-primary-foreground/70 text-sm">Coursework</p>
-              <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
-                Assignments
-              </h1>
-              <p className="text-primary-foreground/70 mt-3 text-sm">
-                Every assignment across your courses, grouped by status.
-              </p>
-            </div>
-            <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
-              <HeaderAssignments className="h-full w-auto" />
-            </div>
-          </div>
-        </section>
+      <PageFrame type="list" breadcrumb={[{ label: "Assignments" }]}>
+        <PageTitle
+          eyebrow="Coursework"
+          title="Assignments"
+          description="Every assignment across your courses, grouped by status."
+          illustration={<HeaderAssignments />}
+        />
 
         <TestsTabs
           counts={counts}
@@ -160,7 +151,7 @@ export default async function SubmissionsIndexPage() {
             graded: renderBucket("graded"),
           }}
         />
-      </div>
+      </PageFrame>
     );
   }
 
@@ -176,24 +167,20 @@ export default async function SubmissionsIndexPage() {
     });
 
     return (
-      <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-              Assignments
-            </h1>
-            <p className="text-muted-foreground mt-1.5 text-sm">
-              Every assignment you&apos;ve published, newest due-date first.
-            </p>
-          </div>
-          <WriteGuard label="New assignment" size="default" variant="brand">
-            <Button asChild variant="brand">
+      <PageFrame
+        type="list"
+        breadcrumb={[{ label: "Assignments" }]}
+        actions={
+          <WriteGuard label="New assignment" variant="brand">
+            <Button asChild variant="brand" size="sm">
               <Link href={assignmentRoutes.new}>
                 <Plus className="size-4" /> New assignment
               </Link>
             </Button>
           </WriteGuard>
-        </header>
+        }
+      >
+        <PageTitle title="Assignments" description="Every assignment you've published, newest due-date first." />
 
         {rows.length === 0 ? (
           <EmptyState
@@ -280,7 +267,7 @@ export default async function SubmissionsIndexPage() {
             </div>
           </div>
         )}
-      </div>
+      </PageFrame>
     );
   }
 

@@ -14,7 +14,8 @@ import { notFound } from "next/navigation";
 import { StatusChip } from "@/components/shell/status-chip";
 import { getBillingOverview, getCourseServices, getCourseTiers } from "@/features/billing/queries";
 import { isBillingEnabled } from "@/features/billing/errors";
-import { CourseFrame } from "@/features/courses/components/course-frame";
+import { PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { CourseFrame, courseRoutes } from "@/features/courses/components/course-frame";
 import { CourseServices } from "@/features/courses/components/course-services";
 import { TIER_LABEL, billingErrorMessage, formatRand } from "@/features/courses/lib/billing-ui";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
@@ -39,7 +40,7 @@ export default async function CourseServicesPage({ params }: PageProps) {
   if (!isBillingEnabled()) notFound();
   const { id } = await params;
   const loaded = await loadTutorCourse(id);
-  if (!loaded.ok) return <div className="text-muted-foreground p-8 text-sm">{loaded.message}</div>;
+  if (!loaded.ok) return <PageMessage breadcrumb={[{ label: "Courses", href: courseRoutes.list }, { label: "Services" }]}>{loaded.message}</PageMessage>;
   const { course, userId } = loaded;
 
   const [prefs, servicesResult, tiers, overview] = await Promise.all([
@@ -57,11 +58,16 @@ export default async function CourseServicesPage({ params }: PageProps) {
   const renewsOn = overview?.period ? formatDate(new Date(overview.period.renewsAt), ctx, { day: "numeric", month: "short" }) : null;
 
   return (
-    <CourseFrame course={course} page="Services">
-      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
-        <header className="space-y-2">
-          <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Services</h1>
-          {tier ? (
+    <CourseFrame course={course} page="Services" type="settings">
+      <PageTitle
+        title="Services"
+        description={
+          inTrial
+            ? "Free during your trial. Switch services on to try them; the plan they need applies once you start paying."
+            : undefined
+        }
+        properties={
+          tier ? (
             <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
               <span>Plan:</span>
               <StatusChip tone={tier.billedTierKey === "CORE" ? "neutral" : "info"}>{TIER_LABEL[tier.billedTierKey]}</StatusChip>
@@ -72,29 +78,24 @@ export default async function CourseServicesPage({ params }: PageProps) {
                   : ""}
               </span>
             </p>
-          ) : null}
-          {inTrial ? (
-            <p className="text-muted-foreground text-sm">
-              Free during your trial. Switch services on to try them; the plan they need applies once you start paying.
-            </p>
-          ) : null}
-        </header>
+          ) : null
+        }
+      />
 
-        {servicesResult.items ? (
-          <CourseServices
-            courseId={course.id}
-            courseName={course.name}
-            items={servicesResult.items}
-            inTrial={inTrial}
-            renewsOn={renewsOn}
-            dateCtx={ctx}
-          />
-        ) : (
-          <p role="alert" className="text-muted-foreground text-sm">
-            {billingErrorMessage(servicesResult.error)}
-          </p>
-        )}
-      </div>
+      {servicesResult.items ? (
+        <CourseServices
+          courseId={course.id}
+          courseName={course.name}
+          items={servicesResult.items}
+          inTrial={inTrial}
+          renewsOn={renewsOn}
+          dateCtx={ctx}
+        />
+      ) : (
+        <p role="alert" className="text-muted-foreground text-sm">
+          {billingErrorMessage(servicesResult.error)}
+        </p>
+      )}
     </CourseFrame>
   );
 }

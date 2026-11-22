@@ -29,6 +29,7 @@ import { APP_CONTACT, APP_NAME } from "@/lib/branding";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import HeaderHelp from "@/components/illustrations/generated/header-help";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 
 export const metadata = { title: "Help" };
 
@@ -163,24 +164,13 @@ export default async function HelpPage() {
   const mailtoHref = `mailto:${APP_CONTACT.email}?subject=${mailSubject}&body=${mailBody}`;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-xl">
-            <p className="text-primary-foreground/70 text-sm">Support</p>
-            <h1 className="font-display mt-1 text-2xl sm:text-3xl leading-tight tracking-tight">
-              How can we help?
-            </h1>
-            <p className="text-primary-foreground/70 mt-3 text-sm">
-              Common questions, quick shortcuts, and a way to reach a human
-              when the docs don&apos;t cut it.
-            </p>
-          </div>
-          <div className="illustration-paper hidden h-32 w-40 shrink-0 items-end justify-center md:flex">
-            <HeaderHelp className="h-full w-auto" />
-          </div>
-        </div>
-      </section>
+    <PageFrame type="settings" breadcrumb={[{ label: "Help" }]} helpHref={null}>
+      <PageTitle
+        eyebrow="Support"
+        title="How can we help?"
+        description="Common questions, quick shortcuts, and a way to reach a human when the docs don't cut it."
+        illustration={<HeaderHelp />}
+      />
 
       <section className="space-y-3">
         <h2 className="font-display text-xl leading-tight">Quick starts</h2>
@@ -274,6 +264,6 @@ export default async function HelpPage() {
           </p>
         </Card>
       </section>
-    </div>
+    </PageFrame>
   );
 }

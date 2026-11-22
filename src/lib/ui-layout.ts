@@ -33,12 +33,23 @@ export const FRAME_WIDTH_CLASS: Record<FrameWidth, string> = {
   full: "max-w-none",
 };
 
-/** Horizontal padding, top padding and the gap between sections. */
-export const FRAME_BODY_CLASS = "mx-auto flex w-full flex-col gap-(--frame-gap) px-(--frame-pad) pt-(--frame-pad-top)";
+/** Horizontal, top and bottom padding and the gap between sections. */
+export const FRAME_BODY_CLASS =
+  "mx-auto flex w-full flex-col gap-(--frame-gap) px-(--frame-pad) pt-(--frame-pad-top) pb-(--frame-pad-bottom)";
 
 /** Sticky offsets: the primary header sits under the shell bar, the secondary under both. */
 export const HEADER_TOP_CLASS = "top-(--shell-top)";
 export const SECONDARY_TOP_CLASS = "top-[calc(var(--shell-top)+var(--header-primary))]";
+
+/**
+ * For a side panel that stays in view from 1024 px (the lesson tree): pins
+ * it 16 px under both headers and keeps it inside the window.
+ */
+export const SIDE_PANEL_STICKY_CLASS =
+  "lg:sticky lg:top-[calc(var(--shell-top)+var(--header-primary)+var(--header-secondary)+16px)] lg:max-h-[calc(100vh-var(--shell-top)-var(--header-primary)-var(--header-secondary)-32px)] lg:self-start lg:overflow-y-auto";
+
+/** The test runner's own sticky bar (timer, question strip) sits under the runner strip. */
+export const BELOW_RUNNER_STRIP_TOP_CLASS = "top-[calc(var(--shell-top)+var(--header-runner))]";
 
 /** Below this width the secondary header hides while scrolling down. */
 export const SECONDARY_HIDE_BELOW_PX = 768;

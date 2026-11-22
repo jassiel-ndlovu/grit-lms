@@ -545,7 +545,8 @@ export function TestRunner({
           top of the window together. */}
       <div
         className={cn(
-          "bg-background/95 border-border z-20 -mx-4 border-b px-4 backdrop-blur sm:-mx-6 sm:px-6",
+          // Bleeds to the frame's edges (PageFrame padding, #205).
+          "bg-background/95 border-border z-20 -mx-(--frame-pad) border-b px-(--frame-pad) backdrop-blur",
           !preview && cn("sticky", stickyTop),
         )}
       >

@@ -24,6 +24,7 @@ import { can, getViewer } from "@/lib/viewer";
 import { isRevampUi } from "@/lib/ui-flags";
 import { ThemeSetting } from "@/features/courses/components/theme-picker";
 import HeaderSettings from "@/components/illustrations/generated/header-settings";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 
 export const metadata = { title: "Settings" };
 
@@ -65,26 +66,13 @@ export default async function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-xl">
-            <p className="text-primary-foreground/70 text-sm">
-              Preferences
-            </p>
-            <h1 className="font-display mt-1 text-2xl sm:text-3xl leading-tight tracking-tight">
-              Settings
-            </h1>
-            <p className="text-primary-foreground/70 mt-3 text-sm">
-              Choose what you hear about, how the app looks and where you
-              land. Changes apply when you click &ldquo;Save preferences&rdquo;.
-            </p>
-          </div>
-          <div className="illustration-paper hidden h-32 w-40 shrink-0 items-end justify-center md:flex">
-            <HeaderSettings className="h-full w-auto" />
-          </div>
-        </div>
-      </section>
+    <PageFrame type="settings" breadcrumb={[{ label: "Settings" }]}>
+      <PageTitle
+        eyebrow="Preferences"
+        title="Settings"
+        description="Choose what you hear about, how the app looks and where you land. Changes apply when you click “Save preferences”."
+        illustration={<HeaderSettings />}
+      />
 
       <Link
         href="/dashboard/settings/account"
@@ -159,6 +147,6 @@ export default async function SettingsPage() {
         emailVerified={user.emailVerified !== null}
         defaults={defaults}
       />
-    </div>
+    </PageFrame>
   );
 }

@@ -70,7 +70,7 @@ export function PageFrame({
  * (PropertyList, chips, dates). Exactly one h1 per page.
  */
 export function PageTitle({
-  title, icon, eyebrow, description, properties, actions, className,
+  title, icon, eyebrow, description, properties, actions, illustration, className,
 }: {
   title: React.ReactNode;
   /** A lucide icon or an emoji; shown at 32 px above the title. */
@@ -82,10 +82,15 @@ export function PageTitle({
   properties?: React.ReactNode;
   /** Rarely: an action that belongs to the title (most go in the header). */
   actions?: React.ReactNode;
+  /**
+   * A small Open Peeps scene (#204) beside the title from 768 px, at most
+   * 112 px tall. Decorative; hidden on phones.
+   */
+  illustration?: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <div data-slot="page-title" className={cn("flex flex-col gap-2", className)}>
+  const body = (
+    <div data-slot="page-title" className={cn("flex min-w-0 flex-col gap-2", illustration ? "flex-1" : className)}>
       {icon ? (
         <span aria-hidden className="text-muted-foreground mb-1 grid size-8 place-items-center text-2xl [&_svg]:size-7">
           {icon}
@@ -101,6 +106,36 @@ export function PageTitle({
       {description ? <div className="text-muted-foreground max-w-prose text-sm">{description}</div> : null}
       {properties ? <div className="pt-2">{properties}</div> : null}
     </div>
+  );
+  if (!illustration) return body;
+  return (
+    <div className={cn("flex items-end gap-6", className)}>
+      {body}
+      <div aria-hidden className="hidden h-28 w-40 shrink-0 items-end justify-center md:flex [&_svg]:h-full [&_svg]:w-auto">
+        {illustration}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A framed page that only has a sentence to say: not found, no access, no
+ * profile yet. Same header and width rules as every other page.
+ */
+export function PageMessage({
+  breadcrumb, title, children,
+}: {
+  breadcrumb: Crumb[];
+  title?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <PageFrame type="settings" breadcrumb={breadcrumb}>
+      {title ? <PageTitle title={title} /> : null}
+      <div role="status" className="text-muted-foreground text-sm">
+        {children}
+      </div>
+    </PageFrame>
   );
 }
 

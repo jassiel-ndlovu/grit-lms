@@ -8,7 +8,13 @@
  * back once those features migrate to the new pattern.
  */
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BookOpen } from "lucide-react";
+
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { Button } from "@/components/ui/button";
+import { joinRoutes } from "@/features/courses/lib/join-ui";
 import { parentLanding } from "@/features/activity/lib/child-overview";
 import { getViewer } from "@/lib/viewer";
 
@@ -34,25 +40,22 @@ export default async function StudentCoursesPage() {
   });
 
   if (!student) {
-    return (
-      <div className="text-muted-foreground p-8 text-sm">
-        No student profile found for this account.
-      </div>
-    );
+    return <PageMessage breadcrumb={[{ label: "My courses" }]}>No student profile found for this account.</PageMessage>;
   }
 
   const courses = await listCoursesByStudentId(student.id);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <header>
-        <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-          My courses
-        </h1>
-        <p className="text-muted-foreground mt-1.5 text-sm">
-          Continue learning where you left off.
-        </p>
-      </header>
+    <PageFrame
+      type="list"
+      breadcrumb={[{ label: "My courses" }]}
+      actions={
+        <Button asChild variant="outline" size="sm">
+          <Link href={joinRoutes.browse}>Find courses</Link>
+        </Button>
+      }
+    >
+      <PageTitle icon={<BookOpen />} title="My courses" description="Continue learning where you left off." />
 
       <CourseGrid
         view={(await getUserPreferences(session.user.id)).preferredView}
@@ -74,6 +77,6 @@ export default async function StudentCoursesPage() {
           />
         ))}
       </CourseGrid>
-    </div>
+    </PageFrame>
   );
 }

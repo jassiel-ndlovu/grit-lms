@@ -13,13 +13,13 @@
  * deferred to a follow-up chapter — this page focuses on notifications.
  */
 
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bell } from "lucide-react";
 
 import { auth } from "@/lib/auth";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { RibbonNav } from "@/components/shell/ribbon";
+import { StatusChip } from "@/components/shell/status-chip";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -55,42 +55,23 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
       : "Activity from your courses, tutors, and submissions.";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-8">
-      <div className="mb-6 space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-              Notifications
-            </h1>
-            <p className="text-muted-foreground mt-1.5 text-sm">{subtitle}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={unreadCount > 0 ? "soft" : "secondary"}>
-              {unreadCount} unread
-            </Badge>
-            <MarkAllReadButton hasUnread={unreadCount > 0} />
-          </div>
-        </div>
-
-        {/* Filter toggle — active filter uses the slate primary so the
-            terracotta accents below stay reserved for unread state. */}
-        <div className="flex items-center gap-2">
-          <Button
-            asChild
-            variant={unreadOnly ? "outline" : "default"}
-            size="sm"
-          >
-            <Link href="/dashboard/notifications">All</Link>
-          </Button>
-          <Button
-            asChild
-            variant={unreadOnly ? "default" : "outline"}
-            size="sm"
-          >
-            <Link href="/dashboard/notifications?unread=1">Unread only</Link>
-          </Button>
-        </div>
-      </div>
+    <PageFrame
+      type="list"
+      breadcrumb={[{ label: "Notifications" }]}
+      status={unreadCount > 0 ? <StatusChip tone="info">{unreadCount} unread</StatusChip> : undefined}
+      actions={<MarkAllReadButton hasUnread={unreadCount > 0} />}
+      secondary={
+        <RibbonNav
+          label="Show"
+          current={unreadOnly ? "/dashboard/notifications?unread=1" : "/dashboard/notifications"}
+          links={[
+            { label: "All", href: "/dashboard/notifications" },
+            { label: "Unread only", href: "/dashboard/notifications?unread=1" },
+          ]}
+        />
+      }
+    >
+      <PageTitle icon={<Bell />} title="Notifications" description={subtitle} />
 
       {items.length === 0 ? (
         <NotificationsEmpty unreadOnly={unreadOnly} />
@@ -112,6 +93,6 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
           </ul>
         </Card>
       )}
-    </div>
+    </PageFrame>
   );
 }

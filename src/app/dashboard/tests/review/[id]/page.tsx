@@ -18,11 +18,12 @@
  * LessonMarkdown already ships.
  */
 
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { StatusChip } from "@/components/shell/status-chip";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   AlertTriangle,
-  ArrowLeft,
   CheckCircle2,
   CircleDot,
   Clock,
@@ -41,7 +42,6 @@ import { toFileAnswers, toFileUploadMemo } from "@/features/assessments/lib/file
 import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import { isManuallyMarked } from "@/features/assessments/lib/auto-grade";
 import { questionStatusTone } from "@/features/assessments/lib/review-status";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -101,9 +101,9 @@ export default async function TestReviewPage({ params }: PageProps) {
   });
   if (!student) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Review" }]}>
         No student profile found for this account.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -115,27 +115,26 @@ export default async function TestReviewPage({ params }: PageProps) {
   if (!test) notFound();
   if (!submission) {
     return (
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-10">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/courses/${test.courseId}`}>
-            <ArrowLeft className="size-4" /> Back to course
-          </Link>
-        </Button>
-        <Card className="mt-6 p-8 sm:p-12 text-center">
-          <h1 className="font-display text-2xl text-foreground">
-            No submission yet
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            You haven&apos;t started this test yet. Open it from your tests
-            list to begin.
-          </p>
-          <div className="mt-6">
-            <Button asChild>
-              <Link href={`/dashboard/tests/${test.id}`}>Open test</Link>
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <PageFrame
+        type="record"
+        width="reading"
+        breadcrumb={[
+          { label: "Tests", href: "/dashboard/tests" },
+          { label: test.course.name, href: `/dashboard/courses/${test.courseId}` },
+          { label: test.title },
+        ]}
+        actions={
+          <Button asChild size="sm">
+            <Link href={`/dashboard/tests/${test.id}`}>Open test</Link>
+          </Button>
+        }
+      >
+        <PageTitle
+          eyebrow={test.course.name}
+          title="No submission yet"
+          description="You haven't started this test yet. Open it from your tests list to begin."
+        />
+      </PageFrame>
     );
   }
 
@@ -204,39 +203,24 @@ export default async function TestReviewPage({ params }: PageProps) {
   const canSeeGrades = releaseAutoMarks || graded;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-      <Button asChild variant="ghost" size="sm" className="-ml-2">
-        <Link href={`/dashboard/courses/${test.courseId}`}>
-          <ArrowLeft className="size-4" /> Back to course
-        </Link>
-      </Button>
-
-      {/* ───── Hero header ───── */}
-      <header className="space-y-2">
-        <p className="text-muted-foreground text-xs">
-          {test.course.name} · with {tutorOf(test.course)?.fullName ?? "your tutor"}
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-            {test.title}
-          </h1>
-          <Badge
-            variant={
-              graded
-                ? "brand"
-                : status === "SUBMITTED"
-                  ? "soft"
-                  : "secondary"
-            }
-          >
-            {graded
-              ? "Graded"
-              : status === "SUBMITTED"
-                ? "Awaiting grade"
-                : status}
-          </Badge>
-        </div>
-      </header>
+    <PageFrame
+      type="record"
+      width="reading"
+      breadcrumb={[
+        { label: "Tests", href: "/dashboard/tests" },
+        { label: test.course.name, href: `/dashboard/courses/${test.courseId}` },
+        { label: test.title },
+      ]}
+      status={
+        <StatusChip tone={graded ? "success" : status === "SUBMITTED" ? "info" : "neutral"}>
+          {graded ? "Graded" : status === "SUBMITTED" ? "Awaiting grade" : status}
+        </StatusChip>
+      }
+    >
+      <PageTitle
+        eyebrow={`${test.course.name} · with ${tutorOf(test.course)?.fullName ?? "your tutor"}`}
+        title={test.title}
+      />
 
       {/* ───── Summary table ───── */}
       <Card className="p-0 overflow-hidden">
@@ -376,7 +360,7 @@ export default async function TestReviewPage({ params }: PageProps) {
           ))}
         </ol>
       </Card>
-    </div>
+    </PageFrame>
   );
 }
 
