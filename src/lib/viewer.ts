@@ -55,6 +55,7 @@ const workspaceSelect = {
   accentColor: true,
   billingState: true,
   trialEndsAt: true,
+  teachingOffAt: true,
 } as const;
 
 const loadViewer = cache(
@@ -72,6 +73,7 @@ const loadViewer = cache(
         twoFactorEnabled: true,
         createdAt: true,
         platformRole: true,
+        preferences: { select: { theme: true } },
         tutorProfile: { select: { profileImageUrl: true } },
         studentProfile: { select: { id: true, imageUrl: true } },
         memberships: {
@@ -125,6 +127,7 @@ const loadViewer = cache(
       twoFactorEnabled: user.twoFactorEnabled ?? false,
       platformRole: user.platformRole,
       imageUrl,
+      theme: user.preferences?.theme ?? "CALM",
     };
 
     if (hasTenancy({ user: base, memberships: user.memberships, learners: user.learners, children })) {
@@ -162,7 +165,7 @@ const loadViewer = cache(
       }
     }
     if (!profileId && (role === "TUTOR" || role === "STUDENT")) return buildNewUserViewer(base);
-    return buildLegacyViewer({ user: { ...base, role }, profileId });
+    return buildLegacyViewer({ user: { ...base, role }, profileId, theme: base.theme });
   },
 );
 

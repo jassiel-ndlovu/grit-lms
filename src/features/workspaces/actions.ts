@@ -17,6 +17,7 @@ import { requireViewer, ViewerError } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";
 
 import { createWorkspaceFor, updateWorkspaceProfileFor } from "./onboarding";
+import { switchTeachingOffFor } from "./teaching";
 
 // Not exported: a "use server" module may only export async functions.
 const ACTIVE_WORKSPACE_COOKIE = "nexa_ws";
@@ -88,6 +89,21 @@ export const updateWorkspaceProfile = viewerActionClient
     const viewer = await requireViewer({ workspace: true });
     if (!can(viewer, "workspace.settings")) throw new ViewerError("FORBIDDEN");
     const r = await updateWorkspaceProfileFor(viewer.user.id, viewer.workspace!.id, parsedInput);
+    revalidatePath("/", "layout");
+    return r;
+  });
+
+/**
+ * Switches teaching off for the active organisation (#206). Owner only;
+ * `confirmName` must be the organisation's name. Strict: only a Nexa admin
+ * switches it back on (adminSwitchTeachingOn). Refused with a message
+ * while an owner or admin still teaches a course.
+ */
+export const switchTeachingOff = viewerActionClient
+  .schema(z.object({ confirmName: z.string().trim().min(1).max(120) }))
+  .action(async ({ parsedInput: { confirmName }, ctx: { viewer } }) => {
+    if (!viewer.workspace || viewer.membership?.role !== "OWNER" || viewer.workspace.kind !== "ORGANISATION") throw new ViewerError("FORBIDDEN");
+    const r = await switchTeachingOffFor(viewer.workspace.id, viewer.user.id, confirmName);
     revalidatePath("/", "layout");
     return r;
   });

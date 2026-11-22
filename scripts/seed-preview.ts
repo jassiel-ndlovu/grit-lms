@@ -309,6 +309,9 @@ async function seed(password: string) {
   }
   const learn = async (wsId: string, u: { id: string }, opts: { adult?: boolean } = {}) => {
     const l = await prisma.learner.create({ data: { workspaceId: wsId, userId: u.id, isMinor: !opts.adult, paymentVisible: !!opts.adult }, select: { id: true } });
+    // Made by the first workspace's staff (migration 23), except the adult,
+    // who stands in for a student who signed up themself.
+    if (u.id !== P.adult.id) await prisma.user.updateMany({ where: { id: u.id, managedByWorkspaceId: null }, data: { managedByWorkspaceId: wsId } });
     return { learnerId: l.id, studentId: studentOf.get(u.id)!, userId: u.id };
   };
   const lu = {
@@ -327,6 +330,7 @@ async function seed(password: string) {
     { guardianUserId: P.parentSibs.id, studentUserId: P.sib1.id, status: "ACTIVE", relationship: "PARENT" },
     { guardianUserId: P.parentSibs.id, studentUserId: P.sib2.id, status: "ACTIVE", relationship: "PARENT" },
   ] as Prisma.GuardianshipCreateManyInput[] });
+  await prisma.user.updateMany({ where: { id: { in: [P.parentOne.id, P.parentSibs.id] } }, data: { managedByWorkspaceId: U.ws.id } });
 
   // Courses.
   const uMaths = await course(U.ws.id, uT1.id, "Maths Grade 10 (seed)", [lu.adult, lu.minor1, lu.sib1, lu.nofees, lu.twoWs], true);

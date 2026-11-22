@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from "next/server";
-import type { Session } from "next-auth";
+import type { Session } from "@/lib/auth";
 
 import { taughtByEmail } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";

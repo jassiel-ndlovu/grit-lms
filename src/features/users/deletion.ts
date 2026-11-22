@@ -18,6 +18,8 @@
 
 import "server-only";
 
+import { UserError } from "@/lib/user-error";
+
 import { createHash, randomBytes } from "node:crypto";
 
 import { prisma } from "@/lib/db";
@@ -46,7 +48,7 @@ export async function requestAccountDeletionFor(userId: string, by: { actorUserI
   const sole = await soleOwnerOf(userId);
   if (sole.length) throw new Error(`Hand over ownership of ${sole.join(", ")} first, or close it`);
   const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, email: true, emailIsPlaceholder: true, deletionRequestedAt: true, deletedAt: true } });
-  if (u.deletedAt) throw new Error("This account was already deleted");
+  if (u.deletedAt) throw new UserError("This account was already deleted");
   if (u.deletionRequestedAt) return { deleteOn: new Date(u.deletionRequestedAt.getTime() + DELETION_GRACE_DAYS * DAY).toISOString(), alreadyRequested: true };
   const token = randomBytes(32).toString("base64url");
   const deleteOn = new Date(now.getTime() + DELETION_GRACE_DAYS * DAY);

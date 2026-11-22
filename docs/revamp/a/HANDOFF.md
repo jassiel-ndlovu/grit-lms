@@ -3,6 +3,70 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-21 Teaching switch, join requests and colour themes (#206), `revamp/a-206-teaching-joins-themes`
+
+Owner decisions of 2026-11-21, relayed by B in #206. Viewer contract Draft 1.12. Stacked on `revamp/a-restart-and-nextauth` (PR #202).
+
+Done:
+- **Migration `22_teaching_join_requests_theme`**, additive only:
+  - `Workspace.teachingOffAt` and `teachingOffById`;
+  - `CourseListing` and `JoinRequest`, with one open request per course and student (a partial unique index);
+  - `UserPreferences.theme` (`UiTheme`: CALM, BRIGHT).
+  Applied on Preview; production not yet.
+- **Back-relations on `Course`** in B's `learning.prisma` (`listing`, `joinRequests`), like the billing ones. No columns. For B's review.
+- **Teaching switch** (`workspaces/teaching.ts`):
+  - `switchTeachingOff` is owner only and needs the organisation's name. It's refused while an owner or admin still teaches.
+  - `adminSwitchTeachingOn` needs `admin.override` and a note.
+  - `viewer.workspace.teaches`; the mode is null while teaching is off.
+  - `setUpCourseTenancy` and invite acceptance skip CourseStaff for owners and admins while it's off (`mayTeach`).
+- **Join requests** (`workspaces/join-requests.ts` and `join-request-actions.ts`):
+  - listing, browse, request, cancel, inbox, approve and decline;
+  - three emails (`join:requested`, `join:approved`, `join:declined`);
+  - limits: 5 open, 10 a day.
+- **Tutors can't search for self-registered students.** The enrol picker was already limited to the workspace. The "account already exists" error now points to join requests.
+- **`viewer.user.theme`**, saved with `updateOwnPreferences({ theme })`.
+- **`UserError`** (`src/lib/user-error.ts`): the safe-action layer now passes its message through. Before this, every plain `Error` from A's account, invite and email-change code reached users as "Something went wrong". Those throws now use `UserError`.
+
+Also in this branch (same session, after #206):
+- **#201 reviewed:** B's `assertMayResetPassword` is right. I added one thing it couldn't know about: join requests let staff reach accounts they didn't make.
+- **Migration `23_user_managed_by_workspace`:** `User.managedByWorkspaceId`, backfilled for tutor-made and pre-tenancy students and staff-made parents. `assertWorkspaceManages` now guards `resetUserPassword`, `issueSignInCode` and student account deletion, so staff can't take over an account someone made themself. Applied on Preview (seeded students marked; `seed.adult` stays self-made).
+- **Audit of A's staff actions for unchecked ids:**
+  - AI marking, calendar writes, billing, invites, privacy and email change were already scoped.
+  - Fixed: a tutor could invoice, or set a fee schedule for, a student who isn't on their course (`assertLearnerOnCourses`).
+  - Fixed: an owner in tutor mode saw the whole workspace's calendar.
+  - Fixed: join request checks now use `canIn`, so a course's owner counts.
+- **`changeOwnPassword`** compared only `User.password`, so every account made since the cutover got "Current password is incorrect". It now uses `checkPassword`, which reads the credential account. `updateOwnProfile` no longer fails when there is no Student or Tutor row.
+- **Housekeeping:** closed #106, #120, #125, #137, #142, #148, #161 and #175.
+- **For B:** please audit your own actions (courses, lessons, tests, assignments, grades, events) the same way. Any id taken from input should be checked against `viewer.workspace` or `canIn`.
+
+Tested:
+- A throwaway script ran 42 checks against Preview: teaching off and on, the viewer, listings, every request path, consent, limits and emails. All passed and the data was removed.
+- Types and lint pass.
+
+Next:
+- Push after PR #202 merges (Vercel deploy limit), then migrate production (backup first, AGENTS.md 4.1).
+- B builds the browse page, the staff inbox, the theme picker and the teaching switch in settings.
+
+## 2026-11-21 Restarting cancelled workspaces (#191); NextAuth removed from A's code, `revamp/a-restart-and-nextauth`
+
+Owner decision (2026-11-21): restarting with no students is free with a card on file.
+
+Done:
+- **`billing/restart.ts`** and the `restartWorkspace` action (billing contract Draft 1.15). It returns PAY_OUTSTANDING, PAY_FIRST_PERIOD, CARD_REQUIRED or RESTARTED (a R0 first period).
+- **NextAuth removed from A's code:**
+  - `lib/auth.ts` is Better Auth only, with its own `Session` type;
+  - middleware checks only the Better Auth cookie;
+  - `auth-client.ts` has no NextAuth fallback;
+  - the API routes import `Session` from `@/lib/auth`;
+  - sign-ins are written to the activity log from a Better Auth hook.
+- **What stays until B moves off it:** B's `providers.tsx` (`SessionProvider`) and `features/search/queries.ts` (a type import). The `next-auth` package and `lib/next-auth.d.ts` remain, and a stand-in `/api/auth/[...nextauth]` answers "no session". Delete all three once B is done.
+- **`check-branding`:** allows the Neon project name and the word "integrity".
+- **Checks:**
+  - restart: 8 checks on preview (Preview reseeded afterwards);
+  - all check scripts pass;
+  - local `next build` passes with a secret set.
+- **Process:** the 2026-11-21 deploy limit was hit (#198 merged without a build). This PR waits for every check to pass. See AGENTS.md 4.4.
+
 ## 2026-11-21 Organisation and tutor mode (#192); two-factor answers (#178), `revamp/a-viewer-mode`
 
 Done:

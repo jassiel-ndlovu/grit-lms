@@ -16,6 +16,8 @@
 
 import "server-only";
 
+import { UserError } from "@/lib/user-error";
+
 import { createHash, randomBytes } from "node:crypto";
 
 import bcrypt from "bcryptjs";
@@ -42,13 +44,13 @@ export async function checkPassword(userId: string, password: string): Promise<b
 
 export async function requestEmailChangeFor(userId: string, input: { password: string; newEmail: string }, now: Date = new Date()) {
   const newEmail = input.newEmail.trim().toLowerCase();
-  if (!EMAIL_RE.test(newEmail) || newEmail.endsWith(".invalid")) throw new Error("Enter a valid email address");
+  if (!EMAIL_RE.test(newEmail) || newEmail.endsWith(".invalid")) throw new UserError("Enter a valid email address");
   const u = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { name: true, email: true } });
-  if (u.email.toLowerCase() === newEmail) throw new Error("That's already your email address");
-  if (!(await checkPassword(userId, input.password))) throw new Error("That password isn't right");
-  if (await prisma.user.findUnique({ where: { email: newEmail }, select: { id: true } })) throw new Error("Another account uses that email address");
+  if (u.email.toLowerCase() === newEmail) throw new UserError("That's already your email address");
+  if (!(await checkPassword(userId, input.password))) throw new UserError("That password isn't right");
+  if (await prisma.user.findUnique({ where: { email: newEmail }, select: { id: true } })) throw new UserError("Another account uses that email address");
   const recent = await prisma.emailChangeRequest.findFirst({ where: { userId, createdAt: { gte: new Date(now.getTime() - 2 * 60 * 1000) } }, select: { id: true } });
-  if (recent) throw new Error("Wait a couple of minutes before asking again");
+  if (recent) throw new UserError("Wait a couple of minutes before asking again");
 
   const token = randomBytes(32).toString("base64url");
   const r = await prisma.emailChangeRequest.create({
@@ -76,7 +78,7 @@ export async function confirmEmailChangeFor(token: string, now: Date = new Date(
   const key = `account:email-changed:${r.id}`;
   await prisma.$transaction(async (tx) => {
     const won = await tx.emailChangeRequest.updateMany({ where: { id: r.id, confirmedAt: null }, data: { confirmedAt: now, ...(notifyOld ? { revertTokenHash: sha(revert), revertExpiresAt: new Date(now.getTime() + 7 * DAY) } : {}) } });
-    if (won.count === 0) throw new Error("Already confirmed");
+    if (won.count === 0) throw new UserError("Already confirmed");
     await tx.user.update({ where: { id: r.userId }, data: { email: r.newEmail, emailVerified: now, emailConfirmed: true, emailIsPlaceholder: false } });
     // Legacy profiles carry the email too (design 01, section 8).
     await tx.student.updateMany({ where: { userId: r.userId }, data: { email: r.newEmail } });

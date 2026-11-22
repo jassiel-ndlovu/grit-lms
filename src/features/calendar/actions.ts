@@ -26,7 +26,7 @@ async function visibleCourseIds(viewer: Viewer): Promise<string[]> {
   const ids = new Set<string>();
   if (viewer.persona === "staff" && viewer.workspace) {
     const role = viewer.membership?.role;
-    const where = role === "OWNER" || role === "ADMIN"
+    const where = (role === "OWNER" || role === "ADMIN") && viewer.mode !== "tutor"
       ? { workspaceId: viewer.workspace.id }
       : { workspaceId: viewer.workspace.id, staff: { some: { membershipId: viewer.membership?.id ?? "-" } } };
     for (const c of await prisma.course.findMany({ where, select: { id: true } })) ids.add(c.id);

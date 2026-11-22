@@ -42,6 +42,20 @@ async function assertFeeScope(viewer: Viewer, courseIds: Array<string | null | u
   }
 }
 
+/**
+ * A tutor (scoped fees) may only bill a learner who is on the course they
+ * bill for. Owners and admins bill anyone in the workspace (fees.ts checks
+ * the learner is in it).
+ */
+async function assertLearnerOnCourses(viewer: Viewer, learnerId: string | null | undefined, courseIds: Array<string | null | undefined>) {
+  if (!learnerId || !needsScope(viewer, "fees.manage")) return;
+  for (const courseId of courseIds) {
+    if (!courseId) continue;
+    const on = await prisma.enrollment.findFirst({ where: { learnerId, courseId, endedAt: null }, select: { id: true } });
+    if (!on) throw new ViewerError("FORBIDDEN");
+  }
+}
+
 async function invoiceCourses(invoiceId: string): Promise<Array<string | null>> {
   const lines = await prisma.invoiceLine.findMany({ where: { invoiceId }, select: { courseId: true } });
   return lines.length ? lines.map((l) => l.courseId) : [null];
@@ -109,6 +123,7 @@ export const upsertFeeSchedule = viewerActionClient
   .action(async ({ parsedInput }) => {
     const { viewer, workspaceId } = await staff();
     await assertFeeScope(viewer, [parsedInput.courseId]);
+    await assertLearnerOnCourses(viewer, parsedInput.learnerId, [parsedInput.courseId]);
     return done(await fees.upsertFeeSchedule(actorOf(viewer), workspaceId, parsedInput));
   });
 
@@ -126,6 +141,7 @@ export const issueInvoice = viewerActionClient
   .action(async ({ parsedInput }) => {
     const { viewer, workspaceId } = await staff();
     await assertFeeScope(viewer, parsedInput.lines.map((l) => l.courseId));
+    await assertLearnerOnCourses(viewer, parsedInput.learnerId, parsedInput.lines.map((l) => l.courseId));
     return done(await fees.issueInvoice(actorOf(viewer), workspaceId, parsedInput));
   });
 

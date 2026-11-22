@@ -25,6 +25,8 @@ export type AdminWorkspaceBillingRow = {
   /** Open invoices past their due date. */
   overdueCents: number;
   deleteAfter: string | null;
+  /** Set when the organisation switched teaching off (#206); adminSwitchTeachingOn clears it. */
+  teachingOffAt: string | null;
 };
 
 /** Workspaces with their billing, by name. `q` matches the name or slug; `cursor` is the last workspaceId of the previous page. */
@@ -46,7 +48,7 @@ export async function adminListWorkspaceBillingFor(input: { state?: BillingState
     take: limit + 1,
     ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
     select: {
-      id: true, name: true, kind: true, billingState: true, trialEndsAt: true,
+      id: true, name: true, kind: true, billingState: true, trialEndsAt: true, teachingOffAt: true,
       subscription: { select: { renewsAt: true, deleteAfter: true } },
     },
   });
@@ -78,6 +80,7 @@ export async function adminListWorkspaceBillingFor(input: { state?: BillingState
     lastPeriodCents: paidBy.get(w.id) ?? null,
     overdueCents: overdueBy.get(w.id) ?? 0,
     deleteAfter: w.subscription?.deleteAfter?.toISOString() ?? null,
+    teachingOffAt: w.teachingOffAt?.toISOString() ?? null,
   }));
   return { items, nextCursor: rows.length > limit ? page[page.length - 1].id : null };
 }

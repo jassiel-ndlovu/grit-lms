@@ -42,12 +42,13 @@ export function isBcryptHash(hash: string): boolean {
 }
 
 /** "better-auth" once the cutover is switched on. */
-export function authProvider(): "next-auth" | "better-auth" {
-  return process.env.AUTH_PROVIDER === "better-auth" ? "better-auth" : "next-auth";
+/** Better Auth is the only sign-in since the 2026-11-20 cutover. Kept for callers. */
+export function authProvider(): "better-auth" {
+  return "better-auth";
 }
 
 export function betterAuthEnabled(): boolean {
-  return authProvider() === "better-auth" || process.env.BETTER_AUTH_ENABLED === "1";
+  return true;
 }
 
 const appUrl = process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -101,6 +102,10 @@ export const betterAuthInstance = betterAuth({
   databaseHooks: {
     session: {
       create: {
+        // Activity log, as NextAuth's sign-in event did.
+        after: async (session) => {
+          await prisma.activityLog.create({ data: { userId: session.userId, action: "LOGIN" } }).catch(() => undefined);
+        },
         // A sign-in code from a tutor stops working after 14 days unless the user chose a password.
         before: async (session) => {
           const u = await prisma.user.findUnique({ where: { id: session.userId }, select: { mustChangePassword: true, initialCodeExpiresAt: true, deletionRequestedAt: true, deletedAt: true } });

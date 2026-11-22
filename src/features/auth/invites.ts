@@ -10,9 +10,12 @@
 
 import "server-only";
 
+import { UserError } from "@/lib/user-error";
+
 import { createHash, randomBytes } from "node:crypto";
 
 import { prisma } from "@/lib/db";
+import { mayTeach } from "@/features/workspaces/teaching";
 import { enqueueEmail, sealForQueue, sendQueuedNow } from "@/lib/email/queue";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -30,9 +33,9 @@ export async function createStaffInvitesFor(
   now: Date = new Date(),
 ) {
   const emails = [...new Set(input.emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
-  if (emails.length === 0 || emails.length > 50) throw new Error("Invite between 1 and 50 people at a time");
+  if (emails.length === 0 || emails.length > 50) throw new UserError("Invite between 1 and 50 people at a time");
   const courseIds = input.courseIds ?? [];
-  if (courseIds.length && (await prisma.course.count({ where: { id: { in: courseIds }, workspaceId } })) !== courseIds.length) throw new Error("One of the courses isn't in this workspace");
+  if (courseIds.length && (await prisma.course.count({ where: { id: { in: courseIds }, workspaceId } })) !== courseIds.length) throw new UserError("One of the courses isn't in this workspace");
   const ws = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { name: true, timezone: true } });
   const out: Array<{ email: string; status: "INVITED" | "ALREADY_MEMBER" | "RESENT" }> = [];
   const keys: string[] = [];
@@ -95,7 +98,9 @@ export async function acceptInviteFor(user: { id: string; email: string }, token
       update: { status: "ACTIVE", role: i.role ?? "TUTOR" },
       select: { id: true },
     });
-    for (const courseId of i.courseIds) {
+    // An admin joining an organisation that switched teaching off doesn't teach (#206).
+    const teachIds = (await mayTeach(tx, m.id)) ? i.courseIds : [];
+    for (const courseId of teachIds) {
       await tx.courseStaff.upsert({ where: { courseId_membershipId: { courseId, membershipId: m.id } }, create: { courseId, membershipId: m.id, role: "ASSISTANT" }, update: {} });
     }
     // An invited tutor is staff: settle the role choice a fresh sign-up would otherwise see.
@@ -107,7 +112,7 @@ export async function acceptInviteFor(user: { id: string; email: string }, token
 
 export async function revokeInviteFor(actorUserId: string, workspaceId: string, inviteId: string) {
   const r = await prisma.invite.updateMany({ where: { id: inviteId, workspaceId, acceptedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
-  if (r.count === 0) throw new Error("That invite is no longer pending");
+  if (r.count === 0) throw new UserError("That invite is no longer pending");
   await prisma.auditLog.create({ data: { workspaceId, actorUserId, action: "members.invite.revoke", targetType: "Invite", targetId: inviteId, data: {} } });
   return { revoked: true as const };
 }

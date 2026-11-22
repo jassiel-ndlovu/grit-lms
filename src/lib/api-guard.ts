@@ -18,7 +18,7 @@
  */
 
 import { NextResponse } from "next/server";
-import type { Session } from "next-auth";
+import type { Session } from "@/lib/auth";
 
 import type { Prisma } from "@/generated/prisma";
 import { auth } from "@/lib/auth";

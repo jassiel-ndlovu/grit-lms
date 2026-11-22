@@ -33,6 +33,7 @@ import { createSafeActionClient } from "next-safe-action";
 
 import { auth, AuthError, requireRole, requireSession } from "@/lib/auth";
 import { getViewer, requireViewer, ViewerError } from "@/lib/viewer";
+import { UserError } from "@/lib/user-error";
 import { BillingError } from "@/features/billing/errors";
 import { ProviderError } from "@/features/payments/provider/types";
 
@@ -48,6 +49,10 @@ export const actionClient = createSafeActionClient({
     // Stable codes from docs/revamp/contracts/billing.md ("CODE: message").
     if (e instanceof BillingError || e instanceof ProviderError) {
       return `${e.code}: ${e.message}`;
+    }
+    // Messages written for the user (UserError and its subclasses).
+    if (e instanceof UserError) {
+      return e.message;
     }
     if (e instanceof ViewerError) {
       return e.code === "UNAUTHENTICATED" ? "Please sign in again." : "You don't have access to do that.";

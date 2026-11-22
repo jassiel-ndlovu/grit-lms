@@ -22,6 +22,7 @@ import { assertBillingEnabled, BillingError } from "./errors";
 import { loadOpenPeriod } from "./data";
 import { createFirstInvoice } from "./invoice";
 import { capStatuses } from "./queries";
+import { restartWorkspaceFor } from "./restart";
 import { addDays, applyServiceChange, billedTier, derivedTier, holdUntilFor, tierAbove } from "./pricing";
 import { assertSwitchable, loadServiceChangeContext, requireCourseServicesAccess } from "./queries";
 
@@ -181,6 +182,20 @@ export const startFirstPayment = viewerActionClient
       invoice, workspaceId: workspace.id, userId: viewer.user.id, email: viewer.user.email, returnPath,
     });
     return { authorizationUrl, reference, amountCents: invoice.totalCents };
+  });
+
+/**
+ * Restarts a cancelled or read-only workspace (#191). Returns the next step:
+ * PAY_OUTSTANDING (invoiceIds), PAY_FIRST_PERIOD (call startFirstPayment),
+ * CARD_REQUIRED (call startCardReplacement, then this again) or RESTARTED.
+ */
+export const restartWorkspace = viewerActionClient
+  .schema(z.object({}))
+  .action(async () => {
+    const { viewer, workspace } = await billingManager();
+    const r = await restartWorkspaceFor(workspace.id, viewer.user.id);
+    if (r.status === "RESTARTED") revalidatePath("/", "layout");
+    return r;
   });
 
 /**
