@@ -9,6 +9,7 @@ import Link from "next/link";
 
 import ErrorArt from "@/components/illustrations/generated/error";
 import NotFoundArt from "@/components/illustrations/generated/not-found";
+import UnauthorizedArt from "@/components/illustrations/generated/unauthorized";
 import { cn } from "@/lib/utils";
 
 export type ErrorKind = "404" | "401" | "403" | "500";
@@ -65,7 +66,7 @@ export function ErrorScreen({
   className?: string;
 }) {
   const copy = ERROR_COPY[kind];
-  const Art = kind === "500" ? ErrorArt : NotFoundArt;
+  const Art = kind === "500" ? ErrorArt : kind === "404" ? NotFoundArt : UnauthorizedArt;
   return (
     <section
       aria-labelledby="error-title"

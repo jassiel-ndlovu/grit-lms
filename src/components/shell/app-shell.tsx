@@ -39,7 +39,7 @@ import { switchWorkspace } from "@/features/workspaces/actions";
 import { APP_SHORT_NAME } from "@/lib/branding";
 import { toast } from "sonner";
 
-import { FOOTER_LINKS, activeHref, isFocusRoute, type NavIcon, type NavSection } from "./nav-config";
+import { FOOTER_LINKS, activeHref, isFocusRoute, navHue, type NavIcon, type NavSection } from "./nav-config";
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   home: Home, book: BookOpen, calendar: Calendar, test: FileText, assignment: ClipboardList,
@@ -220,7 +220,14 @@ function ShellSidebar({
   const item = (l: (typeof all)[number]) => {
     const Icon = ICONS[l.icon];
     return (
-      <SidebarItem key={l.href} href={l.href} icon={<Icon />} active={l.href === current} onClick={onNavigate}>
+      <SidebarItem
+        key={l.href}
+        href={l.href}
+        icon={<Icon />}
+        iconColor={navHue(l.icon)}
+        active={l.href === current}
+        onClick={onNavigate}
+      >
         {l.label}
       </SidebarItem>
     );

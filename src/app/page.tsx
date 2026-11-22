@@ -12,7 +12,6 @@
  * no-op under `prefers-reduced-motion`.
  */
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -27,6 +26,10 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import LandingLaunch from "@/components/illustrations/generated/landing-launch";
+import LandingStudent from "@/components/illustrations/generated/landing-student";
+import LandingTutor from "@/components/illustrations/generated/landing-tutor";
+import { SpotIllustration } from "@/components/illustrations/spot-illustration";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -97,17 +100,17 @@ const STEPS = [
   {
     title: "Request access",
     body: "Send an email. We create your account — student or tutor — and add you to the right course.",
-    art: "/illustrations/planning.svg",
+    art: "school-run",
   },
   {
     title: "Sign in",
     body: "Your credentials arrive by email. Signing in drops you on a dashboard built for your role.",
-    art: "/illustrations/research-paper.svg",
+    art: "focus",
   },
   {
     title: "Learn or teach",
     body: "Students work through courses, tests and grades. Tutors author material, then mark what comes back.",
-    art: "/illustrations/success-factors.svg",
+    art: "team",
   },
 ] as const;
 
@@ -261,15 +264,9 @@ function Hero() {
 
         <HeroIn delay={0.2} className="relative">
           <Float>
-            <div className="relative mx-auto aspect-square w-full max-w-lg">
-              <Image
-                src="/illustrations/teacher-student.svg"
-                alt=""
-                fill
-                priority
-                className="object-contain"
-                sizes="(max-width: 1024px) 80vw, 480px"
-              />
+            <div className="mx-auto flex aspect-square w-full max-w-lg items-end justify-center gap-2 pb-6 sm:gap-4">
+              <LandingTutor className="h-[85%] w-auto" />
+              <LandingStudent className="h-[48%] w-auto" />
             </div>
           </Float>
         </HeroIn>
@@ -360,14 +357,8 @@ function HowItWorks() {
                     delay={0.1}
                     className={flip ? "md:order-1" : undefined}
                   >
-                    <div className="relative mx-auto aspect-[4/3] w-full max-w-sm">
-                      <Image
-                        src={step.art}
-                        alt=""
-                        fill
-                        className="object-contain"
-                        sizes="(max-width: 768px) 80vw, 360px"
-                      />
+                    <div className="flex justify-center">
+                      <SpotIllustration name={step.art} width={240} maxHeight={220} />
                     </div>
                   </Reveal>
                 </div>
@@ -385,7 +376,7 @@ function HowItWorks() {
 function Audiences() {
   const panels = [
     {
-      art: "/illustrations/mathematics-tutor.svg",
+      art: "reading" as const,
       eyebrow: "For tutors",
       title: "Author once, mark faster",
       points: [
@@ -396,7 +387,7 @@ function Audiences() {
       ],
     },
     {
-      art: "/illustrations/curious.svg",
+      art: "study" as const,
       eyebrow: "For students",
       title: "Know where you stand",
       points: [
@@ -414,14 +405,8 @@ function Audiences() {
         {panels.map((p, i) => (
           <Reveal key={p.eyebrow} delay={i * 0.1}>
             <Card className="flex h-full flex-col p-8">
-              <div className="relative mx-auto aspect-[4/3] w-full max-w-64">
-                <Image
-                  src={p.art}
-                  alt=""
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 768px) 70vw, 256px"
-                />
+              <div className="flex justify-center">
+                <SpotIllustration name={p.art} width={220} maxHeight={190} />
               </div>
               <p className="text-brand-terracotta mt-6 text-xs font-medium uppercase tracking-wider">
                 {p.eyebrow}
@@ -519,14 +504,8 @@ function ClosingCta() {
             </div>
 
             <Float distance={8} duration={8}>
-              <div className="relative mx-auto aspect-square w-full max-w-64">
-                <Image
-                  src="/illustrations/launching.svg"
-                  alt=""
-                  fill
-                  className="object-contain"
-                  sizes="(max-width: 768px) 60vw, 256px"
-                />
+              <div className="illustration-paper mx-auto flex h-64 w-full max-w-64 justify-center">
+                <LandingLaunch className="h-full w-auto" />
               </div>
             </Float>
           </div>

@@ -12,7 +12,6 @@
  * the session, so it loads instantly even on flaky connections.
  */
 
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -29,6 +28,7 @@ import { auth } from "@/lib/auth";
 import { APP_CONTACT, APP_NAME } from "@/lib/branding";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import HeaderHelp from "@/components/illustrations/generated/header-help";
 
 export const metadata = { title: "Help" };
 
@@ -176,14 +176,8 @@ export default async function HelpPage() {
               when the docs don&apos;t cut it.
             </p>
           </div>
-          <div className="relative hidden h-32 w-40 shrink-0 md:block">
-            <Image
-              src="/illustrations/curious.svg"
-              alt=""
-              fill
-              priority
-              className="object-contain"
-            />
+          <div className="illustration-paper hidden h-32 w-40 shrink-0 items-end justify-center md:flex">
+            <HeaderHelp className="h-full w-auto" />
           </div>
         </div>
       </section>

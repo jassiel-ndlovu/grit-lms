@@ -4,8 +4,8 @@
  * Approach:
  *   - Single visual treatment for every nav item: muted by default, slate
  *     foreground on hover, slate-tinted background + terracotta indicator
- *     when active. Drops the previous per-icon rainbow palette in favour
- *     of one calm, consistent rhythm.
+ *     when active. Icons carry a fixed hue per destination (globals.css
+ *     --nav-*, 2026-11-21); labels stay in text colours.
  *   - Wordmark is set in Fraunces — the lone display-serif moment in the
  *     sidebar to anchor the brand.
  *   - Drops the legacy NotificationsContext dependency. The notification
@@ -61,50 +61,53 @@ import {
 } from "lucide-react";
 
 import type { ShellUser } from "@/components/shell/app-shell";
+import { navHue, type NavHue } from "@/components/shell/nav-config";
 import { APP_CONTACT, APP_LEGAL_NAME, APP_SHORT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
   icon: LucideIcon;
+  /** Icon colour, fixed per destination (globals.css --nav-*). */
+  hue: NavHue;
   label: string;
   link: string;
   description?: string;
 }
 
 const STUDENT_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { icon: Home, label: "Dashboard", link: "/dashboard", description: "Overview" },
-  { icon: BookOpen, label: "My Courses", link: "/dashboard/courses", description: "Enrolled courses" },
-  { icon: Calendar, label: "Schedule", link: "/dashboard/calendar", description: "Events" },
-  { icon: PenTool, label: "Assignments", link: "/dashboard/assignments", description: "Tasks" },
-  { icon: FileText, label: "Tests", link: "/dashboard/tests", description: "Assessments" },
-  { icon: Award, label: "Grades", link: "/dashboard/grades", description: "Performance" },
-  // { icon: Users, label: "Study Groups", link: "/dashboard/groups", description: "Collaborate" },
-  { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
+  { icon: Home, hue: "home", label: "Dashboard", link: "/dashboard", description: "Overview" },
+  { icon: BookOpen, hue: "book", label: "My Courses", link: "/dashboard/courses", description: "Enrolled courses" },
+  { icon: Calendar, hue: "calendar", label: "Schedule", link: "/dashboard/calendar", description: "Events" },
+  { icon: PenTool, hue: "assignment", label: "Assignments", link: "/dashboard/assignments", description: "Tasks" },
+  { icon: FileText, hue: "test", label: "Tests", link: "/dashboard/tests", description: "Assessments" },
+  { icon: Award, hue: "grades", label: "Grades", link: "/dashboard/grades", description: "Performance" },
+  // { icon: Users, hue: "users", label: "Study Groups", link: "/dashboard/groups", description: "Collaborate" },
+  { icon: Bell, hue: "inbox", label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 
 const TUTOR_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { icon: Home, label: "Dashboard", link: "/dashboard", description: "Analytics" },
-  { icon: Wrench, label: "Manage Courses", link: "/dashboard/manage-courses", description: "Authoring" },
-  { icon: Calendar, label: "Schedule", link: "/dashboard/calendar", description: "Events" },
-  { icon: FileText, label: "Tests", link: "/dashboard/tutor-tests", description: "Grading" },
-  { icon: PenTool, label: "Assignments", link: "/dashboard/assignments", description: "Review" },
-  { icon: Award, label: "Gradebook", link: "/dashboard/gradebook", description: "Weighted marks" },
-  { icon: BarChart3, label: "Analytics", link: "/dashboard/analytics", description: "Class performance" },
-  { icon: UserCog, label: "Students", link: "/dashboard/students", description: "Accounts and sign-in codes" },
-  { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
+  { icon: Home, hue: "home", label: "Dashboard", link: "/dashboard", description: "Analytics" },
+  { icon: Wrench, hue: "book", label: "Manage Courses", link: "/dashboard/manage-courses", description: "Authoring" },
+  { icon: Calendar, hue: "calendar", label: "Schedule", link: "/dashboard/calendar", description: "Events" },
+  { icon: FileText, hue: "test", label: "Tests", link: "/dashboard/tutor-tests", description: "Grading" },
+  { icon: PenTool, hue: "assignment", label: "Assignments", link: "/dashboard/assignments", description: "Review" },
+  { icon: Award, hue: "gradebook", label: "Gradebook", link: "/dashboard/gradebook", description: "Weighted marks" },
+  { icon: BarChart3, hue: "analytics", label: "Analytics", link: "/dashboard/analytics", description: "Class performance" },
+  { icon: UserCog, hue: "users", label: "Students", link: "/dashboard/students", description: "Accounts and sign-in codes" },
+  { icon: Bell, hue: "inbox", label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 
 // Admin and parent portals are placeholders for now — a landing page plus
 // the shared pages every role has.
 const ADMIN_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { icon: Home, label: "Dashboard", link: "/dashboard", description: "Platform overview" },
-  { icon: UserCog, label: "Users", link: "/dashboard/manage-users", description: "Manage accounts" },
-  { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
+  { icon: Home, hue: "home", label: "Dashboard", link: "/dashboard", description: "Platform overview" },
+  { icon: UserCog, hue: "users", label: "Users", link: "/dashboard/manage-users", description: "Manage accounts" },
+  { icon: Bell, hue: "inbox", label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 
 const PARENT_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { icon: Home, label: "Dashboard", link: "/dashboard", description: "Your learners" },
-  { icon: Bell, label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
+  { icon: Home, hue: "home", label: "Dashboard", link: "/dashboard", description: "Your learners" },
+  { icon: Bell, hue: "inbox", label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 
 const NAV_ITEMS_BY_ROLE: Record<string, ReadonlyArray<NavItem>> = {
@@ -115,9 +118,9 @@ const NAV_ITEMS_BY_ROLE: Record<string, ReadonlyArray<NavItem>> = {
 };
 
 const BOTTOM_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { icon: User, label: "Profile", link: "/dashboard/profile", description: "You" },
-  { icon: Settings, label: "Settings", link: "/dashboard/settings", description: "Preferences" },
-  { icon: HelpCircle, label: "Help", link: "/dashboard/help", description: "FAQs & contact" },
+  { icon: User, hue: "profile", label: "Profile", link: "/dashboard/profile", description: "You" },
+  { icon: Settings, hue: "settings", label: "Settings", link: "/dashboard/settings", description: "Preferences" },
+  { icon: HelpCircle, hue: "help", label: "Help", link: "/dashboard/help", description: "FAQs & contact" },
 ];
 
 /** Every page in a role's nav — the header search matches these locally. */
@@ -451,7 +454,7 @@ interface NavRowProps {
 }
 
 function NavRow({ item, active, collapsed, onClick }: NavRowProps) {
-  const { icon: Icon, label, description } = item;
+  const { icon: Icon, hue, label, description } = item;
   return (
     <li>
       <button
@@ -475,12 +478,7 @@ function NavRow({ item, active, collapsed, onClick }: NavRowProps) {
           />
         )}
 
-        <Icon
-          className={cn(
-            "h-4 w-4 shrink-0",
-            active ? "text-brand-terracotta" : "text-muted-foreground",
-          )}
-        />
+        <Icon className="h-4 w-4 shrink-0" style={{ color: navHue(hue) }} />
 
         {!collapsed && (
           <div className="min-w-0 flex-1">

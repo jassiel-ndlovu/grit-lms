@@ -115,6 +115,25 @@
   --sidebar-accent-foreground: oklch(0.247 0.041 257);
   --sidebar-border: oklch(0.880 0.022 82);
   --sidebar-ring: oklch(0.611 0.122 42);
+
+  /* Nav icon hues: one fixed hue per destination (never per position), icon
+     only. Each clears 3:1 on --sidebar and on --sidebar-accent / --muted (the
+     hover and active rows), light and dark. Checked 2026-11-21: lowest 3.8:1. */
+  --nav-home: oklch(0.55 0.140 42);
+  --nav-inbox: oklch(0.55 0.140 10);
+  --nav-book: oklch(0.55 0.140 255);
+  --nav-calendar: oklch(0.55 0.140 305);
+  --nav-test: oklch(0.55 0.091 180);
+  --nav-assignment: oklch(0.55 0.119 70);
+  --nav-grades: oklch(0.55 0.112 90);
+  --nav-gradebook: oklch(0.55 0.126 145);
+  --nav-analytics: oklch(0.55 0.098 225);
+  --nav-users: oklch(0.55 0.140 340);
+  --nav-profile: oklch(0.55 0.140 275);
+  --nav-settings: oklch(0.55 0.042 257);
+  --nav-help: oklch(0.55 0.091 200);
+  --nav-billing: oklch(0.55 0.112 160);
+  --nav-fees: oklch(0.55 0.112 120);
 }
 
 /*
@@ -171,6 +190,23 @@
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.640 0.130 42);
 
+  /* Nav icon hues, lifted for the dark sidebar (lowest 6.2:1). */
+  --nav-home: oklch(0.76 0.120 42);
+  --nav-inbox: oklch(0.76 0.120 10);
+  --nav-book: oklch(0.76 0.120 255);
+  --nav-calendar: oklch(0.76 0.120 305);
+  --nav-test: oklch(0.76 0.078 180);
+  --nav-assignment: oklch(0.76 0.102 70);
+  --nav-grades: oklch(0.76 0.096 90);
+  --nav-gradebook: oklch(0.76 0.108 145);
+  --nav-analytics: oklch(0.76 0.084 225);
+  --nav-users: oklch(0.76 0.120 340);
+  --nav-profile: oklch(0.76 0.120 275);
+  --nav-settings: oklch(0.76 0.036 257);
+  --nav-help: oklch(0.76 0.078 200);
+  --nav-billing: oklch(0.76 0.096 160);
+  --nav-fees: oklch(0.76 0.096 120);
+
   --success: oklch(0.620 0.070 137);
   --warning: oklch(0.700 0.130 67);
   --link: oklch(0.945 0.024 84);
@@ -216,6 +252,21 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-nav-home: var(--nav-home);
+  --color-nav-inbox: var(--nav-inbox);
+  --color-nav-book: var(--nav-book);
+  --color-nav-calendar: var(--nav-calendar);
+  --color-nav-test: var(--nav-test);
+  --color-nav-assignment: var(--nav-assignment);
+  --color-nav-grades: var(--nav-grades);
+  --color-nav-gradebook: var(--nav-gradebook);
+  --color-nav-analytics: var(--nav-analytics);
+  --color-nav-users: var(--nav-users);
+  --color-nav-profile: var(--nav-profile);
+  --color-nav-settings: var(--nav-settings);
+  --color-nav-help: var(--nav-help);
+  --color-nav-billing: var(--nav-billing);
+  --color-nav-fees: var(--nav-fees);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

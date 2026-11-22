@@ -16,6 +16,18 @@ export const scenes = {
   "success-submitted": () => import("./success-submitted"),
   "not-found": () => import("./not-found"),
   "error": () => import("./error"),
+  "unauthorized": () => import("./unauthorized"),
+  "header-analytics": () => import("./header-analytics"),
+  "header-assignments": () => import("./header-assignments"),
+  "header-grades": () => import("./header-grades"),
+  "header-help": () => import("./header-help"),
+  "header-people": () => import("./header-people"),
+  "header-profile": () => import("./header-profile"),
+  "header-settings": () => import("./header-settings"),
+  "header-tests": () => import("./header-tests"),
+  "landing-tutor": () => import("./landing-tutor"),
+  "landing-student": () => import("./landing-student"),
+  "landing-launch": () => import("./landing-launch"),
 } as const;
 
 export type SceneName = keyof typeof scenes;

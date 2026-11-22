@@ -12,7 +12,6 @@
  * listGradesForCourse so it reflects whatever has been graded so far.
  */
 
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { BarChart3 } from "lucide-react";
 
@@ -33,6 +32,7 @@ import {
   type LineSeries,
 } from "@/features/grades/components/charts";
 import { teacherFrom } from "@/features/courses/lib/teacher";
+import HeaderAnalytics from "@/components/illustrations/generated/header-analytics";
 // Personal analytics: the courses this user teaches, owners included (#192).
 import { tutorScope } from "@/features/courses/lib/course-access";
 
@@ -171,14 +171,8 @@ export default async function TutorAnalyticsPage() {
               )}
             </div>
           </div>
-          <div className="relative hidden h-40 w-56 shrink-0 md:block">
-            <Image
-              src="/illustrations/dashboard.svg"
-              alt=""
-              fill
-              priority
-              className="object-contain"
-            />
+          <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
+            <HeaderAnalytics className="h-full w-auto" />
           </div>
         </div>
       </section>

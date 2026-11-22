@@ -7,7 +7,6 @@
  * they need to do vs. what they've already done.
  */
 
-import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
@@ -26,6 +25,7 @@ import {
   type FilterBucket,
 } from "@/features/assessments/lib/filters";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import HeaderTests from "@/components/illustrations/generated/header-tests";
 
 export const metadata = { title: "Tests & Quizzes" };
 
@@ -140,14 +140,8 @@ export default async function StudentTestsPage() {
               your attention first.
             </p>
           </div>
-          <div className="relative hidden h-40 w-56 shrink-0 md:block">
-            <Image
-              src="/illustrations/research-paper.svg"
-              alt=""
-              fill
-              priority
-              className="object-contain"
-            />
+          <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
+            <HeaderTests className="h-full w-auto" />
           </div>
         </div>
       </section>

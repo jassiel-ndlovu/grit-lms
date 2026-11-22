@@ -3,8 +3,13 @@
  * mode, rather than inverting them (owner decision, 2026-11-16). Set on the
  * <svg> itself, so it wins over an ancestor's --illustration-surface (for
  * example the avatar's card colour) and over the light text colour.
+ *
+ * `.illustration-paper` pins the same light figure on any ancestor, for
+ * places where the text colour is light in both modes: the dashboard page
+ * headers on the primary panel, and the landing page's closing call to action.
  */
-.dark [data-illustration] {
+.dark [data-illustration],
+.illustration-paper {
   --illustration-ink: #37352f;
   --illustration-surface: #f7f7f5;
 }

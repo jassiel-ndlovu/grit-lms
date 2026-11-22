@@ -12,7 +12,6 @@
  * individual grade for per-question feedback.
  */
 
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Award } from "lucide-react";
@@ -31,6 +30,7 @@ import {
   type LineSeries,
   type BarDatum,
 } from "@/features/grades/components/charts";
+import HeaderGrades from "@/components/illustrations/generated/header-grades";
 
 export const metadata = { title: "Grades" };
 
@@ -136,14 +136,8 @@ export default async function StudentGradesPage() {
               </div>
             )}
           </div>
-          <div className="relative hidden h-40 w-56 shrink-0 md:block">
-            <Image
-              src="/illustrations/success-factors.svg"
-              alt=""
-              fill
-              priority
-              className="object-contain"
-            />
+          <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
+            <HeaderGrades className="h-full w-auto" />
           </div>
         </div>
       </section>
