@@ -95,3 +95,61 @@ export function criterionScoreTotal(r: Rubric, marks: Record<string, string>): n
   }
   return any ? total : null;
 }
+
+/** Marks per criterion as sent by the grading form: criterion id → marks. */
+export const CriterionMarksSchema = z.record(z.string().min(1).max(40), z.number().min(0).max(MAX_CRITERION_MARKS));
+export type CriterionMarks = z.infer<typeof CriterionMarksSchema>;
+
+/**
+ * The marks per criterion to store with a question's grade, or null. Only
+ * the rubric's criteria are kept, each rounded to the rubric's step and
+ * capped at its max. They are stored only when they add up to the score
+ * the tutor saved: a breakdown that disagrees with the mark would mislead
+ * the student, so typing a different Score drops it.
+ */
+export function criterionMarksToStore(
+  rubric: Rubric | null,
+  marks: CriterionMarks | null | undefined,
+  score: number,
+): CriterionMarks | null {
+  if (!rubric || rubric.criteria.length < 2 || !marks) return null;
+  const step = rubric.halfMarks ? 0.5 : 1;
+  const out: CriterionMarks = {};
+  let total = 0;
+  for (const c of rubric.criteria) {
+    const n = marks[c.id];
+    if (typeof n !== "number" || !Number.isFinite(n)) continue;
+    const v = Math.min(c.max, Math.max(0, Math.round(n / step) * step));
+    out[c.id] = v;
+    total += v;
+  }
+  if (Object.keys(out).length === 0) return null;
+  return Math.abs(total - score) < 1e-9 ? out : null;
+}
+
+/** Stored marks as the form's text fields ("" for a criterion with none). */
+export function criterionMarksText(rubric: Rubric | null, raw: unknown): Record<string, string> {
+  const parsed = CriterionMarksSchema.safeParse(raw);
+  if (!rubric || !parsed.success) return {};
+  return Object.fromEntries(rubric.criteria.filter((c) => c.id in parsed.data).map((c) => [c.id, String(parsed.data[c.id])]));
+}
+
+/** The form's text fields as numbers, for sending; empty and unreadable entries are left out. */
+export function criterionMarksFromText(marks: Record<string, string> | undefined): CriterionMarks | null {
+  if (!marks) return null;
+  const out: CriterionMarks = {};
+  for (const [id, raw] of Object.entries(marks)) {
+    const t = raw.trim().replace(",", ".");
+    if (!t) continue;
+    const n = Number(t);
+    if (Number.isFinite(n) && n >= 0) out[id] = n;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** Each criterion with the marks stored for it, for the student's review; null when none were stored. */
+export function criterionBreakdown(rubric: Rubric | null, raw: unknown): Array<{ id: string; label: string; awarded: number; max: number }> | null {
+  const parsed = CriterionMarksSchema.safeParse(raw);
+  if (!rubric || !parsed.success || Object.keys(parsed.data).length === 0) return null;
+  return rubric.criteria.map((c) => ({ id: c.id, label: c.label, awarded: parsed.data[c.id] ?? 0, max: c.max }));
+}

@@ -210,6 +210,8 @@ model QuestionGrade {
   score             Float
   outOf             Float
   feedback          String?
+  /// Marks per rubric criterion, `{ [criterionId]: marks }`, only when they add up to `score` (#216).
+  criteria          Json?
   testSubmissionId  String?
   submissionEntryId String?
   createdAt         DateTime         @default(now())
