@@ -256,7 +256,7 @@ function AiSuggestionsButton() {
                   setOpen(false);
                 }}
               >
-                Accept {take.length === n ? "all" : take.length} {take.length === 1 ? "suggestion" : "suggestions"}
+                {take.length === 1 ? "Accept 1 suggestion" : take.length === n ? "Accept all suggestions" : `Accept ${take.length} suggestions`}
               </Button>
               <p className="text-muted-foreground text-xs">Accepted marks fill in the scores. Save the grade to confirm them.</p>
             </DialogFooter>
