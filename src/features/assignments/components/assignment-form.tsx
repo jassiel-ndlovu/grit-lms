@@ -481,7 +481,7 @@ export function AssignmentForm({
           </div>
         )}
 
-        <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg">
+        <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg lg:left-60">
           <div className="flex flex-wrap items-center justify-between gap-3 px-(--frame-pad) py-4">
             <DraftStatus draft={draft} />
             <div className="flex flex-wrap items-center gap-2">

@@ -628,8 +628,8 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
         )}
       </div>
 
-      {/* ───── Sticky save bar ───── */}
-      <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg">
+      {/* ───── Sticky save bar (lg:left-60 clears the w-60 sidebar) ───── */}
+      <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg lg:left-60">
         <div className="flex flex-wrap items-center justify-between gap-3 px-(--frame-pad) py-4">
           <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">
