@@ -30,6 +30,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { WriteGuard } from "@/components/shell/workspace-access";
+
 import { EventForm } from "./event-form";
 
 export interface CreateEventButtonProps {
@@ -48,6 +50,7 @@ export function CreateEventButton({ courses }: CreateEventButtonProps) {
   }
 
   return (
+    <WriteGuard label="New event" size="default" variant="brand">
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="brand">
@@ -90,5 +93,6 @@ export function CreateEventButton({ courses }: CreateEventButtonProps) {
         />
       </DialogContent>
     </Dialog>
+    </WriteGuard>
   );
 }

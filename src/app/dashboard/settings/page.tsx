@@ -21,6 +21,8 @@ import { getUserPreferences } from "@/features/users/preferences";
 import { resolveLocale } from "@/lib/datetime";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { can, getViewer } from "@/lib/viewer";
+import { isRevampUi } from "@/lib/ui-flags";
+import { ThemeSetting } from "@/features/courses/components/theme-picker";
 import HeaderSettings from "@/components/illustrations/generated/header-settings";
 
 export const metadata = { title: "Settings" };
@@ -40,6 +42,8 @@ export default async function SettingsPage() {
   const showBilling = isBillingEnabled() && viewer?.workspace != null && can(viewer, "billing.view");
   // Payouts: whoever connects the account, or manages fees (tutors in per-tutor mode).
   const showMembers = viewer?.workspace != null && can(viewer, "members.invite");
+  // The teaching switch (#206): organisations, for owners and admins.
+  const showOrganisation = viewer?.workspace?.kind === "ORGANISATION" && can(viewer, "workspace.settings");
   const showPayouts =
     isBillingEnabled() && viewer?.workspace != null && (can(viewer, "payouts.connect") || can(viewer, "fees.manage"));
   const defaults: SettingsFormValues = {
@@ -95,6 +99,21 @@ export default async function SettingsPage() {
         </Link>
       ) : null}
 
+      {showOrganisation ? (
+        <Link
+          href="/dashboard/settings/organisation"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">Organisation</span>
+            <span className="text-muted-foreground">
+              {viewer?.workspace?.teaches ? "Your organisation teaches. Switch teaching off here." : "Your organisation doesn't teach."}
+            </span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
+
       {showMembers ? (
         <Link
           href="/dashboard/settings/members"
@@ -120,6 +139,8 @@ export default async function SettingsPage() {
           <span aria-hidden className="text-muted-foreground">→</span>
         </Link>
       ) : null}
+
+      {isRevampUi() ? <ThemeSetting initial={viewer?.user.theme ?? "CALM"} /> : null}
 
       <SettingsForm
         role={session.user.role}

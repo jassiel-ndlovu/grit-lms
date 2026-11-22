@@ -21,6 +21,7 @@ import { redirect } from "next/navigation";
 import { PreferencesProvider } from "@/components/preferences-provider";
 import { AppShell, type ShellUser } from "@/components/shell/app-shell";
 import { navSectionsFor } from "@/components/shell/nav-config";
+import { WorkspaceAccessProvider } from "@/components/shell/workspace-access";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { getUserPreferences } from "@/features/users/preferences";
 import { AccountBanners } from "@/features/workspaces/components/account-banners";
@@ -58,6 +59,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         workspaceId: viewer.workspace?.id ?? null,
         canCreateWorkspace:
           isBillingEnabled() && viewer.user.emailVerified && (viewer.persona === "staff" || viewer.persona === "none"),
+        // Organisation / Tutor switch: only while the organisation teaches.
+        mode: viewer.workspace?.teaches ? viewer.mode : null,
       }
     : null;
 
@@ -77,16 +80,20 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     </DashboardShell>
   );
 
+  // Read-only workspaces (#189): staff see write controls disabled, with the reason.
+  const readOnly = viewer?.persona === "staff" && viewer.workspace?.readOnly === true;
+
   return (
     <PreferencesProvider
       value={{
         timeZone: prefs?.timeZone ?? null,
         locale: resolveLocale(prefs?.preferredLanguage),
         darkMode: prefs?.darkMode ?? false,
+        theme: viewer?.user.theme ?? "CALM",
         preferredView: prefs?.preferredView ?? "GRID",
       }}
     >
-      {shell}
+      <WorkspaceAccessProvider readOnly={readOnly}>{shell}</WorkspaceAccessProvider>
     </PreferencesProvider>
   );
 }

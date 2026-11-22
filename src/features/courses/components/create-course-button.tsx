@@ -19,6 +19,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+import { WriteGuard } from "@/components/shell/workspace-access";
+
 import { CourseForm } from "./course-form";
 import type { StudentListItem } from "@/features/students/queries";
 
@@ -30,6 +32,7 @@ export function CreateCourseButton({
   const [open, setOpen] = React.useState(false);
 
   return (
+    <WriteGuard label="New course" size="default" variant="default">
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
@@ -50,5 +53,6 @@ export function CreateCourseButton({
         />
       </DialogContent>
     </Dialog>
+    </WriteGuard>
   );
 }

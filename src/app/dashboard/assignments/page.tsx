@@ -36,6 +36,7 @@ import {
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import HeaderAssignments from "@/components/illustrations/generated/header-assignments";
+import { WriteGuard } from "@/components/shell/workspace-access";
 import { getCourseScope } from "@/features/courses/course-access";
 
 export const metadata = { title: "Assignments" };
@@ -185,11 +186,13 @@ export default async function SubmissionsIndexPage() {
               Every assignment you&apos;ve published, newest due-date first.
             </p>
           </div>
-          <Button asChild variant="brand">
-            <Link href={assignmentRoutes.new}>
-              <Plus className="size-4" /> New assignment
-            </Link>
-          </Button>
+          <WriteGuard label="New assignment" size="default" variant="brand">
+            <Button asChild variant="brand">
+              <Link href={assignmentRoutes.new}>
+                <Plus className="size-4" /> New assignment
+              </Link>
+            </Button>
+          </WriteGuard>
         </header>
 
         {rows.length === 0 ? (

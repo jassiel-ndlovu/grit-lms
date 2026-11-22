@@ -15,6 +15,7 @@ import { formatDate, type DateContext } from "@/lib/datetime";
 
 import { STATE_CHIP, TIER_LABEL, capLabel, capTone, formatRand } from "../lib/billing-ui";
 import { CardButton, PayButton, PaymentReturn } from "./billing-pay";
+import { RestartPanel } from "./billing-restart";
 import { courseRoutes } from "./course-frame";
 
 export type BillingOverviewData = Awaited<ReturnType<typeof getBillingOverview>>;
@@ -58,6 +59,10 @@ export function BillingOverview({
   // Paying starts a period: an overdue invoice is paid as it is; otherwise a
   // trial, read-only or cancelled workspace starts its first payment.
   const firstPayment = !overdue && (o.state === "TRIAL" || o.state === "READ_ONLY" || o.state === "CANCELLED");
+  // Cancelled, or read-only with nothing overdue: the restart flow (#191)
+  // replaces the first-payment button, so a workspace with no students can
+  // come back too.
+  const restartable = canManage && (cancelled || (o.state === "READ_ONLY" && !overdue));
 
   return (
     <BillingFrame status={<StatusChip tone={chip.tone}>{chip.label}</StatusChip>}>
@@ -122,7 +127,9 @@ export function BillingOverview({
         </PropertyRow>
       </PropertyList>
 
-      {firstPayment && canManage && o.nextRenewalEstimateCents > 0 ? (
+      {restartable ? <RestartPanel cancelled={cancelled} firstPeriodCents={o.nextRenewalEstimateCents} /> : null}
+
+      {firstPayment && !restartable && canManage && o.nextRenewalEstimateCents > 0 ? (
         <PayButton
           invoiceId={null}
           label={`Pay ${formatRand(o.nextRenewalEstimateCents)} for 30 days`}

@@ -10,6 +10,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ReadOnlyNote, WriteGuard } from "@/components/shell/workspace-access";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -155,10 +156,13 @@ export function AddStudentForm({
           ) : null}
         </p>
       ) : null}
-      <Button type="submit" disabled={busy || (coursesRequired && courses.length === 0)}>
-        {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-        Add student
-      </Button>
+      <ReadOnlyNote billingHref={BILLING_PATH} />
+      <WriteGuard label="Add student" size="default" variant="default">
+        <Button type="submit" disabled={busy || (coursesRequired && courses.length === 0)}>
+          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+          Add student
+        </Button>
+      </WriteGuard>
     </form>
   );
 }

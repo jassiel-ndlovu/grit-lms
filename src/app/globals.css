@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./revamp-tokens.css";
+@import "./page-frame.css";
+@import "./themes.css";
 
 @custom-variant dark (&:is(.dark *));
 

@@ -16,7 +16,7 @@
 
 import "server-only";
 
-import type { Session } from "next-auth";
+import type { Session } from "@/lib/auth";
 
 import { prisma } from "@/lib/db";
 import { enrolledStudent, openEnrollmentCount, ownerTutor, taughtByUser, tutorOf } from "@/features/courses/lib/tenancy-where";

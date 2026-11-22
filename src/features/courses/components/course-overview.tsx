@@ -15,6 +15,8 @@ import { assignmentRoutes } from "@/features/assignments/routes";
 import { formatDate } from "@/lib/datetime";
 
 import { courseInitials, type WorkItem, type WorkStatus } from "../lib/course-overview";
+import { WriteGuard } from "@/components/shell/workspace-access";
+
 import { CourseFrame, courseRoutes } from "./course-frame";
 
 export interface CourseOverviewProps {
@@ -132,12 +134,16 @@ export function CourseOverview({ course, props, outline, work, ctx }: CourseOver
                 Tests and assignments
               </h2>
               <div className="flex gap-3 text-xs">
-                <Link href="/dashboard/tutor-tests/new" className="text-muted-foreground hover:text-foreground hover:underline">
+                <WriteGuard label="New test" as="link">
+                  <Link href="/dashboard/tutor-tests/new" className="text-muted-foreground hover:text-foreground hover:underline">
                   New test
                 </Link>
-                <Link href={assignmentRoutes.new} className="text-muted-foreground hover:text-foreground hover:underline">
+                </WriteGuard>
+                <WriteGuard label="New assignment" as="link">
+                  <Link href={assignmentRoutes.new} className="text-muted-foreground hover:text-foreground hover:underline">
                   New assignment
                 </Link>
+                </WriteGuard>
               </div>
             </div>
             {work.length === 0 ? (

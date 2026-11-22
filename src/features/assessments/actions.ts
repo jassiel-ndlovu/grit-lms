@@ -28,6 +28,7 @@ import { staffFor, enrollmentFor } from "@/features/courses/lib/tenancy-where";
 import {
   studentActionClient,
   tutorActionClient,
+  tutorReadActionClient,
 } from "@/lib/safe-action";
 import { emitNotification, notifyHandIn } from "@/features/notifications/server";
 import { getExtraTime } from "./accommodations";
@@ -849,7 +850,7 @@ import { CuidSchema } from "../shared/primitives";
 import { getCourseScope } from "@/features/courses/course-access";
 import { managesCourse } from "@/features/courses/lib/course-access";
 
-export const exportTestJson = tutorActionClient
+export const exportTestJson = tutorReadActionClient
   .schema(z.object({ id: CuidSchema }))
   .action(async ({ parsedInput, ctx }) => {
     const owns = await testBelongsToTutor(parsedInput.id, await getCourseScope(ctx.session.user.id));

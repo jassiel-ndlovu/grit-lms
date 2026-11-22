@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from "@/lib/branding";
 import { themeBootScript } from "@/components/preferences-provider";
@@ -91,7 +90,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body className="antialiased">
-        <Providers>{children}</Providers>
+        {children}
         <Toaster richColors closeButton position="top-right" />
       </body>
     </html>
