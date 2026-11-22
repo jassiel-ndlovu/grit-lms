@@ -3,6 +3,27 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 React 18.3 to 19, `revamp/a-next`
+
+The owner's tracker lists this as A's (root config). PR #202 (with #206 and the #201 follow-up) merged and is live. Production has migrations 22 and 23, applied after the backup `backup-teaching-joins-20261122`.
+
+Done:
+- **React 19.3.1:** `react` and `react-dom` upgraded; the types were already 19.
+- **Peer dependency:** `mafs` pulls in `use-resize-observer`, which still declares React up to 18. An npm `overrides` entry gives it the app's React, and `npm ls` is now clean.
+- **Removed APIs:** none in our code. `findDOMNode`, `ReactDOM.render`, `defaultProps` on functions and string refs are all absent; the `useFormState` in `form.tsx` is react-hook-form's.
+
+Tested:
+- Types, lint and `next build` pass.
+- **Local dev server against the Preview database,** signed in as a seed owner. No console errors on:
+  - sign-in and two-factor setup;
+  - dashboard, manage courses and a course overview;
+  - the lesson editor (Tiptap with maths);
+  - students and calendar;
+  - the graph dialog (`mafs`), which renders its live preview.
+- Fees showed "page not found" locally only because billing was off in that setup.
+
+For B: rebase or merge `main` into open branches. Nothing in your code needed changing.
+
 ## 2026-11-21 Teaching switch, join requests and colour themes (#206), `revamp/a-206-teaching-joins-themes`
 
 Owner decisions of 2026-11-21, relayed by B in #206. Viewer contract Draft 1.12. Stacked on `revamp/a-restart-and-nextauth` (PR #202).
