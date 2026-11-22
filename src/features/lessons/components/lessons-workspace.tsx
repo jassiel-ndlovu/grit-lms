@@ -14,7 +14,7 @@ import { SIDE_PANEL_STICKY_CLASS } from "@/lib/ui-layout";
 import { cn } from "@/lib/utils";
 import { CreateLessonButton } from "./create-lesson-button";
 import { LessonActions } from "./lesson-actions";
-import { TopicsContext } from "@/features/courses/components/topic-picker";
+import { TopicsProvider } from "@/features/courses/components/topic-picker";
 import { topicsFor, type CourseCurriculum } from "@/features/courses/lib/curriculum";
 import { LessonForm } from "./lesson-form";
 import { LessonSidebar } from "./lesson-sidebar";
@@ -60,7 +60,7 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
   const topics = topicsFor(course);
 
   return (
-    <TopicsContext.Provider value={topics}>
+    <TopicsProvider topics={topics}>
     <CourseFrame course={course} page="Lessons" type="editor">
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-0">
         {/* The tree stays in view while a long lesson scrolls. */}
@@ -167,6 +167,6 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
         </section>
       </div>
     </CourseFrame>
-    </TopicsContext.Provider>
+    </TopicsProvider>
   );
 }

@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/select";
 
 import { createTest, updateTest } from "../actions";
-import { TopicsContext } from "@/features/courses/components/topic-picker";
+import { TopicsProvider } from "@/features/courses/components/topic-picker";
 import { topicsFor, type CourseCurriculum } from "@/features/courses/lib/curriculum";
 import {
   TestQuestionEditor,
@@ -398,7 +398,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
   }
 
   return (
-    <TopicsContext.Provider value={topics}>
+    <TopicsProvider topics={topics}>
     <div className="space-y-6 pb-40">
       <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this test" />
 
@@ -690,6 +690,6 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
       </div>
 
     </div>
-    </TopicsContext.Provider>
+    </TopicsProvider>
   );
 }

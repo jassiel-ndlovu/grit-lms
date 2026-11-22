@@ -20,6 +20,11 @@ import { MAX_TOPICS, topicByCode, type Topic } from "../lib/curriculum";
 /** The topics a form can tag from, set once by the form for its course. */
 export const TopicsContext = React.createContext<Topic[]>([]);
 
+/** Sets the topic list for the pickers inside; usable from server components. */
+export function TopicsProvider({ topics, children }: { topics: Topic[]; children: React.ReactNode }) {
+  return <TopicsContext.Provider value={topics}>{children}</TopicsContext.Provider>;
+}
+
 export function TopicPicker({
   value,
   onChange,
