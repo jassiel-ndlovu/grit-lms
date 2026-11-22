@@ -18,7 +18,8 @@
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
-import { TestFrame } from "@/features/assessments/components/test-frame";
+import { PageMessage } from "@/components/shell/page-frame";
+import { TestFrame, testRoutes } from "@/features/assessments/components/test-frame";
 
 import {
   getTestDetailById,
@@ -47,9 +48,9 @@ export default async function PreviewTestPage({ params }: PageProps) {
   const owns = await testBelongsToTutor(testId, scope);
   if (!owns) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: testRoutes.list }, { label: "Test" }]}>
         You don&apos;t own this test.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -85,21 +86,19 @@ export default async function PreviewTestPage({ params }: PageProps) {
         </span>
       }
     >
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
-        <TestRunner
-          mode="preview"
-          testId={test.id}
-          title={test.title}
-          questions={questions}
-          initialAnswers={initialAnswers}
-          timeLimit={test.timeLimit}
-          labelScheme={test.labelScheme}
-          // No attempt exists, so anchor the countdown at page load. It's
-          // there to show the tutor how much time students get; it never
-          // submits anything.
-          startedAt={new Date()}
-        />
-      </div>
+      <TestRunner
+        mode="preview"
+        testId={test.id}
+        title={test.title}
+        questions={questions}
+        initialAnswers={initialAnswers}
+        timeLimit={test.timeLimit}
+        labelScheme={test.labelScheme}
+        // No attempt exists, so anchor the countdown at page load. It's
+        // there to show the tutor how much time students get; it never
+        // submits anything.
+        startedAt={new Date()}
+      />
     </TestFrame>
   );
 }

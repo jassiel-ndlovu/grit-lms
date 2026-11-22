@@ -18,7 +18,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { StatusChip } from "@/components/shell/status-chip";
-import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 import type { Crumb } from "@/components/shell/page-header";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { PropertyList, PropertyRow } from "@/components/ui/property-list";
@@ -117,9 +117,9 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
   const owns = await testBelongsToTutor(testId, scope);
   if (!owns) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: testRoutes.list }, { label: "Submission" }]}>
         You don&apos;t own this test.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -135,22 +135,20 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
   if (!test) notFound();
   if (!student) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: testRoutes.list }, { label: "Submission" }]}>
         Student not found.
-      </div>
+      </PageMessage>
     );
   }
   if (!submission) {
     return (
       <TestFrame test={test} view="submissions" page={student.fullName}>
-        <div className="mx-auto flex min-h-[320px] w-full max-w-3xl items-center justify-center px-4 py-10">
-          <EmptyState
-            compact
-            illustration={<Scene name="nothing-to-grade" />}
-            title="No submission"
-            description={`${student.fullName} hasn't started this test yet.`}
-          />
-        </div>
+        <EmptyState
+          compact
+          illustration={<Scene name="nothing-to-grade" />}
+          title="No submission"
+          description={`${student.fullName} hasn't started this test yet.`}
+        />
       </TestFrame>
     );
   }

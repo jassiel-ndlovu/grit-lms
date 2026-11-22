@@ -9,6 +9,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BookOpen, ChevronRight, Users } from "lucide-react";
 
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { auth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 
@@ -28,15 +29,8 @@ export default async function GradebookIndexPage() {
   const courses = await listGradebookCoursesForTutor(scope);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <header>
-        <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-          Gradebook
-        </h1>
-        <p className="text-muted-foreground mt-1.5 text-sm">
-          Weighted marks per course, for the class and for each student.
-        </p>
-      </header>
+    <PageFrame type="list" breadcrumb={[{ label: "Gradebook" }]}>
+      <PageTitle title="Gradebook" description="Weighted marks per course, for the class and for each student." />
 
       {courses.length === 0 ? (
         <Card className="p-8 sm:p-12 text-center">
@@ -85,6 +79,6 @@ export default async function GradebookIndexPage() {
           ))}
         </ul>
       )}
-    </div>
+    </PageFrame>
   );
 }

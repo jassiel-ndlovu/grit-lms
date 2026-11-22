@@ -6,8 +6,9 @@
 
 import Link from "next/link";
 
-import { PageHeader, type Crumb } from "@/components/shell/page-header";
-import { Ribbon, RibbonNav } from "@/components/shell/ribbon";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import type { Crumb } from "@/components/shell/page-header";
+import { RibbonNav } from "@/components/shell/ribbon";
 import { StatusChip } from "@/components/shell/status-chip";
 import { PropertyList, PropertyRow } from "@/components/ui/property-list";
 import type { getBillingOverview, getCourseTiers } from "@/features/billing/queries";
@@ -258,8 +259,9 @@ export function CapBar({ cap, label }: { cap: BillingOverviewData["caps"][number
 }
 
 /**
+ * The billing pages' PageFrame (#205, a Settings page at Reading width):
  * Settings › Billing [› page], the Overview / Usage / Payments ribbon, and
- * the page's h1 (default "Billing").
+ * the page's title (default "Billing").
  */
 export function BillingFrame({
   status,
@@ -281,9 +283,12 @@ export function BillingFrame({
     ...(page ?? []),
   ];
   return (
-    <>
-      <PageHeader breadcrumb={crumbs} status={status} actions={actions} />
-      <Ribbon>
+    <PageFrame
+      type="settings"
+      breadcrumb={crumbs}
+      status={status}
+      actions={actions}
+      secondary={
         <RibbonNav
           label="Billing"
           links={[
@@ -292,11 +297,10 @@ export function BillingFrame({
             { label: "Payments", href: billingRoutes.payments },
           ]}
         />
-      </Ribbon>
-      <div className="mx-auto w-full max-w-4xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
-        <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">{title}</h1>
-        {children}
-      </div>
-    </>
+      }
+    >
+      <PageTitle title={title} />
+      {children}
+    </PageFrame>
   );
 }

@@ -7,11 +7,10 @@
  * redirects forward instead of showing this screen.
  */
 
-import Link from "next/link";
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 import { notFound, redirect } from "next/navigation";
 import {
   AlertTriangle,
-  ArrowLeft,
   CalendarDays,
   FileQuestion,
   Hourglass,
@@ -21,7 +20,6 @@ import {
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { tutorOf } from "@/features/courses/lib/tenancy-where";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 import {
@@ -61,18 +59,18 @@ export default async function PreTestPage({ params }: PageProps) {
   });
   if (!student) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Test" }]}>
         No student profile found for this account.
-      </div>
+      </PageMessage>
     );
   }
 
   const canAccess = await studentCanAccessTest(testId, student.id);
   if (!canAccess) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Test" }]}>
         This test isn&apos;t available right now.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -112,103 +110,91 @@ export default async function PreTestPage({ params }: PageProps) {
     ifStartedNow.at != null ? Math.max(0, Math.floor((ifStartedNow.at - now) / 60_000)) : null;
 
   return (
-    <div className="bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <div className="flex h-14 items-center">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href={`/dashboard/courses/${test.courseId}`}>
-                <ArrowLeft className="size-4" /> Back to course
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
+    <PageFrame
+      type="record"
+      width="reading"
+      breadcrumb={[
+        { label: "Tests", href: "/dashboard/tests" },
+        { label: test.course.name, href: `/dashboard/courses/${test.courseId}` },
+        { label: test.title },
+      ]}
+    >
+      <PageTitle
+        eyebrow={`${test.course.name} · with ${tutorOf(test.course)?.fullName ?? "your tutor"}`}
+        title={test.title}
+        description={test.description}
+      />
 
-      <div className="mx-auto max-w-3xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-        <header className="space-y-2">
-          <p className="text-muted-foreground text-xs">
-            {test.course.name} - with {tutorOf(test.course)?.fullName ?? "your tutor"}
-          </p>
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-            {test.title}
-          </h1>
-          {test.description && (
-            <p className="text-muted-foreground text-sm">{test.description}</p>
-          )}
-        </header>
-
-        <Card className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-3">
-          <Stat
-            icon={<CalendarDays className="size-4" />}
-            label="Due"
-            value={dateFmt.format(test.dueDate)}
-          />
-          <Stat
-            icon={<FileQuestion className="size-4" />}
-            label="Questions"
-            value={String(topQuestionCount)}
-          />
-          <Stat
-            icon={<Hourglass className="size-4" />}
-            label="Time limit"
-            value={
-              test.timeLimit == null
-                ? "Untimed"
-                : extraApplies
-                  ? limitText
-                    ? `${limitText}, with your extra time`
-                    : "No limit for you"
-                  : `${test.timeLimit} min`
-            }
-          />
-        </Card>
-
-        {ifStartedNow.cutShort && minutesIfStartedNow != null && (
-          <div
-            role="note"
-            className="border-destructive/40 bg-destructive/5 flex items-start gap-3 rounded-md border p-4"
-          >
-            <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
-            <p className="text-foreground text-sm">
-              This test closes at its due time ({dateFmt.format(test.dueDate)}). If you
-              start now you&apos;ll have <strong>{minutesIfStartedNow} minutes</strong>, not
-              the full {limitText}. Your answers are submitted automatically when it
-              closes.
-            </p>
-          </div>
-        )}
-
-        {test.preTestInstructions && (
-          <Card className="space-y-3 p-6">
-            <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
-              <ScrollText className="text-brand-terracotta size-4" />
-              Before you begin
-            </h2>
-            <LessonMarkdown content={test.preTestInstructions ?? ""} />
-          </Card>
-        )}
-
-        <Card className="space-y-4 p-6">
-          <p className="text-muted-foreground text-sm">
-            Once you begin the timer starts immediately
-            {limitText
-              ? ` and you have ${ifStartedNow.cutShort ? `${minutesIfStartedNow} min` : limitText}${extraApplies ? ", including your extra time" : ""}.`
+      <Card className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-3">
+        <Stat
+          icon={<CalendarDays className="size-4" />}
+          label="Due"
+          value={dateFmt.format(test.dueDate)}
+        />
+        <Stat
+          icon={<FileQuestion className="size-4" />}
+          label="Questions"
+          value={String(topQuestionCount)}
+        />
+        <Stat
+          icon={<Hourglass className="size-4" />}
+          label="Time limit"
+          value={
+            test.timeLimit == null
+              ? "Untimed"
               : extraApplies
-                ? ". You have no time limit on this test, but it still closes at its due time."
-                : "."}{" "}
-            Drafts auto-save every few seconds, so you can refresh or
-            navigate away and resume.
+                ? limitText
+                  ? `${limitText}, with your extra time`
+                  : "No limit for you"
+                : `${test.timeLimit} min`
+          }
+        />
+      </Card>
+
+      {ifStartedNow.cutShort && minutesIfStartedNow != null && (
+        <div
+          role="note"
+          className="border-destructive/40 bg-destructive/5 flex items-start gap-3 rounded-md border p-4"
+        >
+          <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
+          <p className="text-foreground text-sm">
+            This test closes at its due time ({dateFmt.format(test.dueDate)}). If you
+            start now you&apos;ll have <strong>{minutesIfStartedNow} minutes</strong>, not
+            the full {limitText}. Your answers are submitted automatically when it
+            closes.
           </p>
-          <div className="flex justify-end">
-            <BeginTestButton
-              testId={test.id}
-              redirectTo={`/dashboard/tests/${test.id}`}
-            />
-          </div>
+        </div>
+      )}
+
+      {test.preTestInstructions && (
+        <Card className="space-y-3 p-6">
+          <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
+            <ScrollText className="text-brand-terracotta size-4" />
+            Before you begin
+          </h2>
+          <LessonMarkdown content={test.preTestInstructions ?? ""} />
         </Card>
-      </div>
-    </div>
+      )}
+
+      <Card className="space-y-4 p-6">
+        <p className="text-muted-foreground text-sm">
+          Once you begin the timer starts immediately
+          {limitText
+            ? ` and you have ${ifStartedNow.cutShort ? `${minutesIfStartedNow} min` : limitText}${extraApplies ? ", including your extra time" : ""}.`
+            : extraApplies
+              ? ". You have no time limit on this test, but it still closes at its due time."
+              : "."}{" "}
+          Drafts auto-save every few seconds, so you can refresh or
+          navigate away and resume.
+        </p>
+        <div className="flex justify-end">
+          <BeginTestButton
+            testId={test.id}
+            redirectTo={`/dashboard/tests/${test.id}`}
+          />
+        </div>
+      </Card>
+    </PageFrame>
   );
 }
 

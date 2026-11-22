@@ -13,10 +13,11 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, BookOpen, CalendarDays, GraduationCap, Hourglass, Pencil, Receipt, Target, TrendingUp } from "lucide-react";
+import { BookOpen, CalendarDays, GraduationCap, Hourglass, Pencil, Receipt, Target, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { getChildOverview } from "@/features/activity/child-overview";
@@ -46,37 +47,26 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
   const latest = overview.marks[0] ?? null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground -ml-2">
-        <Link href={childRoutes.home}>
-          <ArrowLeft className="size-3" />
-          Your learners
-        </Link>
-      </Button>
-
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-primary-foreground/70 text-sm">
-              {child.workspaces.length ? child.workspaces.map((w) => w.name).join(" · ") : "Not learning anywhere yet"}
-            </p>
-            <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">{child.name}</h1>
-            <p className="text-primary-foreground/70 mt-3 max-w-xl text-sm">
-              {courseCount === 0
-                ? "No courses yet."
-                : `${courseCount} ${courseCount === 1 ? "course" : "courses"}. ${overview.progress.done} of ${overview.progress.total} lessons completed.`}
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
-            <HeroStat icon={<TrendingUp className="size-4" />} label="Progress" value={`${overview.progress.percent}%`} />
-            <HeroStat icon={<Target className="size-4" />} label="Due soon" value={String(overview.upcoming.length)} />
-            <HeroStat icon={<GraduationCap className="size-4" />} label="Latest mark" value={latest ? `${latest.percent}%` : "-"} />
-          </div>
-        </div>
-      </section>
+    <PageFrame type="record" breadcrumb={[{ label: "Your learners", href: childRoutes.home }, { label: child.name }]}>
+      <PageTitle
+        eyebrow={child.workspaces.length ? child.workspaces.map((w) => w.name).join(" · ") : "Not learning anywhere yet"}
+        title={child.name}
+        description={
+          courseCount === 0
+            ? "No courses yet."
+            : `${courseCount} ${courseCount === 1 ? "course" : "courses"}. ${overview.progress.done} of ${overview.progress.total} lessons completed.`
+        }
+        properties={
+          <StatTiles>
+            <StatTile icon={<TrendingUp />} label="Progress" value={`${overview.progress.percent}%`} />
+            <StatTile icon={<Target />} label="Due soon" value={String(overview.upcoming.length)} />
+            <StatTile icon={<GraduationCap />} label="Latest mark" value={latest ? `${latest.percent}%` : "-"} />
+          </StatTiles>
+        }
+      />
 
       <section className="space-y-4">
-        <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">Courses</h2>
+        <h2 className="text-foreground text-base font-semibold">Courses</h2>
         {courseCount === 0 ? (
           <Card className="p-0">
             <EmptyState
@@ -125,7 +115,7 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="space-y-4">
-          <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">
+          <h2 className="text-foreground text-base font-semibold">
             Due in the next {UPCOMING_DAYS / 7} weeks
           </h2>
           <Card className="overflow-hidden p-0">
@@ -163,7 +153,7 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
         </section>
 
         <section className="space-y-4">
-          <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">Recent marks</h2>
+          <h2 className="text-foreground text-base font-semibold">Recent marks</h2>
           <Card className="overflow-hidden p-0">
             {overview.marks.length === 0 ? (
               <EmptyState
@@ -204,7 +194,7 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">Attendance</h2>
+          <h2 className="text-foreground text-base font-semibold">Attendance</h2>
           <Link href={calendarRoutes.view({ view: "agenda", child: userId })} className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm">
             <CalendarDays className="size-3.5" />
             {child.name.split(" ")[0]}&apos;s calendar
@@ -231,18 +221,6 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
           Fees for {child.name.split(" ")[0]}
         </Link>
       </Card>
-    </div>
-  );
-}
-
-function HeroStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="bg-primary-foreground/8 backdrop-blur-sm min-w-0 rounded-lg border border-primary-foreground/15 p-2.5 sm:p-3">
-      <div className="text-primary-foreground/70 flex min-w-0 items-center gap-1.5 truncate text-xs">
-        {icon}
-        {label}
-      </div>
-      <p className="font-display mt-1 text-xl tabular-nums sm:text-2xl">{value}</p>
-    </div>
+    </PageFrame>
   );
 }

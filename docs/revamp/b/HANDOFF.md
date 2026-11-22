@@ -3,6 +3,59 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 Page frame rollout (#205 steps 2 to 5), `claude/b-frame-rollout-588b5d`
+
+Every page under `src/app/dashboard/**` now renders `PageFrame` (directly or
+through a frame component), with its type from the owner's table. Pages
+don't branch on REVAMP_UI; only the shell does.
+
+Done:
+- **Frame additions:** `PageTitle` takes an `illustration` (beside the title
+  from 768 px, at most 112 px tall, hidden on phones), so the #204 headers
+  stay. `PageMessage` frames the one-line "No student profile" and "You
+  don't own this" states. `StatTile` / `StatTiles` (`components/ui`) replace
+  the white-on-brand hero stats. `--frame-pad-bottom` (48, 64 from 1024).
+  `SIDE_PANEL_STICKY_CLASS` and `BELOW_RUNNER_STRIP_TOP_CLASS` in
+  `lib/ui-layout.ts`.
+- **Frame components** now wrap `PageFrame` and take a `type`: `CourseFrame`,
+  `TestFrame`, `BillingFrame`, `AdminBillingFrame` and the new
+  `StudentCourseFrame` (My courses › course, Overview / Lessons ribbon).
+- **Step 2, students and parents:** homes, courses, a course, a lesson
+  (editor type; Previous / Next / Mark complete in the header), tests,
+  pre-test, review, grades, assignments, notifications, help, profile,
+  settings, fees return, the parent home and a child. Banners became
+  `PageTitle` with the illustration.
+- **Step 3, tutors:** course pages, lessons workspace, test designer, new
+  test, preview, submissions, assignments and the editor, gradebook (a
+  course is full width), students, fees, discounts, members, payouts,
+  analytics, manage-users.
+- **Step 4:** admin billing pages use `AdminBillingFrame` (list or record).
+- **Step 5:** `scripts/check-page-frame.ts` (static): every dashboard page
+  that renders UI uses a frame component (found by following exports from
+  `PageFrame` / `PageMessage`), and none has a page-sized `mx-auto max-w-*`,
+  the brand banner, a bare `PageHeader` or a hand-made `font-display` h1.
+  Exceptions: the onboarding wizard (welcome, onboarding). Deleted the unused
+  `dashboard/components/*`, `tests/skeletons/*` and `tests/review/components/*`.
+- **Checked** locally at 375, 768 and 1280 (widths, padding, sticky headers,
+  ribbon hiding on phones, runner strip, no sideways scroll). **Testing:**
+  section F of `testing/preview-recheck-2026-11-22.md`, not run.
+
+Next:
+- Run the Preview rechecks (A to F).
+- Pro lockdown hiding the runner strip: there's no lockdown flag on a test
+  yet. When A adds one, `PageFrame type="runner"` should drop the header.
+
+Blocked:
+- No GitHub workflow runs tsc, lint or `scripts/check-*`; the PR checks are
+  Vercel only. Asked A for one (`needs-a`); `.github/` isn't B's.
+
+Questions:
+- Pre-test and review aren't focus routes, so they use record type at
+  reading width with the full header, not the runner strip. Say if they
+  should become focus routes.
+- The admin home (`AdminDashboard`, A's `src/features/admin`) and
+  `src/app/admin/**` are A's and unframed; offered the frame on #205.
+
 ## 2026-11-22 AI-assisted marking UI (#150), `claude/b-ai-marking-ui-6cc9a6`
 
 Built on A's actions (`features/ai-marking/actions.ts`, PR 168). The tutor

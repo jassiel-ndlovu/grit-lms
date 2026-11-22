@@ -13,6 +13,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { GraduationCap, Mail } from "lucide-react";
 
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,16 +78,9 @@ export default async function StudentGradebookPage({ params }: PageProps) {
   const student = book.students.find((s) => s.id === studentId);
   if (!student) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 px-4 sm:px-6 py-6 sm:py-10">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/gradebook/${courseId}`}>← Back to class</Link>
-        </Button>
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground text-sm">
-            That student isn&apos;t enrolled in this course.
-          </p>
-        </Card>
-      </div>
+      <PageMessage breadcrumb={[{ label: "Gradebook", href: "/dashboard/gradebook" }, { label: book.course.name, href: `/dashboard/gradebook/${courseId}` }, { label: "Student" }]}>
+        That student isn&apos;t enrolled in this course.
+      </PageMessage>
     );
   }
 
@@ -106,50 +101,22 @@ export default async function StudentGradebookPage({ params }: PageProps) {
       : null;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-      <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/gradebook/${courseId}`}>← Back to class</Link>
-        </Button>
-      </div>
-
-      <header className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-primary-foreground/15 flex size-12 items-center justify-center rounded-full text-lg font-semibold">
-              {student.fullName.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <h1 className="font-display text-2xl leading-tight tracking-tight">
-                {student.fullName}
-              </h1>
-              <p className="text-primary-foreground/70 truncate text-sm">
-                {book.course.name}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-6 text-sm">
-            <div>
-              <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                Mark to date
-              </p>
-              <p className="font-display text-3xl tabular-nums">
-                {fmt(mark.markToDate)}
-              </p>
-            </div>
-            <div>
-              <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                vs class
-              </p>
-              <p className="font-display text-3xl tabular-nums">
-                {vsClass == null
-                  ? "—"
-                  : `${vsClass > 0 ? "+" : ""}${vsClass}`}
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <PageFrame type="record" breadcrumb={[{ label: "Gradebook", href: "/dashboard/gradebook" }, { label: book.course.name, href: `/dashboard/gradebook/${courseId}` }, { label: student.fullName }]}>
+      <PageTitle
+        icon={
+          <span className="bg-muted text-foreground flex size-8 items-center justify-center rounded-full text-base font-semibold">
+            {student.fullName.charAt(0).toUpperCase()}
+          </span>
+        }
+        eyebrow={book.course.name}
+        title={student.fullName}
+        properties={
+          <StatTiles>
+            <StatTile label="Mark to date" value={fmt(mark.markToDate)} />
+            <StatTile label="vs class" value={vsClass == null ? "—" : `${vsClass > 0 ? "+" : ""}${vsClass}`} />
+          </StatTiles>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-5">
@@ -289,6 +256,6 @@ export default async function StudentGradebookPage({ params }: PageProps) {
           </a>
         </Button>
       </Card>
-    </div>
+    </PageFrame>
   );
 }

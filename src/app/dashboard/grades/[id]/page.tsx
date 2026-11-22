@@ -11,10 +11,11 @@
  *   3. Tutor's overall feedback as a markdown card.
  *   4. Per-item breakdown - per-question for tests, per-file for assignments.
  */
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { StatusChip } from "@/components/shell/status-chip";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
-  ArrowLeft,
   CheckCircle2,
   ExternalLink,
   FileText,
@@ -71,9 +72,9 @@ export default async function GradeDetailPage({ params }: PageProps) {
   });
   if (!student) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Grades", href: "/dashboard/grades" }, { label: "Grade" }]}>
         No student profile found for this account.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -81,9 +82,9 @@ export default async function GradeDetailPage({ params }: PageProps) {
   if (!grade) notFound();
   if (grade.studentId !== student.id) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Grades", href: "/dashboard/grades" }, { label: "Grade" }]}>
         This grade isn&apos;t yours.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -91,85 +92,61 @@ export default async function GradeDetailPage({ params }: PageProps) {
   const isTest = grade.testSubmission !== null;
 
   return (
-    <div className="bg-background">
-      {/* ───── Header bar ───── */}
-      <div className="bg-card border-b border-border">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <div className="flex h-14 items-center">
-            <Button asChild variant="ghost" size="sm" className="-ml-2">
-              <Link href="/dashboard/grades">
-                <ArrowLeft className="size-4" /> All grades
-              </Link>
-            </Button>
+    <PageFrame
+      type="record"
+      breadcrumb={[{ label: "Grades", href: "/dashboard/grades" }, { label: grade.title }]}
+      status={<StatusChip tone="neutral">{isTest ? "Test" : "Assignment"}</StatusChip>}
+    >
+      <PageTitle
+        eyebrow={`${grade.course.name}${tutorOf(grade.course)?.fullName ? ` · with ${tutorOf(grade.course)?.fullName}` : ""}`}
+        title={grade.title}
+        description={`Graded ${dateFmt.format(grade.updatedAt)}`}
+      />
+
+      {/* ───── Score callout ───── */}
+      <Card className="bg-brand-terracotta/8 border-brand-terracotta/30 flex flex-wrap items-center justify-between gap-4 p-6">
+        <div className="flex items-center gap-4">
+          <div className="bg-brand-terracotta/15 text-brand-terracotta flex size-14 items-center justify-center rounded-md">
+            <GraduationCap className="size-7" />
+          </div>
+          <div>
+            <p className="font-display text-4xl tabular-nums text-foreground">
+              {grade.score}
+              <span className="text-muted-foreground"> / {grade.outOf}</span>
+            </p>
+            <p className="text-muted-foreground text-sm tabular-nums">
+              {grade.outOf > 0 ? `${overallPct}% overall` : ""}
+            </p>
           </div>
         </div>
-      </div>
+        {grade.outOf > 0 && (
+          <Badge
+            variant={overallPct >= 50 ? "soft" : "secondary"}
+            className="tabular-nums px-3 py-1.5 text-base"
+          >
+            {overallPct}%
+          </Badge>
+        )}
+      </Card>
 
-      <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-        {/* ───── Hero ───── */}
-        <header className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-muted-foreground text-xs">
-              {grade.course.name}
-              {tutorOf(grade.course)?.fullName ? ` - with ${tutorOf(grade.course)?.fullName}` : ""}
-            </p>
-            <Badge variant="secondary">
-              {isTest ? "Test" : "Assignment"}
-            </Badge>
-          </div>
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-            {grade.title}
-          </h1>
-          <p className="text-muted-foreground text-xs">
-            Graded {dateFmt.format(grade.updatedAt)}
-          </p>
-        </header>
-
-        {/* ───── Score callout ───── */}
-        <Card className="bg-brand-terracotta/8 border-brand-terracotta/30 flex flex-wrap items-center justify-between gap-4 p-6">
-          <div className="flex items-center gap-4">
-            <div className="bg-brand-terracotta/15 text-brand-terracotta flex size-14 items-center justify-center rounded-md">
-              <GraduationCap className="size-7" />
-            </div>
-            <div>
-              <p className="font-display text-4xl tabular-nums text-foreground">
-                {grade.score}
-                <span className="text-muted-foreground"> / {grade.outOf}</span>
-              </p>
-              <p className="text-muted-foreground text-sm tabular-nums">
-                {grade.outOf > 0 ? `${overallPct}% overall` : ""}
-              </p>
-            </div>
-          </div>
-          {grade.outOf > 0 && (
-            <Badge
-              variant={overallPct >= 50 ? "soft" : "secondary"}
-              className="tabular-nums px-3 py-1.5 text-base"
-            >
-              {overallPct}%
-            </Badge>
-          )}
+      {/* ───── Final feedback ───── */}
+      {grade.finalComments && (
+        <Card className="space-y-3 p-6">
+          <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
+            <MessageSquare className="text-brand-terracotta size-4" />
+            Tutor feedback
+          </h2>
+          <LessonMarkdown content={grade.finalComments} />
         </Card>
+      )}
 
-        {/* ───── Final feedback ───── */}
-        {grade.finalComments && (
-          <Card className="space-y-3 p-6">
-            <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
-              <MessageSquare className="text-brand-terracotta size-4" />
-              Tutor feedback
-            </h2>
-            <LessonMarkdown content={grade.finalComments} />
-          </Card>
-        )}
-
-        {/* ───── Per-item body ───── */}
-        {isTest ? (
-          <TestBreakdown grade={grade} />
-        ) : (
-          <SubmissionBreakdown grade={grade} />
-        )}
-      </div>
-    </div>
+      {/* ───── Per-item body ───── */}
+      {isTest ? (
+        <TestBreakdown grade={grade} />
+      ) : (
+        <SubmissionBreakdown grade={grade} />
+      )}
+    </PageFrame>
   );
 }
 

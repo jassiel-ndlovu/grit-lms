@@ -11,7 +11,7 @@
 
 import { notFound, redirect } from "next/navigation";
 
-import { PageHeader } from "@/components/shell/page-header";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { StatusChip } from "@/components/shell/status-chip";
 import { PropertyList, PropertyRow } from "@/components/ui/property-list";
 import { isBillingEnabled } from "@/features/billing/errors";
@@ -28,21 +28,19 @@ export default async function PayoutsPage() {
   if (!viewer) redirect("/auth");
   if (!viewer.workspace || !(can(viewer, "payouts.connect") || can(viewer, "fees.manage"))) notFound();
 
-  const header = <PageHeader breadcrumb={[{ label: "Settings", href: "/dashboard/settings" }, { label: "Payouts" }]} />;
   const body = (children: React.ReactNode) => (
-    <>
-      {header}
-      <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
-        <div className="space-y-2">
-          <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Payouts</h1>
-          <p className="text-muted-foreground text-sm">
+    <PageFrame type="settings" breadcrumb={[{ label: "Settings", href: "/dashboard/settings" }, { label: "Payouts" }]}>
+      <PageTitle
+        title="Payouts"
+        description={
+          <>
             Parents&apos; payments through Nexa go straight to this account; Nexa never holds them. Nexa keeps 2%, and the card
             or EFT fee comes off the same payment.
-          </p>
-        </div>
-        {children}
-      </div>
-    </>
+          </>
+        }
+      />
+      {children}
+    </PageFrame>
   );
 
   let settings: Awaited<ReturnType<typeof getPayoutSettings>>;

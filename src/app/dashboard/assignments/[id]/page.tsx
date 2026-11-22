@@ -9,6 +9,7 @@
  *     link out to the per-student grading view.
  */
 
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -26,7 +27,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { enrolledStudent, tutorOf } from "@/features/courses/lib/tenancy-where";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -84,9 +84,9 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     });
     if (!student) {
       return (
-        <div className="text-muted-foreground p-8 text-sm">
+        <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Assignment" }]}>
           No student profile found for this account.
-        </div>
+        </PageMessage>
       );
     }
 
@@ -100,9 +100,9 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     });
     if (!enrolled) {
       return (
-        <div className="text-muted-foreground p-8 text-sm">
+        <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Assignment" }]}>
           You aren&apos;t enrolled in this course.
-        </div>
+        </PageMessage>
       );
     }
 
@@ -111,37 +111,29 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     const grade = entry?.grade ?? null;
 
     return (
-      <div className="mx-auto max-w-3xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={`/dashboard/courses/${submission.courseId}`}>
-            ← Back to course
-          </Link>
-        </Button>
-
-        <header className="space-y-2">
-          <p className="text-muted-foreground text-xs">
-            {submission.course.name} · with {tutorOf(submission.course)?.fullName ?? "your tutor"}
-          </p>
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-            {submission.title}
-          </h1>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <span className="inline-flex items-center gap-1">
-              <CalendarDays className="size-4" />
-              Due {dateFmt.format(submission.dueDate)}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Hourglass className="size-4" />
-              {submission.totalPoints} points
-            </span>
-            {submission.maxAttempts && (
+      <PageFrame type="settings" breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: submission.title }]}>
+        <PageTitle
+          eyebrow={<>{submission.course.name} · with {tutorOf(submission.course)?.fullName ?? "your tutor"}</>}
+          title={submission.title}
+          properties={
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
               <span className="inline-flex items-center gap-1">
-                <Users className="size-4" />
-                {submission.maxAttempts} attempts allowed
+                <CalendarDays className="size-4" />
+                Due {dateFmt.format(submission.dueDate)}
               </span>
-            )}
-          </div>
-        </header>
+              <span className="inline-flex items-center gap-1">
+                <Hourglass className="size-4" />
+                {submission.totalPoints} points
+              </span>
+              {submission.maxAttempts && (
+                <span className="inline-flex items-center gap-1">
+                  <Users className="size-4" />
+                  {submission.maxAttempts} attempts allowed
+                </span>
+              )}
+            </div>
+          }
+        />
 
         {submission.description && (
           <Card className="space-y-3 p-6">
@@ -358,7 +350,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
               </ul>
             </Card>
           )}
-      </div>
+      </PageFrame>
     );
   }
 
@@ -369,40 +361,32 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     const teaches = await prisma.course.count({ where: { id: submission.courseId, ...manageableBy(scope) } });
     if (teaches === 0) {
       return (
-        <div className="text-muted-foreground p-8 text-sm">
+        <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Assignment" }]}>
           You don&apos;t own this assignment.
-        </div>
+        </PageMessage>
       );
     }
 
     const entries = await listEntriesForSubmission(submission.id);
 
     return (
-      <div className="mx-auto max-w-4xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={assignmentRoutes.index}>
-            ← Back to assignments
-          </Link>
-        </Button>
-
-        <header className="space-y-2">
-          <p className="text-muted-foreground text-xs">
-            {submission.course.name}
-          </p>
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight tracking-tight text-foreground">
-            {submission.title}
-          </h1>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <span className="inline-flex items-center gap-1">
-              <CalendarDays className="size-4" />
-              Due {dateFmt.format(submission.dueDate)}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Hourglass className="size-4" />
-              {submission.totalPoints} points
-            </span>
-          </div>
-        </header>
+      <PageFrame type="record" breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: submission.title }]}>
+        <PageTitle
+          eyebrow={submission.course.name}
+          title={submission.title}
+          properties={
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays className="size-4" />
+                Due {dateFmt.format(submission.dueDate)}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Hourglass className="size-4" />
+                {submission.totalPoints} points
+              </span>
+            </div>
+          }
+        />
 
         <Card className="overflow-hidden p-0">
           <div className="flex items-baseline justify-between gap-3 px-5 py-4">
@@ -481,7 +465,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
             </ul>
           )}
         </Card>
-      </div>
+      </PageFrame>
     );
   }
 

@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { ProfileForm } from "@/features/users/components/profile-form";
 import { PasswordForm } from "@/features/users/components/password-form";
 import HeaderProfile from "@/components/illustrations/generated/header-profile";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 
 export const metadata = { title: "Profile" };
 
@@ -63,54 +64,34 @@ export default async function ProfilePage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-5">
-            {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={imageUrl}
-                alt={fullName}
-                className="border-primary-foreground/30 size-20 rounded-full border-2 object-cover"
-              />
-            ) : (
-              <div className="bg-brand-terracotta text-brand-terracotta-foreground flex size-20 items-center justify-center rounded-full text-3xl font-semibold">
-                {initial}
-              </div>
-            )}
-            <div>
-              <p className="text-primary-foreground/70 text-sm">
-                Your profile
-              </p>
-              <h1 className="font-display mt-1 text-2xl sm:text-3xl leading-tight tracking-tight">
-                {fullName || "Unnamed"}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-                <span className="text-primary-foreground/80">{email}</span>
-                <Badge
-                  variant="secondary"
-                  className="bg-brand-terracotta/90 text-brand-terracotta-foreground"
-                >
-                  {session.user.role}
-                </Badge>
-                {memberSince?.createdAt && (
-                  <span className="text-primary-foreground/60 text-xs">
-                    Member since{" "}
-                    {new Intl.DateTimeFormat(undefined, {
-                      month: "short",
-                      year: "numeric",
-                    }).format(memberSince.createdAt)}
-                  </span>
-                )}
-              </div>
-            </div>
+    <PageFrame type="settings" breadcrumb={[{ label: "Profile" }]}>
+      <PageTitle
+        icon={
+          imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt="" className="size-8 rounded-full object-cover" />
+          ) : (
+            <span className="bg-brand-terracotta text-brand-terracotta-foreground flex size-8 items-center justify-center rounded-full text-base font-semibold">
+              {initial}
+            </span>
+          )
+        }
+        eyebrow="Your profile"
+        title={fullName || "Unnamed"}
+        illustration={<HeaderProfile />}
+        properties={
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-muted-foreground">{email}</span>
+            <Badge variant="secondary">{session.user.role}</Badge>
+            {memberSince?.createdAt ? (
+              <span className="text-muted-foreground text-xs">
+                Member since{" "}
+                {new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" }).format(memberSince.createdAt)}
+              </span>
+            ) : null}
           </div>
-          <div className="illustration-paper hidden h-32 w-40 shrink-0 items-end justify-center md:flex">
-            <HeaderProfile className="h-full w-auto" />
-          </div>
-        </div>
-      </section>
+        }
+      />
 
       <section className="grid gap-6 lg:grid-cols-5">
         <Card className="p-6 lg:col-span-3">
@@ -149,6 +130,6 @@ export default async function ProfilePage() {
           </div>
         </Card>
       </section>
-    </div>
+    </PageFrame>
   );
 }

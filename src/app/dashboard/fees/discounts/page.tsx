@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { PageHeader } from "@/components/shell/page-header";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { FeeCodeForm, FeeCodeList } from "@/features/courses/components/fee-discount-codes";
 import { payoutErrorMessage } from "@/features/courses/lib/payouts-ui";
@@ -39,40 +39,39 @@ export default async function FeeDiscountsPage() {
   }
 
   return (
-    <>
-      <PageHeader breadcrumb={[{ label: "Fees", href: "/dashboard/fees" }, { label: "Discount codes" }]} />
-      <div className="mx-auto w-full max-w-5xl space-y-10 px-4 py-6 sm:px-6 sm:py-10">
-        <div className="space-y-2">
-          <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Discount codes</h1>
-          <p className="text-muted-foreground max-w-2xl text-sm">
+    <PageFrame type="list" breadcrumb={[{ label: "Fees", href: "/dashboard/fees" }, { label: "Discount codes" }]}>
+      <PageTitle
+        title="Discount codes"
+        description={
+          <>
             Parents enter a code when they pay your fees online. It takes money off fees in this workspace only, and each
             student can use it once per payment.
+          </>
+        }
+      />
+
+      <section aria-labelledby="codes-heading" className="space-y-4">
+        <h2 id="codes-heading" className="text-foreground text-sm font-semibold">
+          Codes
+        </h2>
+        {codes ? (
+          <FeeCodeList codes={codes} ctx={ctx} now={new Date().toISOString()} />
+        ) : (
+          <p role="alert" className="text-muted-foreground text-sm">
+            We couldn&apos;t load your codes. {failed}{" "}
+            <Link href="/dashboard/fees/discounts" className="text-foreground underline underline-offset-2">
+              Try again
+            </Link>
           </p>
-        </div>
+        )}
+      </section>
 
-        <section aria-labelledby="codes-heading" className="space-y-4">
-          <h2 id="codes-heading" className="text-foreground text-sm font-semibold">
-            Codes
-          </h2>
-          {codes ? (
-            <FeeCodeList codes={codes} ctx={ctx} now={new Date().toISOString()} />
-          ) : (
-            <p role="alert" className="text-muted-foreground text-sm">
-              We couldn&apos;t load your codes. {failed}{" "}
-              <Link href="/dashboard/fees/discounts" className="text-foreground underline underline-offset-2">
-                Try again
-              </Link>
-            </p>
-          )}
-        </section>
-
-        <section aria-labelledby="new-code-heading" className="space-y-4">
-          <h2 id="new-code-heading" className="text-foreground text-sm font-semibold">
-            New code
-          </h2>
-          <FeeCodeForm />
-        </section>
-      </div>
-    </>
+      <section aria-labelledby="new-code-heading" className="space-y-4">
+        <h2 id="new-code-heading" className="text-foreground text-sm font-semibold">
+          New code
+        </h2>
+        <FeeCodeForm />
+      </section>
+    </PageFrame>
   );
 }

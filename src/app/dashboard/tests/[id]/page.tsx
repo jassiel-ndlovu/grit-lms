@@ -11,11 +11,13 @@
  * with the tutor preview so both render an identical structure.
  */
 
+import { PageFrame, PageMessage } from "@/components/shell/page-frame";
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isRevampUi } from "@/lib/ui-flags";
+import { BELOW_RUNNER_STRIP_TOP_CLASS } from "@/lib/ui-layout";
 
 import {
   getTestDetailById,
@@ -44,18 +46,18 @@ export default async function TestRunnerPage({ params }: PageProps) {
   });
   if (!student) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Test" }]}>
         No student profile found for this account.
-      </div>
+      </PageMessage>
     );
   }
 
   const canAccess = await studentCanAccessTest(testId, student.id);
   if (!canAccess) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Test" }]}>
         This test isn&apos;t available right now.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -84,13 +86,16 @@ export default async function TestRunnerPage({ params }: PageProps) {
       ? (submission.answers as Record<string, unknown>)
       : {};
 
-  // The revamp shell shows this route alone (isFocusRoute), so the
-  // runner's header sticks to the top. The legacy shell keeps its own
-  // sticky header (h-14, lg:h-20) above it.
-  const stickyTop = isRevampUi() ? "top-0" : "top-14 lg:top-20";
+  // The revamp shell shows this route alone (isFocusRoute): the frame's
+  // runner strip is at the top and the runner's own bar sticks under it.
+  // The legacy shell keeps its own sticky header (h-14, lg:h-20) above it.
+  const stickyTop = isRevampUi() ? BELOW_RUNNER_STRIP_TOP_CLASS : "top-14 lg:top-20";
 
   return (
-    <div className="bg-background mx-auto max-w-3xl px-4 pb-10 sm:px-6">
+    <PageFrame
+      type="runner"
+      breadcrumb={[{ label: test.course?.name ?? "Course", href: `/dashboard/courses/${test.courseId}` }, { label: test.title }]}
+    >
       <TestRunner
         testId={test.id}
         submissionId={submission.id}
@@ -106,6 +111,6 @@ export default async function TestRunnerPage({ params }: PageProps) {
         extraTimePercent={submission.extraTimePercent}
         noTimeLimit={submission.noTimeLimit}
       />
-    </div>
+    </PageFrame>
   );
 }

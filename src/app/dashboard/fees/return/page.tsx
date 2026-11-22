@@ -6,7 +6,7 @@
 
 import { notFound, redirect } from "next/navigation";
 
-import { PageHeader } from "@/components/shell/page-header";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { CheckoutReturn } from "@/features/courses/components/fee-checkout-return";
 import { returnReference } from "@/features/courses/lib/fee-pay-ui";
@@ -23,12 +23,9 @@ export default async function FeesReturnPage({ searchParams }: PageProps) {
   if (!(await getViewer())) redirect("/auth");
   const reference = returnReference(await searchParams);
   return (
-    <>
-      <PageHeader breadcrumb={[{ label: "Fees", href: "/dashboard/fees" }, { label: "Payment" }]} />
-      <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
-        <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">Payment</h1>
-        <CheckoutReturn reference={reference} />
-      </div>
-    </>
+    <PageFrame type="settings" breadcrumb={[{ label: "Fees", href: "/dashboard/fees" }, { label: "Payment" }]}>
+      <PageTitle title="Payment" />
+      <CheckoutReturn reference={reference} />
+    </PageFrame>
   );
 }

@@ -1,14 +1,18 @@
 /**
- * The frame of a tutor's course pages (UI draft "Course page"): one
- * PageHeader and a ribbon with the course's views. Overview, Lessons,
- * Services (billing on) and Settings are separate routes, so each view has its own URL.
+ * The frame of a tutor's course pages (UI draft "Course page"): a record
+ * PageFrame (#205) with the course's views in the ribbon. Overview,
+ * Lessons, Services (billing on) and Settings are separate routes, so each
+ * view has its own URL. The lesson editor passes `type="editor"`, the
+ * settings views `type="settings"`.
  *
  * Server component; RibbonNav (client) lights the current view.
  */
 
-import { PageHeader, type Crumb } from "@/components/shell/page-header";
-import { Ribbon, RibbonNav } from "@/components/shell/ribbon";
+import { PageFrame } from "@/components/shell/page-frame";
+import type { Crumb } from "@/components/shell/page-header";
+import { RibbonNav } from "@/components/shell/ribbon";
 import { isBillingEnabled } from "@/features/billing/errors";
+import type { PageType } from "@/lib/ui-layout";
 
 export const courseRoutes = {
   list: "/dashboard/manage-courses",
@@ -23,12 +27,14 @@ export function CourseFrame({
   course,
   page,
   actions,
+  type = "record",
   children,
 }: {
   course: { id: string; name: string };
   /** The last crumb after the course name, e.g. "Lessons". Omit on the overview. */
   page?: string;
   actions?: React.ReactNode;
+  type?: PageType;
   children: React.ReactNode;
 }) {
   const crumbs: Crumb[] = [
@@ -38,9 +44,11 @@ export function CourseFrame({
   if (page) crumbs.push({ label: page });
 
   return (
-    <>
-      <PageHeader breadcrumb={crumbs} actions={actions} />
-      <Ribbon>
+    <PageFrame
+      type={type}
+      breadcrumb={crumbs}
+      actions={actions}
+      secondary={
         <RibbonNav
           label="Course"
           links={[
@@ -51,8 +59,9 @@ export function CourseFrame({
             { label: "Settings", href: courseRoutes.settings(course.id) },
           ]}
         />
-      </Ribbon>
+      }
+    >
       {children}
-    </>
+    </PageFrame>
   );
 }

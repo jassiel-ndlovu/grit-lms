@@ -12,6 +12,8 @@
  */
 
 import { hasService } from "@/features/billing/services";
+import { PageMessage } from "@/components/shell/page-frame";
+import { courseRoutes } from "@/features/courses/components/course-frame";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
 import { LessonsWorkspace } from "@/features/lessons/components/lessons-workspace";
 import { getLessonDetailById, listLessonsByCourseId } from "@/features/lessons/queries";
@@ -28,7 +30,7 @@ export default async function ManageLessonsPage({ params, searchParams }: PagePr
   const [{ id: courseId }, { lesson: selectedLessonParam }] = await Promise.all([params, searchParams]);
 
   const [loaded, lessons] = await Promise.all([loadTutorCourse(courseId), listLessonsByCourseId(courseId)]);
-  if (!loaded.ok) return <div className="text-muted-foreground p-8 text-sm">{loaded.message}</div>;
+  if (!loaded.ok) return <PageMessage breadcrumb={[{ label: "Courses", href: courseRoutes.list }, { label: "Lessons" }]}>{loaded.message}</PageMessage>;
   const { course } = loaded;
 
   const selectedLessonId =

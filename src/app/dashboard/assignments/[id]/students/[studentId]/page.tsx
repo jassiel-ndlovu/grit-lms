@@ -14,7 +14,9 @@
  * return there.
  */
 
-import Link from "next/link";
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { StatusChip } from "@/components/shell/status-chip";
+import { PropertyList, PropertyRow } from "@/components/ui/property-list";
 import { notFound, redirect } from "next/navigation";
 import { CalendarDays, Download, Eye, FileText, Mail } from "lucide-react";
 
@@ -73,9 +75,9 @@ export default async function StudentGradingPage({ params }: PageProps) {
   const owns = await submissionBelongsToTutor(submissionId, scope);
   if (!owns) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Entry" }]}>
         You don&apos;t own this assignment.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -86,19 +88,22 @@ export default async function StudentGradingPage({ params }: PageProps) {
   if (!submission) notFound();
   if (!entry) {
     return (
-      <div className="mx-auto max-w-4xl space-y-4 px-4 sm:px-6 py-6 sm:py-10">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={assignmentRoutes.detail(submissionId)}>
-            ← Back to assignment
-          </Link>
-        </Button>
+      <PageFrame
+        type="record"
+        breadcrumb={[
+          { label: "Assignments", href: assignmentRoutes.index },
+          { label: submission.title, href: assignmentRoutes.detail(submissionId) },
+          { label: "Entry" },
+        ]}
+      >
+        <PageTitle eyebrow={submission.course.name} title={submission.title} />
         <Card className="p-8 text-center">
           <FileText className="text-muted-foreground mx-auto size-8" />
           <p className="mt-3 text-sm text-muted-foreground">
             This student hasn&apos;t submitted this assignment yet.
           </p>
         </Card>
-      </div>
+      </PageFrame>
     );
   }
 
@@ -126,55 +131,26 @@ export default async function StudentGradingPage({ params }: PageProps) {
   const defaultFeedback = grade?.finalComments ?? entry.feedback ?? "";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 py-6 sm:py-10">
-      <div className="flex items-center justify-between gap-3">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={assignmentRoutes.detail(submissionId)}>
-            ← Back to assignment
-          </Link>
-        </Button>
-        <DeleteEntryButton
-          entryId={entry.id}
-          submissionId={submissionId}
-          studentName={entry.student.fullName}
-        />
-      </div>
-
-      <header className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-primary-foreground/70 text-xs">
-              {submission.course.name}
-            </p>
-            <h1 className="font-display mt-1 text-2xl leading-tight tracking-tight">
-              {submission.title}
-            </h1>
-            <p className="text-primary-foreground/80 mt-2 text-sm">
-              Grading <span className="font-medium">{entry.student.fullName}</span>
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div>
-              <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                Due
-              </p>
-              <p>{dateFmt.format(submission.dueDate)}</p>
-            </div>
-            <div>
-              <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                Points
-              </p>
-              <p>{submission.totalPoints}</p>
-            </div>
-            <div>
-              <p className="text-primary-foreground/60 text-xs uppercase tracking-wide">
-                Status
-              </p>
-              <p>{entry.status.replace("_", " ")}</p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <PageFrame
+      type="record"
+      breadcrumb={[
+        { label: "Assignments", href: assignmentRoutes.index },
+        { label: submission.title, href: assignmentRoutes.detail(submissionId) },
+        { label: entry.student.fullName },
+      ]}
+      status={<StatusChip tone={entry.status === "GRADED" ? "success" : "info"}>{entry.status.replace("_", " ")}</StatusChip>}
+      actions={<DeleteEntryButton entryId={entry.id} submissionId={submissionId} studentName={entry.student.fullName} />}
+    >
+      <PageTitle
+        eyebrow={`${submission.course.name} · ${submission.title}`}
+        title={entry.student.fullName}
+        properties={
+          <PropertyList>
+            <PropertyRow label="Due">{dateFmt.format(submission.dueDate)}</PropertyRow>
+            <PropertyRow label="Points">{submission.totalPoints}</PropertyRow>
+          </PropertyList>
+        }
+      />
 
       <section className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -326,6 +302,6 @@ export default async function StudentGradingPage({ params }: PageProps) {
           </Card>
         </aside>
       </section>
-    </div>
+    </PageFrame>
   );
 }

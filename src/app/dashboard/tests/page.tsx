@@ -26,6 +26,7 @@ import {
 } from "@/features/assessments/lib/filters";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import HeaderTests from "@/components/illustrations/generated/header-tests";
+import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 
 export const metadata = { title: "Tests & Quizzes" };
 
@@ -48,9 +49,9 @@ export default async function StudentTestsPage() {
   });
   if (!student) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests" }]}>
         No student profile found for this account.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -125,26 +126,13 @@ export default async function StudentTestsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-10">
-      <section className="border-b-2 border-brand-terracotta bg-primary text-primary-foreground overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-6 p-5 sm:p-8 md:flex-row md:items-center md:justify-between">
-          <div className="max-w-xl">
-            <p className="text-primary-foreground/70 text-sm">
-              Assessments
-            </p>
-            <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight tracking-tight">
-              Tests &amp; quizzes
-            </h1>
-            <p className="text-primary-foreground/70 mt-3 text-sm">
-              Active assessments across your courses, sorted by what needs
-              your attention first.
-            </p>
-          </div>
-          <div className="illustration-paper hidden h-40 w-56 shrink-0 items-end justify-center md:flex">
-            <HeaderTests className="h-full w-auto" />
-          </div>
-        </div>
-      </section>
+    <PageFrame type="list" breadcrumb={[{ label: "Tests" }]}>
+      <PageTitle
+        eyebrow="Assessments"
+        title="Tests & quizzes"
+        description="Active assessments across your courses, sorted by what needs your attention first."
+        illustration={<HeaderTests />}
+      />
 
       <TestsTabs
         counts={counts}
@@ -156,6 +144,6 @@ export default async function StudentTestsPage() {
           graded: renderBucket("graded"),
         }}
       />
-    </div>
+    </PageFrame>
   );
 }

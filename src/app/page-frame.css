@@ -9,6 +9,7 @@
                (lists, records, dashboards), Full (editors, boards, tables).
      Padding   16 px on phones, 24 px from 640 px, 32 px from 1024 px.
      Top       24 / 32 / 40 px above the title, on the same breakpoints.
+     Bottom    48 px below the last section (64 px from 1024 px).
      Sections  32 px between the title and each section.
      Headers   primary 48 px (sticky), secondary 40 px (sticky under it),
                runner 28 px. `--shell-top` is the shell's own top bar above
@@ -21,6 +22,7 @@
   --frame-standard: 1120px;
   --frame-pad: 16px;
   --frame-pad-top: 24px;
+  --frame-pad-bottom: 48px;
   --frame-gap: 32px;
 
   --header-primary: 48px;
@@ -40,6 +42,7 @@
   :root {
     --frame-pad: 32px;
     --frame-pad-top: 40px;
+    --frame-pad-bottom: 64px;
     --shell-top: 0px;
   }
 }

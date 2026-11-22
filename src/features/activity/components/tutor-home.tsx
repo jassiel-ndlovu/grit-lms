@@ -9,7 +9,7 @@
 
 import Link from "next/link";
 
-import { PageHeader } from "@/components/shell/page-header";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { StatusChip, type StatusTone } from "@/components/shell/status-chip";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
@@ -91,157 +91,151 @@ export function TutorHome({
   const today = formatDate(now, dateCtx, { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <>
-      <PageHeader
-        breadcrumb={[{ label: "Home" }]}
-        actions={
-          <NewMenu
-            items={[
-              { label: "Course", href: "/dashboard/manage-courses", icon: "course" },
-              { label: "Test", href: "/dashboard/tutor-tests/new", icon: "test" },
-              { label: "Assignment", href: assignmentRoutes.new, icon: "assignment" },
-              { label: "Event", href: "/dashboard/calendar", icon: "event" },
-            ]}
-          />
-        }
+    <PageFrame
+      type="home"
+      breadcrumb={[{ label: "Home" }]}
+      actions={
+        <NewMenu
+          items={[
+            { label: "Course", href: "/dashboard/manage-courses", icon: "course" },
+            { label: "Test", href: "/dashboard/tutor-tests/new", icon: "test" },
+            { label: "Assignment", href: assignmentRoutes.new, icon: "assignment" },
+            { label: "Event", href: "/dashboard/calendar", icon: "event" },
+          ]}
+        />
+      }
+    >
+      <PageTitle
+        eyebrow={today}
+        title={`${greetingFor(now, dateCtx.timeZone)}, ${firstName}`}
+        description={summary(data.stats)}
       />
 
-      <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
-        <header>
-          <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">
-            {greetingFor(now, dateCtx.timeZone)}, {firstName}
-          </h1>
-          <p className="text-muted-foreground mt-1.5 text-sm">
-            {today} · {summary(data.stats)}
-          </p>
-        </header>
+      {setup}
 
-        {setup}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
+        <section aria-labelledby="attention-heading" className="min-w-0 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="attention-heading" className="text-foreground text-base font-semibold">
+              Needs your attention
+            </h2>
+            <nav aria-label="Filter" className="flex flex-wrap gap-1">
+              {FILTERS.map((f) => (
+                <Link
+                  key={f.value}
+                  href={f.value === "all" ? "/dashboard" : `/dashboard?show=${f.value}`}
+                  aria-current={filter === f.value ? "true" : undefined}
+                  scroll={false}
+                  className={cn(
+                    "h-7 rounded-md px-2.5 text-xs leading-7 font-medium transition-colors",
+                    filter === f.value
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  )}
+                >
+                  {f.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
-          <section aria-labelledby="attention-heading" className="min-w-0 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="attention-heading" className="text-foreground text-base font-semibold">
-                Needs your attention
-              </h2>
-              <nav aria-label="Filter" className="flex flex-wrap gap-1">
-                {FILTERS.map((f) => (
-                  <Link
-                    key={f.value}
-                    href={f.value === "all" ? "/dashboard" : `/dashboard?show=${f.value}`}
-                    aria-current={filter === f.value ? "true" : undefined}
-                    scroll={false}
-                    className={cn(
-                      "h-7 rounded-md px-2.5 text-xs leading-7 font-medium transition-colors",
-                      filter === f.value
-                        ? "bg-muted text-foreground"
-                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                    )}
-                  >
-                    {f.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-
-            <Card className="overflow-hidden p-0">
-              {rows.length === 0 ? (
-                <EmptyState
-                  compact
-                  illustration={<Scene name="nothing-to-grade" />}
-                  title={filter === "all" ? "You're all caught up" : `Nothing ${FILTERS.find((f) => f.value === filter)?.label.toLowerCase()}`}
-                  description="Hand-ins to mark, work due this week and drafts show up here."
-                />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-border text-muted-foreground border-b text-left text-xs">
-                        <th scope="col" className="h-9 px-4 font-medium">Item</th>
-                        <th scope="col" className="hidden h-9 px-4 font-medium sm:table-cell">Course</th>
-                        <th scope="col" className="h-9 px-4 font-medium">Status</th>
-                        <th scope="col" className="h-9 px-4 text-right font-medium">Due</th>
+          <Card className="overflow-hidden p-0">
+            {rows.length === 0 ? (
+              <EmptyState
+                compact
+                illustration={<Scene name="nothing-to-grade" />}
+                title={filter === "all" ? "You're all caught up" : `Nothing ${FILTERS.find((f) => f.value === filter)?.label.toLowerCase()}`}
+                description="Hand-ins to mark, work due this week and drafts show up here."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-border text-muted-foreground border-b text-left text-xs">
+                      <th scope="col" className="h-9 px-4 font-medium">Item</th>
+                      <th scope="col" className="hidden h-9 px-4 font-medium sm:table-cell">Course</th>
+                      <th scope="col" className="h-9 px-4 font-medium">Status</th>
+                      <th scope="col" className="h-9 px-4 text-right font-medium">Due</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={`${r.kind}-${r.id}`} className="border-border hover:bg-muted/40 border-b last:border-0">
+                        <td className="px-4 py-2.5">
+                          <Link href={rowHref(r)} className="text-foreground font-medium hover:underline">
+                            {r.title}
+                          </Link>
+                          <p className="text-muted-foreground text-xs">
+                            {rowDetail(r)}
+                            <span className="sm:hidden"> · {r.course}</span>
+                          </p>
+                        </td>
+                        <td className="text-muted-foreground hidden max-w-40 truncate px-4 py-2.5 sm:table-cell">{r.course}</td>
+                        <td className="px-4 py-2.5">
+                          <StatusChip tone={CHIP[r.bucket].tone} className="whitespace-nowrap">{CHIP[r.bucket].label}</StatusChip>
+                        </td>
+                        <td className="text-muted-foreground px-4 py-2.5 text-right whitespace-nowrap tabular-nums">
+                          {dueLabel(r.dueDate, now, dateCtx)}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((r) => (
-                        <tr key={`${r.kind}-${r.id}`} className="border-border hover:bg-muted/40 border-b last:border-0">
-                          <td className="px-4 py-2.5">
-                            <Link href={rowHref(r)} className="text-foreground font-medium hover:underline">
-                              {r.title}
-                            </Link>
-                            <p className="text-muted-foreground text-xs">
-                              {rowDetail(r)}
-                              <span className="sm:hidden"> · {r.course}</span>
-                            </p>
-                          </td>
-                          <td className="text-muted-foreground hidden max-w-40 truncate px-4 py-2.5 sm:table-cell">{r.course}</td>
-                          <td className="px-4 py-2.5">
-                            <StatusChip tone={CHIP[r.bucket].tone} className="whitespace-nowrap">{CHIP[r.bucket].label}</StatusChip>
-                          </td>
-                          <td className="text-muted-foreground px-4 py-2.5 text-right whitespace-nowrap tabular-nums">
-                            {dueLabel(r.dueDate, now, dateCtx)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </section>
+
+        <aside className="space-y-8">
+          <section aria-labelledby="week-heading" className="space-y-2">
+            <h2 id="week-heading" className="text-foreground text-base font-semibold">
+              This week
+            </h2>
+            <dl className="divide-border divide-y text-sm">
+              {[
+                ["Courses", data.stats.courses],
+                ["Students", data.stats.students],
+                ["To mark", data.stats.toMark],
+                ["Due in 7 days", data.stats.dueThisWeek],
+              ].map(([label, value]) => (
+                <div key={label} className="flex h-9 items-center justify-between">
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="text-foreground font-mono tabular-nums">{value}</dd>
                 </div>
-              )}
-            </Card>
+              ))}
+            </dl>
           </section>
 
-          <aside className="space-y-8">
-            <section aria-labelledby="week-heading" className="space-y-2">
-              <h2 id="week-heading" className="text-foreground text-base font-semibold">
-                This week
+          <section aria-labelledby="next-heading" className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <h2 id="next-heading" className="text-foreground text-base font-semibold">
+                Coming up
               </h2>
-              <dl className="divide-border divide-y text-sm">
-                {[
-                  ["Courses", data.stats.courses],
-                  ["Students", data.stats.students],
-                  ["To mark", data.stats.toMark],
-                  ["Due in 7 days", data.stats.dueThisWeek],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex h-9 items-center justify-between">
-                    <dt className="text-muted-foreground">{label}</dt>
-                    <dd className="text-foreground font-mono tabular-nums">{value}</dd>
-                  </div>
+              <Link href="/dashboard/calendar" className="text-muted-foreground hover:text-foreground text-xs hover:underline">
+                Calendar
+              </Link>
+            </div>
+            {data.upcoming.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No sessions in the next 7 days.</p>
+            ) : (
+              <ul className="space-y-2.5 text-sm">
+                {data.upcoming.map((e) => (
+                  <li key={e.id} className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-foreground truncate">{e.title}</p>
+                      <p className="text-muted-foreground truncate text-xs">{e.course}</p>
+                    </div>
+                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                      {dueLabel(e.date, now, dateCtx)},{" "}
+                      {formatDate(e.date, dateCtx, { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </li>
                 ))}
-              </dl>
-            </section>
-
-            <section aria-labelledby="next-heading" className="space-y-2">
-              <div className="flex items-baseline justify-between">
-                <h2 id="next-heading" className="text-foreground text-base font-semibold">
-                  Coming up
-                </h2>
-                <Link href="/dashboard/calendar" className="text-muted-foreground hover:text-foreground text-xs hover:underline">
-                  Calendar
-                </Link>
-              </div>
-              {data.upcoming.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No sessions in the next 7 days.</p>
-              ) : (
-                <ul className="space-y-2.5 text-sm">
-                  {data.upcoming.map((e) => (
-                    <li key={e.id} className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-foreground truncate">{e.title}</p>
-                        <p className="text-muted-foreground truncate text-xs">{e.course}</p>
-                      </div>
-                      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                        {dueLabel(e.date, now, dateCtx)},{" "}
-                        {formatDate(e.date, dateCtx, { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </aside>
-        </div>
+              </ul>
+            )}
+          </section>
+        </aside>
       </div>
-    </>
+    </PageFrame>
   );
 }

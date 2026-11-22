@@ -20,7 +20,8 @@ import {
 import { TestForm } from "@/features/assessments/components/test-form";
 import { loadTestFingerprint } from "@/features/assessments/lib/test-fingerprint";
 import { ExportTestButton } from "@/features/assessments/components/export-test-button";
-import { TestFrame } from "@/features/assessments/components/test-frame";
+import { PageMessage } from "@/components/shell/page-frame";
+import { TestFrame, testRoutes } from "@/features/assessments/components/test-frame";
 import type {
   EditorQuestion,
   EditorQuestionType,
@@ -91,9 +92,9 @@ export default async function EditTestPage({ params }: PageProps) {
   const owns = await testBelongsToTutor(testId, scope);
   if (!owns) {
     return (
-      <div className="text-muted-foreground p-8 text-sm">
+      <PageMessage breadcrumb={[{ label: "Tests", href: testRoutes.list }, { label: "Test" }]}>
         You don&apos;t own this test.
-      </div>
+      </PageMessage>
     );
   }
 
@@ -114,40 +115,38 @@ export default async function EditTestPage({ params }: PageProps) {
   const editorQuestions = buildEditorTree(test.questions);
 
   return (
-    <TestFrame test={test} page="Questions" actions={<ExportTestButton testId={test.id} />}>
+    <TestFrame test={test} page="Questions" type="editor" actions={<ExportTestButton testId={test.id} />}>
       {/* "Preview as student" lives in the form's save bar: it saves
           first, so the preview always shows the latest edits. */}
-      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
-        <h1 className="sr-only">Edit {test.title}</h1>
-        <TestForm
-          extraSettings={
-            <AiMarkingSwitch
-              testId={test.id}
-              initialOn={test.aiMarking}
-              available={aiAvailable}
-              servicesHref={isBillingEnabled() ? courseRoutes.services(test.courseId) : null}
-            />
-          }
-          courses={courses.map((c) => ({ id: c.id, name: c.name }))}
-          defaultValues={{
-            id: test.id,
-            title: test.title,
-            description: test.description,
-            courseId: test.courseId,
-            dueDate: test.dueDate,
-            timeLimit: test.timeLimit,
-            totalPoints: test.totalPoints,
-            isActive: test.isActive,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            releaseAutoMarksToStudent: (test as any).releaseAutoMarksToStudent ?? false,
-            preTestInstructions: test.preTestInstructions,
-            memoFileUrls: test.memoFileUrls,
-            labelScheme: test.labelScheme,
-            questions: editorQuestions,
-            baseFingerprint: baseFingerprint ?? undefined,
-          }}
-        />
-      </div>
+      <h1 className="sr-only">Edit {test.title}</h1>
+      <TestForm
+        extraSettings={
+          <AiMarkingSwitch
+            testId={test.id}
+            initialOn={test.aiMarking}
+            available={aiAvailable}
+            servicesHref={isBillingEnabled() ? courseRoutes.services(test.courseId) : null}
+          />
+        }
+        courses={courses.map((c) => ({ id: c.id, name: c.name }))}
+        defaultValues={{
+          id: test.id,
+          title: test.title,
+          description: test.description,
+          courseId: test.courseId,
+          dueDate: test.dueDate,
+          timeLimit: test.timeLimit,
+          totalPoints: test.totalPoints,
+          isActive: test.isActive,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          releaseAutoMarksToStudent: (test as any).releaseAutoMarksToStudent ?? false,
+          preTestInstructions: test.preTestInstructions,
+          memoFileUrls: test.memoFileUrls,
+          labelScheme: test.labelScheme,
+          questions: editorQuestions,
+          baseFingerprint: baseFingerprint ?? undefined,
+        }}
+      />
     </TestFrame>
   );
 }

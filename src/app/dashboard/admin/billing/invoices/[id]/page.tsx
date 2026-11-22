@@ -36,6 +36,7 @@ export default async function AdminInvoicePage({ params }: PageProps) {
         { label: invoice.number },
       ]}
       title={invoice.number}
+      type="record"
     >
       <AdminInvoiceDetail invoice={invoice} workspaceName={ws.name} ctx={ctx} canOverride={canOverride} />
     </AdminBillingFrame>

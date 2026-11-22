@@ -1,16 +1,19 @@
 /**
- * The frame of a tutor's test pages, like CourseFrame for courses: one
- * PageHeader (Tests › course › test, the Published or Draft chip) and a
- * ribbon with the test's views. Questions, Submissions and Preview are
+ * The frame of a tutor's test pages, like CourseFrame for courses: a
+ * PageFrame (#205) with Tests › course › test and the Published or Draft
+ * chip in the header and the test's views in the ribbon. The designer is
+ * an editor (Full width), the rest records. Questions, Submissions and Preview are
  * separate routes, so each view keeps its own URL.
  *
  * Server component; RibbonNav (client) lights the current view.
  */
 
-import { PageHeader, type Crumb } from "@/components/shell/page-header";
-import { Ribbon, RibbonNav } from "@/components/shell/ribbon";
+import { PageFrame } from "@/components/shell/page-frame";
+import type { Crumb } from "@/components/shell/page-header";
+import { RibbonNav } from "@/components/shell/ribbon";
 import { StatusChip } from "@/components/shell/status-chip";
 import { courseRoutes } from "@/features/courses/components/course-frame";
+import type { PageType } from "@/lib/ui-layout";
 
 export const testRoutes = {
   list: "/dashboard/tutor-tests",
@@ -28,6 +31,7 @@ export function TestFrame({
   page,
   view,
   actions,
+  type = "record",
   children,
 }: {
   test: { id: string; title: string; isActive: boolean | null; courseId: string; course: { name: string } };
@@ -36,6 +40,7 @@ export function TestFrame({
   /** Set for a page inside a view: adds that view's crumb and lights its tab. */
   view?: TestView;
   actions?: React.ReactNode;
+  type?: PageType;
   children: React.ReactNode;
 }) {
   const crumbs: Crumb[] = [
@@ -47,13 +52,12 @@ export function TestFrame({
   crumbs.push({ label: page });
 
   return (
-    <>
-      <PageHeader
-        breadcrumb={crumbs}
-        status={<StatusChip tone={test.isActive ? "success" : "neutral"}>{test.isActive ? "Published" : "Draft"}</StatusChip>}
-        actions={actions}
-      />
-      <Ribbon>
+    <PageFrame
+      type={type}
+      breadcrumb={crumbs}
+      status={<StatusChip tone={test.isActive ? "success" : "neutral"}>{test.isActive ? "Published" : "Draft"}</StatusChip>}
+      actions={actions}
+      secondary={
         <RibbonNav
           label="Test"
           current={view ? testRoutes[view](test.id) : undefined}
@@ -63,8 +67,9 @@ export function TestFrame({
             { label: "Preview", href: testRoutes.preview(test.id) },
           ]}
         />
-      </Ribbon>
+      }
+    >
       {children}
-    </>
+    </PageFrame>
   );
 }
