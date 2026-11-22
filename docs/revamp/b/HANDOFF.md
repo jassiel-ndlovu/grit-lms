@@ -3,6 +3,40 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 Join requests, `revamp/b-join-requests`
+
+Done:
+- **Find courses (#206):** `/dashboard/courses/browse` (framed). Listed
+  courses from `listListedCourses`, with search (`?q=`) and "More courses"
+  (`?cursor=`). A student asks for themself, a parent for each linked
+  child (`requestToJoin`, with an optional message). The card says
+  "Request sent" once everyone has asked. "Your requests" lists
+  `listMyJoinRequests` with Cancel while waiting.
+- **Staff inbox:** `/dashboard/join-requests` (framed, `learners.invite`).
+  `listJoinRequestsForStaff`, scoped by `needsScope`, with Waiting,
+  Approved, Declined and Cancelled tabs. Approve asks whether the student
+  is under 18. A minor who asked alone needs the consent box ticked
+  (`needsConsent`); a trial student-limit error links to Billing. Decline
+  takes an optional reason. Both are `WriteGuard`ed.
+- **Listing switch:** course settings for workspace courses
+  (`setCourseListed`), with "N requests waiting".
+- **Nav:** Find courses for learners and guardians; Join requests under
+  People for staff. navigation.md and `check-shell-nav.ts` updated.
+  `/dashboard/browse-courses`, which listed every course on the platform,
+  now redirects to Find courses.
+- **Checks:** `scripts/check-join-requests.ts`. Sample screens:
+  `/design-system/join`.
+- **Testing:** `testing/preview-recheck-2026-11-22.md` lists the Preview
+  rechecks for PR 207 and this batch, none run yet.
+
+Next:
+- Run the Preview rechecks.
+- #205 steps 2 to 4.
+
+Blocked on the other agent: none.
+
+Questions for the owner: none.
+
 ## 2026-11-22 Page frame step 1 and the 21 Nov decision screens, `revamp/b-frame-and-decisions`
 
 Done:
