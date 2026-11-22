@@ -17,7 +17,8 @@ import { cache } from "react";
 import type { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
-import { enrolledStudent, ownerTutor, taughtByUser } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, ownerTutor } from "@/features/courses/lib/tenancy-where";
+import { manageableBy, type CourseScope } from "@/features/courses/lib/course-access";
 
 const submissionListInclude = {
   course: { select: { id: true, name: true } },
@@ -35,9 +36,9 @@ export type SubmissionListItem = Awaited<
 /**
  * Assignments owned by a tutor (across all their courses).
  */
-export const listSubmissionsByTutorId = cache(async (teacherUserId: string) => {
+export const listSubmissionsByTutorId = cache(async (scope: CourseScope) => {
   return prisma.submission.findMany({
-    where: { course: taughtByUser(teacherUserId) },
+    where: { course: manageableBy(scope) },
     orderBy: [{ dueDate: "desc" }, { createdAt: "desc" }],
     include: submissionListInclude,
   });
@@ -155,8 +156,8 @@ export const listEntriesForStudentInCourse = cache(
 /* ------------------------------------------------------------------------- */
 
 export const submissionBelongsToTutor = cache(
-  async (submissionId: string, teacherUserId: string) => {
-    const n = await prisma.submission.count({ where: { id: submissionId, course: taughtByUser(teacherUserId) } });
+  async (submissionId: string, scope: CourseScope) => {
+    const n = await prisma.submission.count({ where: { id: submissionId, course: manageableBy(scope) } });
     return n > 0;
   },
 );

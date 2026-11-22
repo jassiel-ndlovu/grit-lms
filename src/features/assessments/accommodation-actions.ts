@@ -17,6 +17,8 @@ import { tutorActionClient } from "@/lib/safe-action";
 
 import { CuidSchema } from "../shared/primitives";
 import { EXTRA_TIME_CHOICES, choiceToExtraTime } from "./lib/extra-time";
+import { getCourseScope } from "@/features/courses/course-access";
+import { managesCourse } from "@/features/courses/lib/course-access";
 
 const SetExtraTimeSchema = z.object({
   courseId: CuidSchema,
@@ -32,12 +34,13 @@ export const setExtraTime = tutorActionClient
       where: { id: courseId },
       select: {
         id: true,
+        workspaceId: true,
         staff: staffFor(ctx.session.user.email),
         enrollments: enrollmentFor(studentId),
       },
     });
     if (!course) throw new Error("Course not found");
-    if (course.staff.length === 0) throw new Error("You don't teach this course");
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) throw new Error("You don't teach this course");
     if (course.enrollments.length === 0) throw new Error("That student isn't enrolled on this course");
 
     const value = choiceToExtraTime(choice);

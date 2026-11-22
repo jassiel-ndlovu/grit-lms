@@ -48,7 +48,7 @@ import {
 import { CreateEventButton } from "@/features/events/components/create-event-button";
 import { occurrencesOf } from "@/features/events/lib/recurrence";
 import { assignmentRoutes } from "@/features/assignments/routes";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 /**
  * How far ahead the calendar materialises repeating events. The grid only
@@ -193,12 +193,12 @@ export default async function SchedulePage({ searchParams }: PageProps) {
       })),
     ];
   } else if (session.user.role === "TUTOR") {
-    const tutor = teacherFrom(session.user);
+    const scope = await getCourseScope(session.user.id);
 
-    const courses = await listCoursesByTutorId(tutor.id);
+    const courses = await listCoursesByTutorId(scope);
     tutorCourses = courses.map((c) => ({ id: c.id, name: c.name }));
 
-    const events = await listUpcomingEventsForTutor(tutor.id);
+    const events = await listUpcomingEventsForTutor(scope);
 
     // For tutors, also surface tests + assignments they own. Fan out per
     // course so we reuse the existing per-course queries.

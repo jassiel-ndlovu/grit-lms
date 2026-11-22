@@ -22,7 +22,8 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
-import { enrolledStudent, openEnrollmentCount, ownerTutor, taughtByUser } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, openEnrollmentCount, ownerTutor } from "@/features/courses/lib/tenancy-where";
+import { manageableBy, type CourseScope } from "@/features/courses/lib/course-access";
 
 /* ------------------------------------------------------------------------- */
 /* List queries                                                              */
@@ -60,9 +61,9 @@ export const listAllCourses = cache(async () => {
 /**
  * Courses owned by a tutor — used by /dashboard/manage-courses.
  */
-export const listCoursesByTutorId = cache(async (teacherUserId: string) => {
+export const listCoursesByTutorId = cache(async (scope: CourseScope) => {
   return prisma.course.findMany({
-    where: taughtByUser(teacherUserId),
+    where: manageableBy(scope),
     orderBy: { createdAt: "desc" },
     include: listInclude,
   });
@@ -138,14 +139,3 @@ export const getCourseDetailById = cache(async (id: string) => {
     .sort((a, b) => (a.fullName ?? "").localeCompare(b.fullName ?? ""));
   return { ...rest, students };
 });
-
-/**
- * Lightweight ownership check — does a tutor own this course?
- * Used by the update/delete actions before mutating.
- */
-export const courseBelongsToTutor = cache(
-  async (courseId: string, teacherUserId: string) => {
-    const n = await prisma.course.count({ where: { id: courseId, ...taughtByUser(teacherUserId) } });
-    return n > 0;
-  },
-);

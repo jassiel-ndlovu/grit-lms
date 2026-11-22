@@ -16,8 +16,8 @@ import { prisma } from "@/lib/db";
 import { tutorActionClient } from "@/lib/safe-action";
 
 import { CuidSchema } from "../shared/primitives";
-import { courseBelongsToTutor, parseAssessmentKey } from "./gradebook";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { parseAssessmentKey } from "./gradebook";
+import { canManageCourse, getCourseScope } from "@/features/courses/course-access";
 
 export const SetAssessmentWeightsSchema = z.object({
   courseId: CuidSchema,
@@ -36,9 +36,8 @@ export const SetAssessmentWeightsSchema = z.object({
 export const setAssessmentWeights = tutorActionClient
   .schema(SetAssessmentWeightsSchema)
   .action(async ({ parsedInput, ctx }) => {
-    const tutor = teacherFrom(ctx.session.user);
-
-    const owns = await courseBelongsToTutor(parsedInput.courseId, tutor.id);
+    const scope = await getCourseScope(ctx.session.user.id);
+    const owns = await canManageCourse(parsedInput.courseId, scope);
     if (!owns) throw new Error("You don't own this course");
 
     const tests: Array<{ id: string; weight: number | null }> = [];

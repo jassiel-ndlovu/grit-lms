@@ -18,7 +18,7 @@ import { listCoursesByTutorId } from "@/features/courses/queries";
 import { getSubmissionDetailById, submissionBelongsToTutor } from "@/features/assignments/queries";
 import { getViewer } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 /** `id` edits that assignment; without one, a new assignment. */
 export async function AssignmentEditorPage({ id }: { id?: string }) {
@@ -26,13 +26,13 @@ export async function AssignmentEditorPage({ id }: { id?: string }) {
   if (!viewer) redirect("/");
   if (!can(viewer, "courses.edit")) redirect("/dashboard");
 
-  const tutor = teacherFrom(viewer.user);
+  const scope = await getCourseScope(viewer.user.id);
 
   const [courses, submission] = await Promise.all([
-    listCoursesByTutorId(tutor.id),
+    listCoursesByTutorId(scope),
     id ? getSubmissionDetailById(id) : Promise.resolve(null),
   ]);
-  if (id && (!submission || !(await submissionBelongsToTutor(id, tutor.id)))) notFound();
+  if (id && (!submission || !(await submissionBelongsToTutor(id, scope)))) notFound();
 
   const initial: AssignmentFormValues | null = submission
     ? {

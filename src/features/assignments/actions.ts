@@ -44,6 +44,8 @@ import {
   stringifySectionFeedback,
 } from "./lib/sections";
 import { assignmentRoutes } from "./routes";
+import { getCourseScope } from "@/features/courses/course-access";
+import { managesCourse } from "@/features/courses/lib/course-access";
 
 /* ------------------------------------------------------------------------- */
 /* createSubmission                                                          */
@@ -54,10 +56,10 @@ export const createSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, staff: staffFor(ctx.session.user.email) },
+      select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
-    if (course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
       throw new Error("You don't own this course");
     }
 
@@ -116,10 +118,10 @@ export const updateSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.submission.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Assignment not found");
-    if (existing.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
       throw new Error("You don't own this assignment");
     }
 
@@ -189,10 +191,10 @@ export const deleteSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.submission.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Assignment not found");
-    if (existing.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
       throw new Error("You don't own this assignment");
     }
 
@@ -238,11 +240,11 @@ export const deleteEntry = tutorActionClient
       select: {
         id: true,
         studentId: true,
-        submission: { select: { id: true, course: { select: { id: true, staff: staffFor(ctx.session.user.email) } } } },
+        submission: { select: { id: true, course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } } },
       },
     });
     if (!entry) throw new Error("Hand-in not found");
-    if (entry.submission.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), entry.submission.course)) {
       throw new Error("You don't own this assignment");
     }
 
@@ -375,13 +377,13 @@ export const gradeEntry = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { staff: staffFor(ctx.session.user.email) } },
+            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!entry) throw new Error("Entry not found");
-    if (entry.submission.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), entry.submission.course)) {
       throw new Error("You don't own this assignment");
     }
 
@@ -463,13 +465,13 @@ export const gradeEntryWithSections = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { staff: staffFor(ctx.session.user.email) } },
+            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
           },
         },
       },
     });
     if (!entry) throw new Error("Entry not found");
-    if (entry.submission.course.staff.length === 0) {
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), entry.submission.course)) {
       throw new Error("You don't own this assignment");
     }
 

@@ -10,7 +10,8 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/db";
-import { enrolledStudent, ownerTutor, taughtByUser } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, ownerTutor } from "@/features/courses/lib/tenancy-where";
+import { manageableBy, type CourseScope } from "@/features/courses/lib/course-access";
 
 /**
  * A repeating event's `date` column holds only the FIRST occurrence, so a
@@ -76,11 +77,11 @@ export const listUpcomingEventsForStudent = cache(async (studentId: string) => {
 });
 
 /** All events across every course owned by a tutor. */
-export const listUpcomingEventsForTutor = cache(async (teacherUserId: string) => {
+export const listUpcomingEventsForTutor = cache(async (scope: CourseScope) => {
   return prisma.courseEvent.findMany({
     where: {
       ...upcomingOrRecurring(new Date()),
-      course: taughtByUser(teacherUserId),
+      course: manageableBy(scope),
     },
     orderBy: { date: "asc" },
     include: {
@@ -97,8 +98,8 @@ export const listUpcomingEventsForTutor = cache(async (teacherUserId: string) =>
 
 /** Ownership: does the event live under a course owned by this tutor? */
 export const eventBelongsToTutor = cache(
-  async (eventId: string, teacherUserId: string) => {
-    const n = await prisma.courseEvent.count({ where: { id: eventId, course: taughtByUser(teacherUserId) } });
+  async (eventId: string, scope: CourseScope) => {
+    const n = await prisma.courseEvent.count({ where: { id: eventId, course: manageableBy(scope) } });
     return n > 0;
   },
 );

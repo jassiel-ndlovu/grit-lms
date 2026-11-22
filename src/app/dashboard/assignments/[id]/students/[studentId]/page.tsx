@@ -37,7 +37,7 @@ import { EntryGradingForm } from "@/features/assignments/components/entry-gradin
 import { MemoFilesEditor } from "@/features/assignments/components/memo-files-editor";
 import { DeleteEntryButton } from "@/features/assignments/components/delete-entry-button";
 import { assignmentRoutes } from "@/features/assignments/routes";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 interface PageProps {
   params: Promise<{ id: string; studentId: string }>;
@@ -68,9 +68,9 @@ export default async function StudentGradingPage({ params }: PageProps) {
   if (!session?.user) redirect("/auth");
   if (session.user.role !== "TUTOR") redirect("/dashboard");
 
-  const tutor = teacherFrom(session.user);
+  const scope = await getCourseScope(session.user.id);
 
-  const owns = await submissionBelongsToTutor(submissionId, tutor.id);
+  const owns = await submissionBelongsToTutor(submissionId, scope);
   if (!owns) {
     return (
       <div className="text-muted-foreground p-8 text-sm">

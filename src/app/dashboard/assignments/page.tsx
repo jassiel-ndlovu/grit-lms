@@ -36,7 +36,7 @@ import {
 } from "@/features/assessments/lib/filters";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
-import { teacherFrom } from "@/features/courses/lib/teacher";
+import { getCourseScope } from "@/features/courses/course-access";
 
 export const metadata = { title: "Assignments" };
 
@@ -170,9 +170,9 @@ export default async function SubmissionsIndexPage() {
   }
 
   if (session.user.role === "TUTOR") {
-    const tutor = teacherFrom(session.user);
+    const scope = await getCourseScope(session.user.id);
 
-    const subs = await listSubmissionsByTutorId(tutor.id);
+    const subs = await listSubmissionsByTutorId(scope);
 
     // Sort active-first, newest due first — mirrors the tutor tests table.
     const rows = [...subs].sort((a, b) => {
