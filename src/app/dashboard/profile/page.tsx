@@ -23,6 +23,7 @@ import { ProfileForm } from "@/features/users/components/profile-form";
 import { PasswordForm } from "@/features/users/components/password-form";
 import HeaderProfile from "@/components/illustrations/generated/header-profile";
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { schoolDateFormat } from "@/lib/datetime";
 
 export const metadata = { title: "Profile" };
 
@@ -86,7 +87,7 @@ export default async function ProfilePage() {
             {memberSince?.createdAt ? (
               <span className="text-muted-foreground text-xs">
                 Member since{" "}
-                {new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" }).format(memberSince.createdAt)}
+                {schoolDateFormat({ month: "short", year: "numeric" }).format(memberSince.createdAt)}
               </span>
             ) : null}
           </div>

@@ -32,6 +32,7 @@ import LessonMarkdown from "@/app/components/markdown";
 import { getExtraTime } from "@/features/assessments/accommodations";
 import { attemptDeadline, effectiveTimeLimit } from "@/features/assessments/lib/attempt-deadline";
 import { hasExtraTime, minutesLabel } from "@/features/assessments/lib/extra-time";
+import { schoolDateFormat } from "@/lib/datetime";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -39,7 +40,7 @@ interface PageProps {
 
 export const metadata = { title: "Begin test" };
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   weekday: "short",
   month: "short",
   day: "numeric",

@@ -40,12 +40,13 @@ import {
   type GradeDetail,
 } from "@/features/grades/queries";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { schoolDateFormat } from "@/lib/datetime";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   weekday: "short",
   month: "short",
   day: "numeric",

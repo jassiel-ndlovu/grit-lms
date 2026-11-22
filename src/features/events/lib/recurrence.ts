@@ -21,7 +21,7 @@
  *     so a zone with daylight saving keeps the same local time.
  */
 
-import { DEFAULT_TIME_ZONE } from "@/lib/datetime";
+import { DEFAULT_TIME_ZONE, DEFAULT_LOCALE } from "@/lib/datetime";
 
 export type RepeatFrequency =
   | "NONE"
@@ -161,7 +161,8 @@ export function describeRecurrence(rule: RecurrenceRule): string | null {
   if (rule.repeatCount != null) {
     out += `, ${rule.repeatCount} times`;
   } else if (rule.repeatUntil) {
-    out += `, until ${rule.repeatUntil.toLocaleDateString(undefined, {
+    out += `, until ${rule.repeatUntil.toLocaleDateString(DEFAULT_LOCALE, {
+      timeZone: DEFAULT_TIME_ZONE,
       month: "short",
       day: "numeric",
       year: "numeric",

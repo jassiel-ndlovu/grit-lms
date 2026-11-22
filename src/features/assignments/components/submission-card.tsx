@@ -9,6 +9,7 @@ import { CalendarDays, FileUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { schoolDateFormat } from "@/lib/datetime";
 
 type CardSubmission = {
   id: string;
@@ -40,7 +41,7 @@ export interface SubmissionCardProps {
   className?: string;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   month: "short",
   day: "numeric",
   year: "numeric",

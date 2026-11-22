@@ -52,6 +52,16 @@ export function isValidTimeZone(tz: string): boolean {
   }
 }
 
+/**
+ * A formatter for dates rendered without the viewer's preferences at hand
+ * (module-level formatters, server pages): the default locale and zone, so
+ * the server's UTC never shows. Prefer formatDate with the viewer's context
+ * where it's available.
+ */
+export function schoolDateFormat(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat(DEFAULT_LOCALE, { ...options, timeZone: DEFAULT_TIME_ZONE });
+}
+
 function toDate(value: Date | string | number): Date {
   return value instanceof Date ? value : new Date(value);
 }

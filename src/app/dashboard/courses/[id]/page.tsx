@@ -51,12 +51,13 @@ import { listEventsByCourseId } from "@/features/events/queries";
 import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesson-tree";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { schoolDateFormat } from "@/lib/datetime";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   weekday: "short",
   month: "short",
   day: "numeric",

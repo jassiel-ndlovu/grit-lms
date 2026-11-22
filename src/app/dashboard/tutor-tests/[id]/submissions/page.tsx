@@ -27,6 +27,7 @@ import { AiMarkingQueue } from "@/features/assessments/components/ai-marking-que
 import { getAiMarkingOverview } from "@/features/assessments/ai-marking-queries";
 import { writtenQuestions } from "@/features/assessments/lib/ai-marking-ui";
 import { getCourseScope } from "@/features/courses/course-access";
+import { schoolDateFormat } from "@/lib/datetime";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -34,7 +35,7 @@ interface PageProps {
 
 export const metadata = { title: "Test submissions" };
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   month: "short",
   day: "numeric",
   year: "numeric",
