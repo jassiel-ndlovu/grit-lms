@@ -110,12 +110,13 @@ The layout calls `getViewer()` once and passes `navSectionsFor(viewer)` to `AppS
 
 | Persona | Sections (permission that shows the link) |
 | --- | --- |
-| `learner` | Learning: Courses, Calendar, Tests, Assignments, Grades (`grades.view`) |
-| `staff` | Teaching: Courses (`courses.edit`), Calendar, Tests, Assignments, Gradebook and Analytics (`grades.view`). People: Users (`learners.invite`) |
+| `learner` | Learning: Courses, Find courses, Calendar, Tests, Assignments, Grades (`grades.view`) |
+| `staff` | Teaching: Courses (`courses.edit`), Calendar, Tests, Assignments, Gradebook and Analytics (`grades.view`). People: Students and Join requests (`learners.invite`), Members (`members.invite`) |
 | `admin` | Platform: Users (`admin.console`) |
-| `guardian`, `none` | Top and foot only. Guardians get their children's pages in Phase 1 |
+| `guardian` | Learning: Find courses (ask to join for a child). Children's pages come in Phase 1 |
+| `none` | Top and foot only |
 
-Through today's bridge viewer, each legacy role keeps exactly its old links. The permission check hides UI only: pages and actions check again on the server (viewer.md rule 3).
+Through today's bridge viewer, each legacy role keeps its old links, plus Find courses (students, parents) and Join requests (tutors), added for #206. The permission check hides UI only: pages and actions check again on the server (viewer.md rule 3).
 
 The current item is the longest nav href that equals the path or is a whole-segment prefix of it (`activeHref`). `/dashboard` only lights on itself. `scripts/check-shell-nav.ts` checks these rules.
 

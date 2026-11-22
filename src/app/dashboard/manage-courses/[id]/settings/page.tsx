@@ -3,6 +3,8 @@
  * enrolment (cover image, name, description, students). CourseForm is a
  * client component that calls the updateCourse server action. Below it,
  * each student's extra time on timed tests (ExtraTimeCard, decision 7).
+ * Workspace courses also get the "List this course" switch (#206), which
+ * lets students and parents find it and ask to join.
  */
 
 import { Card } from "@/components/ui/card";
@@ -11,9 +13,11 @@ import { ExtraTimeCard } from "@/features/assessments/components/extra-time-card
 import { extraTimeToChoice } from "@/features/assessments/lib/extra-time";
 import { CourseFrame } from "@/features/courses/components/course-frame";
 import { CourseForm } from "@/features/courses/components/course-form";
+import { CourseListingSwitch } from "@/features/courses/components/join-requests";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
 import { listWorkspaceStudents } from "@/features/students/queries";
 import { LEGACY_WORKSPACE_ID } from "@/features/workspaces/tenancy";
+import { prisma } from "@/lib/db";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -28,7 +32,11 @@ export default async function ManageCourseSettingsPage({ params }: PageProps) {
   const { course } = loaded;
   // Same rule as A's setCourseEnrollment: no workspace means the legacy one.
   const students = await listWorkspaceStudents(course.workspaceId ?? LEGACY_WORKSPACE_ID);
-  const extraTime = await listExtraTime(course.id);
+  const [extraTime, listing, pendingRequests] = await Promise.all([
+    listExtraTime(course.id),
+    prisma.courseListing.findUnique({ where: { courseId: course.id }, select: { courseId: true } }),
+    prisma.joinRequest.count({ where: { courseId: course.id, status: "PENDING" } }),
+  ]);
   const extraTimeInitial = Object.fromEntries(course.students.map((s) => [s.id, extraTimeToChoice(extraTime.get(s.id))]));
 
   return (
@@ -50,6 +58,11 @@ export default async function ManageCourseSettingsPage({ params }: PageProps) {
             }}
           />
         </Card>
+        {course.workspaceId ? (
+          <Card className="p-6">
+            <CourseListingSwitch courseId={course.id} listed={listing != null} pending={pendingRequests} />
+          </Card>
+        ) : null}
         <Card className="p-6">
           <ExtraTimeCard
             courseId={course.id}

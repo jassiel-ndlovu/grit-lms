@@ -52,7 +52,7 @@ const PAGE_TITLES: Record<string, string> = {
   help: "Help & Support",
   "manage-courses": "Manage Courses",
   "tutor-tests": "Tests & Grading",
-  "browse-courses": "Browse Courses",
+  "browse-courses": "Find courses",
   account: "Account",
 };
 
