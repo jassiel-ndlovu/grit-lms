@@ -34,6 +34,7 @@ const view = { rows, needs: [] as ImportView["needs"], counts };
 check("field label", fieldLabel("full_name"), "Full name");
 check("field label: dashes", fieldLabel("parent-email"), "Parent email");
 check("columns in first-seen order", columnsOf(rows), ["full_name", "email", "grade"]);
+check("columns follow the template", columnsOf(rows, ["email", "full_name", "minor"]), ["email", "full_name", "grade"]);
 check("cell issue: error wins", cellIssue(rows[1].issues, "email")?.level, "error");
 check("cell issue: none", cellIssue(rows[1].issues, "full_name"), null);
 check("to import: with errors", toImport(view, false), 2);

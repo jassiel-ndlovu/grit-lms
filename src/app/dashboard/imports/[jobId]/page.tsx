@@ -10,7 +10,7 @@ import { ImportJob } from "@/components/imports/import-job";
 import { IMPORT_STATUS, importRoutes } from "@/components/imports/import-ui";
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { StatusChip } from "@/components/shell/status-chip";
-import { getImport } from "@/features/imports/actions";
+import { getImport, listImportTypes } from "@/features/imports/actions";
 import { getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "Import" };
@@ -19,7 +19,7 @@ export default async function ImportJobPage({ params }: { params: Promise<{ jobI
   const viewer = await getViewer();
   if (!viewer) redirect("/auth");
   const { jobId } = await params;
-  const res = await getImport({ jobId });
+  const [res, typesRes] = await Promise.all([getImport({ jobId }), listImportTypes({})]);
   const view = res?.data;
   if (!view) notFound();
   const status = IMPORT_STATUS[view.status];
@@ -32,7 +32,7 @@ export default async function ImportJobPage({ params }: { params: Promise<{ jobI
       status={<StatusChip tone={status.tone}>{status.label}</StatusChip>}
     >
       <PageTitle title={view.title} description={view.fileName} />
-      <ImportJob key={view.id} initial={view} />
+      <ImportJob key={view.id} initial={view} headers={typesRes?.data?.find((t) => t.kind === view.kind)?.headers ?? []} />
     </PageFrame>
   );
 }

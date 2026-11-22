@@ -35,11 +35,11 @@ export function fieldLabel(field: string): string {
   return words ? words[0].toUpperCase() + words.slice(1).toLowerCase() : field;
 }
 
-/** The columns to show: every field the rows carry, in first-seen order. */
-export function columnsOf(rows: Array<Pick<ImportRow, "data">>): string[] {
+/** The columns to show: every field the rows carry, the template's order first, then the rest as first seen. */
+export function columnsOf(rows: Array<Pick<ImportRow, "data">>, order: string[] = []): string[] {
   const seen = new Set<string>();
   for (const r of rows) for (const k of Object.keys(r.data)) seen.add(k);
-  return [...seen];
+  return [...order.filter((h) => seen.has(h)), ...[...seen].filter((k) => !order.includes(k))];
 }
 
 /** The worst issue for one cell (errors before warnings), or null. */

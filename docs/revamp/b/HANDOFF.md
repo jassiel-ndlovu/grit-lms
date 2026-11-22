@@ -39,7 +39,10 @@ Done:
   `/auth/sign-up?callbackUrl=<invite>`. Sign-up passes it to
   `signUpWithPassword` and Google, same-site paths only.
 
-Not verified yet: an import end to end on Preview (done in this PR's check).
+Checked on Preview as tutor1, with test rows only: preview, fixing cells, skip
+errors, confirm, sign-in sheet (3 cards, nothing in storage) and undo. The
+imported students were removed again. The table now follows the template's
+column order; the engine's row data has its own key order.
 
 ## 2026-11-22 Rubrics and reading settings (#216, phase 1), `revamp/b-rubrics-a11y`
 

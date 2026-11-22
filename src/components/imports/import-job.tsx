@@ -40,7 +40,8 @@ import {
 
 const POLL_MS = 2000;
 
-export function ImportJob({ initial }: { initial: ImportView }) {
+/** `headers`: the template's columns, which set the table's column order. */
+export function ImportJob({ initial, headers = [] }: { initial: ImportView; headers?: string[] }) {
   const router = useRouter();
   const [view, setView] = React.useState(initial);
   const [busy, setBusy] = React.useState<string | null>(null);
@@ -92,15 +93,15 @@ export function ImportJob({ initial }: { initial: ImportView }) {
   return (
     <div className="space-y-6">
       <Counts view={view} />
-      {view.status === "PREVIEW" ? <Preview view={view} busy={busy} run={run} /> : null}
+      {view.status === "PREVIEW" ? <Preview view={view} headers={headers} busy={busy} run={run} /> : null}
       {isWorking(view.status) ? <Progress view={view} /> : null}
-      {view.status === "DONE" || view.status === "UNDONE" ? <Outcome view={view} busy={busy} run={run} /> : null}
+      {view.status === "DONE" || view.status === "UNDONE" ? <Outcome view={view} headers={headers} busy={busy} run={run} /> : null}
       {view.status === "FAILED" ? (
         <p role="alert" className="border-destructive/40 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
           The import stopped: {view.error ?? "something went wrong"}. Rows already imported stay; their results are below.
         </p>
       ) : null}
-      {view.status === "FAILED" ? <OutcomeTable view={view} /> : null}
+      {view.status === "FAILED" ? <OutcomeTable view={view} headers={headers} /> : null}
       {view.status === "CANCELLED" ? (
         <p className="text-muted-foreground border-border rounded-lg border border-dashed p-6 text-center text-sm">
           This import was cancelled before anything changed.{" "}
@@ -152,12 +153,12 @@ function Counts({ view }: { view: ImportView }) {
 
 /* ─── Preview, edit, confirm ─────────────────────────────────────────── */
 
-function Preview({ view, busy, run }: { view: ImportView; busy: string | null; run: Run }) {
+function Preview({ view, headers, busy, run }: { view: ImportView; headers: string[]; busy: string | null; run: Run }) {
   const [drafts, setDrafts] = React.useState<Record<number, Record<string, string>>>({});
   const [onlyProblems, setOnlyProblems] = React.useState(view.counts.errors + view.counts.warnings > 0);
   const [ticked, setTicked] = React.useState<Record<string, boolean>>({});
   const [skipErrors, setSkipErrors] = React.useState(false);
-  const columns = React.useMemo(() => columnsOf(view.rows), [view.rows]);
+  const columns = React.useMemo(() => columnsOf(view.rows, headers), [view.rows, headers]);
   const edits = pendingEdits(view, drafts);
   const shown = onlyProblems ? view.rows.filter(hasProblem) : view.rows;
 
@@ -397,7 +398,7 @@ function Progress({ view }: { view: ImportView }) {
 
 /* ─── Outcome, cards, undo ───────────────────────────────────────────── */
 
-function Outcome({ view, busy, run }: { view: ImportView; busy: string | null; run: Run }) {
+function Outcome({ view, headers, busy, run }: { view: ImportView; headers: string[]; busy: string | null; run: Run }) {
   const [asking, setAsking] = React.useState(false);
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
@@ -432,7 +433,7 @@ function Outcome({ view, busy, run }: { view: ImportView; busy: string | null; r
       {view.hasSignInCards && view.status === "DONE" ? (
         <p className="text-muted-foreground text-xs">New students and parents sign in with the codes on their cards. The codes work for 14 days.</p>
       ) : null}
-      <OutcomeTable view={view} />
+      <OutcomeTable view={view} headers={headers} />
 
       <AlertDialog open={asking} onOpenChange={setAsking}>
         <AlertDialogContent>
@@ -463,8 +464,8 @@ const OUTCOME = {
   failed: { label: "Failed", icon: XCircle, cls: "text-destructive" },
 } as const;
 
-function OutcomeTable({ view }: { view: ImportView }) {
-  const first = columnsOf(view.rows)[0];
+function OutcomeTable({ view, headers }: { view: ImportView; headers: string[] }) {
+  const first = columnsOf(view.rows, headers)[0];
   const applied = view.rows.filter((r) => r.outcome);
   if (applied.length === 0) return null;
   return (
