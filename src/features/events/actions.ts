@@ -14,7 +14,7 @@ import type { Prisma } from "@/generated/prisma";
 import { emitNotification } from "@/features/notifications/server";
 import { prisma } from "@/lib/db";
 import { staffFor } from "@/features/courses/lib/tenancy-where";
-import { tutorActionClient } from "@/lib/safe-action";
+import { tutorActionClient, tutorReadActionClient } from "@/lib/safe-action";
 
 import { eventChangeNotification } from "./notify";
 
@@ -57,6 +57,7 @@ export const createCourseEvent = tutorActionClient
         repeatWeekdays: parsedInput.repeatWeekdays,
         repeatUntil: parsedInput.repeatUntil,
         repeatCount: parsedInput.repeatCount,
+        ...(parsedInput.timeZone ? { timeZone: parsedInput.timeZone } : {}),
       },
       select: { id: true, courseId: true, title: true, type: true },
     });
@@ -100,6 +101,7 @@ export const updateCourseEvent = tutorActionClient
       data.repeatUntil = parsedInput.repeatUntil;
     if (parsedInput.repeatCount !== undefined)
       data.repeatCount = parsedInput.repeatCount;
+    if (parsedInput.timeZone !== undefined) data.timeZone = parsedInput.timeZone;
 
     const updated = await prisma.courseEvent.update({
       where: { id: parsedInput.id },
@@ -138,4 +140,26 @@ export const deleteCourseEvent = tutorActionClient
     revalidatePath("/dashboard/calendar");
 
     return { id: parsedInput.id, courseId };
+  });
+
+/**
+ * The series behind an occurrence, for the edit form (#149): its first
+ * start, time zone and repeat rule, which `listCalendarOccurrences` leaves
+ * out.
+ */
+export const getCourseEventSeries = tutorReadActionClient
+  .schema(z.object({ id: CuidSchema }))
+  .action(async ({ parsedInput, ctx }) => {
+    const e = await prisma.courseEvent.findUnique({
+      where: { id: parsedInput.id },
+      select: {
+        id: true, title: true, description: true, type: true, date: true, duration: true, location: true, link: true, timeZone: true,
+        repeatFrequency: true, repeatInterval: true, repeatWeekdays: true, repeatUntil: true, repeatCount: true,
+        course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+      },
+    });
+    if (!e) throw new Error("Event not found");
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), e.course)) throw new Error("You don't own this event");
+    const { course, ...series } = e;
+    return { ...series, courseId: course.id, date: e.date.toISOString(), repeatUntil: e.repeatUntil?.toISOString() ?? null };
   });

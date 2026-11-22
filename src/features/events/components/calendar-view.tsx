@@ -1,262 +1,135 @@
 "use client";
 
 /**
- * CalendarView - month-grid client component for the schedule page.
+ * CalendarView — the calendar body (#149): month, week, day and agenda.
  *
- * Owns nothing server-side - it receives a flat list of CalendarItem rows
- * (events, tests, assignments) from the page wrapper and renders them in
- * a 6-week month grid. Click any item to open a Dialog with the full
- * details. Prev/next arrows shift the displayed month locally; the data
- * already covers an extended window so navigating doesn't refetch.
+ * The page works out the days and loads the entries (A's
+ * `listCalendarOccurrences`, plus tests and assignments due) for exactly
+ * those days; the view switch and the date stepper are links in the
+ * page's ribbon, so this only lays the entries out and opens one.
+ *
+ * Every date is a day key in the viewer's zone (lib/calendar-ui.ts), so
+ * the server render and the browser agree. Below 640 px the month grid
+ * shows dots and each day links to the day view; the week stacks its days.
  */
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  GraduationCap,
-  Megaphone,
-  Pencil,
-  Presentation,
-  Timer,
-} from "lucide-react";
+import { Ban, Repeat, Timer } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-export type CalendarKind = "event" | "test" | "assignment";
+import { calendarRoutes, dayLabel, groupByDay, joinOpen, type CalendarEntry, type CalendarViewMode } from "../lib/calendar-ui";
+import { EntryDialog, type EntryContext } from "./entry-dialog";
+import { iconFor, labelFor } from "./entry-meta";
 
-export interface CalendarItem {
-  id: string;
-  kind: CalendarKind;
-  /** Underlying event type for CourseEvents (LECTURE/EXAM/etc.); ignored for tests/assignments. */
-  type?: string;
-  title: string;
-  /** Date the item is anchored to (event start, due date, etc.). */
-  date: Date;
-  course: { id: string; name: string };
-  description?: string | null;
-  location?: string | null;
-  duration?: number | null;
-  link?: string | null;
-  /** Where to send the user when they click "Open" in the detail dialog. */
-  href?: string | null;
-}
-
-const dayFmt = new Intl.DateTimeFormat(undefined, {
-  weekday: "long",
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-});
-const timeFmt = new Intl.DateTimeFormat(undefined, {
-  hour: "numeric",
-  minute: "2-digit",
-});
-const monthFmt = new Intl.DateTimeFormat(undefined, {
-  month: "long",
-  year: "numeric",
-});
-
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-function startOfWeek(d: Date): Date {
-  const out = new Date(d);
-  out.setDate(d.getDate() - d.getDay());
-  out.setHours(0, 0, 0, 0);
-  return out;
-}
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function iconFor(item: CalendarItem) {
-  if (item.kind === "test") return Pencil;
-  if (item.kind === "assignment") return Pencil;
-  switch (item.type) {
-    case "LECTURE":
-      return Presentation;
-    case "EXAM":
-      return GraduationCap;
-    case "REMINDER":
-      return Megaphone;
-    case "LIVE":
-    case "MEETING":
-      return Timer;
-    default:
-      return CalendarDays;
-  }
-}
-
-function labelFor(item: CalendarItem): string {
-  if (item.kind === "test") return "Test due";
-  if (item.kind === "assignment") return "Assignment due";
-  switch (item.type) {
-    case "LECTURE": return "Lecture";
-    case "EXAM": return "Exam";
-    case "REMINDER": return "Reminder";
-    case "LIVE": return "Live session";
-    case "MEETING": return "Meeting";
-    case "TEST": return "Test";
-    case "SUBMISSION": return "Assignment";
-    case "HOLIDAY": return "Holiday";
-    default: return "Event";
-  }
-}
+export type { CalendarEntry };
 
 export interface CalendarViewProps {
-  items: CalendarItem[];
+  view: CalendarViewMode;
+  /** The days on screen, first to last (lib/calendar-ui `daysFor`). */
+  days: string[];
+  /** The anchor day: the month shown, or the day. */
+  anchor: string;
+  today: string;
+  entries: CalendarEntry[];
+  /** Shown when the range has nothing in it (day and agenda). */
+  empty: React.ReactNode;
+  /** Parent view: keeps `?child=` on the day links. */
+  child?: string | null;
+  ctx: EntryContext;
 }
 
-export function CalendarView({ items }: CalendarViewProps) {
-  const [cursor, setCursor] = React.useState<Date>(() => startOfMonth(new Date()));
-  const [open, setOpen] = React.useState<CalendarItem | null>(null);
+const WEEK_HEAD = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  // Build the 6-week grid: start from the Sunday on/before the 1st of the
-  // current month and lay out 42 cells.
-  const gridStart = startOfWeek(startOfMonth(cursor));
-  const cells: Date[] = [];
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(gridStart);
-    d.setDate(gridStart.getDate() + i);
-    cells.push(d);
-  }
+export function CalendarView({ view, days, anchor, today, entries, empty, child, ctx }: CalendarViewProps) {
+  const [open, setOpen] = React.useState<CalendarEntry | null>(null);
+  const byDay = React.useMemo(() => groupByDay(entries, ctx.timeZone), [entries, ctx.timeZone]);
+  const time = React.useMemo(() => new Intl.DateTimeFormat(ctx.locale, { hour: "2-digit", minute: "2-digit", timeZone: ctx.timeZone }), [ctx.locale, ctx.timeZone]);
+  const dayHref = (d: string) => calendarRoutes.view({ view: "day", date: d, child });
 
-  // Bucket items by yyyy-mm-dd for fast lookup as we render the grid.
-  const byDay = new Map<string, CalendarItem[]>();
-  for (const item of items) {
-    const key = `${item.date.getFullYear()}-${item.date.getMonth()}-${item.date.getDate()}`;
-    const list = byDay.get(key);
-    if (list) list.push(item);
-    else byDay.set(key, [item]);
-  }
-  for (const list of byDay.values()) {
-    list.sort((a, b) => a.date.getTime() - b.date.getTime());
-  }
+  const chip = (e: CalendarEntry, withTime: boolean) => {
+    const Icon = iconFor(e);
+    return (
+      <button
+        key={e.id}
+        type="button"
+        onClick={() => setOpen(e)}
+        title={e.title}
+        className={cn(
+          "focus-visible:ring-ring flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-left text-xs outline-none focus-visible:ring-2",
+          e.kind === "event" ? "bg-primary/10 text-foreground hover:bg-primary/15" : "bg-muted text-muted-foreground hover:bg-muted/70",
+          e.cancelled && "line-through opacity-60",
+        )}
+      >
+        {withTime ? (
+          // Week columns are narrow: time on one line, up to two lines of title.
+          <span className="min-w-0">
+            <span className="flex items-center gap-1 tabular-nums">
+              <Icon aria-hidden className="size-3 shrink-0" />
+              {time.format(new Date(e.start))}
+            </span>
+            <span className="line-clamp-2 break-words">{e.title}</span>
+          </span>
+        ) : (
+          <>
+            <Icon aria-hidden className="size-3 shrink-0" />
+            <span className="truncate">{e.title}</span>
+          </>
+        )}
+      </button>
+    );
+  };
 
-  const today = new Date();
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))
-            }
-            aria-label="Previous month"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <h2 className="font-display min-w-44 text-center text-lg leading-tight tracking-tight text-foreground">
-            {monthFmt.format(cursor)}
-          </h2>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
-            }
-            aria-label="Next month"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setCursor(startOfMonth(new Date()))}
-        >
-          Today
-        </Button>
-      </div>
-
+  let body: React.ReactNode;
+  if (view === "month") {
+    const month = anchor.slice(0, 7);
+    body = (
       <Card className="overflow-hidden p-0">
-        <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-muted-foreground text-xs">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="px-2 py-2 text-center font-medium">
-              {d}
+        <div className="bg-muted/40 text-muted-foreground grid grid-cols-7 border-b text-xs">
+          {WEEK_HEAD.map((d) => (
+            <div key={d} className="px-1 py-2 text-center font-medium">
+              <span className="sm:hidden">{d[0]}</span>
+              <span className="hidden sm:inline">{d}</span>
             </div>
           ))}
         </div>
         <div className="grid grid-cols-7">
-          {cells.map((day, i) => {
-            const inMonth = day.getMonth() === cursor.getMonth();
-            const isToday = isSameDay(day, today);
-            const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
-            const cellItems = byDay.get(key) ?? [];
+          {days.map((d, i) => {
+            const list = byDay.get(d) ?? [];
+            const inMonth = d.startsWith(month);
+            const isToday = d === today;
             return (
               <div
-                key={i}
-                className={cn(
-                  "border-border min-h-24 border-r border-b p-1.5 last:border-r-0",
-                  i % 7 === 6 && "border-r-0",
-                  i >= 35 && "border-b-0",
-                  !inMonth && "bg-muted/20",
-                )}
+                key={d}
+                className={cn("border-border min-h-14 border-r border-b p-1 sm:min-h-24 sm:p-1.5", i % 7 === 6 && "border-r-0", i >= 35 && "border-b-0", !inMonth && "bg-muted/20")}
               >
-                <div
+                <Link
+                  href={dayHref(d)}
+                  aria-label={`${dayLabel(d, ctx.locale, { weekday: "long", day: "numeric", month: "long" })}${list.length ? `, ${list.length} ${list.length === 1 ? "item" : "items"}` : ""}`}
                   className={cn(
-                    "mb-1 inline-flex size-6 items-center justify-center rounded-full text-xs tabular-nums",
-                    isToday
-                      ? "bg-brand-terracotta text-primary-foreground font-medium"
-                      : inMonth
-                        ? "text-foreground"
-                        : "text-muted-foreground/60",
+                    "focus-visible:ring-ring mb-1 inline-flex size-6 items-center justify-center rounded-full text-xs tabular-nums outline-none hover:underline focus-visible:ring-2",
+                    isToday ? "bg-foreground text-background font-medium" : inMonth ? "text-foreground" : "text-muted-foreground/60",
                   )}
                 >
-                  {day.getDate()}
-                </div>
-                <div className="space-y-1">
-                  {cellItems.slice(0, 3).map((item) => {
-                    const Icon = iconFor(item);
-                    return (
-                      <button
-                        key={`${item.kind}-${item.id}`}
-                        type="button"
-                        onClick={() => setOpen(item)}
-                        className={cn(
-                          "flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-left text-[11px] transition-colors",
-                          "bg-brand-terracotta/12 text-brand-terracotta hover:bg-brand-terracotta/20",
-                        )}
-                        title={item.title}
-                      >
-                        <Icon className="size-3 shrink-0" />
-                        <span className="truncate">{item.title}</span>
-                      </button>
-                    );
-                  })}
-                  {cellItems.length > 3 && (
-                    <button
-                      type="button"
-                      onClick={() => setOpen(cellItems[3])}
-                      className="text-muted-foreground hover:text-foreground w-full px-1.5 text-left text-[11px]"
-                    >
-                      +{cellItems.length - 3} more
-                    </button>
+                  {Number(d.slice(8))}
+                </Link>
+                {/* Phones: one dot per item, up to three. */}
+                {list.length > 0 && (
+                  <Link href={dayHref(d)} tabIndex={-1} aria-hidden className="flex gap-0.5 pl-1 sm:hidden">
+                    {list.slice(0, 3).map((e) => (
+                      <span key={e.id} className={cn("size-1.5 rounded-full", e.kind === "event" ? "bg-foreground" : "bg-muted-foreground/50", e.cancelled && "opacity-30")} />
+                    ))}
+                  </Link>
+                )}
+                <div className="hidden space-y-1 sm:block">
+                  {list.slice(0, 3).map((e) => chip(e, false))}
+                  {list.length > 3 && (
+                    <Link href={dayHref(d)} className="text-muted-foreground hover:text-foreground block px-1.5 text-xs">
+                      +{list.length - 3} more
+                    </Link>
                   )}
                 </div>
               </div>
@@ -264,78 +137,134 @@ export function CalendarView({ items }: CalendarViewProps) {
           })}
         </div>
       </Card>
+    );
+  } else if (view === "week") {
+    body = (
+      <>
+        {/* Wide screens: seven columns. */}
+        <Card className="hidden overflow-hidden p-0 md:block">
+          <div className="grid grid-cols-7 divide-x">
+            {days.map((d) => (
+              <div key={d} className="min-h-64">
+                <Link
+                  href={dayHref(d)}
+                  className={cn("hover:bg-accent/50 block border-b px-2 py-2 text-center text-xs", d === today ? "text-foreground font-semibold" : "text-muted-foreground")}
+                >
+                  {dayLabel(d, ctx.locale, { weekday: "short", day: "numeric" })}
+                </Link>
+                <div className="space-y-1 p-1.5">{(byDay.get(d) ?? []).map((e) => chip(e, true))}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        {/* Phones: the days stacked. */}
+        <div className="space-y-4 md:hidden">
+          {days.map((d) => (
+            <DayGroup key={d} day={d} today={today} entries={byDay.get(d) ?? []} ctx={ctx} time={time} onOpen={setOpen} showEmpty />
+          ))}
+        </div>
+      </>
+    );
+  } else {
+    const shown = days.filter((d) => (byDay.get(d)?.length ?? 0) > 0);
+    body =
+      shown.length === 0 ? (
+        empty
+      ) : (
+        <div className="space-y-4">
+          {shown.map((d) => (
+            <DayGroup key={d} day={d} today={today} entries={byDay.get(d)!} ctx={ctx} time={time} onOpen={setOpen} hideHeading={view === "day"} />
+          ))}
+        </div>
+      );
+  }
 
-      {/* Detail dialog — opens when any cell item is clicked. */}
-      <Dialog open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent className="sm:max-w-md">
-          {open && <EventDetailBody item={open} />}
-        </DialogContent>
-      </Dialog>
-    </div>
+  return (
+    <>
+      {body}
+      <EntryDialog entry={open} onClose={() => setOpen(null)} ctx={ctx} />
+    </>
   );
 }
 
-function EventDetailBody({ item }: { item: CalendarItem }) {
-  const Icon = iconFor(item);
+function DayGroup({
+  day, today, entries, ctx, time, onOpen, showEmpty = false, hideHeading = false,
+}: {
+  day: string;
+  today: string;
+  entries: CalendarEntry[];
+  ctx: EntryContext;
+  time: Intl.DateTimeFormat;
+  onOpen: (e: CalendarEntry) => void;
+  showEmpty?: boolean;
+  hideHeading?: boolean;
+}) {
+  if (!showEmpty && entries.length === 0) return null;
   return (
-    <>
-      <DialogHeader>
-        <div className="flex items-start gap-3">
-          <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-10 items-center justify-center rounded-md shrink-0">
-            <Icon className="size-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <DialogTitle className="font-display text-xl leading-tight tracking-tight">
-              {item.title}
-            </DialogTitle>
-            <DialogDescription className="mt-1 flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">{labelFor(item)}</Badge>
-              <span className="truncate text-xs">{item.course.name}</span>
-            </DialogDescription>
-          </div>
-        </div>
-      </DialogHeader>
+    <section aria-label={dayLabel(day, ctx.locale, { weekday: "long", day: "numeric", month: "long" })}>
+      {!hideHeading && (
+        <h2 className={cn("mb-1.5 text-sm", day === today ? "text-foreground font-semibold" : "text-muted-foreground font-medium")}>
+          {dayLabel(day, ctx.locale, { weekday: "long", day: "numeric", month: "short" })}
+          {day === today ? " · Today" : ""}
+        </h2>
+      )}
+      {entries.length === 0 ? (
+        <p className="text-muted-foreground border-border rounded-md border border-dashed px-3 py-2 text-xs">Nothing on</p>
+      ) : (
+        <Card className="divide-border divide-y overflow-hidden p-0">
+          {entries.map((e) => (
+            <EntryRow key={e.id} entry={e} time={time} onOpen={onOpen} />
+          ))}
+        </Card>
+      )}
+    </section>
+  );
+}
 
-      <Separator />
-
-      <div className="space-y-3 text-sm">
-        <div className="text-muted-foreground flex items-center gap-2 text-xs">
-          <CalendarDays className="size-3.5" />
-          <span className="tabular-nums">
-            {dayFmt.format(item.date)} · {timeFmt.format(item.date)}
-            {item.duration ? ` · ${item.duration} min` : ""}
+function EntryRow({ entry: e, time, onOpen }: { entry: CalendarEntry; time: Intl.DateTimeFormat; onOpen: (e: CalendarEntry) => void }) {
+  const Icon = iconFor(e);
+  const live = e.link && joinOpen(e, new Date());
+  return (
+    <div className="flex items-center gap-3 px-3 py-2.5 sm:px-4">
+      <button type="button" onClick={() => onOpen(e)} className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-3 rounded text-left outline-none focus-visible:ring-2">
+        <span className="text-muted-foreground w-12 shrink-0 text-xs tabular-nums">
+          {time.format(new Date(e.start))}
+          {e.end ? (
+            <>
+              <br />
+              {time.format(new Date(e.end))}
+            </>
+          ) : null}
+        </span>
+        <span className={cn("bg-muted text-foreground grid size-8 shrink-0 place-items-center rounded-md", e.cancelled && "opacity-50")}>
+          <Icon aria-hidden className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={cn("block truncate text-sm font-medium", e.cancelled && "text-muted-foreground line-through")}>{e.title}</span>
+          <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+            <span className="truncate">{e.courseName}</span>
+            <span aria-hidden>·</span>
+            <span className="shrink-0">{labelFor(e)}</span>
+            {e.recurring ? <Repeat aria-label="Repeats" className="size-3 shrink-0" /> : null}
           </span>
-        </div>
-        {item.location && (
-          <p className="text-foreground text-sm">
-            <span className="text-muted-foreground text-xs">Location: </span>
-            {item.location}
-          </p>
-        )}
-        {item.description && (
-          <p className="text-foreground whitespace-pre-wrap text-sm">
-            {item.description}
-          </p>
-        )}
-        {item.link && (
-          <a
-            href={item.link}
-            target="_blank"
-            rel="noreferrer"
-            className="text-brand-terracotta inline-flex items-center gap-1 text-sm hover:underline"
-          >
-            Open link
-            <ExternalLink className="size-3" />
-          </a>
-        )}
-        {item.href && (
-          <div className="pt-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href={item.href}>Go to {labelFor(item).toLowerCase()}</Link>
-            </Button>
-          </div>
-        )}
-      </div>
-    </>
+        </span>
+      </button>
+      {e.cancelled ? (
+        <Badge variant="secondary" className="shrink-0">
+          <Ban aria-hidden className="size-3" />
+          Cancelled
+        </Badge>
+      ) : e.changed ? (
+        <Badge variant="outline" className="shrink-0">
+          Changed
+        </Badge>
+      ) : null}
+      {live ? (
+        <a href={e.link!} target="_blank" rel="noreferrer" className="bg-primary text-primary-foreground inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-3 text-sm font-medium">
+          <Timer aria-hidden className="size-3.5" />
+          Join
+        </a>
+      ) : null}
+    </div>
   );
 }

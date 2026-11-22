@@ -1,98 +1,73 @@
 "use client";
 
 /**
- * CreateEventButton — tutor-only entry point for adding a course event.
- *
- * Opens a Dialog containing the EventForm in create mode. After save the
- * dialog closes and the parent route re-fetches via router.refresh().
- *
- * If the tutor owns multiple courses we surface a course picker; if they
- * only own one, we lock to it.
+ * CreateEventButton — "New session" for staff (#149). Opens EventForm in a
+ * dialog, with a course picker when there is more than one course. The
+ * new event repeats in the tutor's zone (`timeZone`).
  */
 
 import * as React from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WriteGuard } from "@/components/shell/workspace-access";
 
 import { EventForm } from "./event-form";
 
 export interface CreateEventButtonProps {
-  /** Courses the tutor owns; required so the dialog can scope the new event. */
+  /** Courses the viewer may add events to. */
   courses: { id: string; name: string }[];
+  /** The tutor's zone; the series repeats at the same local time in it. */
+  timeZone: string;
+  /** The day the form starts on (`YYYY-MM-DD`). */
+  initialDate?: string;
 }
 
-export function CreateEventButton({ courses }: CreateEventButtonProps) {
+export function CreateEventButton({ courses, timeZone, initialDate }: CreateEventButtonProps) {
   const [open, setOpen] = React.useState(false);
-  const [courseId, setCourseId] = React.useState<string>(
-    courses[0]?.id ?? "",
-  );
+  const [courseId, setCourseId] = React.useState<string>(courses[0]?.id ?? "");
 
-  if (courses.length === 0) {
-    return null;
-  }
+  if (courses.length === 0) return null;
 
   return (
-    <WriteGuard label="New event" size="default" variant="brand">
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="brand">
-          <Plus className="size-4" />
-          New event
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create a new event</DialogTitle>
-          <DialogDescription>
-            Lectures, exams, and reminders show up on the calendar for
-            students enrolled in the chosen course.
-          </DialogDescription>
-        </DialogHeader>
+    <WriteGuard label="New session" size="sm" variant="default">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm">
+            <Plus className="size-4" />
+            New session
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>New session</DialogTitle>
+            <DialogDescription>It shows on the calendar of everyone on the course.</DialogDescription>
+          </DialogHeader>
 
-        {courses.length > 1 && (
-          <div className="space-y-1.5">
-            <label className="text-foreground text-sm font-medium">
-              Course
-            </label>
-            <Select value={courseId} onValueChange={setCourseId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pick a course" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+          {courses.length > 1 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="new-session-course">Course</Label>
+              <Select value={courseId} onValueChange={setCourseId}>
+                <SelectTrigger id="new-session-course">
+                  <SelectValue placeholder="Pick a course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-        <EventForm
-          courseId={courseId}
-          onSuccess={() => setOpen(false)}
-        />
-      </DialogContent>
-    </Dialog>
+          <EventForm key={courseId} courseId={courseId} timeZone={timeZone} initialDate={initialDate} onSuccess={() => setOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </WriteGuard>
   );
 }

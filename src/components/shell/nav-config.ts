@@ -109,7 +109,8 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
     },
   ],
   // Guardians get their children's pages in Phase 1 (viewer.children).
-  guardian: [{ items: [HOME, INBOX] }, { label: "Learning", items: [FIND_COURSES] }, { label: "Account", items: [PAY_FEES] }],
+  // Calendar: each child's sessions, one at a time (#149).
+  guardian: [{ items: [HOME, INBOX] }, { label: "Learning", items: [CALENDAR, FIND_COURSES] }, { label: "Account", items: [PAY_FEES] }],
   none: [{ items: [HOME, INBOX] }],
 };
 
