@@ -8,9 +8,9 @@
  *     (with answers, existing QuestionGrades, existing Grade)
  *   - Renders <GradingForm> which handles all mutation
  *
- * Replaces the legacy /dashboard/tutor-tests/submissions/[id]/(student)/
- * [studentId] page (which was a heavy client component reading directly
- * from TestContext / QuestionGradeContext).
+ * Framed (#205, the plan's "Grade a submission" example; #150): the
+ * primary header holds the student and the live score, the secondary
+ * header Previous and Next, the rubric and the AI suggestions.
  */
 
 import { notFound, redirect } from "next/navigation";
@@ -18,22 +18,34 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { StatusChip } from "@/components/shell/status-chip";
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import type { Crumb } from "@/components/shell/page-header";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { PropertyList, PropertyRow } from "@/components/ui/property-list";
 
 import {
   getTestDetailById,
   getTestSubmissionByStudentAndTest,
+  listSubmissionsForTest,
   testBelongsToTutor,
   type TestDetail,
 } from "@/features/assessments/queries";
+import { suggestionsFor } from "@/features/ai-marking/jobs";
+import { rubricFor } from "@/features/ai-marking/rules";
+import {
+  GradingRibbon,
+  GradingSessionProvider,
+  LiveScore,
+} from "@/features/assessments/components/grading-session";
+import { neighbours, writtenQuestions, type AiSuggestion } from "@/features/assessments/lib/ai-marking-ui";
+import { courseRoutes } from "@/features/courses/components/course-frame";
 import {
   GradingForm,
   type GradingQuestion,
 } from "@/features/assessments/components/grading-form";
 import { SubmissionAdminPanel } from "@/features/assessments/components/submission-admin-panel";
 import { AutoGradeButton } from "@/features/assessments/components/auto-grade-button";
-import { TestFrame } from "@/features/assessments/components/test-frame";
+import { TestFrame, testRoutes } from "@/features/assessments/components/test-frame";
 import { getCourseScope } from "@/features/courses/course-access";
 
 interface PageProps {
@@ -111,13 +123,14 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
     );
   }
 
-  const [test, student, submission] = await Promise.all([
+  const [test, student, submission, all] = await Promise.all([
     getTestDetailById(testId),
     prisma.student.findUnique({
       where: { id: studentId },
       select: { id: true, fullName: true, email: true, imageUrl: true },
     }),
     getTestSubmissionByStudentAndTest(studentId, testId),
+    listSubmissionsForTest(testId),
   ]);
   if (!test) notFound();
   if (!student) {
@@ -174,30 +187,67 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
         ? { tone: "info" as const, label: "To mark" }
         : { tone: "neutral" as const, label: "In progress" };
 
+  // Previous and Next follow the submissions list's order.
+  const near = neighbours(all, studentId);
+  const href = (sid: string) => `/dashboard/tutor-tests/submissions/${test.id}/${sid}`;
+
+  // AI-suggested marks (#150), when the test has them on.
+  const suggestions: AiSuggestion[] | null = test.aiMarking ? ((await suggestionsFor(submission.id)) as AiSuggestion[]) : null;
+  const byId = new Map(test.questions.map((q) => [q.id, q]));
+  const rubrics = writtenQuestions(test.questions, test.labelScheme).map((w) => {
+    const q = byId.get(w.id)!;
+    return { id: w.id, label: w.label, points: q.points, rubric: rubricFor(q.rubric, q.points) };
+  });
+
+  const crumbs: Crumb[] = [
+    { label: "Tests", href: testRoutes.list },
+    { label: test.course.name, href: courseRoutes.overview(test.courseId) },
+    { label: test.title, href: testRoutes.questions(test.id) },
+    { label: "Submissions", href: testRoutes.submissions(test.id) },
+    { label: student.fullName },
+  ];
+
   return (
-    <TestFrame test={test} view="submissions" page={student.fullName} actions={<AutoGradeButton submissionId={submission.id} />}>
-      <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
-        <header className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-foreground text-2xl leading-tight tracking-tight sm:text-3xl">
-              {student.fullName}
-            </h1>
-            <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
-          </div>
-          <PropertyList>
-            <PropertyRow label="Email">{student.email}</PropertyRow>
-            <PropertyRow label={submission.submittedAt ? "Submitted" : "Started"}>
-              <span className="tabular-nums">{dateFmt.format(submission.submittedAt ?? submission.startedAt)}</span>
-            </PropertyRow>
-            {existingGrade ? (
-              <PropertyRow label="Current grade">
-                <span className="tabular-nums">
-                  {existingGrade.score} / {existingGrade.outOf}
-                </span>
+    <GradingSessionProvider>
+      <PageFrame
+        type="record"
+        breadcrumb={crumbs}
+        status={<StatusChip tone={chip.tone}>{chip.label}</StatusChip>}
+        actions={
+          <>
+            <LiveScore initial={existingGrade ? { score: existingGrade.score, outOf: existingGrade.outOf } : null} />
+            <AutoGradeButton submissionId={submission.id} />
+          </>
+        }
+        secondary={
+          <GradingRibbon
+            prevHref={near.prev ? href(near.prev.studentId) : null}
+            nextHref={near.next ? href(near.next.studentId) : null}
+            position={near.index >= 0 ? `${near.index + 1} of ${all.length}` : null}
+            rubrics={rubrics}
+            aiEnabled={suggestions !== null}
+          />
+        }
+      >
+        <PageTitle
+          eyebrow={test.title}
+          title={student.fullName}
+          properties={
+            <PropertyList>
+              <PropertyRow label="Email">{student.email}</PropertyRow>
+              <PropertyRow label={submission.submittedAt ? "Submitted" : "Started"}>
+                <span className="tabular-nums">{dateFmt.format(submission.submittedAt ?? submission.startedAt)}</span>
               </PropertyRow>
-            ) : null}
-          </PropertyList>
-        </header>
+              {existingGrade ? (
+                <PropertyRow label="Saved grade">
+                  <span className="tabular-nums">
+                    {existingGrade.score} / {existingGrade.outOf}
+                  </span>
+                </PropertyRow>
+              ) : null}
+            </PropertyList>
+          }
+        />
 
         <GradingForm
           submissionId={submission.id}
@@ -208,6 +258,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
           existingQuestionGrades={existingQuestionGrades}
           existingGrade={existingGrade}
           labelScheme={test.labelScheme}
+          ai={suggestions ? { initial: suggestions } : null}
         />
 
         <SubmissionAdminPanel
@@ -216,7 +267,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
           studentName={student.fullName}
           initialStatus={submission.status as "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "GRADED" | "LATE" | "NOT_SUBMITTED"}
         />
-      </div>
-    </TestFrame>
+      </PageFrame>
+    </GradingSessionProvider>
   );
 }

@@ -32,9 +32,25 @@ import LessonMarkdown from "@/app/components/markdown";
 import { AnswerText, MathsAnswerText } from "@/components/content/answer-text";
 
 import { EmailStudentCheckbox } from "@/features/notifications/components/email-student-checkbox";
+import { WriteGuard, useReadOnly } from "@/components/shell/workspace-access";
+import { getAiSuggestions, recordAiSuggestionAction } from "@/features/ai-marking/actions";
 
 import { gradeTestSubmission } from "../actions";
 import { toFileAnswers, toFileUploadMemo } from "../lib/file-answers";
+import {
+  awaitingReview,
+  criteriaOf,
+  finalActions,
+  highlightRuns,
+  isAiMarkedType,
+  isPending,
+  provenanceOf,
+  type AiSuggestion,
+  type AiTutorAction,
+  type Provenance,
+} from "../lib/ai-marking-ui";
+import { AiSuggestionCard, HighlightedAnswer } from "./ai-suggestion-card";
+import { usePublishGrading } from "./grading-session";
 
 /* ─── Shapes ───────────────────────────────────────────────────────────── */
 
@@ -88,6 +104,26 @@ export interface GradingFormProps {
   } | null;
   /** The test's question numbering (Test.labelScheme); empty = default. */
   labelScheme?: string[];
+  /** AI-suggested marks (#150), when the test has them on. */
+  ai?: {
+    initial: AiSuggestion[];
+    /** For the preview pages only; A's actions by default. */
+    load?: (testSubmissionId: string) => Promise<AiSuggestion[] | null>;
+    record?: (input: { suggestionId: string; action: AiTutorAction; score: number | null }) => Promise<string | null>;
+  } | null;
+}
+
+const AI_POLL_MS = 5000;
+
+async function loadSuggestions(testSubmissionId: string): Promise<AiSuggestion[] | null> {
+  const r = await getAiSuggestions({ testSubmissionId });
+  return (r?.data as AiSuggestion[] | undefined) ?? null;
+}
+
+/** Returns the server's message when it refused. */
+async function recordAction(input: { suggestionId: string; action: AiTutorAction; score: number | null }): Promise<string | null> {
+  const r = await recordAiSuggestionAction(input);
+  return r?.serverError ?? (r?.validationErrors ? "The mark was rejected." : null);
 }
 
 /* ─── Flattening + helpers ─────────────────────────────────────────────── */
@@ -136,8 +172,10 @@ export function GradingForm({
   existingQuestionGrades,
   existingGrade,
   labelScheme,
+  ai = null,
 }: GradingFormProps) {
   const router = useRouter();
+  const readOnly = useReadOnly();
   const rows = React.useMemo(
     () => flatten(questions, normalizeScheme(labelScheme)),
     [questions, labelScheme],
@@ -171,6 +209,23 @@ export function GradingForm({
     }
     return seed;
   });
+
+  /* ─── AI suggestions (#150) ─── */
+
+  const [suggestions, setSuggestions] = React.useState<AiSuggestion[]>(ai?.initial ?? []);
+  // What the tutor decided on this page; recorded when the grade is saved.
+  const [decided, setDecided] = React.useState<Record<string, AiTutorAction | undefined>>({});
+  const byQuestion = React.useMemo(() => new Map(suggestions.map((s) => [s.questionId, s])), [suggestions]);
+  const aiWorking = suggestions.filter(isPending).length;
+  const loadAi = ai?.load ?? loadSuggestions;
+  React.useEffect(() => {
+    if (!ai || aiWorking === 0) return;
+    const t = window.setInterval(async () => {
+      const next = await loadAi(submissionId).catch(() => null);
+      if (next) setSuggestions(next);
+    }, AI_POLL_MS);
+    return () => window.clearInterval(t);
+  }, [ai, aiWorking, loadAi, submissionId]);
 
   const [overallFeedback, setOverallFeedback] = React.useState(
     existingGrade?.finalComments ?? "",
@@ -253,6 +308,71 @@ export function GradingForm({
     [updateScore],
   );
 
+  const fillFrom = React.useCallback((s: AiSuggestion) => {
+    const total = s.totalAwarded;
+    if (total == null) return;
+    setPerQ((prev) => {
+      const cur = prev[s.questionId] ?? { score: "", feedback: "" };
+      return { ...prev, [s.questionId]: { score: String(total), feedback: cur.feedback.trim() ? cur.feedback : (s.feedbackToStudent ?? "") } };
+    });
+  }, []);
+  const clearScore = React.useCallback((questionId: string) => {
+    setPerQ((prev) => ({ ...prev, [questionId]: { feedback: prev[questionId]?.feedback ?? "", score: "" } }));
+  }, []);
+  const acceptSuggestion = React.useCallback(
+    (s: AiSuggestion) => {
+      fillFrom(s);
+      setDecided((d) => ({ ...d, [s.id]: "ACCEPTED" }));
+    },
+    [fillFrom],
+  );
+  const editSuggestion = React.useCallback(
+    (s: AiSuggestion) => {
+      fillFrom(s);
+      setDecided((d) => ({ ...d, [s.id]: "EDITED" }));
+      window.setTimeout(() => {
+        const el = document.getElementById(`score-${s.questionId}`) as HTMLInputElement | null;
+        el?.focus();
+        el?.select();
+      }, 0);
+    },
+    [fillFrom],
+  );
+  // Rejecting or undoing takes the AI's mark back out of the box.
+  const rejectSuggestion = React.useCallback(
+    (s: AiSuggestion) => {
+      if (decided[s.id] === "ACCEPTED" || decided[s.id] === "EDITED") clearScore(s.questionId);
+      setDecided((d) => ({ ...d, [s.id]: "REJECTED" }));
+    },
+    [decided, clearScore],
+  );
+  const undoSuggestion = React.useCallback(
+    (s: AiSuggestion) => {
+      if (decided[s.id] === "ACCEPTED" || decided[s.id] === "EDITED") clearScore(s.questionId);
+      setDecided((d) => {
+        const next = { ...d };
+        delete next[s.id];
+        return next;
+      });
+    },
+    [decided, clearScore],
+  );
+  const acceptMany = React.useCallback(
+    (ids: string[]) => {
+      for (const s of suggestions) if (ids.includes(s.id)) acceptSuggestion(s);
+    },
+    [suggestions, acceptSuggestion],
+  );
+
+  const pathById = React.useMemo(() => new Map(rows.map((r) => [r.q.id, r.path])), [rows]);
+  usePublishGrading({
+    score: effectiveScore,
+    outOf: outOfTotal,
+    working: aiWorking,
+    toReview: awaitingReview(suggestions, decided).map((s) => ({ suggestion: s, label: pathById.get(s.questionId) ?? "" })),
+    acceptMany,
+  });
+
   async function onSubmit() {
     if (outOfTotal <= 0) {
       toast.error("This test has no gradable questions.");
@@ -285,6 +405,17 @@ export function GradingForm({
       });
       if (result?.serverError) throw new Error(result.serverError);
       if (result?.validationErrors) throw new Error("Some scores were rejected — check each question.");
+      // The audit trail for each AI suggestion (A's recordAiSuggestionAction).
+      if (ai && suggestions.length > 0) {
+        const record = ai.record ?? recordAction;
+        const actions = finalActions(suggestions, decided, (qid) => perQ[qid]?.score ?? "");
+        const refused = (
+          await Promise.all(actions.map((a) => record(a).catch((e: unknown) => (e instanceof Error ? e.message : "Failed"))))
+        ).filter(Boolean);
+        if (refused.length > 0) {
+          toast.error(`The grade is saved, but ${refused.length} AI decision${refused.length === 1 ? " wasn't" : "s weren't"} recorded: ${refused[0]}`);
+        }
+      }
       draft.clear();
       toast.success(`Saved grade for ${studentName}`);
       router.push(`/dashboard/tutor-tests/${testId}/submissions`);
@@ -311,6 +442,14 @@ export function GradingForm({
           onScore={updateScore}
           onFeedback={updateFeedback}
           onAssignFull={assignFull}
+          suggestion={ai ? byQuestion.get(r.q.id) : undefined}
+          provenance={ai && isAiMarkedType(r.q.type) ? provenanceOf(byQuestion.get(r.q.id), decided[byQuestion.get(r.q.id)?.id ?? ""]) : null}
+          canUndo={Boolean(decided[byQuestion.get(r.q.id)?.id ?? ""])}
+          readOnly={readOnly}
+          onAccept={acceptSuggestion}
+          onEdit={editSuggestion}
+          onReject={rejectSuggestion}
+          onUndo={undoSuggestion}
         />
       ))}
       </div>
@@ -382,11 +521,13 @@ export function GradingForm({
             />
             <DraftStatus draft={draft} />
             <SaveProgressButton draft={draft} />
-            <Button type="button" variant="brand" onClick={onSubmit} disabled={pending}>
-              {pending && <Loader2 className="size-4 animate-spin" />}
-              {existingGrade ? "Update grade" : "Save grade"}
-              <Save className="size-4" />
-            </Button>
+            <WriteGuard label={existingGrade ? "Update grade" : "Save grade"} variant="brand" size="default">
+              <Button type="button" variant="brand" onClick={onSubmit} disabled={pending}>
+                {pending && <Loader2 className="size-4 animate-spin" />}
+                {existingGrade ? "Update grade" : "Save grade"}
+                <Save className="size-4" />
+              </Button>
+            </WriteGuard>
           </div>
         </div>
       </div>
@@ -411,6 +552,14 @@ const QuestionCard = React.memo(function QuestionCard({
   onScore,
   onFeedback,
   onAssignFull,
+  suggestion,
+  provenance,
+  canUndo,
+  readOnly,
+  onAccept,
+  onEdit,
+  onReject,
+  onUndo,
 }: {
   row: FlatRow;
   answer: unknown;
@@ -419,12 +568,26 @@ const QuestionCard = React.memo(function QuestionCard({
   onScore: (qid: string, v: string) => void;
   onFeedback: (qid: string, v: string) => void;
   onAssignFull: (qid: string, points: number) => void;
+  suggestion?: AiSuggestion;
+  /** Where the mark comes from; null when AI marking doesn't apply. */
+  provenance: Provenance | null;
+  canUndo: boolean;
+  readOnly: boolean;
+  onAccept: (s: AiSuggestion) => void;
+  onEdit: (s: AiSuggestion) => void;
+  onReject: (s: AiSuggestion) => void;
+  onUndo: (s: AiSuggestion) => void;
 }) {
   const { q, path, depth, gradable } = row;
   const isContext = !gradable;
+  const [highlight, setHighlight] = React.useState(true);
+  const evidence = React.useMemo(() => criteriaOf(suggestion?.criteria).flatMap((c) => c.evidence), [suggestion?.criteria]);
+  const answerText = typeof answer === "string" ? answer : "";
+  const showHighlight = highlight && evidence.length > 0 && answerText.trim() !== "" && provenance !== null;
 
   return (
     <section
+      id={`q-${q.id}`}
       aria-label={isContext ? `Context ${path}` : `Question ${path}`}
       className={cn("space-y-4 py-6", depth > 0 && "border-brand-terracotta/30 ml-2 border-l-2 pl-4 sm:ml-4")}
     >
@@ -446,9 +609,21 @@ const QuestionCard = React.memo(function QuestionCard({
         <>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <p className="text-muted-foreground mb-2 text-xs font-medium">Student answer</p>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-muted-foreground text-xs font-medium">Student answer</p>
+                {evidence.length > 0 && provenance !== null ? (
+                  <button
+                    type="button"
+                    onClick={() => setHighlight((h) => !h)}
+                    aria-pressed={highlight}
+                    className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-2"
+                  >
+                    {highlight ? "Hide AI evidence" : "Show AI evidence"}
+                  </button>
+                ) : null}
+              </div>
               <div className="border-border bg-muted/40 rounded-md border p-3">
-                <AnswerView type={q.type} value={answer} />
+                {showHighlight ? <HighlightedAnswer runs={highlightRuns(answerText, evidence)} /> : <AnswerView type={q.type} value={answer} />}
               </div>
             </div>
             <div>
@@ -459,13 +634,27 @@ const QuestionCard = React.memo(function QuestionCard({
             </div>
           </div>
 
+          {suggestion && provenance !== null ? (
+            <AiSuggestionCard
+              suggestion={suggestion}
+              provenance={provenance}
+              canUndo={canUndo}
+              disabled={readOnly}
+              onAccept={onAccept}
+              onEdit={onEdit}
+              onReject={onReject}
+              onUndo={onUndo}
+            />
+          ) : null}
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr]">
             <div className="space-y-1.5">
-              <label className="text-foreground text-xs font-medium">
+              <label htmlFor={`score-${q.id}`} className="text-foreground text-xs font-medium">
                 Score
               </label>
               <div className="flex items-center gap-2">
                 <Input
+                  id={`score-${q.id}`}
                   type="number"
                   className="h-9 w-20 text-right tabular-nums"
                   value={score}

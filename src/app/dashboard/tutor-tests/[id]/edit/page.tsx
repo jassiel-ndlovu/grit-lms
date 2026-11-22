@@ -26,7 +26,12 @@ import type {
   EditorQuestionType,
 } from "@/features/assessments/components/test-question-editor";
 import { prisma } from "@/lib/db";
+import { getViewer } from "@/lib/viewer";
 import { getCourseScope } from "@/features/courses/course-access";
+import { courseRoutes } from "@/features/courses/components/course-frame";
+import { hasService } from "@/features/billing/services";
+import { isBillingEnabled } from "@/features/billing/errors";
+import { AiMarkingSwitch } from "@/features/assessments/components/ai-marking-switch";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -102,6 +107,10 @@ export default async function EditTestPage({ params }: PageProps) {
   ]);
   if (!test) notFound();
 
+  // AI-suggested marks (#150) need the course's `ai-marking` service (Pro).
+  const viewer = await getViewer();
+  const aiAvailable = viewer ? await hasService(viewer, test.courseId, "ai-marking") : false;
+
   const editorQuestions = buildEditorTree(test.questions);
 
   return (
@@ -111,6 +120,14 @@ export default async function EditTestPage({ params }: PageProps) {
       <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
         <h1 className="sr-only">Edit {test.title}</h1>
         <TestForm
+          extraSettings={
+            <AiMarkingSwitch
+              testId={test.id}
+              initialOn={test.aiMarking}
+              available={aiAvailable}
+              servicesHref={isBillingEnabled() ? courseRoutes.services(test.courseId) : null}
+            />
+          }
           courses={courses.map((c) => ({ id: c.id, name: c.name }))}
           defaultValues={{
             id: test.id,
