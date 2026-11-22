@@ -45,6 +45,7 @@ import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { getCourseScope } from "@/features/courses/course-access";
 import { manageableBy } from "@/features/courses/lib/course-access";
+import { schoolDateFormat } from "@/lib/datetime";
 
 function fileNameFromUrl(url: string): string {
   try {
@@ -58,7 +59,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   weekday: "short",
   month: "short",
   day: "numeric",

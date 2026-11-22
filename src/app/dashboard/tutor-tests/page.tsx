@@ -24,10 +24,11 @@ import { WriteGuard } from "@/components/shell/workspace-access";
 import { ImportTestDialog } from "@/features/assessments/components/import-test-dialog";
 import { testRoutes } from "@/features/assessments/components/test-frame";
 import { getCourseScope } from "@/features/courses/course-access";
+import { schoolDateFormat } from "@/lib/datetime";
 
 export const metadata = { title: "Tests" };
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   month: "short",
   day: "numeric",
   year: "numeric",

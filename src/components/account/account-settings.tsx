@@ -34,6 +34,7 @@ import { actionError } from "@/features/courses/lib/account-ui";
 import { cancelStudentAccountDeletion, requestAccountDeletion, requestStudentAccountDeletion } from "@/features/users/privacy-actions";
 
 import { DELETE_WORD, deleteWordMatches, deletionDoneHref, formatDeletionDate } from "./account-copy";
+import { DEFAULT_LOCALE, DEFAULT_TIME_ZONE } from "@/lib/datetime";
 
 function ErrorLine({ error }: { error: string | null }) {
   return error ? (
@@ -137,7 +138,7 @@ export function DataExportButton({ userId, label = "Download my data" }: { userI
         setNote({
           tone: "info",
           text: next
-            ? `A download was made in the last 24 hours. The next one is possible from ${next.toLocaleString(undefined, { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}.`
+            ? `A download was made in the last 24 hours. The next one is possible from ${next.toLocaleString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIME_ZONE, day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}.`
             : "A download was made in the last 24 hours. Try again tomorrow.",
         });
         return;

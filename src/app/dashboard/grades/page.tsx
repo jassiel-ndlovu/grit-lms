@@ -33,10 +33,11 @@ import {
 import HeaderGrades from "@/components/illustrations/generated/header-grades";
 import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
+import { schoolDateFormat } from "@/lib/datetime";
 
 export const metadata = { title: "Grades" };
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   month: "short",
   day: "numeric",
   year: "numeric",

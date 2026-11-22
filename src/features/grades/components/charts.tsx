@@ -16,6 +16,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { schoolDateFormat } from "@/lib/datetime";
 
 /* ------------------------------------------------------------------------- */
 /* LineChart — score over time                                                */
@@ -49,7 +50,7 @@ function niceExtent(values: number[], fallback: [number, number]): [number, numb
   return [min, max];
 }
 
-const monthDayFmt = new Intl.DateTimeFormat(undefined, {
+const monthDayFmt = schoolDateFormat({
   month: "short",
   day: "numeric",
 });

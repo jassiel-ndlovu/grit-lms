@@ -48,12 +48,13 @@ import { SubmissionAdminPanel } from "@/features/assessments/components/submissi
 import { AutoGradeButton } from "@/features/assessments/components/auto-grade-button";
 import { TestFrame, testRoutes } from "@/features/assessments/components/test-frame";
 import { getCourseScope } from "@/features/courses/course-access";
+import { schoolDateFormat } from "@/lib/datetime";
 
 interface PageProps {
   params: Promise<{ testId: string; studentId: string }>;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   weekday: "short",
   month: "short",
   day: "numeric",

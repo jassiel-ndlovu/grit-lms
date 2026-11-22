@@ -40,12 +40,13 @@ import { MemoFilesEditor } from "@/features/assignments/components/memo-files-ed
 import { DeleteEntryButton } from "@/features/assignments/components/delete-entry-button";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { getCourseScope } from "@/features/courses/course-access";
+import { schoolDateFormat } from "@/lib/datetime";
 
 interface PageProps {
   params: Promise<{ id: string; studentId: string }>;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   weekday: "short",
   month: "short",
   day: "numeric",

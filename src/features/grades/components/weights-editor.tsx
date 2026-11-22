@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { setAssessmentWeights } from "../actions";
 import { buildWeightPlan, type WeightedAssessment } from "../lib/weighting";
+import { DEFAULT_LOCALE, DEFAULT_TIME_ZONE } from "@/lib/datetime";
 
 export interface WeightsEditorProps {
   courseId: string;
@@ -156,7 +157,8 @@ export function WeightsEditor({ courseId, assessments }: WeightsEditorProps) {
                 <p className="text-muted-foreground text-xs">
                   {a.kind === "test" ? "Test" : "Assignment"} ·{" "}
                   {a.totalPoints} {a.totalPoints === 1 ? "mark" : "marks"} · due{" "}
-                  {a.dueDate.toLocaleDateString(undefined, {
+                  {a.dueDate.toLocaleDateString(DEFAULT_LOCALE, {
+                    timeZone: DEFAULT_TIME_ZONE,
                     month: "short",
                     day: "numeric",
                     year: "numeric",

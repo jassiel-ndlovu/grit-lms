@@ -48,6 +48,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import LessonMarkdown from "@/app/components/markdown";
 import { AnswerText, MathsAnswerText } from "@/components/content/answer-text";
+import { schoolDateFormat } from "@/lib/datetime";
 
 import {
   getTestDetailById,
@@ -58,7 +59,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   weekday: "short",
   month: "short",
   day: "numeric",

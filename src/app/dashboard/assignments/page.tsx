@@ -39,6 +39,7 @@ import { EmptyState, Scene } from "@/components/ui/empty-state";
 import HeaderAssignments from "@/components/illustrations/generated/header-assignments";
 import { WriteGuard } from "@/components/shell/workspace-access";
 import { getCourseScope } from "@/features/courses/course-access";
+import { DEFAULT_LOCALE, DEFAULT_TIME_ZONE } from "@/lib/datetime";
 
 export const metadata = { title: "Assignments" };
 
@@ -238,7 +239,8 @@ export default async function SubmissionsIndexPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-muted-foreground text-xs tabular-nums">
-                          {sub.dueDate.toLocaleDateString(undefined, {
+                          {sub.dueDate.toLocaleDateString(DEFAULT_LOCALE, {
+                            timeZone: DEFAULT_TIME_ZONE,
                             month: "short",
                             day: "numeric",
                             year: "numeric",

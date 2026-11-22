@@ -12,6 +12,7 @@ import { Clock, FileQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { schoolDateFormat } from "@/lib/datetime";
 
 type TestCardTest = {
   id: string;
@@ -64,7 +65,7 @@ function statusFor(submission: TestCardSubmission, dueDate: Date) {
   }
 }
 
-const dateFmt = new Intl.DateTimeFormat(undefined, {
+const dateFmt = schoolDateFormat({
   month: "short",
   day: "numeric",
   year: "numeric",
