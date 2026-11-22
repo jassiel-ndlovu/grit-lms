@@ -3,6 +3,76 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 Page frame step 1 and the 21 Nov decision screens, `revamp/b-frame-and-decisions`
+
+Done:
+- **Page frame (#205, step 1).** `PageFrame`, `PageTitle` and `PageSection`
+  in `components/shell/page-frame.tsx`. Widths (Reading 720, Standard 1120,
+  Full), padding 16/24/32 px, top padding and the 32 px section gap live in
+  one file, `src/app/page-frame.css`, named in `src/lib/ui-layout.ts`.
+  `PageHeader` stays the 48 px sticky primary header (now `top:
+  var(--shell-top)`, same place as before). `Ribbon` is the 40 px sticky
+  secondary header under it, hidden while scrolling down below 768 px.
+  The runner gets a 28 px strip (`density="runner"`); `lockdown` hides it.
+  Every page type is on `/design-system/frame?type=home|list|record|editor|runner|settings`.
+  No existing page was migrated (steps 2 to 4). navigation.md has the rules.
+- **Mode switch (#192, #206):** Organisation / Tutor in the sidebar under
+  the account menu (`ModeSwitch` in app-shell). Shown only when
+  `viewer.mode` is set and `viewer.workspace.teaches`; `switchViewerMode`
+  then a refresh.
+- **Teaching switch:** new `/dashboard/settings/organisation` (framed).
+  Owner only: typed organisation name, a warning, "only Nexa support can
+  switch it back on" (`switchTeachingOff`). Admins of the organisation see
+  the state. Linked from Settings for organisations.
+- **Admin switch-on:** `/dashboard/admin/billing/workspaces/[id]` is B's, so
+  the workspace detail now has a Teaching row with "Switch teaching on…"
+  (`adminSwitchTeachingOn`, with a note) when it's off.
+- **Tutor lists:** `ownerTutor` loads the membership role and the
+  workspace's `teachingOffAt`; `tutorOf` and `otherTeacherName` return null
+  for an owner or admin of an organisation that doesn't teach. Course cards
+  say "No tutor yet" instead of "Unknown tutor".
+- **Restart (#191):** `RestartPanel` on Billing for a CANCELLED workspace,
+  or READ_ONLY with nothing overdue, replacing the first-payment button.
+  Handles PAY_OUTSTANDING (a pay button per bill, then restart again),
+  PAY_FIRST_PERIOD (`startFirstPayment`), CARD_REQUIRED (`CardButton`, then
+  restart again) and RESTARTED (refresh).
+- **Read-only (#189):** `WorkspaceAccessProvider` in the dashboard layout
+  (staff in a read-only workspace) and `WriteGuard`, which swaps a write
+  control for a disabled one with a lock and "Your workspace is read-only.
+  Pay to unlock it." Used on New course, New event, New test, Import JSON,
+  New assignment (list and course overview), Add student and Send invites.
+  `exportTestJson` is on `tutorReadActionClient`.
+- **Themes (#206):** a Calm / Bright picker card in Settings (revamp
+  UI only) that saves at once (`updateOwnPreferences({ theme })`; A's settings form is untouched). Bright is in
+  `src/app/themes.css` (light and dark), applied as `data-theme` on
+  `<html>` by PreferencesProvider and the boot script.
+- **#203:** `providers.tsx` (SessionProvider) deleted; search imports
+  `Session` from `@/lib/auth`. No B code imports next-auth now.
+- **#196:** `/dashboard/fees` for a learner who neither manages nor pays
+  fees shows "Your fees are handled by your parent or your tutor. Ask your
+  tutor if you need to pay." (framed) instead of a 404.
+- **Checks:** `scripts/check-themes.ts` (every Bright text pair ≥ 4.5:1,
+  outlines and nav icons ≥ 3:1, light and dark; the layout file's values)
+  and `scripts/check-decision-screens.ts`. Screens with sample data:
+  `/design-system/decisions`.
+
+Next:
+- #205 steps 2 to 4: move the pages that use `PageHeader`, then student and
+  parent pages, then tutor pages; step 5 adds `check-page-frame.ts`.
+- Join requests (browse, request, staff inbox) are the next batch.
+- On Preview, recheck with real accounts: the mode switch as a teaching
+  owner, Settings › Organisation, a cancelled workspace's Billing, and the
+  read-only buttons on `seed.thuto.owner`. Locally only the design-system
+  pages were checked (no sign-in).
+- Dialogs portal outside a `data-ui="revamp"` wrapper, so on the
+  design-system pages (not on Preview, where `<html>` carries it) they keep
+  the old look.
+
+Blocked on the other agent: none. #203 done on B's side: A can delete the
+stand-in `/api/auth/[...nextauth]`, `lib/next-auth.d.ts` and the package.
+
+Questions for the owner: none.
+
 ## 2026-11-21 Open Peeps everywhere, coloured nav icons, `revamp/b-peeps-nav-colour`
 
 Done:

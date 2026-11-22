@@ -19,7 +19,7 @@
 import type { Prisma } from "@/generated/prisma";
 import { can, needsScope, type Viewer } from "@/lib/viewer-core";
 
-import { taughtByUser } from "./tenancy-where";
+import { taughtByUser, teachesAsOwner, type TeachingMembership } from "./tenancy-where";
 
 export interface CourseScope {
   /** The signed-in user's id: courses they teach are always in scope. */
@@ -73,9 +73,9 @@ export function managesCourse(
  */
 export function otherTeacherName(
   userId: string,
-  course: { ownerMembership: { user: { id: string; name: string; tutorProfile: { fullName: string } | null } } | null },
+  course: { ownerMembership: ({ user: { id: string; name: string; tutorProfile: { fullName: string } | null } } & TeachingMembership) | null },
 ): string | null {
   const user = course.ownerMembership?.user;
-  if (!user || user.id === userId) return null;
+  if (!user || user.id === userId || !teachesAsOwner(course.ownerMembership!)) return null;
   return user.tutorProfile?.fullName || user.name || null;
 }

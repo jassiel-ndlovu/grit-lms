@@ -1,0 +1,163 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Colour themes (#206, owner decision 2026-11-21).
+
+   CALM is the default: the grey revamp tokens in revamp-tokens.css, with no
+   data-theme override. BRIGHT is for primary-school learners: a warm cream
+   page, a sunny sidebar, violet actions and livelier nav icons. Picked per
+   user in Settings (viewer.user.theme, saved with updateOwnPreferences);
+   PreferencesProvider sets data-theme="bright" on <html>.
+
+   Revamp UI only: the selectors need data-ui="revamp", so production's
+   Inkwell look is untouched until REVAMP_UI ships.
+
+   Contrast (WCAG 2.2 AA) is checked by scripts/check-themes.ts, which reads
+   this file: text and its background at least 4.5:1, control outlines and
+   nav icons at least 3:1. Keep every colour here a 6-digit hex so it can.
+   Adding a theme also needs a value in A's UiTheme enum (viewer.md 1.12).
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root[data-ui="revamp"][data-theme="bright"],
+[data-ui="revamp"][data-theme="bright"] {
+  --radius: 0.625rem;
+
+  --background: #fffdf7;
+  --foreground: #1f2544;
+  --card: #ffffff;
+  --card-foreground: #1f2544;
+  --popover: #ffffff;
+  --popover-foreground: #1f2544;
+
+  --primary: #6d28d9;
+  --primary-foreground: #ffffff;
+
+  --secondary: #fef3c7;
+  --secondary-foreground: #1f2544;
+  --muted: #fff6e0;
+  --muted-foreground: #5b5675;
+  --accent: #fdecb8;
+  --accent-foreground: #1f2544;
+
+  --destructive: #c2261d;
+  --destructive-foreground: #ffffff;
+  --success: #047857;
+  --success-foreground: #ffffff;
+  --warning: #92400e;
+  --warning-foreground: #ffffff;
+  --link: #6d28d9;
+
+  --border: #f0e2bd;
+  --input: #8a82a6;
+  --ring: #7c3aed;
+
+  --brand-terracotta: #c2410c;
+  --brand-terracotta-foreground: #ffffff;
+  --brand-slate: #1f2544;
+  --brand-parchment: #fffdf7;
+
+  --chart-1: #6d28d9;
+  --chart-2: #0e7490;
+  --chart-3: #c2410c;
+  --chart-4: #be185d;
+  --chart-5: #047857;
+
+  --sidebar: #fff3d1;
+  --sidebar-foreground: #1f2544;
+  --sidebar-primary: #6d28d9;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fde3a0;
+  --sidebar-accent-foreground: #1f2544;
+  --sidebar-border: #f2d98f;
+  --sidebar-ring: #7c3aed;
+
+  --scrollbar-thumb: #ead9a8;
+  --scrollbar-thumb-hover: #8a82a6;
+
+  /* Livelier nav hues; each clears 3:1 on the sidebar and its active row. */
+  --nav-home: #c2410c;
+  --nav-inbox: #be123c;
+  --nav-book: #1d4ed8;
+  --nav-calendar: #7e22ce;
+  --nav-test: #0f766e;
+  --nav-assignment: #b45309;
+  --nav-grades: #a16207;
+  --nav-gradebook: #15803d;
+  --nav-analytics: #0369a1;
+  --nav-users: #be185d;
+  --nav-profile: #4338ca;
+  --nav-settings: #475569;
+  --nav-help: #0e7490;
+  --nav-billing: #047857;
+  --nav-fees: #4d7c0f;
+}
+
+:root[data-ui="revamp"][data-theme="bright"].dark,
+.dark [data-ui="revamp"][data-theme="bright"],
+[data-ui="revamp"][data-theme="bright"].dark {
+  --background: #17142b;
+  --foreground: #f3f0ff;
+  --card: #201c3a;
+  --card-foreground: #f3f0ff;
+  --popover: #262043;
+  --popover-foreground: #f3f0ff;
+
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+
+  --secondary: #2e2852;
+  --secondary-foreground: #f3f0ff;
+  --muted: #241f40;
+  --muted-foreground: #bdb6dc;
+  --accent: #2e2852;
+  --accent-foreground: #f3f0ff;
+
+  --destructive: #f87171;
+  --destructive-foreground: #17142b;
+  --success: #34d399;
+  --success-foreground: #17142b;
+  --warning: #fbbf24;
+  --warning-foreground: #17142b;
+  --link: #c4b5fd;
+
+  --border: #352e5c;
+  --input: #7f78a8;
+  --ring: #c4b5fd;
+
+  --brand-terracotta: #c2410c;
+  --brand-terracotta-foreground: #ffffff;
+  --brand-slate: #f3f0ff;
+  --brand-parchment: #17142b;
+
+  --chart-1: #c4b5fd;
+  --chart-2: #67e8f9;
+  --chart-3: #fdba74;
+  --chart-4: #f9a8d4;
+  --chart-5: #6ee7b7;
+
+  --sidebar: #1d1936;
+  --sidebar-foreground: #f3f0ff;
+  --sidebar-primary: #c4b5fd;
+  --sidebar-primary-foreground: #17142b;
+  --sidebar-accent: #2e2852;
+  --sidebar-accent-foreground: #f3f0ff;
+  --sidebar-border: #352e5c;
+  --sidebar-ring: #c4b5fd;
+
+  --scrollbar-thumb: #352e5c;
+  --scrollbar-thumb-hover: #7f78a8;
+
+  --nav-home: #fb923c;
+  --nav-inbox: #fb7185;
+  --nav-book: #60a5fa;
+  --nav-calendar: #c084fc;
+  --nav-test: #2dd4bf;
+  --nav-assignment: #fbbf24;
+  --nav-grades: #facc15;
+  --nav-gradebook: #4ade80;
+  --nav-analytics: #38bdf8;
+  --nav-users: #f472b6;
+  --nav-profile: #a5b4fc;
+  --nav-settings: #94a3b8;
+  --nav-help: #22d3ee;
+  --nav-billing: #34d399;
+  --nav-fees: #a3e635;
+}

@@ -30,7 +30,7 @@ export function CourseCard({
   actions,
   className,
 }: CourseCardProps) {
-  const tutorName = tutorOf(course)?.fullName ?? "Unknown tutor";
+  const tutorName = tutorOf(course)?.fullName ?? "No tutor yet";
 
   return (
     <Card

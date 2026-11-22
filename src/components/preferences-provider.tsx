@@ -20,6 +20,8 @@ export interface ClientPreferences {
   timeZone: string | null;
   locale: string;
   darkMode: boolean;
+  /** Colour theme (#206): CALM (default) or BRIGHT. Applied as data-theme on <html>. */
+  theme?: "CALM" | "BRIGHT";
   preferredView: "LIST" | "GRID" | "TIMELINE";
 }
 
@@ -33,6 +35,8 @@ const DEFAULTS: ClientPreferences = {
 const PreferencesContext = React.createContext<ClientPreferences>(DEFAULTS);
 
 export const THEME_STORAGE_KEY = "nexa-theme";
+/** The colour theme (#206), mirrored like the dark-mode flag. */
+export const COLOR_THEME_STORAGE_KEY = "nexa-color-theme";
 
 export function PreferencesProvider({
   value,
@@ -46,12 +50,15 @@ export function PreferencesProvider({
     root.classList.toggle("dark", value.darkMode);
     root.style.colorScheme = value.darkMode ? "dark" : "light";
     root.lang = value.locale;
+    const colour = value.theme === "BRIGHT" ? "bright" : "calm";
+    root.dataset.theme = colour;
     try {
       localStorage.setItem(THEME_STORAGE_KEY, value.darkMode ? "dark" : "light");
+      localStorage.setItem(COLOR_THEME_STORAGE_KEY, colour);
     } catch {
       // Storage can be unavailable (private mode); the class is still set.
     }
-  }, [value.darkMode, value.locale]);
+  }, [value.darkMode, value.locale, value.theme]);
 
   return (
     <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>
@@ -84,4 +91,4 @@ export function useMounted(): boolean {
  * Inline script for <head>: applies the last-known theme before React
  * hydrates, avoiding a light flash for dark-mode users.
  */
-export const themeBootScript = `try{if(localStorage.getItem("${THEME_STORAGE_KEY}")==="dark"){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}}catch(e){}`;
+export const themeBootScript = `try{if(localStorage.getItem("${THEME_STORAGE_KEY}")==="dark"){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}if(localStorage.getItem("${COLOR_THEME_STORAGE_KEY}")==="bright"){document.documentElement.dataset.theme="bright"}}catch(e){}`;

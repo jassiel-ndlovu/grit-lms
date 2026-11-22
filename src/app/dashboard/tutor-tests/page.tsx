@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { listTestsByTutorId } from "@/features/assessments/queries";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TutorTestActions } from "@/features/assessments/components/tutor-test-actions";
+import { WriteGuard } from "@/components/shell/workspace-access";
 import { ImportTestDialog } from "@/features/assessments/components/import-test-dialog";
 import { testRoutes } from "@/features/assessments/components/test-frame";
 import { getCourseScope } from "@/features/courses/course-access";
@@ -57,12 +58,16 @@ export default async function TutorTestsPage() {
         breadcrumb={[{ label: "Tests" }]}
         actions={
           <div className="flex items-center gap-2">
-            <ImportTestDialog courses={courses.map((c) => ({ id: c.id, name: c.name }))} />
-            <Button asChild variant="brand" size="sm">
-              <Link href={testRoutes.create}>
-                <Plus className="size-4" /> New test
-              </Link>
-            </Button>
+            <WriteGuard label="Import JSON">
+              <ImportTestDialog courses={courses.map((c) => ({ id: c.id, name: c.name }))} />
+            </WriteGuard>
+            <WriteGuard label="New test" variant="brand">
+              <Button asChild variant="brand" size="sm">
+                <Link href={testRoutes.create}>
+                  <Plus className="size-4" /> New test
+                </Link>
+              </Button>
+            </WriteGuard>
           </div>
         }
       />

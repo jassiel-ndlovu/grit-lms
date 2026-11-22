@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as ToolbarPrimitive from "@radix-ui/react-toolbar";
 
+import { SECONDARY_HIDE_BELOW_PX, SECONDARY_TOP_CLASS } from "@/lib/ui-layout";
 import { cn } from "@/lib/utils";
 
 import { activeHref } from "./nav-config";
@@ -28,12 +29,67 @@ export interface RibbonLink {
   href: string;
 }
 
+/**
+ * The secondary header of the page frame (#205): 40 px, sticky directly
+ * under the PageHeader. Below 768 px it slides away while the page scrolls
+ * down and comes back on the first scroll up, so phones keep the room.
+ */
 export function Ribbon({ className, children }: { className?: string; children: React.ReactNode }) {
+  const hidden = useHideOnScrollDown();
   return (
-    <div data-slot="ribbon" className={cn("border-border flex h-10 items-center gap-4 border-b px-4", className)}>
+    <div
+      data-slot="ribbon"
+      data-hidden={hidden ? "" : undefined}
+      className={cn(
+        "bg-background/95 border-border sticky z-10 flex h-(--header-secondary) items-center gap-4 border-b px-4 backdrop-blur",
+        "transition-[translate,opacity] duration-200 motion-reduce:transition-none",
+        SECONDARY_TOP_CLASS,
+        hidden && "pointer-events-none -translate-y-full opacity-0",
+        className,
+      )}
+    >
       {children}
     </div>
   );
+}
+
+/** Scroll distance before the direction counts, so small jitters don't flicker the bar. */
+const SCROLL_SLOP_PX = 8;
+
+/** True while a phone-width window is scrolling down (and past the headers). Always false from 768 px. */
+export function useHideOnScrollDown(): boolean {
+  const [hidden, setHidden] = React.useState(false);
+  React.useEffect(() => {
+    const narrow = window.matchMedia(`(max-width: ${SECONDARY_HIDE_BELOW_PX - 1}px)`);
+    let last = window.scrollY;
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const y = window.scrollY;
+        if (!narrow.matches || y < 96) {
+          setHidden(false);
+        } else if (y - last > SCROLL_SLOP_PX) {
+          setHidden(true);
+        } else if (last - y > SCROLL_SLOP_PX) {
+          setHidden(false);
+        } else {
+          return; // too small to count; keep `last` where the move started
+        }
+        last = y;
+      });
+    };
+    const onWidth = () => !narrow.matches && setHidden(false);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    narrow.addEventListener("change", onWidth);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      narrow.removeEventListener("change", onWidth);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+  return hidden;
 }
 
 export function RibbonNav({

@@ -10,6 +10,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 
+import { WriteGuard } from "@/components/shell/workspace-access";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,10 +76,12 @@ export function InviteStaffForm({ canInviteAdmins }: { canInviteAdmins: boolean 
             </SelectContent>
           </Select>
         </div>
-        <Button type="submit" disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-          Send invites
-        </Button>
+        <WriteGuard label="Send invites" size="default" variant="default">
+          <Button type="submit" disabled={busy}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : null}
+            Send invites
+          </Button>
+        </WriteGuard>
       </div>
       <p className="text-muted-foreground text-xs">
         {role === "ADMIN" ? "Admins manage tutors, students, fees and settings." : "Tutors teach the courses you give them."} The link

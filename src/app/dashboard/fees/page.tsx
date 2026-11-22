@@ -13,6 +13,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { Receipt } from "lucide-react";
+
+import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { PageHeader } from "@/components/shell/page-header";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { feeCourses } from "@/features/courses/fee-courses";
@@ -40,6 +43,9 @@ export default async function FeesPage({ searchParams }: PageProps) {
   if (!viewer) redirect("/auth");
   if (!can(viewer, "fees.manage")) {
     if (isPayer(viewer)) return <PayerFees viewer={viewer} />;
+    // A learner whose fees someone else pays (a minor, often with no parent
+    // linked yet): say who handles them instead of a 404 (#196, F8).
+    if (viewer.learner) return <FeesHandledElsewhere />;
     notFound();
   }
   if (!viewer.workspace) notFound();
@@ -191,5 +197,18 @@ async function PayerFees({ viewer }: { viewer: Viewer }) {
       today={dayIn(new Date().toISOString(), ctx)}
       forSelf={forSelf}
     />,
+  );
+}
+
+/** #196: a student who doesn't see or pay fees, often a minor with no parent linked. */
+function FeesHandledElsewhere() {
+  return (
+    <PageFrame type="settings" breadcrumb={[{ label: "Fees" }]}>
+      <PageTitle icon={<Receipt />} title="Fees" />
+      <div className="bg-muted/60 space-y-1 rounded-lg p-4 text-sm">
+        <p className="text-foreground font-medium">Your fees are handled by your parent or your tutor.</p>
+        <p className="text-muted-foreground">Ask your tutor if you need to pay.</p>
+      </div>
+    </PageFrame>
   );
 }

@@ -58,6 +58,25 @@ The switch is in `src/app/dashboard/layout.tsx`: `isRevampUi()` picks `AppShell`
 - **Banner:** `AppShell`'s `banner` prop (a React node) renders full width at the top of the content column, above every page, in `data-slot="account-banner"`. It is for account-wide notices only: verify your email, impersonation, read-only billing. A owns what goes in it; the dashboard layout passes it in. It scrolls away with the page, and `PageHeader` still sticks. Notices about one page belong in that page.
 - **Ctrl/⌘K** opens the command palette anywhere. It shows "Go to" (every nav link, matched on label and keywords) and, from two characters, live results from `searchEverything`.
 
+### PageFrame (#205, from 2026-11-22)
+
+New pages use `PageFrame` and `PageTitle` from `@/components/shell/page-frame`. Existing pages move over in later steps of #205; A's `/admin/**` pages too.
+
+```tsx
+<PageFrame type="record" breadcrumb={[…]} status={<StatusChip …/>} actions={…} secondary={<RibbonNav …/>}>
+  <PageTitle icon={<BookOpen />} eyebrow="Course" title="…" description="…" properties={<PropertyList>…</PropertyList>} />
+  <PageSection title="Lessons">…</PageSection>
+</PageFrame>
+```
+
+- **Primary header:** the existing `PageHeader`, 48 px, sticky. Breadcrumb, one status, actions, help. Never the title.
+- **Secondary header:** the `Ribbon` (`secondary` prop), 40 px, sticky directly under the primary. Below 768 px it hides while scrolling down and returns on scroll up.
+- **Widths:** `type` picks one (home, list and record: Standard 1120 px; editor: Full; settings and runner: Reading 720 px); `width` overrides it.
+- **One layout file:** widths, padding (16/24/32 px at <640, 640+, 1024+), top padding and the 32 px section gap are CSS variables in `src/app/page-frame.css`, named for TypeScript in `src/lib/ui-layout.ts`. Don't hard-code them.
+- **Test runner:** `type="runner"` shrinks the primary header to a 28 px strip; add `lockdown` for Pro lockdown tests to hide it.
+- **Switchers** (workspace, Organisation / Tutor mode) are in the sidebar, never in a page header.
+- Every type is on `/design-system/frame?type=…`.
+
 ## Rules for pages (both agents)
 
 1. **Start every page with one `PageHeader`.** The breadcrumb runs from the section to this page; the last crumb is the page itself and is not a link. On small screens only the last crumb shows.

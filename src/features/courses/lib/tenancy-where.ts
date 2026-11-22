@@ -85,9 +85,16 @@ export function enrollmentFor(studentId: string): {
  * Nested select for a course's teacher, read through the owner membership
  * instead of `Course.tutor` (which goes with `tutorId` in step 5). Use
  * `tutorOf(course)` to get `{ id, fullName, email }` back.
+ *
+ * The role and the workspace's teaching flag come along so an organisation
+ * that switched teaching off (#206) is never shown as a course's tutor.
  */
 export const ownerTutor = {
-  select: { user: { select: { id: true, name: true, tutorProfile: { select: { id: true, fullName: true, email: true } } } } },
+  select: {
+    role: true,
+    workspace: { select: { kind: true, teachingOffAt: true } },
+    user: { select: { id: true, name: true, tutorProfile: { select: { id: true, fullName: true, email: true } } } },
+  },
 } as const;
 
 export interface CourseTutor {
@@ -96,12 +103,32 @@ export interface CourseTutor {
   email: string | null;
 }
 
-/** The course's teacher from `ownerMembership: ownerTutor`, or null when it has no owner. */
+/** The owner membership fields that decide whether it counts as a teacher. */
+export interface TeachingMembership {
+  role?: string;
+  workspace?: { kind: string; teachingOffAt: Date | string | null } | null;
+}
+
+/**
+ * False for an owner or admin of an organisation that doesn't teach (#206):
+ * they run it and aren't anyone's tutor. Solo workspaces always teach.
+ * Rows loaded without the role or workspace count as teaching.
+ */
+export function teachesAsOwner(m: TeachingMembership): boolean {
+  if (!m.workspace || m.workspace.kind !== "ORGANISATION" || !m.workspace.teachingOffAt) return true;
+  return m.role !== "OWNER" && m.role !== "ADMIN";
+}
+
+/**
+ * The course's teacher from `ownerMembership: ownerTutor`, or null when it
+ * has no owner, or its owner is an organisation's owner or admin while the
+ * organisation doesn't teach.
+ */
 export function tutorOf(course: {
-  ownerMembership: { user: { name: string; tutorProfile: { id: string; fullName: string; email: string } | null } } | null;
+  ownerMembership: ({ user: { name: string; tutorProfile: { id: string; fullName: string; email: string } | null } } & TeachingMembership) | null;
 }): CourseTutor | null {
   const user = course.ownerMembership?.user;
-  if (!user) return null;
+  if (!user || !teachesAsOwner(course.ownerMembership!)) return null;
   return {
     id: user.tutorProfile?.id ?? null,
     fullName: user.tutorProfile?.fullName || user.name,

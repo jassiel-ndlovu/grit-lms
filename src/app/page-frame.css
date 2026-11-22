@@ -1,0 +1,50 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Page frame layout (#205, step 1). The one place for page widths, padding,
+   section spacing and header heights. PageFrame, PageTitle, PageHeader and
+   Ribbon (src/components/shell) read these variables; src/lib/ui-layout.ts
+   names the widths for TypeScript. Change a value here and every framed
+   page follows.
+
+     Widths    Reading 720 px (prose, forms, settings), Standard 1120 px
+               (lists, records, dashboards), Full (editors, boards, tables).
+     Padding   16 px on phones, 24 px from 640 px, 32 px from 1024 px.
+     Top       24 / 32 / 40 px above the title, on the same breakpoints.
+     Sections  32 px between the title and each section.
+     Headers   primary 48 px (sticky), secondary 40 px (sticky under it),
+               runner 28 px. `--shell-top` is the shell's own top bar above
+               them: 48 px below 1024 px (the mobile bar), 0 from 1024 px.
+               AppShell's focus mode (the test runner) sets it to 0.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --frame-reading: 720px;
+  --frame-standard: 1120px;
+  --frame-pad: 16px;
+  --frame-pad-top: 24px;
+  --frame-gap: 32px;
+
+  --header-primary: 48px;
+  --header-secondary: 40px;
+  --header-runner: 28px;
+  --shell-top: 48px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --frame-pad: 24px;
+    --frame-pad-top: 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --frame-pad: 32px;
+    --frame-pad-top: 40px;
+    --shell-top: 0px;
+  }
+}
+
+/* The test runner has no shell bar above its header. */
+[data-shell="focus"] {
+  --shell-top: 0px;
+}

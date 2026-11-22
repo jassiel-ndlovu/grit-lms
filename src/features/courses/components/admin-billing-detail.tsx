@@ -25,6 +25,7 @@ import { adminBillingRoutes } from "./admin-billing";
 import { CourseTierOverride, DeactivateCodeButton, InvoiceActions, RefundButton } from "./admin-billing-dialogs";
 import { WorkspaceActions } from "./admin-workspace-actions";
 import { InvoiceLines } from "./billing-payments";
+import { TeachingOnButton } from "./teaching-switch";
 
 export type AdminWorkspace = Awaited<ReturnType<typeof adminGetWorkspaceBilling>>;
 export type AdminInvoice = Awaited<ReturnType<typeof adminGetPlatformInvoice>>;
@@ -52,6 +53,18 @@ export function WorkspaceDetail({ ws, ctx, canOverride }: { ws: AdminWorkspace; 
             <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
           </PropertyRow>
           <PropertyRow label="Kind">{ws.kind === "SOLO" ? "Solo tutor" : "Organisation"}</PropertyRow>
+          {ws.kind === "ORGANISATION" ? (
+            <PropertyRow label="Teaching">
+              {ws.teachingOffAt ? (
+                <span className="inline-flex flex-wrap items-center gap-3">
+                  <span>Off since {d.long(ws.teachingOffAt)}</span>
+                  {canOverride ? <TeachingOnButton workspaceId={ws.workspaceId} name={ws.name} /> : null}
+                </span>
+              ) : (
+                "On"
+              )}
+            </PropertyRow>
+          ) : null}
           {ws.state === "TRIAL" && ws.trialEndsAt ? <PropertyRow label="Trial ends">{d.long(ws.trialEndsAt)}</PropertyRow> : null}
           {ws.renewsAt ? <PropertyRow label="Renews">{d.long(ws.renewsAt)}</PropertyRow> : null}
           {ws.deleteAfter && ws.state !== "COMPED" ? (

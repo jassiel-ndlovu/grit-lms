@@ -21,7 +21,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { appSignOut } from "@/lib/auth-client";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
-  Award, BarChart3, BookOpen, Calendar, ChevronsUpDown, ClipboardList, FileText,
+  Award, BarChart3, BookOpen, Building2, Calendar, ChevronsUpDown, ClipboardList, FileText,
   CreditCard, GraduationCap, Receipt, HelpCircle, Home, Inbox, LogOut, Menu, Plus, Search, Settings, User,
   Users, X, type LucideIcon,
 } from "lucide-react";
@@ -35,8 +35,9 @@ import { Kbd } from "@/components/ui/kbd";
 import { Sidebar, SidebarItem, SidebarSection } from "@/components/ui/sidebar";
 import { searchEverything } from "@/features/search/actions";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
-import { switchWorkspace } from "@/features/workspaces/actions";
+import { switchViewerMode, switchWorkspace } from "@/features/workspaces/actions";
 import { APP_SHORT_NAME } from "@/lib/branding";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 import { FOOTER_LINKS, activeHref, isFocusRoute, navHue, type NavIcon, type NavSection } from "./nav-config";
@@ -60,6 +61,12 @@ export interface ShellUser {
   workspaceId?: string | null;
   /** Offer "Create a workspace" (billing on, verified email, not a learner or guardian). */
   canCreateWorkspace?: boolean;
+  /**
+   * Organisation or tutor mode (viewer.mode, #192). Set only for an owner
+   * or admin of an organisation that teaches (viewer.workspace.teaches)
+   * and who teaches a course; null or absent hides the switch.
+   */
+  mode?: "organisation" | "tutor" | null;
 }
 
 export interface ShellWorkspace {
@@ -204,6 +211,62 @@ function AccountMenu({ user }: { user: ShellUser }) {
   );
 }
 
+const MODES = [
+  { value: "organisation", label: "Organisation", Icon: Building2, hint: "Every course, members and billing" },
+  { value: "tutor", label: "Tutor", Icon: GraduationCap, hint: "Only the courses you teach" },
+] as const;
+
+/**
+ * Organisation / Tutor (#192, owner decisions of 21 Nov): a two-way switch
+ * under the workspace switcher, never in the page header. A's
+ * switchViewerMode sets the cookie; the refresh re-reads the viewer.
+ */
+export function ModeSwitch({ mode }: { mode: "organisation" | "tutor" }) {
+  const router = useRouter();
+  const [pending, start] = React.useTransition();
+  const [shown, setShown] = React.useState(mode);
+  React.useEffect(() => setShown(mode), [mode]);
+  const pick = (next: "organisation" | "tutor") => {
+    if (next === shown || pending) return;
+    setShown(next);
+    start(async () => {
+      const res = await switchViewerMode({ mode: next });
+      if (res?.data) {
+        router.refresh();
+        toast.success(next === "tutor" ? "Tutor mode: only the courses you teach." : "Organisation mode: the whole organisation.");
+      } else {
+        setShown(mode);
+        toast.error("Could not switch mode. Try again.");
+      }
+    });
+  };
+  return (
+    <div role="radiogroup" aria-label="Mode" aria-busy={pending || undefined} className="bg-sidebar-accent/60 grid grid-cols-2 gap-0.5 rounded-md p-0.5">
+      {MODES.map(({ value, label, Icon, hint }) => {
+        const on = shown === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            title={hint}
+            disabled={pending}
+            onClick={() => pick(value)}
+            className={cn(
+              "focus-visible:ring-sidebar-ring flex h-7 items-center justify-center gap-1.5 rounded px-2 text-xs outline-none focus-visible:ring-2 disabled:cursor-progress",
+              on ? "bg-background text-foreground font-medium shadow-xs" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon aria-hidden className="size-3.5" />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ShellSidebar({
   user, sections, notifications, onSearch, onNavigate, className,
 }: {
@@ -239,6 +302,7 @@ function ShellSidebar({
         <AccountMenu user={user} />
         {notifications ? <NotificationBell /> : null}
       </div>
+      {user.mode ? <ModeSwitch mode={user.mode} /> : null}
       <button
         type="button"
         onClick={onSearch}
@@ -283,7 +347,7 @@ export function AppShell({ user, sections, children, search = true, notification
   // The test runner: the page alone, so a sitting is not left by accident.
   if (focus) {
     return (
-      <div className="bg-background text-foreground min-h-screen">
+      <div data-shell="focus" className="bg-background text-foreground min-h-screen">
         {banner ? <div data-slot="account-banner">{banner}</div> : null}
         <main>{children}</main>
       </div>
