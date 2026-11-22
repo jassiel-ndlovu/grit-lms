@@ -61,13 +61,13 @@ export const createStudentUser = staffActionClient
     // relying on Prisma's P2002.
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      throw new Error(`A user with email ${email} already exists.`);
+      throw new UserError("An account with that email already exists. Ask them to find your course on Nexa and request to join");
     }
     const existingStudent = await prisma.student.findUnique({
       where: { email },
     });
     if (existingStudent) {
-      throw new Error(`A student profile with email ${email} already exists.`);
+      throw new UserError("An account with that email already exists. Ask them to find your course on Nexa and request to join");
     }
 
     // The user, the profile (linked by userId, not email) and the Learner row

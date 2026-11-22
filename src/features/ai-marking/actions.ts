@@ -13,11 +13,12 @@ import { z } from "zod";
 
 import { hasService } from "@/features/billing/services";
 import { prisma } from "@/lib/db";
-import { viewerActionClient } from "@/lib/safe-action";
+import { viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
 import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 
 import { queueAiMarkingFor, recordTutorActionFor, runAiMarking, suggestionsFor } from "./jobs";
 import { aiMarkingConfigured } from "./marker";
+import { UserError } from "@/lib/user-error";
 
 async function tutorOfTest(viewer: Viewer, testId: string) {
   const t = await prisma.test.findUnique({ where: { id: testId }, select: { courseId: true } });
@@ -26,14 +27,14 @@ async function tutorOfTest(viewer: Viewer, testId: string) {
 }
 
 /** Turn AI suggestions on or off for one test. Turning on needs the tutor to confirm they hold parents' consent for this class. */
-export const setTestAiMarking = viewerActionClient
+export const setTestAiMarking = writableViewerActionClient
   .schema(z.object({ testId: z.string().min(1), on: z.boolean(), consentConfirmed: z.boolean().optional() }))
   .action(async ({ parsedInput: { testId, on, consentConfirmed } }) => {
     const viewer = await requireViewer();
     const courseId = await tutorOfTest(viewer, testId);
     if (on) {
-      if (!consentConfirmed) throw new Error("Confirm that you have parents' consent for AI-assisted marking for this class");
-      if (!(await hasService(viewer, courseId, "ai-marking"))) throw new Error("AI-suggested marks are part of the Pro plan for this course");
+      if (!consentConfirmed) throw new UserError("Confirm that you have parents' consent for AI-assisted marking for this class");
+      if (!(await hasService(viewer, courseId, "ai-marking"))) throw new UserError("AI-suggested marks are part of the Pro plan for this course");
     }
     await prisma.test.update({ where: { id: testId }, data: { aiMarking: on } });
     revalidatePath("/dashboard", "layout");
@@ -41,15 +42,15 @@ export const setTestAiMarking = viewerActionClient
   });
 
 /** Queue suggestions for the test's written answers (all, or the given questions) and start marking. */
-export const requestAiMarking = viewerActionClient
+export const requestAiMarking = writableViewerActionClient
   .schema(z.object({ testId: z.string().min(1), questionIds: z.array(z.string().min(1)).max(100).optional() }))
   .action(async ({ parsedInput }) => {
     const viewer = await requireViewer();
     const courseId = await tutorOfTest(viewer, parsedInput.testId);
-    if (!aiMarkingConfigured()) throw new Error("AI-assisted marking isn't set up yet");
-    if (!(await hasService(viewer, courseId, "ai-marking"))) throw new Error("AI-suggested marks are part of the Pro plan for this course");
+    if (!aiMarkingConfigured()) throw new UserError("AI-assisted marking isn't set up yet");
+    if (!(await hasService(viewer, courseId, "ai-marking"))) throw new UserError("AI-suggested marks are part of the Pro plan for this course");
     const r = await queueAiMarkingFor({ ...parsedInput, requestedByUserId: viewer.user.id });
-    if (r.reason === "OFF") throw new Error("Turn on AI-suggested marks for this test first");
+    if (r.reason === "OFF") throw new UserError("Turn on AI-suggested marks for this test first");
     if (r.queued > 0) after(() => runAiMarking({ limit: 25 }).catch((e) => console.error("[ai-marking] run failed:", (e as Error).message)));
     return { queued: r.queued, skipped: r.skipped };
   });
@@ -66,7 +67,7 @@ export const getAiSuggestions = viewerActionClient
   });
 
 /** Records what the tutor did with a suggestion. */
-export const recordAiSuggestionAction = viewerActionClient
+export const recordAiSuggestionAction = writableViewerActionClient
   .schema(z.object({ suggestionId: z.string().min(1), action: z.enum(["ACCEPTED", "EDITED", "REJECTED"]), score: z.number().min(0).nullable().optional() }))
   .action(async ({ parsedInput }) => {
     const viewer = await requireViewer();

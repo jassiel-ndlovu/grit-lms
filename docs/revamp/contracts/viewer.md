@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.13, 2026-11-21** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.14, 2026-11-22** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-22 | Draft 1.14. Themes OCEAN, SUNSET and CONTRAST (#217); `user.textSize` and `user.readingFont` (#216); `workspace.meetingProvider` and `setMeetingProvider` (#211); `signUpWithPassword({ callbackUrl })` (#174); `writableViewerActionClient` (refused for staff in a read-only workspace). NextAuth is gone: no `/api/auth/*` route remains |
 | 2026-11-21 | Draft 1.13. Staff manage only the accounts their workspace made (`User.managedByWorkspaceId`, migration 23): `resetUserPassword`, `issueSignInCode` and `requestStudentAccountDeletion` refuse a self-made account with a `UserError` saying the person manages it themself. Tutors invoice or set fees only for a student on that course. `changeOwnPassword` works for accounts made since the cutover |
 | 2026-11-21 | Draft 1.12. Owner decisions of 21 Nov (#206): `workspace.teaches`, `switchTeachingOff` and `adminSwitchTeachingOn`; course listings and join requests; `user.theme` and `updateOwnPreferences({ theme })`. Action errors written for the user (`UserError`) now reach `serverError` as written, instead of "Something went wrong" |
 | 2026-11-21 | Draft 1.11. `viewer.mode` ("organisation" \| "tutor" \| null) and `switchViewerMode({ mode })` for owners and admins of an organisation who also teach (#192, owner decision). Tutor mode uses a tutor's grants, scoped to their courses. Two-factor setup works for Google-only accounts (`allowPasswordless`); email change with two-factor on needs a sign-in in the last 15 minutes |
@@ -308,7 +309,7 @@ Students and parents find listed courses and ask to join; staff approve or decli
 
 ### Colour theme
 
-- **`viewer.user.theme`** is `"CALM"` (the default, mostly grey) or `"BRIGHT"`. The list is `UI_THEMES` in `@/lib/viewer-core`.
+- **`viewer.user.theme`** is one of `UI_THEMES` in `@/lib/viewer-core`: `"CALM"` (the default, mostly grey), `"BRIGHT"`, `"OCEAN"`, `"SUNSET"` or `"CONTRAST"` (Draft 1.14).
 - **Changing it:** `updateOwnPreferences({ theme })`, the existing settings action.
 - **New themes:** ask A to add a value before you ship one. It's a database enum.
 
@@ -318,3 +319,10 @@ Students and parents find listed courses and ask to join; staff approve or decli
 - **Self-made accounts:** someone who signed up themself, even after a join request, manages their own account. Staff get "This person manages their own account…" from `resetUserPassword`, `issueSignInCode` and `requestStudentAccountDeletion`. Hide or disable those buttons when the account isn't managed by the workspace. Ask A for a field on your student queries if you need one.
 - **Another workspace's accounts:** a managed student who also joined another workspace is managed only by the first.
 - **On Preview,** the seeded adult student (`seed.adult`) stands in for a self-made account.
+
+### Accessibility and the meeting provider (Draft 1.14)
+
+- **`viewer.user.textSize`** is `"DEFAULT"`, `"LARGE"` or `"LARGER"` (`TEXT_SIZES`), and **`viewer.user.readingFont`** is `"DEFAULT"` or `"DYSLEXIA"` (`READING_FONTS`). Both are saved with `updateOwnPreferences({ textSize, readingFont })` and follow the user across devices.
+- **`viewer.workspace.meetingProvider`** is `"GOOGLE_MEET"` (default), `"ZOOM"`, `"TEAMS"` or `"OTHER"` (`MEETING_PROVIDERS`). Owners and admins change it with `setMeetingProvider({ meetingProvider })` in `@/features/workspaces/actions`. It's audited and refused in a read-only workspace.
+- **`signUpWithPassword({ name, email, password, callbackUrl? })`:** the verification link returns to `callbackUrl` when it's a same-site path (for example `/auth/invite/<token>`), otherwise to `/dashboard/welcome`.
+- **`writableViewerActionClient`** (`@/lib/safe-action`) is `viewerActionClient` plus the read-only guard. The AI marking writes (`setTestAiMarking`, `requestAiMarking`, `recordAiSuggestionAction`) now use it, so in a read-only workspace they return `READ_ONLY: …` instead of "You don't have access".

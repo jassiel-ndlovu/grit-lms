@@ -144,7 +144,7 @@ export function ThemePicker({ value, onChange }: { value: ColorTheme; onChange: 
         <p className="text-muted-foreground mt-3 text-xs">Saved to your account, so it follows you to every device.</p>
       ) : (
         <p className="text-muted-foreground mt-3 text-xs">
-          {THEME_INFO[value].label} is saved on this device for now. Your other devices stay on Calm.
+          {THEME_INFO[value as ColorTheme].label} is saved on this device for now. Your other devices stay on Calm.
         </p>
       )}
     </div>

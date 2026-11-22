@@ -1,0 +1,67 @@
+# Checks every pull request to main (#215): types, lint and the static check
+# scripts. Vercel's build check runs separately.
+#
+# The check scripts in NEEDS_DATABASE talk to a real database, so they're
+# left out here; run them locally against the Preview branch. Every other
+# scripts/check-*.ts runs, so a new static check is picked up without
+# editing this file.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Unreachable on purpose: Prisma needs a URL to generate, and no check
+      # here may touch a real database.
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:1/ci
+      DIRECT_URL: postgresql://ci:ci@127.0.0.1:1/ci
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEEDS_DATABASE: >-
+        check-accounts
+        check-answer-key-roundtrip
+        check-course-delete
+        check-email-queue
+        check-tenancy-parity
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Types
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Check scripts
+        shell: bash
+        run: |
+          failed=""
+          for f in scripts/check-*.ts; do
+            name=$(basename "$f" .ts)
+            if [[ " $NEEDS_DATABASE " == *" $name "* ]]; then
+              echo "::notice::skipped $name (needs a database)"
+              continue
+            fi
+            echo "::group::$name"
+            if ! npx tsx "$f"; then failed="$failed $name"; fi
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::failed:$failed"
+            exit 1
+          fi

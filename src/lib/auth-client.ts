@@ -67,9 +67,20 @@ export async function signInWithGoogle(callbackUrl = "/dashboard/start") {
   await authClient.signIn.social({ provider: "google", callbackURL: callbackUrl, newUserCallbackURL: "/dashboard/welcome" });
 }
 
-/** Staff sign-up (after the cutover). The account must verify its email before signing in. */
-export async function signUpWithPassword(input: { name: string; email: string; password: string }): Promise<SignInResult> {
-  const r = await authClient.signUp.email({ name: input.name, email: input.email, password: input.password, callbackURL: "/dashboard/welcome" });
+/** A same-site path ("/…", never "//…" or a full URL), or null. */
+function sameSitePath(p: string | undefined): string | null {
+  if (!p || !p.startsWith("/") || p.startsWith("//") || p.includes("\\")) return null;
+  return p;
+}
+
+/**
+ * Sign-up. The account must verify its email before signing in; the link in
+ * that email returns to `callbackUrl` (a same-site path, for example
+ * "/auth/invite/<token>", #174), or to the welcome page.
+ */
+export async function signUpWithPassword(input: { name: string; email: string; password: string; callbackUrl?: string }): Promise<SignInResult> {
+  const callbackURL = sameSitePath(input.callbackUrl) ?? "/dashboard/welcome";
+  const r = await authClient.signUp.email({ name: input.name, email: input.email, password: input.password, callbackURL });
   if (r.error) {
     const code = (r.error as { code?: string }).code;
     if (code === "INVALID_ORIGIN" || code === "MISSING_OR_NULL_ORIGIN") return { ok: false, error: "Sign-up isn't available on this address. Use the main Nexa address." };

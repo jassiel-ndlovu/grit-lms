@@ -27,7 +27,6 @@ const A_OWNED: readonly string[] = [
   "src/lib/blob",
   "src/lib/viewer",
   "src/lib/branding",
-  "src/lib/next-auth.d.ts",
   "src/features/auth/",
   "src/features/users/",
   "src/features/tutors/",

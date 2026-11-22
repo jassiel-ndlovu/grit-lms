@@ -18,6 +18,7 @@ import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 import {
   attendanceHistoryFor, attendanceSheetFor, checkInFor, editOccurrenceFor, markAttendanceFor, occurrencesFor, openCheckInFor, rotateFeedTokenFor,
 } from "./calendar";
+import { UserError } from "@/lib/user-error";
 
 const iso = z.string().refine((s) => !Number.isNaN(Date.parse(s)), "Must be a date");
 
@@ -48,7 +49,7 @@ export const listCalendarOccurrences = viewerActionClient
     const viewer = await requireViewer();
     const from = new Date(parsedInput.from);
     const to = new Date(parsedInput.to);
-    if (!(to > from) || to.getTime() - from.getTime() > 120 * 24 * 60 * 60 * 1000) throw new Error("Choose a range of up to 120 days");
+    if (!(to > from) || to.getTime() - from.getTime() > 120 * 24 * 60 * 60 * 1000) throw new UserError("Choose a range of up to 120 days");
     let courseIds = await visibleCourseIds(viewer);
     if (parsedInput.courseId) courseIds = courseIds.filter((c) => c === parsedInput.courseId);
     return occurrencesFor({ courseIds, from, to });

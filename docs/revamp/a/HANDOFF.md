@@ -3,6 +3,23 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 B's requests and NextAuth's removal, `revamp/a-admin-batch`
+
+Clears what was waiting on A before phase 1 of the backlog (#216). Viewer contract Draft 1.14.
+
+Done:
+- **Migration `24_themes_accessibility_meeting_provider`** (additive): `UiTheme` gains OCEAN, SUNSET and CONTRAST (#217); `UserPreferences.textSize` and `readingFont` (#216); `Workspace.meetingProvider` (#211).
+- **Viewer:** `user.textSize`, `user.readingFont` and `workspace.meetingProvider`. `setMeetingProvider` is for owners and admins.
+- **NextAuth removed (#203):** the stand-in `/api/auth/[...nextauth]`, `lib/next-auth.d.ts`, and the `next-auth` and `@next-auth/prisma-adapter` packages.
+- **Error messages (#185, #150):** user-facing errors in AI marking, calendar, email change, notifications and the old admin student form are now `UserError`. The old form's "already exists" message no longer repeats the email.
+- **Read-only (#150):** a new `writableViewerActionClient`; the AI marking writes use it. They were already refused (read-only removes `courses.edit`), but with the wrong message.
+- **Sign-up return path (#174):** `signUpWithPassword` takes `callbackUrl` (same-site paths only).
+- **CI (#215):** `.github/workflows/ci.yml` runs types, lint and every `scripts/check-*` on pull requests, except the 5 that need a database.
+- **Admin home (#215):** `AdminDashboard` is on `PageFrame`, and its "coming soon" cards are replaced by links to the admin tools that now exist.
+- **Two small type fixes in B's files,** needed once `UI_THEMES` grew: `components/preferences-provider.tsx` (theme type) and `features/courses/components/theme-picker.tsx` (a branch that became unreachable). For B's review.
+- **Billing go-live runbook** (`ops/billing-go-live.md`): billing stays off until January (owner, 22 Nov).
+- **Backlog (owner, 22 Nov):** split of work in #216; the landing page was added to the tracker.
+
 ## 2026-11-22 React 18.3 to 19, `revamp/a-next`
 
 The owner's tracker lists this as A's (root config). PR #202 (with #206 and the #201 follow-up) merged and is live. Production has migrations 22 and 23, applied after the backup `backup-teaching-joins-20261122`.

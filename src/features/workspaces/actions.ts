@@ -12,7 +12,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { assertBillingEnabled } from "@/features/billing/errors";
-import { viewerActionClient } from "@/lib/safe-action";
+import { viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
+import { prisma } from "@/lib/db";
+import { MEETING_PROVIDERS } from "@/lib/viewer-core";
 import { requireViewer, ViewerError } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";
 
@@ -106,4 +108,20 @@ export const switchTeachingOff = viewerActionClient
     const r = await switchTeachingOffFor(viewer.workspace.id, viewer.user.id, confirmName);
     revalidatePath("/", "layout");
     return r;
+  });
+
+/**
+ * The workspace's default meeting service for new sessions (#211).
+ * Owners and admins (workspace.settings); refused in a read-only workspace.
+ */
+export const setMeetingProvider = writableViewerActionClient
+  .schema(z.object({ meetingProvider: z.enum(MEETING_PROVIDERS) }))
+  .action(async ({ parsedInput: { meetingProvider }, ctx: { viewer } }) => {
+    if (!viewer.workspace || !can(viewer, "workspace.settings")) throw new ViewerError("FORBIDDEN");
+    await prisma.$transaction([
+      prisma.workspace.update({ where: { id: viewer.workspace.id }, data: { meetingProvider } }),
+      prisma.auditLog.create({ data: { workspaceId: viewer.workspace.id, actorUserId: viewer.user.id, action: "workspace.meeting_provider", targetType: "Workspace", targetId: viewer.workspace.id, data: { meetingProvider } } }),
+    ]);
+    revalidatePath("/", "layout");
+    return { meetingProvider };
   });

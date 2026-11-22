@@ -77,11 +77,23 @@ export type ViewerWorkspace = {
    * true for a solo workspace.
    */
   teaches: boolean;
+  /** The default meeting service for new sessions (#211). */
+  meetingProvider: MeetingProvider;
 };
 
 /** Colour themes (#206). CALM, the mostly grey theme, is the default. */
-export const UI_THEMES = ["CALM", "BRIGHT"] as const;
+export const UI_THEMES = ["CALM", "BRIGHT", "OCEAN", "SUNSET", "CONTRAST"] as const;
 export type UiTheme = (typeof UI_THEMES)[number];
+
+/** Accessibility settings that follow the user across devices (#216). */
+export const TEXT_SIZES = ["DEFAULT", "LARGE", "LARGER"] as const;
+export type TextSize = (typeof TEXT_SIZES)[number];
+export const READING_FONTS = ["DEFAULT", "DYSLEXIA"] as const;
+export type ReadingFont = (typeof READING_FONTS)[number];
+
+/** The meeting service a workspace's session form suggests (#211). */
+export const MEETING_PROVIDERS = ["GOOGLE_MEET", "ZOOM", "TEAMS", "OTHER"] as const;
+export type MeetingProvider = (typeof MEETING_PROVIDERS)[number];
 
 export type Viewer = {
   user: {
@@ -100,6 +112,9 @@ export type Viewer = {
     twoFactorRequired: boolean;
     /** The colour theme picked in settings (#206). */
     theme: UiTheme;
+    /** Accessibility (#216). */
+    textSize: TextSize;
+    readingFont: ReadingFont;
   };
   workspaces: WorkspaceSummary[];
   workspace: ViewerWorkspace | null;
@@ -257,6 +272,7 @@ export const LEGACY_WORKSPACE: ViewerWorkspace = {
   trialEndsAt: null,
   readOnly: false,
   teaches: true,
+  meetingProvider: "GOOGLE_MEET",
 };
 
 export type LegacyRole = "STUDENT" | "TUTOR" | "ADMIN" | "PARENT";
@@ -274,6 +290,8 @@ export function buildLegacyViewer(input: {
   /** Tutor.id when role is TUTOR, Student.id when STUDENT. */
   profileId: string | null;
   theme?: UiTheme;
+  textSize?: TextSize;
+  readingFont?: ReadingFont;
 }): Viewer {
   const { user, profileId } = input;
   const ws = LEGACY_WORKSPACE;
@@ -317,6 +335,8 @@ export function buildLegacyViewer(input: {
       mustChangePassword: false,
       twoFactorRequired: false,
       theme: input.theme ?? "CALM",
+      textSize: input.textSize ?? "DEFAULT",
+      readingFont: input.readingFont ?? "DEFAULT",
     },
     workspaces,
     workspace,
@@ -351,6 +371,7 @@ export type TenancyWorkspaceRow = {
   billingState: BillingState;
   trialEndsAt: Date | null;
   teachingOffAt?: Date | null;
+  meetingProvider?: MeetingProvider;
 };
 
 export type TenancyInput = {
@@ -366,6 +387,8 @@ export type TenancyInput = {
     mustChangePassword?: boolean;
     twoFactorEnabled?: boolean;
     theme?: UiTheme;
+    textSize?: TextSize;
+    readingFont?: ReadingFont;
   };
   memberships: Array<{
     id: string;
@@ -406,6 +429,7 @@ function toViewerWorkspace(w: TenancyWorkspaceRow): ViewerWorkspace {
     trialEndsAt: w.trialEndsAt ? w.trialEndsAt.toISOString() : null,
     readOnly: w.billingState === "READ_ONLY" || w.billingState === "CANCELLED",
     teaches: w.kind === "SOLO" || !w.teachingOffAt,
+    meetingProvider: w.meetingProvider ?? "GOOGLE_MEET",
   };
 }
 
@@ -487,6 +511,8 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
       mustChangePassword: user.mustChangePassword ?? false,
       twoFactorRequired: !(user.twoFactorEnabled ?? false) && (user.platformRole === "NEXA_ADMIN" || input.memberships.some((x) => x.role === "OWNER")),
       theme: user.theme ?? "CALM",
+      textSize: user.textSize ?? "DEFAULT",
+      readingFont: user.readingFont ?? "DEFAULT",
     },
     workspaces,
     workspace,

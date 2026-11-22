@@ -35,6 +35,8 @@ export const DEFAULT_PREFERENCES: ResolvedPreferences = {
   notifyOnGradingQueue: true,
   lastDigestSentAt: null,
   theme: "CALM",
+  textSize: "DEFAULT",
+  readingFont: "DEFAULT",
 };
 
 export function withDefaults(
