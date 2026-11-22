@@ -23,6 +23,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MathJax } from "better-react-mathjax";
 
+import { SaverImage } from "@/components/data-saver";
 import { cn } from "@/lib/utils";
 import { normalizeTexDelimiters } from "@/lib/tex-delimiters";
 
@@ -114,14 +115,15 @@ function buildComponents(maxImageWidth: string): Components {
     img: ({ alt, src }) => {
       const width = widthFromAlt(alt, maxImageWidth);
       return (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={typeof src === "string" ? src : undefined}
-          alt={alt ?? ""}
-          className="border-border mx-auto my-4 rounded-md border"
-          style={{ maxWidth: width, height: "auto" }}
-          loading="lazy"
-        />
+        // Held back behind "Show image" while data saver is on.
+        typeof src === "string" ? (
+          <SaverImage
+            src={src}
+            alt={alt ?? ""}
+            className="border-border mx-auto my-4 rounded-md border"
+            style={{ maxWidth: width, height: "auto" }}
+          />
+        ) : null
       );
     },
     table: (props) => (

@@ -5,7 +5,7 @@
  * pieces in ./join-requests.tsx.
  */
 
-import Image from "next/image";
+import { SaverCover } from "@/components/data-saver";
 import { Building2, Users } from "lucide-react";
 
 import { StatusChip } from "@/components/shell/status-chip";
@@ -77,7 +77,7 @@ export function ListedCourseGrid({
         return (
           <li key={c.courseId} className="border-border flex flex-col overflow-hidden rounded-lg border">
             <div className="bg-muted relative aspect-video w-full">
-              <Image src={courseCoverSrc(c)} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
+              <SaverCover src={courseCoverSrc(c)} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
             </div>
             <div className="flex flex-1 flex-col gap-2 p-4">
               <h3 className="text-foreground line-clamp-2 text-base leading-snug font-semibold">{c.name}</h3>

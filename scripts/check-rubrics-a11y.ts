@@ -20,6 +20,7 @@ import {
   rubricToStore, rubricTotal,
 } from "../src/features/assessments/lib/rubric";
 import { parseTestJson } from "../src/features/assessments/lib/test-io";
+import { dataSaverCookie, dataSaverOn, fileNameOf, readDataSaverChoice, saveDataRequested } from "../src/lib/data-saver";
 import { readReadingFont, readTextSize, readingBootScript, readingFontAttr, textSizeAttr } from "../src/lib/ui-a11y";
 
 let failures = 0;
@@ -49,6 +50,13 @@ pass(ai.criteria.length === 2 && ai.criteria[1].max === 3, "AI marking reads a s
 const half = readRubric({ ...two, halfMarks: true })!;
 pass(criterionScoreTotal(half, {}) === null, "no marks entered yet: no total");
 pass(criterionScoreTotal(half, { c1: "1,5", c2: "2" }) === 3.5, "half marks add up, decimal comma allowed");
+
+// Data saver (#216, low-data mode).
+pass(readDataSaverChoice("on") === "on" && readDataSaverChoice("x") === "auto" && readDataSaverChoice(undefined) === "auto", "data saver: unknown cookie values mean automatic");
+pass(saveDataRequested("on") && saveDataRequested(" On ") && !saveDataRequested(null) && !saveDataRequested("off"), "data saver: reads the Save-Data header");
+pass(dataSaverOn("auto", true) && !dataSaverOn("auto", false) && dataSaverOn("on", false) && !dataSaverOn("off", true), "data saver: a choice beats the browser's hint");
+pass(dataSaverCookie("auto").includes("Max-Age=0") && dataSaverCookie("on").startsWith("nexa_data_saver=on;"), "data saver: automatic clears the cookie");
+pass(fileNameOf("https://x.test/a/b/photo%201.jpg?v=2") === "photo 1.jpg" && fileNameOf("/img/cell.png") === "cell.png", "data saver: placeholder names the file");
 
 // Stored marks per criterion (#216): kept only when they add up to the score.
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
