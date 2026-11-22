@@ -40,6 +40,7 @@ import { APP_SHORT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+import { SkipLink } from "./skip-link";
 import { FOOTER_LINKS, activeHref, isFocusRoute, navFill, navHue, type NavIcon, type NavSection } from "./nav-config";
 
 /**
@@ -355,14 +356,16 @@ export function AppShell({ user, sections, children, search = true, notification
   if (focus) {
     return (
       <div data-shell="focus" className="bg-background text-foreground min-h-screen">
+        <SkipLink />
         {banner ? <div data-slot="account-banner">{banner}</div> : null}
-        <main>{children}</main>
+        <main id="main-content" tabIndex={-1} className="outline-none">{children}</main>
       </div>
     );
   }
 
   return (
     <div className="bg-background text-foreground flex min-h-screen">
+      <SkipLink />
       <ShellSidebar
         user={user}
         sections={sections}
@@ -423,7 +426,7 @@ export function AppShell({ user, sections, children, search = true, notification
           </button>
         </div>
         {banner ? <div data-slot="account-banner">{banner}</div> : null}
-        <main className="flex-1 pb-12">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 pb-12 outline-none">{children}</main>
       </div>
 
       <CommandPalette

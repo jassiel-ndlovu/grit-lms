@@ -1,0 +1,37 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Reading settings (#216, accessibility). Set in Settings › Reading, kept on
+   the device for now (src/lib/ui-a11y.ts), applied as attributes on <html>.
+
+     Text size   data-text-size="large" (112.5%) or "larger" (125%). Scales
+                 the root size, so everything in rem grows with the text:
+                 copy, controls and spacing. Pixel-sized chrome (the 48 px
+                 header, the 28 px page title) stays put.
+     Font        data-reading-font="dyslexia": Lexend (loaded in the root
+                 layout, not preloaded), with looser letter and word spacing
+                 and taller lines, for readers who find dense text hard.
+
+   Works with every colour theme, light and dark, and with or without
+   REVAMP_UI. The second selector in each rule reaches design-system pages,
+   whose wrapper sets the revamp font itself.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root[data-text-size="large"] {
+  font-size: 112.5%;
+}
+
+:root[data-text-size="larger"] {
+  font-size: 125%;
+}
+
+:root[data-reading-font="dyslexia"],
+:root[data-reading-font="dyslexia"] [data-ui="revamp"] {
+  --app-font-sans: var(--font-lexend), ui-sans-serif, system-ui, sans-serif;
+  --app-font-display: var(--font-lexend), ui-sans-serif, system-ui, sans-serif;
+  --app-font-features: normal;
+}
+
+:root[data-reading-font="dyslexia"] body {
+  letter-spacing: 0.02em;
+  word-spacing: 0.08em;
+  line-height: 1.7;
+}

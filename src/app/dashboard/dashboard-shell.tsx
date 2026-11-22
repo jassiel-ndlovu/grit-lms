@@ -5,6 +5,7 @@ import Header from './models/header';
 import Nav from './models/nav';
 import type { ShellUser } from '@/components/shell/app-shell';
 import { LegacyProviders } from './legacy-providers';
+import { SkipLink } from '@/components/shell/skip-link';
 
 /*
  * Layout notes:
@@ -26,11 +27,12 @@ export default function DashboardShell({ children, user, banner }: { children: R
   return (
     <LegacyProviders>
     <div className="flex min-h-screen bg-background">
+      <SkipLink />
       <Nav user={user} mobileOpen={menuOpen} onMobileOpenChange={setMenuOpen} />
 
       {/* min-w-0 lets wide children (tables, code) scroll inside themselves
           instead of widening the page past the viewport. */}
-      <main className="flex min-w-0 flex-1 flex-col bg-background">
+      <main id="main-content" tabIndex={-1} className="flex min-w-0 flex-1 flex-col bg-background outline-none">
         <Header user={user} onOpenMenu={() => setMenuOpen(true)} />
         {banner}
           <div className="flex-1 pb-12">

@@ -8,6 +8,8 @@
 
 import { z } from "zod";
 
+import { RubricSchema } from "./lib/rubric";
+
 import {
   CuidSchema,
   DateSchema,
@@ -185,6 +187,8 @@ export type CreateTestQuestionTree = {
   reorderItems?: string[];
   blankCount?: number | null;
   mathMode?: z.infer<typeof MathModeSchema> | null;
+  /** Written types only; anything else is dropped on save (lib/rubric.ts). */
+  rubric?: unknown;
   subQuestions?: CreateTestQuestionTree[];
 };
 
@@ -203,6 +207,7 @@ export const CreateTestQuestionTreeSchema: z.ZodType<CreateTestQuestionTree> =
       reorderItems: z.array(z.string()).default([]),
       blankCount: z.number().int().positive().nullable().optional(),
       mathMode: MathModeSchema.nullable().optional(),
+      rubric: RubricSchema.nullable().optional(),
       subQuestions: z.array(CreateTestQuestionTreeSchema).default([]),
     }),
   );

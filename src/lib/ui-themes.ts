@@ -56,3 +56,16 @@ export function effectiveTheme(account: UiTheme | undefined, device: string | nu
   if ((account ?? "CALM") === "CALM" && local && !isAccountTheme(local)) return local;
   return account ?? "CALM";
 }
+
+/** Mirrors of the account's dark mode and theme, for the boot script. */
+export const THEME_STORAGE_KEY = "nexa-theme";
+/** The colour theme (#206), mirrored like the dark-mode flag. */
+export const COLOR_THEME_STORAGE_KEY = "nexa-color-theme";
+
+/**
+ * Inline script for <head>: applies the last-known theme before React
+ * hydrates, avoiding a light flash for dark-mode users. Kept here, not in
+ * the "use client" provider, so the server layout gets the string itself.
+ */
+const BOOT_THEMES = JSON.stringify(COLOR_THEMES.filter((t) => t !== "CALM").map(themeAttr));
+export const themeBootScript = `try{if(localStorage.getItem("${THEME_STORAGE_KEY}")==="dark"){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}var t=localStorage.getItem("${COLOR_THEME_STORAGE_KEY}");if(${BOOT_THEMES}.indexOf(t)>=0){document.documentElement.dataset.theme=t}}catch(e){}`;

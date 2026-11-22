@@ -34,6 +34,7 @@ import { emitNotification, notifyHandIn } from "@/features/notifications/server"
 import { getExtraTime } from "./accommodations";
 import { autoGradeSubmission } from "./lib/auto-grade";
 import { checkMaths } from "./lib/maths-check";
+import { rubricToStore, rubricTotal } from "./lib/rubric";
 import { hasService } from "@/features/billing/services";
 import { getViewer } from "@/lib/viewer";
 import { loadTestFingerprint, STALE_TEST_MESSAGE } from "./lib/test-fingerprint";
@@ -92,6 +93,7 @@ async function createQuestionTree(
         reorderItems: node.reorderItems ?? [],
         blankCount: node.blankCount ?? null,
         mathMode: node.type === "MATH_EXPRESSION" ? node.mathMode ?? "EQUIVALENT" : null,
+        ...rubricColumns(node),
       },
       select: { id: true },
     });
@@ -100,6 +102,17 @@ async function createQuestionTree(
       await createQuestionTree(tx, testId, node.subQuestions, created.id);
     }
   }
+}
+
+/**
+ * The rubric to store (written types only) and, with one, the points it
+ * sets: the question is worth its criteria's total (lib/rubric.ts).
+ */
+function rubricColumns(node: CreateTestQuestionTree) {
+  const rubric = rubricToStore(node.type, node.rubric);
+  return rubric
+    ? { rubric: rubric as Prisma.InputJsonValue, points: rubricTotal(rubric) }
+    : { rubric: Prisma.JsonNull };
 }
 
 /**
@@ -160,6 +173,7 @@ async function upsertQuestionTree(
         reorderItems: node.reorderItems ?? [],
         blankCount: node.blankCount ?? null,
         mathMode: node.type === "MATH_EXPRESSION" ? node.mathMode ?? "EQUIVALENT" : null,
+        ...rubricColumns(node),
       };
 
       let currentId: string;

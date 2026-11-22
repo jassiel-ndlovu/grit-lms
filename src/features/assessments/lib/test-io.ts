@@ -16,6 +16,7 @@ import type {
   CreateTestWithQuestionsInput,
 } from "../schemas";
 import type { TestDetail } from "../queries";
+import { RubricSchema, rubricToStore, rubricTotal, type Rubric } from "./rubric";
 
 /* ------------------------------------------------------------------------- */
 /* Import schema                                                              */
@@ -54,6 +55,7 @@ type ImportQuestion = {
   reorderItems?: string[] | null;
   blankCount?: number | null;
   mathMode?: "EQUIVALENT" | "FORM" | "MARGIN" | null;
+  rubric?: Rubric | null;
   subQuestions?: ImportQuestion[] | null;
 };
 
@@ -74,6 +76,7 @@ const ImportQuestionSchema: z.ZodType<ImportQuestion> = z.lazy(() =>
     reorderItems: z.array(z.string()).nullable().optional(),
     blankCount: z.number().int().positive().nullable().optional(),
     mathMode: z.enum(["EQUIVALENT", "FORM", "MARGIN"]).nullable().optional(),
+    rubric: RubricSchema.nullable().optional(),
     subQuestions: z.array(ImportQuestionSchema).nullable().optional(),
   }),
 );
@@ -121,10 +124,12 @@ export interface ParsedTestPayload {
  * downstream action never has to handle undefined for arrays.
  */
 function toCreateTree(q: ImportQuestion): CreateTestQuestionTree {
+  const rubric = rubricToStore(q.type, q.rubric);
   return {
     question: q.question,
     type: q.type,
-    points: q.points ?? (q.type === "NONE" ? 0 : 1),
+    // A rubric sets the points: the question is worth its criteria's total.
+    points: rubric ? rubricTotal(rubric) : q.points ?? (q.type === "NONE" ? 0 : 1),
     options: q.options ?? [],
     answer: q.answer,
     language: q.language ?? null,
@@ -132,6 +137,7 @@ function toCreateTree(q: ImportQuestion): CreateTestQuestionTree {
     reorderItems: q.reorderItems ?? [],
     blankCount: q.blankCount ?? null,
     mathMode: q.type === "MATH_EXPRESSION" ? q.mathMode ?? "EQUIVALENT" : null,
+    rubric,
     subQuestions: (q.subQuestions ?? []).map(toCreateTree),
   }; 
 }
@@ -221,6 +227,7 @@ type SerializedQuestion = {
   reorderItems?: string[];
   blankCount?: number;
   mathMode?: "EQUIVALENT" | "FORM" | "MARGIN";
+  rubric?: Rubric;
 };
 
 /** Types that carry a list of choices. */
@@ -287,6 +294,10 @@ function serializeQuestion(
   }
   if (q.type === "MATH_EXPRESSION" && q.mathMode) {
     out.mathMode = q.mathMode;
+  }
+  const rubric = rubricToStore(q.type, q.rubric);
+  if (rubric) {
+    out.rubric = rubric;
   }
 
   return out;
@@ -413,6 +424,23 @@ Extra fields depend on the type. Only include the fields relevant to the type.
 | \`REORDER\`            | \`reorderItems: string[]\` (in correct order)     | \`null\` — the array ARE the answer key               |
 | \`FILL_IN_THE_BLANK\`  | \`blankCount: number\`                            | string[] — one entry per blank                      |
 | \`NONE\`               | —                                               | \`null\` — parent context block, must have subQuestions |
+
+## Rubrics (optional)
+
+\`SHORT_ANSWER\`, \`ESSAY\`, \`FILE_UPLOAD\` and \`CODE\` questions may carry a
+\`rubric\` that splits their marks into criteria. The question is then worth
+the criteria's total, whatever \`points\` says.
+
+\`\`\`json
+"rubric": {
+  "criteria": [
+    { "id": "c1", "label": "States the theorem", "max": 2 },
+    { "id": "c2", "label": "Applies it correctly", "max": 3 }
+  ],
+  "notes": "Optional guidance for markers.",
+  "halfMarks": false
+}
+\`\`\`
 
 ## Sub-questions
 

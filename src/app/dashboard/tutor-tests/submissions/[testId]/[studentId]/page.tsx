@@ -32,6 +32,7 @@ import {
 } from "@/features/assessments/queries";
 import { suggestionsFor } from "@/features/ai-marking/jobs";
 import { rubricFor } from "@/features/ai-marking/rules";
+import { readRubric } from "@/features/assessments/lib/rubric";
 import {
   GradingRibbon,
   GradingSessionProvider,
@@ -99,6 +100,7 @@ function buildTree(all: TestDetail["questions"]): GradingQuestion[] {
       matchPairs: q.matchPairs,
       correctAnswer: q.answer,
       mathMode: q.mathMode ?? null,
+      rubric: readRubric(q.rubric),
       subQuestions: build(q.id),
     }));
   }

@@ -23,6 +23,7 @@ import { isBillingEnabled } from "@/features/billing/errors";
 import { can, getViewer } from "@/lib/viewer";
 import { isRevampUi } from "@/lib/ui-flags";
 import { ThemeSetting } from "@/features/courses/components/theme-picker";
+import { ReadingSetting } from "@/components/settings/reading-setting";
 import HeaderSettings from "@/components/illustrations/generated/header-settings";
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 
@@ -140,6 +141,7 @@ export default async function SettingsPage() {
       ) : null}
 
       {isRevampUi() ? <ThemeSetting initial={viewer?.user.theme ?? "CALM"} /> : null}
+      <ReadingSetting />
 
       <SettingsForm
         role={session.user.role}

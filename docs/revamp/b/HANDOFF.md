@@ -3,6 +3,72 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 Rubrics and reading settings (#216, phase 1), `revamp/b-rubrics-a11y`
+
+The first B-only items from A's backlog (#216). Replied on #216: rubrics,
+term reports and CAPS tags are B's. QTI and Common Cartridge parsers are B's
+too, but they wait on A's import-engine contract. Listed what B can start now
+and what waits on A.
+
+Done:
+- **Rubrics.** Written questions (short answer, essay, file upload, code)
+  can have a rubric. It is stored in `TestQuestion.rubric` in the shape AI
+  marking already reads, `{ criteria: [{ id, label, max }], notes?,
+  halfMarks? }`, so `rubricFor` is unchanged. Rules are in
+  `features/assessments/lib/rubric.ts`: 1 to 10 criteria, each 1 to 100
+  marks and named.
+  - **Designer:** `RubricEditor` under each written question. While it has
+    a rubric, the question's points are the rubric total (Points is
+    read-only). Save refuses an unnamed criterion with a toast naming the
+    question.
+  - **Server:** `rubricColumns()` in `actions.ts` cleans the rubric and sets
+    points from it, on create and update. A rubric on an auto-marked type is
+    dropped.
+  - **JSON import and export:** questions carry `rubric`, and the guide has a
+    "Rubrics" section.
+  - **Grading:** a question with two or more criteria shows "Marks by
+    criterion" above Score. The marks add up into Score, with half marks if
+    the rubric allows them and a decimal comma accepted. Score can still be
+    typed directly. The per-criterion marks are not stored; only the score
+    is.
+- **Reading settings** (Settings › Reading, every user, both UIs):
+  - Text size: Default, Large (112.5%) or Larger (125%).
+  - An "Easier-to-read font" switch: Lexend, with wider letter, word and
+    line spacing.
+  - Attributes `data-text-size` and `data-reading-font` on `<html>`, styled
+    in `src/app/a11y.css`. Lexend is not preloaded.
+  - Kept on the device (`nexa-text-size`, `nexa-reading-font`) until A adds
+    the fields (asked on #216).
+- **Skip link** in both shells: the first Tab stop on every dashboard page,
+  moving focus to `<main id="main-content">`.
+- **Fix: the boot script never ran.** `themeBootScript` lived in the
+  `"use client"` preferences provider. The server root layout received it as
+  a client reference, and the inline `<head>` script was a syntax error. So
+  dark mode and colour themes always flashed in after hydration, and
+  signed-out pages never got them. It and the storage keys now live in
+  `src/lib/ui-themes.ts`; the provider re-exports the keys.
+  `check-rubrics-a11y` refuses a boot script imported from a client module.
+- **Checks:** `scripts/check-rubrics-a11y.ts` (pure). tsc, lint and every
+  check script pass, except the four that need a database or the server-only
+  shim (accounts, email-queue, answer-key-roundtrip, tenancy-parity), which
+  fail the same way on main.
+
+Checked locally on temporary pages (designer, grading form, settings card)
+at 375 and 1280, light and dark. Not checked with real accounts. Testing
+checklist section H.
+
+Blocked on A:
+- #217: theme ids in `UI_THEMES`.
+- #216: `textSize` and `readingFont` in `UserPreferences` and
+  `updateOwnPreferences`. Once added, B reads them in the provider and saves
+  from `ReadingSetting`.
+
+Next (B-only, phase 1 first): storing per-criterion marks (needs a field on
+the question grade, in B's schema), CAPS tagging (contract note before the
+migration), the low-data reading UI, then the question bank and randomised
+tests. Term reports wait on A's PDF helper contract. Import screens wait on
+A's engine contract.
+
 ## 2026-11-22 Filled nav icons, three more themes, the signature strip, `claude/b-colour-touches-f66f7a`
 
 The owner's three colour asks of 22 Nov, in one PR.

@@ -157,3 +157,23 @@ on a real device. Run with REVAMP_UI on, except G.6.
 | G.5 | `seed.ubuntu.tutor1`, at 1280 and 375 px | A page without a ribbon (Settings): a 3 px colour strip under the header, sticky with it, in the theme's colours. A course (with ribbon): the strip is under the ribbon only. At 375, scroll down: the ribbon slides away and the strip shows under the header; nothing jumps | ⏭ |
 | G.6 | `seed.student.two` with REVAMP_UI off | Legacy sidebar: icons filled the same way; active row keeps the terracotta tab | ⏭ |
 | G.7 | `seed.student.two` | Start a test: the runner header has a faint 1 px strip. **Don't submit a seeded test** | ⏭ |
+
+## H. Rubrics and reading settings (#216, 22 Nov)
+
+Checked locally on temporary pages (test designer question, grading form,
+Settings › Reading card) and `/design-system/shell`, at 375 and 1280 px,
+light and dark. Not checked with real accounts. Run with REVAMP_UI on unless
+the row says otherwise. Use a test you made; **don't change or submit a
+seeded test**.
+
+| # | Account | Check | Result |
+| --- | --- | --- | --- |
+| H.1 | `seed.ubuntu.tutor1` | New test › an essay question › Add a rubric: one "Content" criterion worth the question's points. Add a criterion and set marks: Points follows the total and can't be typed. Remove the rubric: Points can be typed again. A multiple-choice question has no rubric button | ⏭ |
+| H.2 | `seed.ubuntu.tutor1` | Leave a criterion unnamed and save: a toast names the question; nothing saves. Name it, save, reopen the test: the rubric, notes and half-marks setting are kept | ⏭ |
+| H.3 | `seed.ubuntu.tutor1` | Export that test as JSON: the question has `rubric`. Import the file as a new test: same rubric, same points | ⏭ |
+| H.4 | `seed.ubuntu.tutor1` | Have a test student submit it, then grade: "Marks by criterion" above Score. With half marks on, 1,5 and 2 give Score 3.5. Score can still be typed directly. A rubric with one criterion shows no criterion box | ⏭ |
+| H.5 | `seed.ubuntu.tutor1` | AI marking on that question (if the workspace has it): the suggestion lists the same criteria | ⏭ |
+| H.6 | `seed.student.two` | Settings › Reading: Large and Larger make all text bigger at once. The easier-to-read font switches to Lexend with wider spacing. Reload and open another page: both stay, with no flash of the default size. Try it with REVAMP_UI off too | ⏭ |
+| H.7 | `seed.student.two`, at 375 px | Larger with the font on: Home, a lesson and a test's pre-test page don't scroll sideways; the sidebar and header still fit | ⏭ |
+| H.8 | any | On a dashboard page, press Tab once: "Skip to content" appears top left. Enter: focus moves to the page, past the sidebar. Same in the legacy shell (REVAMP_UI off) | ⏭ |
+| H.9 | `seed.student.two` | Dark mode on, Ocean theme, then reload: the page loads dark and in Ocean straight away, with no light flash (the boot script fix) | ⏭ |

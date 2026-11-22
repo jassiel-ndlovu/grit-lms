@@ -14,7 +14,12 @@
 import * as React from "react";
 
 import { DEFAULT_TIME_ZONE, type DateContext } from "@/lib/datetime";
-import { COLOR_THEMES, DEVICE_THEME_STORAGE_KEY, effectiveTheme, themeAttr } from "@/lib/ui-themes";
+import { COLOR_THEME_STORAGE_KEY, DEVICE_THEME_STORAGE_KEY, THEME_STORAGE_KEY, effectiveTheme, themeAttr } from "@/lib/ui-themes";
+
+// The keys and the boot script live in a plain module: the root layout is a
+// server component, and a value imported from this "use client" file arrives
+// there as a client reference, not the string.
+export { COLOR_THEME_STORAGE_KEY, THEME_STORAGE_KEY };
 
 export interface ClientPreferences {
   /** IANA zone the user chose, or null to follow the browser. */
@@ -38,10 +43,6 @@ const DEFAULTS: ClientPreferences = {
 };
 
 const PreferencesContext = React.createContext<ClientPreferences>(DEFAULTS);
-
-export const THEME_STORAGE_KEY = "nexa-theme";
-/** The colour theme (#206), mirrored like the dark-mode flag. */
-export const COLOR_THEME_STORAGE_KEY = "nexa-color-theme";
 
 export function PreferencesProvider({
   value,
@@ -98,9 +99,3 @@ export function useMounted(): boolean {
   return mounted;
 }
 
-/**
- * Inline script for <head>: applies the last-known theme before React
- * hydrates, avoiding a light flash for dark-mode users.
- */
-const BOOT_THEMES = JSON.stringify(COLOR_THEMES.filter((t) => t !== "CALM").map(themeAttr));
-export const themeBootScript = `try{if(localStorage.getItem("${THEME_STORAGE_KEY}")==="dark"){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}var t=localStorage.getItem("${COLOR_THEME_STORAGE_KEY}");if(${BOOT_THEMES}.indexOf(t)>=0){document.documentElement.dataset.theme=t}}catch(e){}`;
