@@ -37,6 +37,7 @@ import {
   MarkReadSchema,
   MarkUnreadSchema,
 } from "./schemas";
+import { UserError } from "@/lib/user-error";
 
 /* ------------------------------------------------------------------------- */
 /* Helpers                                                                   */
@@ -62,7 +63,7 @@ export const markNotificationRead = authActionClient
 
     const visible = await getNotificationForViewer(parsedInput.id, viewer);
     if (!visible) {
-      throw new Error("Notification not found");
+      throw new UserError("Notification not found");
     }
     if (visible.isRead) {
       // Already read — no-op, return the existing id so the form succeeds.
@@ -94,7 +95,7 @@ export const markNotificationUnread = authActionClient
 
     const visible = await getNotificationForViewer(parsedInput.id, viewer);
     if (!visible) {
-      throw new Error("Notification not found");
+      throw new UserError("Notification not found");
     }
     if (!visible.isRead) {
       return { id: visible.id, alreadyUnread: true };

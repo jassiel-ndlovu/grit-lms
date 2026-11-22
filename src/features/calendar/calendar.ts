@@ -16,6 +16,7 @@ import { prisma } from "@/lib/db";
 import { enqueueEmail } from "@/lib/email/queue";
 
 import { applyExceptions, buildIcs, hashCode, newCheckInCode, untilBefore, type ExceptionRow, type Occurrence, type SeriesRow } from "./calendar-math";
+import { UserError } from "@/lib/user-error";
 
 const DAY = 24 * 60 * 60 * 1000;
 const LATE_AFTER_MIN = 10;
@@ -71,7 +72,7 @@ export type OccurrenceChanges = { title?: string; description?: string; start?: 
 export async function editOccurrenceFor(actorUserId: string, input: { eventId: string; occurrenceStart: string; scope: "THIS" | "FOLLOWING" | "ALL"; changes: OccurrenceChanges }) {
   const occ = new Date(input.occurrenceStart);
   const e = await isOccurrence(input.eventId, occ);
-  if (!e) throw new Error("That occurrence isn't part of this event");
+  if (!e) throw new UserError("That occurrence isn't part of this event");
   const c = input.changes;
   const fields = {
     ...(c.title !== undefined ? { title: c.title } : {}),
@@ -129,7 +130,7 @@ export async function editOccurrenceFor(actorUserId: string, input: { eventId: s
 export async function attendanceSheetFor(eventId: string, occurrenceStart: string) {
   const occ = new Date(occurrenceStart);
   const e = await isOccurrence(eventId, occ);
-  if (!e) throw new Error("That occurrence isn't part of this event");
+  if (!e) throw new UserError("That occurrence isn't part of this event");
   const enrolled = await prisma.enrollment.findMany({
     where: { courseId: e.courseId, startedAt: { lte: occ }, OR: [{ endedAt: null }, { endedAt: { gt: occ } }] },
     select: { learner: { select: { id: true, user: { select: { name: true } } } } },
@@ -156,7 +157,7 @@ export async function markAttendanceFor(actorUserId: string, input: { eventId: s
   const occ = new Date(input.occurrenceStart);
   let absences = 0;
   for (const m of input.marks) {
-    if (!allowed.has(m.learnerId)) throw new Error("A learner on this sheet isn't enrolled in the course");
+    if (!allowed.has(m.learnerId)) throw new UserError("A learner on this sheet isn't enrolled in the course");
     const row = await prisma.sessionAttendance.upsert({
       where: { eventId_occurrenceStart_learnerId: { eventId: input.eventId, occurrenceStart: occ, learnerId: m.learnerId } },
       create: { eventId: input.eventId, occurrenceStart: occ, learnerId: m.learnerId, status: m.status, note: m.note ?? null, markedByUserId: actorUserId, method: "TUTOR" },
@@ -190,7 +191,7 @@ async function notifyGuardiansOfAbsence(attendanceId: string, title: string, occ
 /** Opens (or rotates) a check-in code for an occurrence. The code is returned once; only its hash is kept. */
 export async function openCheckInFor(actorUserId: string, input: { eventId: string; occurrenceStart: string; minutes?: number }) {
   const occ = new Date(input.occurrenceStart);
-  if (!(await isOccurrence(input.eventId, occ))) throw new Error("That occurrence isn't part of this event");
+  if (!(await isOccurrence(input.eventId, occ))) throw new UserError("That occurrence isn't part of this event");
   const code = newCheckInCode();
   const expiresAt = new Date(Date.now() + Math.min(Math.max(input.minutes ?? 15, 1), 120) * 60 * 1000);
   await prisma.attendanceCode.upsert({

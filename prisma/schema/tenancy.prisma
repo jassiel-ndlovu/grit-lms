@@ -6,6 +6,14 @@
 // (6_tenancy_courses): Enrollment, CourseStaff, and the tenancy columns on
 // Course in learning.prisma.
 
+/// The meeting service a workspace's session form suggests (#211). Google Meet unless an owner or admin changes it.
+enum MeetingProvider {
+  GOOGLE_MEET
+  ZOOM
+  TEAMS
+  OTHER
+}
+
 enum WorkspaceKind {
   ORGANISATION
   SOLO
@@ -61,20 +69,21 @@ enum GuardianshipStatus {
 
 /// The tenant: an organisation with tutor teams, or a solo practice.
 model Workspace {
-  id              String        @id @default(cuid())
+  id              String          @id @default(cuid())
   kind            WorkspaceKind
   name            String
-  slug            String        @unique
-  timezone        String        @default("Africa/Johannesburg")
+  slug            String          @unique
+  timezone        String          @default("Africa/Johannesburg")
   logoUrl         String?
   accentColor     String?
-  billingState    BillingState  @default(TRIAL)
+  billingState    BillingState    @default(TRIAL)
   trialEndsAt     DateTime?
   /// Set when an organisation switched teaching off (owner decision 2026-11-21): its owners and admins no longer teach, and it has no tutor mode. Only a Nexa admin clears it. Null means it may teach.
   teachingOffAt   DateTime?
   teachingOffById String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  meetingProvider MeetingProvider @default(GOOGLE_MEET)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   teams          Team[]
   memberships    Membership[]

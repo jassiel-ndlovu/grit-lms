@@ -144,6 +144,15 @@ export const viewerActionClient = actionClient.use(async ({ next }) => {
 });
 
 /**
+ * viewerActionClient for writes: also refused for staff in a read-only
+ * workspace (#189, #150), like the tutor and staff clients.
+ */
+export const writableViewerActionClient = viewerActionClient.use(async ({ next }) => {
+  await assertWritable();
+  return next();
+});
+
+/**
  * Parents and guardians (persona "guardian"). Adds `ctx.viewer`.
  */
 export const guardianActionClient = actionClient.use(async ({ next }) => {

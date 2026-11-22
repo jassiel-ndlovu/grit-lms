@@ -12,6 +12,7 @@ import { actionClient, viewerActionClient } from "@/lib/safe-action";
 import { requireViewer } from "@/lib/viewer";
 
 import { confirmEmailChangeFor, requestEmailChangeFor, revertEmailChangeFor } from "./email-change";
+import { UserError } from "@/lib/user-error";
 
 /** Settings: the user's password and the new address. Sends a confirm link to the new address. */
 export const requestEmailChange = viewerActionClient
@@ -25,7 +26,7 @@ export const requestEmailChange = viewerActionClient
     if (u.twoFactorEnabled) {
       const s = await betterAuthInstance.api.getSession({ headers: await headers() });
       if (!s || Date.now() - new Date(s.session.createdAt).getTime() > 15 * 60 * 1000) {
-        throw new Error("For your security, sign out and sign in again with your authenticator code, then change your email within 15 minutes.");
+        throw new UserError("For your security, sign out and sign in again with your authenticator code, then change your email within 15 minutes.");
       }
     }
     return requestEmailChangeFor(viewer.user.id, parsedInput);

@@ -14,6 +14,7 @@
 import * as React from "react";
 
 import { DEFAULT_TIME_ZONE, type DateContext } from "@/lib/datetime";
+import type { UiTheme } from "@/lib/viewer-core";
 import { COLOR_THEME_STORAGE_KEY, DEVICE_THEME_STORAGE_KEY, THEME_STORAGE_KEY, effectiveTheme, themeAttr } from "@/lib/ui-themes";
 
 // The keys and the boot script live in a plain module: the root layout is a
@@ -31,7 +32,7 @@ export interface ClientPreferences {
    * on <html>, unless it is CALM and this device keeps a newer theme the
    * account can't store yet (src/lib/ui-themes.ts).
    */
-  theme?: "CALM" | "BRIGHT";
+  theme?: UiTheme;
   preferredView: "LIST" | "GRID" | "TIMELINE";
 }
 

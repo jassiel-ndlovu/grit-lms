@@ -128,6 +128,9 @@ model UserPreferences {
   lastDigestSentAt        DateTime?
   /// Colour theme (owner decision 2026-11-21). CALM, the mostly grey theme, is the default; B builds the themes.
   theme                   UiTheme               @default(CALM)
+  /// Accessibility settings that follow the user across devices (#216).
+  textSize                TextSize              @default(DEFAULT)
+  readingFont             ReadingFont           @default(DEFAULT)
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -201,6 +204,22 @@ enum NotificationFrequency {
 enum UiTheme {
   CALM
   BRIGHT
+  OCEAN
+  SUNSET
+  CONTRAST
+}
+
+/// Accessibility (B's request on #216): text size across the app.
+enum TextSize {
+  DEFAULT
+  LARGE
+  LARGER
+}
+
+/// Accessibility: a dyslexia-friendly reading font.
+enum ReadingFont {
+  DEFAULT
+  DYSLEXIA
 }
 
 enum PreferredView {
