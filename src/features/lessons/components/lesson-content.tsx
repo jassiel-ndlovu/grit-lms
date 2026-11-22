@@ -13,6 +13,7 @@
 import { BookOpen, ExternalLink, FileText, Play, Video } from "lucide-react";
 
 import { RichContent } from "@/components/content/rich-content";
+import { SaverEmbed } from "@/components/data-saver";
 import { Card } from "@/components/ui/card";
 import { getYouTubeId } from "@/lib/functions";
 
@@ -50,13 +51,15 @@ export function LessonContent({ lesson }: LessonContentProps) {
                   className="bg-muted relative aspect-video w-full overflow-hidden rounded-md"
                 >
                   {ytId ? (
-                    <iframe
-                      className="absolute inset-0 size-full"
-                      src={`https://www.youtube.com/embed/${ytId}`}
-                      title={`${lesson.title} — video ${idx + 1}`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+                    <SaverEmbed label={videos.length === 1 ? "the video" : `video ${idx + 1}`}>
+                      <iframe
+                        className="absolute inset-0 size-full"
+                        src={`https://www.youtube.com/embed/${ytId}`}
+                        title={`${lesson.title} — video ${idx + 1}`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </SaverEmbed>
                   ) : (
                     <a
                       href={video}

@@ -3,6 +3,39 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Criterion marks and data saver (#216, phase 1), `revamp/b-backlog-2`
+
+Closed #211 and #174 (finished in #225).
+
+Done:
+- **Marks per rubric criterion are saved.** `QuestionGrade.criteria` (JSON,
+  migration `26_question_grade_criteria`, additive) holds
+  `{ [criterionId]: marks }`.
+  - **Grading form:** the marks are part of the form's state. Saved marks
+    load back, and an accepted AI suggestion fills them when its criteria
+    match the rubric.
+  - **Server:** `gradeTestSubmission` keeps only the rubric's criteria,
+    capped and rounded, and only when they add up to the saved score
+    (`criterionMarksToStore`). The form says when they don't add up.
+  - **Student review:** shows "Marks by criterion" under the question.
+- **Data saver** (low-data mode, B's part). Settings › Data saver offers
+  Automatic, On or Off, per device, in the `nexa_data_saver` cookie.
+  - Automatic follows the browser's `Save-Data` header.
+  - `DataSaverProvider` sits in the dashboard layout.
+  - While it's on:
+    - lesson images (markdown and rich content) become "Show image"
+      buttons (`SaverImage`);
+    - YouTube embeds load on tap (`SaverEmbed`);
+    - course card and join-page covers are left out (`SaverCover`).
+  - Offline reading (the service worker) is still A's.
+
+Production needs `migrate deploy` for migration 26. Pages that include
+`questionGrades` select the new column.
+
+Next (B-only): CAPS and IEB tagging (a contract note before the migration),
+then the question bank and randomised tests. Term reports wait on A's PDF
+helper.
+
 ## 2026-11-23 Backlog: imports, meeting app, reading settings, invite sign-up, `revamp/b-backlog`
 
 Preview rechecks are in `docs/revamp/b/testing/preview-recheck-2026-11-22.md`.

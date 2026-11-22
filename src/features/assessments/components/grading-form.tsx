@@ -28,7 +28,7 @@ import {
 import { useLocalDraft } from "@/lib/use-local-draft";
 import { formatLabel, normalizeScheme, type LabelScheme } from "@/lib/enum-labels";
 import { cn } from "@/lib/utils";
-import { criterionScoreTotal, type Rubric } from "../lib/rubric";
+import { criterionMarksFromText, criterionMarksText, criterionScoreTotal, type Rubric } from "../lib/rubric";
 import LessonMarkdown from "@/app/components/markdown";
 import { AnswerText, MathsAnswerText } from "@/components/content/answer-text";
 
@@ -87,6 +87,8 @@ export type GradingExistingQG = {
   score: number;
   outOf: number;
   feedback: string | null;
+  /** Saved marks per rubric criterion (`QuestionGrade.criteria`), if any. */
+  criteria?: unknown;
 };
 
 export interface GradingFormProps {
@@ -187,12 +189,13 @@ export function GradingForm({
 
   // Index existing per-question grades by questionId.
   const initialByQ = React.useMemo(() => {
-    const m = new Map<string, { score: number; feedback: string }>();
+    const m = new Map<string, { score: number; feedback: string; criteria: unknown }>();
     for (const g of existingQuestionGrades) {
       if (g.questionId) {
         m.set(g.questionId, {
           score: g.score,
           feedback: g.feedback ?? "",
+          criteria: g.criteria ?? null,
         });
       }
     }
@@ -200,7 +203,8 @@ export function GradingForm({
   }, [existingQuestionGrades]);
 
   // Per-question grade state: score is a string so empty is representable.
-  type PerQ = { score: string; feedback: string };
+  // `criteria`: marks per rubric criterion as typed, for questions with a rubric.
+  type PerQ = { score: string; feedback: string; criteria?: Record<string, string> };
   const [perQ, setPerQ] = React.useState<Record<string, PerQ>>(() => {
     const seed: Record<string, PerQ> = {};
     for (const r of gradableRows) {
@@ -208,6 +212,7 @@ export function GradingForm({
       seed[r.q.id] = {
         score: prior ? String(prior.score) : "",
         feedback: prior?.feedback ?? "",
+        criteria: criterionMarksText(r.q.rubric ?? null, prior?.criteria),
       };
     }
     return seed;
@@ -304,6 +309,19 @@ export function GradingForm({
       [qid]: { ...(prev[qid] ?? { score: "", feedback: "" }), feedback: next },
     }));
   }, []);
+  // Marks per criterion; each change sets Score to their total.
+  const rubricOf = React.useMemo(() => new Map(gradableRows.map((r) => [r.q.id, r.q.rubric ?? null])), [gradableRows]);
+  const updateCriteria = React.useCallback(
+    (qid: string, next: Record<string, string>) => {
+      const rubric = rubricOf.get(qid);
+      const total = rubric ? criterionScoreTotal(rubric, next) : null;
+      setPerQ((prev) => {
+        const cur = prev[qid] ?? { score: "", feedback: "" };
+        return { ...prev, [qid]: { ...cur, criteria: next, score: total !== null ? String(total) : cur.score } };
+      });
+    },
+    [rubricOf],
+  );
   const assignFull = React.useCallback(
     (qid: string, points: number) => {
       updateScore(qid, String(points));
@@ -316,16 +334,29 @@ export function GradingForm({
     if (total == null) return;
     setPerQ((prev) => {
       const cur = prev[s.questionId] ?? { score: "", feedback: "" };
-      return { ...prev, [s.questionId]: { score: String(total), feedback: cur.feedback.trim() ? cur.feedback : (s.feedbackToStudent ?? "") } };
+      // The AI's marks per criterion, where they match this question's rubric.
+      const rubric = rubricOf.get(s.questionId);
+      const aiMarks = rubric
+        ? Object.fromEntries(
+            criteriaOf(s.criteria)
+              .filter((c) => rubric.criteria.some((rc) => rc.id === c.id))
+              .map((c) => [c.id, String(c.awarded)]),
+          )
+        : {};
+      const criteria = rubric && criterionScoreTotal(rubric, aiMarks) === total ? aiMarks : {};
+      return {
+        ...prev,
+        [s.questionId]: { score: String(total), criteria, feedback: cur.feedback.trim() ? cur.feedback : (s.feedbackToStudent ?? "") },
+      };
     });
-  }, []);
+  }, [rubricOf]);
   // Takes the AI's mark back out, and its draft feedback too while the tutor
   // hasn't changed it: a rejected suggestion's words must not reach the student.
   const clearAi = React.useCallback((s: AiSuggestion) => {
     setPerQ((prev) => {
       const feedback = prev[s.questionId]?.feedback ?? "";
       const aiDraft = (s.feedbackToStudent ?? "").trim();
-      return { ...prev, [s.questionId]: { score: "", feedback: aiDraft && feedback.trim() === aiDraft ? "" : feedback } };
+      return { ...prev, [s.questionId]: { score: "", criteria: {}, feedback: aiDraft && feedback.trim() === aiDraft ? "" : feedback } };
     });
   }, []);
   const acceptSuggestion = React.useCallback(
@@ -400,6 +431,8 @@ export function GradingForm({
             perQ[r.q.id]?.feedback && perQ[r.q.id].feedback.trim() !== ""
               ? perQ[r.q.id].feedback
               : null,
+          // The server keeps these only when they add up to the score.
+          criteria: r.q.rubric ? criterionMarksFromText(perQ[r.q.id]?.criteria) : null,
         };
       });
 
@@ -448,6 +481,8 @@ export function GradingForm({
           answer={answers[r.q.id]}
           score={perQ[r.q.id]?.score ?? ""}
           feedback={perQ[r.q.id]?.feedback ?? ""}
+          criteria={perQ[r.q.id]?.criteria}
+          onCriteria={updateCriteria}
           onScore={updateScore}
           onFeedback={updateFeedback}
           onAssignFull={assignFull}
@@ -558,6 +593,8 @@ const QuestionCard = React.memo(function QuestionCard({
   answer,
   score,
   feedback,
+  criteria,
+  onCriteria,
   onScore,
   onFeedback,
   onAssignFull,
@@ -574,6 +611,8 @@ const QuestionCard = React.memo(function QuestionCard({
   answer: unknown;
   score: string;
   feedback: string;
+  criteria?: Record<string, string>;
+  onCriteria: (qid: string, next: Record<string, string>) => void;
   onScore: (qid: string, v: string) => void;
   onFeedback: (qid: string, v: string) => void;
   onAssignFull: (qid: string, points: number) => void;
@@ -657,7 +696,14 @@ const QuestionCard = React.memo(function QuestionCard({
           ) : null}
 
           {q.rubric && q.rubric.criteria.length > 1 ? (
-            <CriterionMarks rubric={q.rubric} questionId={q.id} disabled={readOnly} onTotal={(t) => onScore(q.id, String(t))} />
+            <CriterionMarks
+              rubric={q.rubric}
+              questionId={q.id}
+              disabled={readOnly}
+              marks={criteria ?? {}}
+              score={score}
+              onChange={(next) => onCriteria(q.id, next)}
+            />
           ) : null}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr]">
@@ -989,30 +1035,33 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
 }
 
 /**
- * Marks per rubric criterion (#216). A helper, not a second record: each
- * change sets the question's Score to the criteria's total (rounded to the
- * rubric's step and capped at each max), and the Score box stays the mark
- * that is saved. Typing in Score directly still works.
+ * Marks per rubric criterion (#216). Each change sets the question's Score
+ * to the criteria's total (rounded to the rubric's step and capped at each
+ * max). Typing in Score directly still works; the marks are saved with the
+ * grade only while they add up to the Score, so the student never sees a
+ * breakdown that disagrees with the mark.
  */
 function CriterionMarks({
   rubric,
   questionId,
   disabled,
-  onTotal,
+  marks,
+  score,
+  onChange,
 }: {
   rubric: Rubric;
   questionId: string;
   disabled: boolean;
-  onTotal: (total: number) => void;
+  marks: Record<string, string>;
+  /** The Score box, to say when the marks no longer add up to it. */
+  score: string;
+  onChange: (next: Record<string, string>) => void;
 }) {
-  const [marks, setMarks] = React.useState<Record<string, string>>({});
   const step = rubric.halfMarks ? 0.5 : 1;
-  const set = (id: string, v: string) => {
-    const next = { ...marks, [id]: v };
-    setMarks(next);
-    const total = criterionScoreTotal(rubric, next);
-    if (total !== null) onTotal(total);
-  };
+  const total = criterionScoreTotal(rubric, marks);
+  const typed = Number(score.trim().replace(",", "."));
+  const disagrees = total !== null && score.trim() !== "" && Number.isFinite(typed) && Math.abs(typed - total) > 1e-9;
+  const set = (id: string, v: string) => onChange({ ...marks, [id]: v });
   return (
     <fieldset className="border-border space-y-2 rounded-md border p-3">
       <legend className="text-foreground px-1 text-xs font-medium">Marks by criterion</legend>
@@ -1039,6 +1088,19 @@ function CriterionMarks({
           </li>
         ))}
       </ul>
+      {disagrees ? (
+        <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
+          These add up to {total}, not the Score, so they won&apos;t be saved.
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange({ ...marks })}
+            className="text-foreground font-medium underline underline-offset-2 disabled:opacity-60"
+          >
+            Use {total} as the Score
+          </button>
+        </p>
+      ) : null}
       {rubric.notes ? <p className="text-muted-foreground text-xs whitespace-pre-line">{rubric.notes}</p> : null}
     </fieldset>
   );

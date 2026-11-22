@@ -41,6 +41,7 @@ import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import { toFileAnswers, toFileUploadMemo } from "@/features/assessments/lib/file-answers";
 import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import { isManuallyMarked } from "@/features/assessments/lib/auto-grade";
+import { criterionBreakdown, readRubric } from "@/features/assessments/lib/rubric";
 import { questionStatusTone } from "@/features/assessments/lib/review-status";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -85,6 +86,7 @@ type QuestionRow = {
   matchPairs: unknown;
   reorderItems: string[];
   blankCount: number | null;
+  rubric: unknown;
 };
 
 /* ──────────────────────────────────────────────────────────────────────── */
@@ -428,7 +430,7 @@ function ReviewNode({
   path: string;
   labels: Map<string, string>;
   answers: Record<string, unknown>;
-  qgByQ: Map<string | null, { score: number; outOf: number; feedback: string | null }>;
+  qgByQ: Map<string | null, { score: number; outOf: number; feedback: string | null; criteria: unknown }>;
   byParent: Map<string | null, QuestionRow[]>;
   canSeeGrades: boolean;
   depth?: number;
@@ -544,6 +546,8 @@ function ReviewNode({
             )}
         </div>
       )}
+
+      {canSeeGrades && qg ? <CriterionList items={criterionBreakdown(readRubric(q.rubric), qg.criteria)} /> : null}
 
       {canSeeGrades && qg?.feedback && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
@@ -838,4 +842,24 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
     default:
       return null;
   }
+}
+
+/** The tutor's marks per rubric criterion (#216), when they were saved. */
+function CriterionList({ items }: { items: ReturnType<typeof criterionBreakdown> }) {
+  if (!items) return null;
+  return (
+    <div className="border-border rounded-md border p-3 text-sm">
+      <p className="text-muted-foreground mb-1.5 text-xs font-medium">Marks by criterion</p>
+      <dl className="space-y-1">
+        {items.map((c) => (
+          <div key={c.id} className="flex items-baseline justify-between gap-3">
+            <dt className="text-foreground min-w-0">{c.label}</dt>
+            <dd className="text-muted-foreground shrink-0 tabular-nums">
+              {c.awarded} / {c.max}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }

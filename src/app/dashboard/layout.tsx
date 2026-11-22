@@ -15,9 +15,10 @@
  */
 
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { DataSaverProvider } from "@/components/data-saver";
 import { PreferencesProvider } from "@/components/preferences-provider";
 import { AppShell, type ShellUser } from "@/components/shell/app-shell";
 import { navSectionsFor } from "@/components/shell/nav-config";
@@ -27,6 +28,7 @@ import { getUserPreferences } from "@/features/users/preferences";
 import { AccountBanners } from "@/features/workspaces/components/account-banners";
 import { auth } from "@/lib/auth";
 import { authProvider } from "@/lib/better-auth";
+import { DATA_SAVER_COOKIE, readDataSaverChoice, saveDataRequested } from "@/lib/data-saver";
 import { resolveLocale } from "@/lib/datetime";
 import { getViewer } from "@/lib/viewer";
 import { isRevampUi, mathJaxVersion } from "@/lib/ui-flags";
@@ -41,7 +43,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   if (viewer?.user.mustChangePassword) redirect("/set-password");
   // Owners and Nexa admins must set up two-factor sign-in (#178). Better
   // Auth only; "Remind me tomorrow" sets a day-long cookie.
-  if (viewer?.user.twoFactorRequired && authProvider() === "better-auth" && !(await cookies()).has(TWO_FACTOR_LATER_COOKIE)) {
+  const jar = await cookies();
+  if (viewer?.user.twoFactorRequired && authProvider() === "better-auth" && !jar.has(TWO_FACTOR_LATER_COOKIE)) {
     redirect("/two-factor-setup");
   }
   const prefs = session?.user ? await getUserPreferences(session.user.id) : null;
@@ -95,7 +98,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         readingFont: viewer?.user.readingFont ?? "DEFAULT",
       }}
     >
-      <WorkspaceAccessProvider readOnly={readOnly} meetingProvider={viewer?.workspace?.meetingProvider ?? "GOOGLE_MEET"}>{shell}</WorkspaceAccessProvider>
+      <DataSaverProvider choice={readDataSaverChoice(jar.get(DATA_SAVER_COOKIE)?.value)} hint={saveDataRequested((await headers()).get("save-data"))}>
+        <WorkspaceAccessProvider readOnly={readOnly} meetingProvider={viewer?.workspace?.meetingProvider ?? "GOOGLE_MEET"}>{shell}</WorkspaceAccessProvider>
+      </DataSaverProvider>
     </PreferencesProvider>
   );
 }

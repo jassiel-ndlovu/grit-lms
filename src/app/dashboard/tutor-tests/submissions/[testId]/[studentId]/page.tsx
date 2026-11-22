@@ -171,6 +171,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
     score: qg.score,
     outOf: qg.outOf,
     feedback: qg.feedback,
+    criteria: qg.criteria,
   }));
 
   const existingGrade = submission.grade

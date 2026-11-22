@@ -5,7 +5,7 @@
  * render an edit/delete dropdown; omit it for student/browse views.
  */
 
-import Image from "next/image";
+import { SaverCover } from "@/components/data-saver";
 import { tutorOf } from "@/features/courses/lib/tenancy-where";
 import Link from "next/link";
 import { BookOpen, Users } from "lucide-react";
@@ -41,7 +41,7 @@ export function CourseCard({
     >
       <Link href={href} className="block in-data-[view=list]:flex">
         <div className="bg-muted relative aspect-video w-full overflow-hidden in-data-[view=list]:aspect-auto in-data-[view=list]:min-h-28 in-data-[view=list]:w-32 in-data-[view=list]:shrink-0 sm:in-data-[view=list]:w-48">
-          <Image
+          <SaverCover
             src={courseCoverSrc(course)}
             alt={course.name}
             fill

@@ -15,8 +15,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { rubricFor } from "../src/features/ai-marking/rules";
-import { criterionScoreTotal, readRubric, rubricAllowed, rubricToStore, rubricTotal } from "../src/features/assessments/lib/rubric";
+import {
+  criterionBreakdown, criterionMarksFromText, criterionMarksText, criterionMarksToStore, criterionScoreTotal, readRubric, rubricAllowed,
+  rubricToStore, rubricTotal,
+} from "../src/features/assessments/lib/rubric";
 import { parseTestJson } from "../src/features/assessments/lib/test-io";
+import { dataSaverCookie, dataSaverOn, fileNameOf, readDataSaverChoice, saveDataRequested } from "../src/lib/data-saver";
 import { readReadingFont, readTextSize, readingBootScript, readingFontAttr, textSizeAttr } from "../src/lib/ui-a11y";
 
 let failures = 0;
@@ -46,6 +50,25 @@ pass(ai.criteria.length === 2 && ai.criteria[1].max === 3, "AI marking reads a s
 const half = readRubric({ ...two, halfMarks: true })!;
 pass(criterionScoreTotal(half, {}) === null, "no marks entered yet: no total");
 pass(criterionScoreTotal(half, { c1: "1,5", c2: "2" }) === 3.5, "half marks add up, decimal comma allowed");
+
+// Data saver (#216, low-data mode).
+pass(readDataSaverChoice("on") === "on" && readDataSaverChoice("x") === "auto" && readDataSaverChoice(undefined) === "auto", "data saver: unknown cookie values mean automatic");
+pass(saveDataRequested("on") && saveDataRequested(" On ") && !saveDataRequested(null) && !saveDataRequested("off"), "data saver: reads the Save-Data header");
+pass(dataSaverOn("auto", true) && !dataSaverOn("auto", false) && dataSaverOn("on", false) && !dataSaverOn("off", true), "data saver: a choice beats the browser's hint");
+pass(dataSaverCookie("auto").includes("Max-Age=0") && dataSaverCookie("on").startsWith("nexa_data_saver=on;"), "data saver: automatic clears the cookie");
+pass(fileNameOf("https://x.test/a/b/photo%201.jpg?v=2") === "photo 1.jpg" && fileNameOf("/img/cell.png") === "cell.png", "data saver: placeholder names the file");
+
+// Stored marks per criterion (#216): kept only when they add up to the score.
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+pass(same(criterionMarksToStore(half, { c1: 1.5, c2: 2 }, 3.5), { c1: 1.5, c2: 2 }), "marks that add up to the score are stored");
+pass(criterionMarksToStore(half, { c1: 1.5, c2: 2 }, 4) === null, "marks that disagree with the score are dropped");
+pass(same(criterionMarksToStore(half, { c1: 1.5, zz: 9 }, 1.5), { c1: 1.5 }), "unknown criteria are dropped");
+pass(same(criterionMarksToStore(half, { c1: 99 }, 2), { c1: 2 }), "marks are capped at the criterion's max");
+pass(criterionMarksToStore(null, { c1: 1 }, 1) === null, "no rubric, nothing stored");
+pass(same(criterionMarksFromText({ c1: "1,5", c2: "", c3: "x" }), { c1: 1.5 }), "form text becomes numbers; blanks dropped");
+pass(same(criterionMarksText(half, { c1: 1.5, zz: 2 }), { c1: "1.5" }), "stored marks become form text for this rubric");
+pass(criterionBreakdown(half, null) === null, "no stored marks, no breakdown");
+pass(criterionBreakdown(half, { c1: 1 })?.length === half.criteria.length, "a breakdown lists every criterion");
 pass(criterionScoreTotal(half, { c1: "9", c2: "-1" }) === 2, "each criterion is capped at 0..max");
 pass(criterionScoreTotal(clean!, { c1: "1.5" }) === 2, "without half marks a mark rounds to a whole one");
 

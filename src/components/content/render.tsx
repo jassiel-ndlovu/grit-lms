@@ -18,6 +18,7 @@ import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { contentExtensions } from "@/lib/content/extensions";
 import { graphNodeSpec } from "@/lib/content/graph";
 
+import { SaverImage } from "../data-saver";
 import { GraphFigure } from "./graph-figure";
 
 const SAFE_SRC = /^(https?:|\/(?!\/))/i;
@@ -33,13 +34,11 @@ export function renderRichContent(doc: JSONContent): React.ReactNode {
           // Only http(s) and same-site paths: never data:, javascript: or protocol-relative URLs.
           if (!src || !SAFE_SRC.test(src)) return null;
           return (
-            // eslint-disable-next-line @next/next/no-img-element -- Blob and external URLs, sized by the author
-            <img
+            // Held back behind "Show image" while data saver is on.
+            <SaverImage
               src={src}
               alt={alt ?? ""}
               title={title ?? undefined}
-              loading="lazy"
-              draggable={false}
               className="my-4 block rounded-md"
               style={{ maxWidth: width ?? "100%", height: "auto" }}
             />

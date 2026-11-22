@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 
-import { RubricSchema } from "./lib/rubric";
+import { CriterionMarksSchema, RubricSchema } from "./lib/rubric";
 
 import {
   CuidSchema,
@@ -305,6 +305,8 @@ export const GradeTestSubmissionSchema = z.object({
         score: z.number().nonnegative(),
         outOf: z.number().positive(),
         feedback: z.string().max(2000).nullable().default(null),
+        /** Marks per rubric criterion; kept only when they add up to `score`. */
+        criteria: CriterionMarksSchema.nullable().default(null),
       }),
     )
     .default([]),

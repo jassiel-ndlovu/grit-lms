@@ -23,6 +23,7 @@ import { isBillingEnabled } from "@/features/billing/errors";
 import { can, getViewer } from "@/lib/viewer";
 import { isRevampUi } from "@/lib/ui-flags";
 import { ThemeSetting } from "@/features/courses/components/theme-picker";
+import { DataSaverSetting } from "@/components/settings/data-saver-setting";
 import { ReadingSetting } from "@/components/settings/reading-setting";
 import { MeetingProviderSetting } from "@/features/events/components/meeting-provider-setting";
 import HeaderSettings from "@/components/illustrations/generated/header-settings";
@@ -147,6 +148,7 @@ export default async function SettingsPage() {
 
       {isRevampUi() ? <ThemeSetting initial={viewer?.user.theme ?? "CALM"} /> : null}
       <ReadingSetting initial={{ textSize: viewer?.user.textSize ?? "DEFAULT", readingFont: viewer?.user.readingFont ?? "DEFAULT" }} />
+      <DataSaverSetting />
 
       <SettingsForm
         role={session.user.role}

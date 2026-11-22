@@ -34,7 +34,7 @@ import { emitNotification, notifyHandIn } from "@/features/notifications/server"
 import { getExtraTime } from "./accommodations";
 import { autoGradeSubmission } from "./lib/auto-grade";
 import { checkMaths } from "./lib/maths-check";
-import { rubricToStore, rubricTotal } from "./lib/rubric";
+import { criterionMarksToStore, readRubric, rubricToStore, rubricTotal } from "./lib/rubric";
 import { hasService } from "@/features/billing/services";
 import { getViewer } from "@/lib/viewer";
 import { loadTestFingerprint, STALE_TEST_MESSAGE } from "./lib/test-fingerprint";
@@ -717,6 +717,16 @@ export const gradeTestSubmission = tutorActionClient
     }
 
     const studentId = submission.studentId;
+    // Rubrics of the graded questions, to keep only valid criterion marks.
+    const withCriteria = parsedInput.questionGrades.filter((qg) => qg.criteria && qg.questionId).map((qg) => qg.questionId!);
+    const rubrics = new Map(
+      withCriteria.length
+        ? (await prisma.testQuestion.findMany({
+            where: { id: { in: withCriteria }, testId: submission.test.id },
+            select: { id: true, rubric: true },
+          })).map((q) => [q.id, readRubric(q.rubric)])
+        : [],
+    );
     const result = await prisma.$transaction(async (tx) => {
       // Upsert the course-level Grade row.
       const grade = await tx.grade.upsert({
@@ -752,6 +762,7 @@ export const gradeTestSubmission = tutorActionClient
             score: qg.score,
             outOf: qg.outOf,
             feedback: qg.feedback,
+            criteria: criterionMarksToStore(qg.questionId ? (rubrics.get(qg.questionId) ?? null) : null, qg.criteria, qg.score) ?? Prisma.DbNull,
             testSubmissionId: submission.id,
           })),
         });
