@@ -4,10 +4,14 @@
  * admin) can invite admins.
  */
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FileUp } from "lucide-react";
 
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { importRoutes } from "@/components/imports/import-ui";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { InviteList, InviteStaffForm, type InviteRow } from "@/features/courses/components/accounts/staff-invites";
 import { listMembers } from "@/features/courses/lib/roster";
 import { listInvites } from "@/features/auth/invite-actions";
@@ -31,7 +35,17 @@ export default async function MembersPage() {
   const canInviteAdmins = viewer.membership?.role === "OWNER" || viewer.persona === "admin";
 
   return (
-    <PageFrame type="settings" breadcrumb={[{ label: "Settings", href: "/dashboard/settings" }, { label: "Members" }]}>
+    <PageFrame
+      type="settings"
+      breadcrumb={[{ label: "Settings", href: "/dashboard/settings" }, { label: "Members" }]}
+      actions={
+        <Button asChild variant="outline" size="sm">
+          <Link href={importRoutes.start("staff")}>
+            <FileUp className="size-3.5" /> Import staff
+          </Link>
+        </Button>
+      }
+    >
       <PageTitle
         title="Members"
         description={
