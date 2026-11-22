@@ -44,6 +44,6 @@ Agent A, 2026-11-22. Needs the owner's go-ahead at each marked step.
    - watch Sentry and the email queue for a day.
 6. **Rollback:** remove `BILLING` and redeploy. Pages hide and the jobs stop at once. Nothing already billed is undone.
 
-## Open question for the owner
+## Owner decision (2026-11-22)
 
-Should tutors be able to sign up and set up before payments go live? This would be an early access period (for example, every new workspace free until 1 February 2027, then the normal trial or payment). It needs a small change: a "launch comp" date that onboarding applies instead of the trial. Without it, the onboarding flow waits for January.
+No early access. Billing, onboarding and trials go live together in January, with the live Paystack keys and the move to Stage 2. Nothing changes in production before then.
