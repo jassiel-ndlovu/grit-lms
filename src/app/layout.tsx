@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, Fraunces, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Fraunces, JetBrains_Mono, Lexend } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from "@/lib/branding";
-import { themeBootScript } from "@/components/preferences-provider";
+import { themeBootScript } from "@/lib/ui-themes";
 import { isRevampUi } from "@/lib/ui-flags";
+import { readingBootScript } from "@/lib/ui-a11y";
 
 /**
  * Inter — body / UI sans.
@@ -57,6 +58,17 @@ const geistMono = Geist_Mono({
   preload: false,
 });
 
+/**
+ * Lexend — the dyslexia-friendly reading font (Settings › Reading, #216).
+ * Not preloaded: only readers who switch it on fetch it (src/app/a11y.css).
+ */
+const lexend = Lexend({
+  variable: "--font-lexend",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: {
     default: APP_NAME,
@@ -80,14 +92,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} ${geist.variable} ${geistMono.variable}`}
+      className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} ${geist.variable} ${geistMono.variable} ${lexend.variable}`}
       data-ui={isRevampUi() ? "revamp" : undefined}
       // The theme script and PreferencesProvider set `dark` / `lang` on the
       // client, so the attributes can legitimately differ from the SSR HTML.
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript + readingBootScript }} />
       </head>
       <body className="antialiased">
         {children}

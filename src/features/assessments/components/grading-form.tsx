@@ -28,6 +28,7 @@ import {
 import { useLocalDraft } from "@/lib/use-local-draft";
 import { formatLabel, normalizeScheme, type LabelScheme } from "@/lib/enum-labels";
 import { cn } from "@/lib/utils";
+import { criterionScoreTotal, type Rubric } from "../lib/rubric";
 import LessonMarkdown from "@/app/components/markdown";
 import { AnswerText, MathsAnswerText } from "@/components/content/answer-text";
 
@@ -70,6 +71,8 @@ export type GradingQuestion = {
   correctAnswer: unknown;
   /** MATH_EXPRESSION only: how the answer is marked. */
   mathMode?: string | null;
+  /** The question's rubric (lib/rubric.ts); with two or more criteria the card marks each. */
+  rubric?: Rubric | null;
   subQuestions: GradingQuestion[];
 };
 
@@ -647,6 +650,10 @@ const QuestionCard = React.memo(function QuestionCard({
             />
           ) : null}
 
+          {q.rubric && q.rubric.criteria.length > 1 ? (
+            <CriterionMarks rubric={q.rubric} questionId={q.id} disabled={readOnly} onTotal={(t) => onScore(q.id, String(t))} />
+          ) : null}
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr]">
             <div className="space-y-1.5">
               <label htmlFor={`score-${q.id}`} className="text-foreground text-xs font-medium">
@@ -973,4 +980,60 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
     default:
       return null;
   }
+}
+
+/**
+ * Marks per rubric criterion (#216). A helper, not a second record: each
+ * change sets the question's Score to the criteria's total (rounded to the
+ * rubric's step and capped at each max), and the Score box stays the mark
+ * that is saved. Typing in Score directly still works.
+ */
+function CriterionMarks({
+  rubric,
+  questionId,
+  disabled,
+  onTotal,
+}: {
+  rubric: Rubric;
+  questionId: string;
+  disabled: boolean;
+  onTotal: (total: number) => void;
+}) {
+  const [marks, setMarks] = React.useState<Record<string, string>>({});
+  const step = rubric.halfMarks ? 0.5 : 1;
+  const set = (id: string, v: string) => {
+    const next = { ...marks, [id]: v };
+    setMarks(next);
+    const total = criterionScoreTotal(rubric, next);
+    if (total !== null) onTotal(total);
+  };
+  return (
+    <fieldset className="border-border space-y-2 rounded-md border p-3">
+      <legend className="text-foreground px-1 text-xs font-medium">Marks by criterion</legend>
+      <ul className="space-y-1.5">
+        {rubric.criteria.map((c) => (
+          <li key={c.id} className="flex items-center gap-2 text-sm">
+            <label htmlFor={`crit-${questionId}-${c.id}`} className="min-w-0 flex-1">
+              {c.label}
+            </label>
+            <Input
+              id={`crit-${questionId}-${c.id}`}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={c.max}
+              step={step}
+              disabled={disabled}
+              value={marks[c.id] ?? ""}
+              onChange={(e) => set(c.id, e.target.value)}
+              placeholder="0"
+              className="h-8 w-20 text-right tabular-nums"
+            />
+            <span className="text-muted-foreground w-10 shrink-0 text-sm tabular-nums">/ {c.max}</span>
+          </li>
+        ))}
+      </ul>
+      {rubric.notes ? <p className="text-muted-foreground text-xs whitespace-pre-line">{rubric.notes}</p> : null}
+    </fieldset>
+  );
 }

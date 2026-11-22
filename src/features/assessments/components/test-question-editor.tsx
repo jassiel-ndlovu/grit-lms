@@ -20,6 +20,9 @@
  *   - FILL_IN_THE_BLANK:              blankCount + array of correct answers
  *   - NONE:                           no fields — context block only
  *
+ * Written types (short answer, essay, file upload, code) can carry a
+ * rubric (RubricEditor); the question is then worth its criteria's total.
+ *
  * Sub-questions render recursively at any depth. NONE-typed parents are
  * marked with a "Context" pill in the header so tutors can spot them.
  *
@@ -63,6 +66,8 @@ import {
 } from "../lib/file-answers";
 import { cn } from "@/lib/utils";
 import { MathField } from "@/components/editor/math-field";
+import { rubricAllowed, rubricTotal, type Rubric } from "../lib/rubric";
+import { RubricEditor } from "./rubric-editor";
 
 /* ─── Shape ────────────────────────────────────────────────────────────── */
 
@@ -95,6 +100,8 @@ export interface EditorQuestion {
   blankCount: number | null;
   /** MATH_EXPRESSION only: how the answer is marked. */
   mathMode?: MathModeValue | null;
+  /** Written types only: marks split into criteria (lib/rubric.ts). */
+  rubric?: Rubric | null;
   subQuestions: EditorQuestion[];
 }
 
@@ -134,6 +141,7 @@ export function blankQuestion(): EditorQuestion {
     reorderItems: [],
     blankCount: null,
     mathMode: null,
+    rubric: null,
     subQuestions: [],
   };
 }
@@ -249,6 +257,7 @@ export function TestQuestionEditor({
       blankCount: nextType === "FILL_IN_THE_BLANK" ? question.blankCount ?? 1 : null,
       language: nextType === "CODE" ? question.language ?? "" : null,
       mathMode: nextType === "MATH_EXPRESSION" ? question.mathMode ?? "EQUIVALENT" : null,
+      rubric: rubricAllowed(nextType) ? question.rubric ?? null : null,
       points: nextType === "NONE" ? 0 : question.points || 1,
     });
   }
@@ -371,6 +380,9 @@ export function TestQuestionEditor({
               min={0}
               className="h-9 w-24 tabular-nums"
               value={question.points}
+              // With a rubric the question is worth its criteria's total.
+              readOnly={!!question.rubric}
+              title={question.rubric ? "Set by the rubric" : undefined}
               onChange={(e) => patch("points", Number(e.target.value) || 0)}
             />
           </div>
@@ -451,6 +463,16 @@ export function TestQuestionEditor({
       </div>
 
       {!isContext && <TypeSpecificFields question={question} patch={patch} />}
+      {rubricAllowed(question.type) && (
+        <RubricEditor
+          value={question.rubric ?? null}
+          points={question.points}
+          idPrefix={question.clientId}
+          onChange={(rubric) =>
+            onChange({ ...question, rubric, points: rubric ? rubricTotal(rubric) : question.points })
+          }
+        />
+      )}
 
       {question.subQuestions.length > 0 && (
         <div className="space-y-3 border-l-2 border-brand-terracotta/20 pl-4">

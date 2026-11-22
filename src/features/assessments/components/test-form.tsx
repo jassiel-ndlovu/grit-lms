@@ -125,6 +125,7 @@ function toServerTree(qs: EditorQuestion[]): unknown[] {
     reorderItems: q.reorderItems,
     blankCount: q.blankCount,
     mathMode: q.type === "MATH_EXPRESSION" ? q.mathMode ?? "EQUIVALENT" : null,
+    rubric: q.rubric ?? null,
     subQuestions: toServerTree(q.subQuestions),
   }));
 }
@@ -167,6 +168,17 @@ function indexQuestions(qs: EditorQuestion[], into = new Map<string, EditorQuest
 function plainSnippet(text: string): string {
   const t = text.replace(/!\[[^\]]*\]\([^)]*\)/g, "[image]").replace(/\s+/g, " ").trim();
   return t.length > 80 ? `${t.slice(0, 80)}…` : t || "(empty)";
+}
+
+/** The label of the first question whose rubric has an unnamed criterion, or null. */
+function unnamedCriterion(qs: EditorQuestion[], labelOf: (path: number[]) => string, path: number[] = []): string | null {
+  for (const [i, q] of qs.entries()) {
+    const here = [...path, i];
+    if (q.rubric?.criteria.some((c) => !c.label.trim())) return labelOf(here);
+    const inner = unnamedCriterion(q.subQuestions, labelOf, here);
+    if (inner) return inner;
+  }
+  return null;
 }
 
 /** Sum points across the tree, skipping NONE-typed context blocks. */
@@ -315,6 +327,11 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
     }
     if (!dateStr || !timeStr) {
       toast.error("Due date and time are required");
+      return;
+    }
+    const unnamed = unnamedCriterion(questions, (path) => path.map((n) => n + 1).join("."));
+    if (unnamed) {
+      toast.error(`Question ${unnamed}: name every rubric criterion, or remove the empty one.`);
       return;
     }
     setPending(mode);

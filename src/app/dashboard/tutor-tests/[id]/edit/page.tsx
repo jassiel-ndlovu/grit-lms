@@ -19,6 +19,7 @@ import {
 } from "@/features/assessments/queries";
 import { TestForm } from "@/features/assessments/components/test-form";
 import { loadTestFingerprint } from "@/features/assessments/lib/test-fingerprint";
+import { readRubric } from "@/features/assessments/lib/rubric";
 import { ExportTestButton } from "@/features/assessments/components/export-test-button";
 import { PageMessage } from "@/components/shell/page-frame";
 import { TestFrame, testRoutes } from "@/features/assessments/components/test-frame";
@@ -74,6 +75,7 @@ function buildEditorTree(all: TestDetail["questions"]): EditorQuestion[] {
       reorderItems: q.reorderItems,
       blankCount: q.blankCount,
       mathMode: q.mathMode ?? null,
+      rubric: readRubric(q.rubric),
       subQuestions: build(q.id),
     }));
   }
