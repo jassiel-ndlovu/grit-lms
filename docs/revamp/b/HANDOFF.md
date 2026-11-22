@@ -3,6 +3,53 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 Calendar and attendance UI (#149), `revamp/b-calendar-attendance`
+
+Built on A's contract (`contracts/calendar.md`, PR 172).
+
+Done:
+- **Calendar** (`/dashboard/calendar`, framed): Month, Week, Day and Agenda
+  in the ribbon with ‹ Today ›; "New session" and Subscribe in the header.
+  One `listCalendarOccurrences` call per view (42 days at most), plus tests
+  and assignments due, as before. Days are keyed in the viewer's zone
+  (`lib/calendar-ui.ts`), so server and browser agree. Below 640 px the
+  month shows dots and links to Day; the week stacks.
+- **Session form:** new events take the tutor's zone
+  (`CourseEvent.timeZone`; preference, else the workspace's). Editing a
+  repeating series at one date offers This session / This and following
+  (A's `editCourseEventOccurrence`, only changed fields) / All sessions
+  (`updateCourseEvent`, shifted by as much as that date moved, with the
+  repeat rule). Cancel and restore one session. `getCourseEventSeries`
+  loads the series for the form. Wall times use the event's zone, which
+  fixes the browser-zone date bug the research noted.
+- **Meeting link:** pasted, with "New Google Meet" (meet.google.com/new)
+  and the provider named. Join goes live 15 minutes before the start.
+- **Attendance** (`/dashboard/calendar/attendance/[eventId]?at=`): P, L,
+  A, E per learner, saved at once, notes, "Mark the rest present", and the
+  rotating check-in code with a countdown. Students check in from the
+  header or the session's dialog.
+- **Parents:** Calendar in the guardian sidebar, one child at a time
+  (`?child=`); Attendance (rate and recent marks) on the per-child page.
+- **Feeds:** Subscribe (A's `getCalendarFeedUrl`: copy, Google, webcal, new
+  link) and "Add to my calendar" per event (`/api/calendar/events/[id]/ics`).
+- **Read-only** workspaces lock every write (WriteGuard, `useReadOnly`).
+- **Checks:** `scripts/check-calendar-ui.ts`; `check-shell-nav.ts` updated.
+  navigation.md: guardians get Calendar.
+- **Testing:** section D of `testing/preview-recheck-2026-11-22.md`, not run.
+
+Next:
+- Run the Preview rechecks (A to D).
+- Move the assignment page off `EventContext`, then ask A to retire
+  `/api/events` (research 10, v1 item 6).
+- #205 steps 2 to 4; #150.
+
+Blocked on the other agent:
+- A workspace setting for the default meeting provider (the plan: chosen in
+  settings, Google Meet by default). The contract has none, so the form
+  defaults to Meet in code. Asked in #211 (`needs-a`).
+
+Questions for the owner: none.
+
 ## 2026-11-22 Account, privacy and two-factor screens, `claude/b-account-privacy-3baeb1`
 
 Clears B's `needs-b` inbox: #182, #185, #178 and #174.
