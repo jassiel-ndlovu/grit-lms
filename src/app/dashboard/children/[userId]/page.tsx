@@ -13,13 +13,16 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, BookOpen, GraduationCap, Hourglass, Pencil, Receipt, Target, TrendingUp } from "lucide-react";
+import { ArrowLeft, BookOpen, CalendarDays, GraduationCap, Hourglass, Pencil, Receipt, Target, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { getChildOverview } from "@/features/activity/child-overview";
+import { getAttendanceHistory } from "@/features/calendar/actions";
+import { AttendanceHistory, type HistoryRow } from "@/features/events/components/attendance-history";
+import { calendarRoutes } from "@/features/events/lib/calendar-ui";
 import { childRoutes, UPCOMING_DAYS, upcomingStatusLabel, isHandedIn } from "@/features/activity/lib/child-overview";
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, formatDate, resolveLocale } from "@/lib/datetime";
@@ -38,7 +41,7 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
   const dateCtx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
   const shortDate = (d: Date) => formatDate(d, dateCtx, { weekday: "short", month: "short", day: "numeric" });
 
-  const overview = await getChildOverview(child, new Date());
+  const [overview, attendance] = await Promise.all([getChildOverview(child, new Date()), getAttendanceHistory({ childUserId: userId })]);
   const courseCount = overview.workspaces.reduce((s, w) => s + w.courses.length, 0);
   const latest = overview.marks[0] ?? null;
 
@@ -198,6 +201,29 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
           </Card>
         </section>
       </div>
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-display text-xl leading-tight tracking-tight text-foreground">Attendance</h2>
+          <Link href={calendarRoutes.view({ view: "agenda", child: userId })} className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm">
+            <CalendarDays className="size-3.5" />
+            {child.name.split(" ")[0]}&apos;s calendar
+          </Link>
+        </div>
+        <AttendanceHistory
+          rows={(attendance?.data ?? []) as HistoryRow[]}
+          timeZone={dateCtx.timeZone}
+          locale={dateCtx.locale}
+          empty={
+            <EmptyState
+              compact
+              illustration={<Scene name="calendar-empty" />}
+              title="No attendance yet"
+              description="When a tutor marks a session, it shows here. You get an email if your child is marked absent."
+            />
+          }
+        />
+      </section>
 
       <Card className="divide-border divide-y p-0">
         <Link href="/dashboard/fees" className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 text-sm transition-colors">

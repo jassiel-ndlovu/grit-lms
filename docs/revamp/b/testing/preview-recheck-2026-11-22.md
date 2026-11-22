@@ -63,3 +63,28 @@ C.5 and C.8 the owner opens the email and passes the link on.
 | C.11 | a fresh owner (password) | `/two-factor-setup`: password, then a QR code beside the setup key. Scanning it with an authenticator app adds Nexa; its code turns two-factor on. "Remind me tomorrow" still works | ⏭ |
 | C.12 | a Google-only owner, if Google sign-in is configured on Preview | `/two-factor-setup` has no password field ("You sign in with Google…"); Start setup goes straight to the QR code | ⏭ |
 | C.13 | any | Students, Add student, Members invites and a student's Sign-in and Parents tabs: an error A writes for users (for example a taken username) shows as written, not "Something went wrong" | ⏭ |
+
+## D. Calendar and attendance (#149)
+
+Checked locally on a temporary page with sample data at 1280 and 375 px
+(every view, the session form, the edit scopes, the entry dialog, attendance
+marking, check-in and the parent's view). Not yet with real accounts. The
+seed's "Weekly class" is a one-off LECTURE two days out, so D.2 makes a
+repeating session first. Delete it at the end (D.13).
+
+| # | Account | Check | Result |
+| --- | --- | --- | --- |
+| D.1 | `seed.ubuntu.tutor1` | Calendar opens on Month. The ribbon switches Month, Week, Day and Agenda, and ‹ Today › step by month, week, day and 30 days. At 375 px the month shows dots and a day opens Day; the week stacks its days; nothing scrolls sideways | ⏭ |
+| D.2 | `seed.ubuntu.tutor1` | New session: weekly on two weekdays, 16:00, with "New Google Meet" opening Meet in a new tab and its link pasted back. "Times are in …" names the tutor's zone. It shows on both weekdays at 16:00 | ⏭ |
+| D.3 | `seed.ubuntu.tutor1` | Open one date › Edit › This session: move it an hour. Only that date moves and says "Changed" | ⏭ |
+| D.4 | `seed.ubuntu.tutor1` | Another date › Edit › This and following: change the title. Earlier dates keep the old title | ⏭ |
+| D.5 | `seed.ubuntu.tutor1` | Edit › All sessions: change the repeat days. The whole series follows | ⏭ |
+| D.6 | `seed.ubuntu.tutor1` | Cancel this session: crossed out with "Cancelled"; Restore brings it back | ⏭ |
+| D.7 | `seed.ubuntu.tutor1` | Take attendance on today's or a past date: P, L, A, E save at once (reload keeps them); a note saves; "Mark the rest present" fills only unmarked rows. Marking a child Absent says parents were emailed (owner's inbox only) | ⏭ |
+| D.8 | `seed.ubuntu.tutor1` + a seeded student | Open check-in: a 6-character code with a countdown. The student's Check in (header, or the session's dialog while it's on) accepts it in lower case with spaces; a wrong code says so. The tutor's sheet shows "checked in" after a reload. More than 10 minutes after the start it's Late | ⏭ |
+| D.9 | a seeded student | Their sessions and tests and assignments due show; Join is live from 15 minutes before; "Add to my calendar" downloads an .ics | ⏭ |
+| D.10 | `seed.parent.siblings` | Sidebar has Calendar. One child at a time, with a chip per child; each child sees only their courses. The child's page has Attendance with the rate and recent marks, and a link to their calendar | ⏭ |
+| D.11 | any | Subscribe › Get my link: copy works; Add to Google Calendar opens Google with the feed; Make a new link stops the old one working in the calendar app | ⏭ |
+| D.12 | `seed.thuto.owner` (read-only) | New session, Edit, Cancel, Delete, the attendance buttons and Open check-in are disabled with the read-only reason. Viewing still works | ⏭ |
+| D.13 | `seed.ubuntu.tutor1` | Delete series on the D.2 session: confirm, and every date goes | ⏭ |
+| D.14 | `seed.ubuntu.owner` | Organisation mode shows every course's sessions in the workspace; Tutor mode only their own | ⏭ |

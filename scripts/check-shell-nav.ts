@@ -26,13 +26,14 @@ check("nested route lights its section", activeHref("/dashboard/tests/abc/review
 check("no false prefix (tests vs tutor-tests)", activeHref("/dashboard/tutor-tests/1/edit", hrefs), "/dashboard/tutor-tests");
 check("trailing segment boundary", activeHref("/dashboard/testsuite", hrefs), null);
 // Each legacy role, through today's bridge viewer: the links it had before the
-// viewer, plus Find courses (learners, guardians) and Join requests (staff
+// viewer, plus Find courses (learners, guardians), Calendar for guardians
+// (#149) and Join requests (staff
 // with learners.invite) from #206.
 const BEFORE: Record<LegacyRole, string[]> = {
   STUDENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses", "/dashboard/courses/browse", "/dashboard/calendar", "/dashboard/tests", "/dashboard/assignments", "/dashboard/grades"],
   TUTOR: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-courses", "/dashboard/calendar", "/dashboard/tutor-tests", "/dashboard/assignments", "/dashboard/gradebook", "/dashboard/analytics", "/dashboard/students", "/dashboard/join-requests"],
   ADMIN: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-users"],
-  PARENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses/browse"],
+  PARENT: ["/dashboard", "/dashboard/notifications", "/dashboard/calendar", "/dashboard/courses/browse"],
 };
 for (const role of Object.keys(BEFORE) as LegacyRole[]) {
   check(`${role}: expected links`, hrefsOf(navSectionsFor(viewerFor(role))), BEFORE[role]);

@@ -11,6 +11,7 @@ import {
   OptionalUrlSchema,
 } from "../shared/primitives";
 import { EventTypeSchema, RepeatFrequencySchema } from "../shared/enums";
+import { isValidTimeZone } from "@/lib/datetime";
 
 export const CourseEventSchema = z.object({
   id: CuidSchema,
@@ -34,6 +35,8 @@ export const CourseEventSchema = z.object({
   repeatUntil: DateSchema.nullable().default(null),
   /** Total occurrences including the first, or null for unlimited. */
   repeatCount: z.number().int().min(1).max(365).nullable().default(null),
+  /** IANA zone the series repeats in (#149): the tutor's zone when created. Omitted: Africa/Johannesburg. */
+  timeZone: z.string().max(64).refine(isValidTimeZone, "Unknown time zone").optional(),
 });
 export type CourseEvent = z.infer<typeof CourseEventSchema>;
 
