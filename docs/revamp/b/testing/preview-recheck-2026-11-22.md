@@ -88,3 +88,28 @@ repeating session first. Delete it at the end (D.13).
 | D.12 | `seed.thuto.owner` (read-only) | New session, Edit, Cancel, Delete, the attendance buttons and Open check-in are disabled with the read-only reason. Viewing still works | ⏭ |
 | D.13 | `seed.ubuntu.tutor1` | Delete series on the D.2 session: confirm, and every date goes | ⏭ |
 | D.14 | `seed.ubuntu.owner` | Organisation mode shows every course's sessions in the workspace; Tutor mode only their own | ⏭ |
+
+## E. AI-assisted marking (#150)
+
+Checked locally on temporary pages with fake suggestions at 1280 and 375 px
+(the switch and its consent dialog, the upgrade line, Mark with AI with a
+chosen subset and with A's "isn't set up yet" error, the review cards, bulk
+accept, the rubric, and read-only). No AI call was made. Until the owner
+sets `ANTHROPIC_API_KEY` on Preview, "Mark with AI" can only show A's
+"isn't set up yet" error, so E.4 to E.9 need the key, or rows written by
+A's `scripts/check-ai-marking.ts` with its fake marker. The seed tests have
+no written questions: E.1 adds one.
+
+| # | Account | Check | Result |
+| --- | --- | --- | --- |
+| E.1 | `seed.ubuntu.tutor1` | Add a short-answer and an essay question, each with a memo, to a seeded test, and hand it in as two seeded students | ⏭ |
+| E.2 | `seed.ubuntu.tutor1` | Test › Questions: "AI-suggested marks" under the auto-marks toggle. Turning it on asks for parents' consent; Turn on stays disabled until it's ticked; after it, a reload keeps it on. Turning it off needs no dialog | ⏭ |
+| E.3 | a tutor on a Core or Plus course (billing on) | The switch is replaced by "Part of the Pro plan for this course" and "See plans and services", which opens the course's Services page | ⏭ |
+| E.4 | `seed.ubuntu.tutor1` | Submissions: the AI box shows progress. Mark with AI › untick one question › Mark: "N answers queued; M skipped". The bar fills while it marks (the page refreshes itself every 5 s) and rows say "N AI marks to review" | ⏭ |
+| E.5 | `seed.ubuntu.tutor1` | A student's page: header shows the student, status and live score; the ribbon has ‹ Previous · n of N · Next ›, Rubric and AI suggestions with a count. Previous and Next follow the submissions list | ⏭ |
+| E.6 | `seed.ubuntu.tutor1` | Each written answer shows the AI's mark, reasoning per criterion, quoted evidence highlighted in the answer, confidence, flags and "Re-marked by the larger model" where it applies. No score is filled in until Accept or Edit | ⏭ |
+| E.7 | `seed.ubuntu.tutor1` | Accept fills the score and draft feedback ("Confirmed by you (AI mark)"); Edit fills and focuses the score; Reject clears it; Undo works. AI suggestions › Accept all takes only unflagged, not-low ones unless the box is ticked | ⏭ |
+| E.8 | `seed.ubuntu.tutor1` | Save grade, reload: decided suggestions show "Confirmed by you" or "rejected" with no buttons; the student sees only the saved mark, with no AI label | ⏭ |
+| E.9 | `seed.ubuntu.tutor1` | A failed or skipped answer says why and "Mark it yourself" | ⏭ |
+| E.10 | `seed.thuto.owner` (read-only) | The switch, Mark with AI, Accept, Edit, Reject, Accept all and Save grade are disabled with the read-only reason | ⏭ |
+| E.11 | any tutor, at 375 px | Grading page: header keeps the score; the ribbon hides on scroll down and returns on scroll up; nothing scrolls sideways | ⏭ |

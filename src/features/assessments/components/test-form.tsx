@@ -88,6 +88,8 @@ export interface TestFormProps {
      *  overwrite a newer save. See features/assessments/lib/test-fingerprint.ts. */
     baseFingerprint?: string;
   };
+  /** Settings saved on their own, shown under the auto-marks toggle (the AI-marking switch). */
+  extraSettings?: React.ReactNode;
 }
 
 function splitDate(d: Date): { date: string; time: string } {
@@ -177,7 +179,7 @@ function sumPoints(qs: EditorQuestion[]): number {
   return n;
 }
 
-export function TestForm({ courses, defaultValues }: TestFormProps) {
+export function TestForm({ courses, defaultValues, extraSettings }: TestFormProps) {
   const router = useRouter();
   const isEdit = Boolean(defaultValues?.id);
 
@@ -495,6 +497,8 @@ export function TestForm({ courses, defaultValues }: TestFormProps) {
             </span>
           </span>
         </label>
+
+        {extraSettings}
 
         <div className="space-y-1.5">
           <label className="text-foreground text-xs font-medium">

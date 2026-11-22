@@ -21,7 +21,10 @@ import {
   testBelongsToTutor,
 } from "@/features/assessments/queries";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
-import { TestFrame } from "@/features/assessments/components/test-frame";
+import { TestFrame, testRoutes } from "@/features/assessments/components/test-frame";
+import { AiMarkingQueue } from "@/features/assessments/components/ai-marking-queue";
+import { getAiMarkingOverview } from "@/features/assessments/ai-marking-queries";
+import { writtenQuestions } from "@/features/assessments/lib/ai-marking-ui";
 import { getCourseScope } from "@/features/courses/course-access";
 
 interface PageProps {
@@ -67,6 +70,10 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
   ]);
   if (!test) notFound();
 
+  // AI-suggested marks (#150): the queue shows only once the test has them on.
+  const written = writtenQuestions(test.questions, test.labelScheme);
+  const ai = test.aiMarking ? await getAiMarkingOverview(test.id) : null;
+
   // Quick aggregate for the header summary.
   const graded = submissions.filter((s) => s.status === "GRADED").length;
   const submitted = submissions.filter((s) => s.status === "SUBMITTED").length;
@@ -92,6 +99,17 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
             {inProgress} in progress)
           </p>
         </header>
+
+        {ai ? (
+          <AiMarkingQueue testId={test.id} questions={written} progress={ai.progress} />
+        ) : written.length > 0 ? (
+          <p className="text-muted-foreground text-xs">
+            AI-suggested marks are off for this test.{" "}
+            <Link href={testRoutes.questions(test.id)} className="text-foreground underline underline-offset-2">
+              Turn them on in the test&apos;s settings
+            </Link>
+          </p>
+        ) : null}
 
         {submissions.length === 0 ? (
           <EmptyState
@@ -120,7 +138,14 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
                           : ` · started ${dateFmt.format(s.startedAt)}`}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-3">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                      {ai?.bySubmission[s.id]?.toReview ? (
+                        <span className="text-primary text-xs whitespace-nowrap">
+                          {ai.bySubmission[s.id].toReview} AI {ai.bySubmission[s.id].toReview === 1 ? "mark" : "marks"} to review
+                        </span>
+                      ) : ai?.bySubmission[s.id]?.working ? (
+                        <span className="text-muted-foreground text-xs whitespace-nowrap">AI marking…</span>
+                      ) : null}
                       <StatusChip tone={c.tone}>{c.label}</StatusChip>
                       {s.grade && itemPct != null ? (
                         <span className="text-foreground text-sm tabular-nums">

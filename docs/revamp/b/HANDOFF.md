@@ -3,6 +3,50 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-22 AI-assisted marking UI (#150), `claude/b-ai-marking-ui-6cc9a6`
+
+Built on A's actions (`features/ai-marking/actions.ts`, PR 168). The tutor
+accepts, edits or rejects every mark; nothing is filled in or saved by the AI.
+
+Done:
+- **Switch** in the test designer's settings (`AiMarkingSwitch`): turning it
+  on asks the tutor to confirm parents' consent, then `setTestAiMarking`.
+  Without the course's `ai-marking` service it shows "Part of the Pro plan"
+  and links the course's Services page (billing on). Saves on its own.
+- **Queue** on the test's submissions page (`AiMarkingQueue`): Mark with AI
+  for all written questions or chosen ones (`requestAiMarking`), "N queued;
+  M skipped", a progress bar that refreshes every 5 s while marking, and
+  "N AI marks to review" per row. Off: a link to the setting.
+- **Review** in the grading form: per short answer and essay, the AI's mark,
+  reasoning per criterion, evidence highlighted in the answer, confidence,
+  flags and "Re-marked by the larger model". Accept, Edit (fills and focuses
+  the score), Reject, Undo. Chips say "AI suggestion: not confirmed" or
+  "Confirmed by you". Decisions go to `recordAiSuggestionAction` when the
+  grade is saved (Accept or Edit ending on the AI's mark is ACCEPTED, other
+  marks EDITED; a typed score on an untouched suggestion counts too). Polls
+  `getAiSuggestions` while any are queued or running.
+- **Grading page framed** (the plan's example): PageFrame with the student,
+  status and live score in the header; ‹ Previous · n of N · Next ›, Rubric
+  and AI suggestions (riskiest first, Accept all safe ones, or all with a
+  tick) in the ribbon. `grading-session.tsx` carries the form's state up.
+- **Read-only** disables the switch, Mark with AI, every review button and
+  Save grade. A's errors show as they come.
+- **Checks:** `scripts/check-ai-marking-ui.ts`. **Testing:** section E of
+  `testing/preview-recheck-2026-11-22.md`, not run.
+
+Next:
+- Run the Preview rechecks (A to E). E needs `ANTHROPIC_API_KEY` on Preview.
+- #205 steps 2 to 4.
+- A rubric editor in the question editor (A's `TestQuestion.rubric`).
+
+Blocked on the other agent (in #150, `needs-a`):
+- A's AI actions throw plain `Error`, so "isn't set up yet", the consent and
+  Pro messages reach tutors as "Something went wrong". They need `UserError`.
+- They run on `viewerActionClient`, which doesn't refuse writes in a
+  read-only workspace. The screens disable them; the server should too.
+
+Questions for the owner: none.
+
 ## 2026-11-22 Calendar and attendance UI (#149), `revamp/b-calendar-attendance`
 
 Built on A's contract (`contracts/calendar.md`, PR 172).
