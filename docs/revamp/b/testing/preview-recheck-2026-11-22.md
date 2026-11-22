@@ -39,3 +39,27 @@ again at the end (B.9).
 | B.10 | `seed.ubuntu.tutor1` | Turn listing off again. Find courses no longer shows it | ⏭ |
 | B.11 | any | `/dashboard/browse-courses` redirects to Find courses | ⏭ |
 | B.12 | A's emails | The "new request" and "approved / declined" emails link to the inbox and to Find courses (owner's inbox only, Resend dev sender) | ⏭ |
+
+## C. Account, privacy and two-factor (#182, #185, #178, #174)
+
+Deleting and changing an email sign the account out everywhere, so never
+use a shared seed account for C.4 to C.9. Sign up a throwaway account with
+an `@example.test` address (it counts as verified off production) and use
+that. Email links only reach the owner's inbox (Resend dev sender), so for
+C.5 and C.8 the owner opens the email and passes the link on.
+
+| # | Account | Check | Result |
+| --- | --- | --- | --- |
+| C.1 | any | Settings has an Account card. Settings › Account is framed (Reading width) and shows Email address, Your data and Delete your account | ⏭ |
+| C.2 | any | Your data › Download my data saves `nexa-data-<date>.json`. A second click the same day says when the next download is possible, instead of an error page | ⏭ |
+| C.3 | `seed.ubuntu.owner` | Delete your account says to hand over the workspace first (sole owner), with no delete button | ⏭ |
+| C.4 | throwaway | Change email: a wrong password says "That password isn't right"; the right one shows "Check your new inbox" with the address and "works for 1 hour" | ⏭ |
+| C.5 | throwaway | The confirm link opens `/account/confirm-email`, which changes nothing until "Confirm my new address" is pressed. Then "Email address changed" and Sign in; the old session is gone. Opening the link again says it doesn't work | ⏭ |
+| C.6 | throwaway | The undo email's link (`/account/revert-email`): "This wasn't me: undo it" puts the old address back and offers a password reset | ⏭ |
+| C.7 | an owner with two-factor on, signed in over 15 minutes ago | Change email shows A's message about signing in again with the authenticator code. **Expected to show "Something went wrong" until A makes it a `UserError` (#185)** | ⏭ |
+| C.8 | throwaway | Delete: the button stays disabled until DELETE is typed in capitals. Confirming lands on "Your account will be deleted on <date>"; signing in is refused. The emailed link (`/account/cancel-deletion`) → Keep my account → sign in works again | ⏭ |
+| C.9 | `seed.ubuntu.tutor1` | A seeded student's profile › Account: Export data downloads; Delete account (parent's request) needs DELETE, then shows Deletion pending (chip in the header, badge in the Students list) and Cancel deletion. **Cancel it straight away** | ⏭ |
+| C.10 | `seed.ubuntu.tutor1` | `seed.adult`'s profile: no new-code button and no delete, with "manages their own account" | ⏭ |
+| C.11 | a fresh owner (password) | `/two-factor-setup`: password, then a QR code beside the setup key. Scanning it with an authenticator app adds Nexa; its code turns two-factor on. "Remind me tomorrow" still works | ⏭ |
+| C.12 | a Google-only owner, if Google sign-in is configured on Preview | `/two-factor-setup` has no password field ("You sign in with Google…"); Start setup goes straight to the QR code | ⏭ |
+| C.13 | any | Students, Add student, Members invites and a student's Sign-in and Parents tabs: an error A writes for users (for example a taken username) shows as written, not "Something went wrong" | ⏭ |
