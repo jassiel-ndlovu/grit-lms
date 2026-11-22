@@ -38,6 +38,8 @@ import {
 import { CreateCourseSchema, UpdateCourseSchema } from "../schemas";
 import { createCourse, updateCourse } from "../actions";
 import { CoverUploader } from "./cover-uploader";
+import { StockCoverPicker } from "./stock-cover-picker";
+import { CourseCoverSchema, isValidCover, stockCoverFor } from "../lib/stock-covers";
 import { StudentPicker } from "./student-picker";
 import { actionError, BILLING_PATH, isStudentLimitError } from "../lib/account-ui";
 import type { StudentListItem } from "@/features/students/queries";
@@ -45,9 +47,14 @@ import type { StudentListItem } from "@/features/students/queries";
 /**
  * Combined form schema. `id` is optional; presence flips the form into edit
  * mode. Reused by both branches via discriminator at submit time.
+ *
+ * The cover may be empty here: on submit an empty cover becomes the stock
+ * cover for the course name (stockCoverFor), so the server always receives
+ * an upload URL or a stock path and never shows "Must be a valid URL".
  */
 const FormSchema = CreateCourseSchema.extend({
   id: z.string().optional(),
+  imageUrl: CourseCoverSchema.or(z.literal("")),
 });
 type FormValues = z.infer<typeof FormSchema>;
 
@@ -88,12 +95,14 @@ export function CourseForm({
       id: defaultValues?.id,
       name: defaultValues?.name ?? "",
       description: defaultValues?.description ?? "",
-      imageUrl: defaultValues?.imageUrl ?? "",
+      // An old row's "" or bare file name starts empty, so it saves as a stock cover.
+      imageUrl: isValidCover(defaultValues?.imageUrl) ? defaultValues.imageUrl : "",
       studentIds: defaultValues?.studentIds ?? [],
     },
   });
 
   const isEdit = Boolean(defaultValues?.id);
+  const courseName = form.watch("name");
 
   /** A student limit (#178) gets a link to billing; any other error shows its message. */
   function failed(serverError: string) {
@@ -107,13 +116,14 @@ export function CourseForm({
 
   async function onSubmit(values: FormValues) {
     setPending(true);
+    const imageUrl = values.imageUrl || stockCoverFor(values.name).src;
     try {
       if (isEdit && values.id) {
         const parsed = UpdateCourseSchema.parse({
           id: values.id,
           name: values.name,
           description: values.description,
-          imageUrl: values.imageUrl,
+          imageUrl,
           studentIds: values.studentIds,
         });
         const result = await updateCourse(parsed);
@@ -123,7 +133,7 @@ export function CourseForm({
         const parsed = CreateCourseSchema.parse({
           name: values.name,
           description: values.description,
-          imageUrl: values.imageUrl,
+          imageUrl,
           studentIds: values.studentIds,
         });
         const result = await createCourse(parsed);
@@ -156,6 +166,11 @@ export function CourseForm({
                   onChange={field.onChange}
                 />
               </FormControl>
+              <StockCoverPicker
+                value={field.value}
+                fallback={stockCoverFor(courseName ?? "")}
+                onChange={field.onChange}
+              />
               <FormMessage />
             </FormItem>
           )}

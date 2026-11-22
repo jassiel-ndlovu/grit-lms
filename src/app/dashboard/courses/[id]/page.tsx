@@ -25,6 +25,7 @@ import {
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { tutorOf } from "@/features/courses/lib/tenancy-where";
+import { courseCoverSrc } from "@/features/courses/lib/stock-covers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -167,18 +168,17 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
       <div className="bg-primary text-primary-foreground border-b-2 border-brand-terracotta">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
           <div className="flex flex-col gap-8 md:flex-row md:items-center">
-            {course.imageUrl && (
-              <div className="hidden w-60 shrink-0 md:block">
-                <div className="relative aspect-video overflow-hidden rounded-lg bg-primary-foreground/10 border border-primary-foreground/15">
-                  <Image
-                    src={course.imageUrl}
-                    alt={course.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+            <div className="hidden w-60 shrink-0 md:block">
+              <div className="relative aspect-video overflow-hidden rounded-lg bg-primary-foreground/10 border border-primary-foreground/15">
+                <Image
+                  src={courseCoverSrc(course)}
+                  alt={course.name}
+                  fill
+                  sizes="240px"
+                  className="object-cover"
+                />
               </div>
-            )}
+            </div>
             <div className="flex-1 space-y-4">
               <div>
                 <p className="text-primary-foreground/70 text-sm">with {tutorOf(course)?.fullName ?? "your tutor"}</p>
