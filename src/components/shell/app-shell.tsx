@@ -21,7 +21,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { appSignOut } from "@/lib/auth-client";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
-  Award, BarChart3, BookOpen, Building2, Calendar, ChevronsUpDown, ClipboardList, FileText,
+  Award, BookOpen, Building2, Calendar, ChartPie, ChevronsUpDown, ClipboardList, FileText,
   CreditCard, GraduationCap, Receipt, HelpCircle, Home, Inbox, LogOut, Menu, Plus, Search, Settings, User,
   Users, X, type LucideIcon,
 } from "lucide-react";
@@ -40,11 +40,17 @@ import { APP_SHORT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-import { FOOTER_LINKS, activeHref, isFocusRoute, navHue, type NavIcon, type NavSection } from "./nav-config";
+import { FOOTER_LINKS, activeHref, isFocusRoute, navFill, navHue, type NavIcon, type NavSection } from "./nav-config";
 
+/**
+ * Every icon here is drawn filled in the sidebar (navFill), so each is a
+ * shape that reads filled: closed outlines with their details stroked on
+ * top. Analytics is a pie, not bars: the bar chart's open axis line fills
+ * as a triangle.
+ */
 const ICONS: Record<NavIcon, LucideIcon> = {
   home: Home, book: BookOpen, calendar: Calendar, test: FileText, assignment: ClipboardList,
-  grades: Award, gradebook: GraduationCap, analytics: BarChart3, users: Users,
+  grades: Award, gradebook: GraduationCap, analytics: ChartPie, users: Users,
   settings: Settings, help: HelpCircle, inbox: Inbox, billing: CreditCard, fees: Receipt,
 };
 
@@ -288,6 +294,7 @@ function ShellSidebar({
         href={l.href}
         icon={<Icon />}
         iconColor={navHue(l.icon)}
+        iconFill={navFill(l.icon, l.href === current)}
         active={l.href === current}
         onClick={onNavigate}
       >

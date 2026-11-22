@@ -19,13 +19,21 @@ export type NavIcon =
   | "gradebook" | "analytics" | "users" | "settings" | "help" | "inbox" | "billing" | "fees";
 
 /**
- * Each destination's icon colour: a CSS variable set in globals.css
- * (`--nav-*`, light and dark). Keyed by destination kind, never by position,
- * so Tests is the same teal in every role's sidebar. "profile" is used only by
- * the legacy shell.
+ * Each destination's icon colour: a CSS variable set in globals.css and per
+ * theme in themes.css (`--nav-*`, light and dark). Keyed by destination
+ * kind, never by position, so Tests is the same teal in every role's
+ * sidebar. "profile" is used only by the legacy shell.
+ *
+ * Icons are filled (22 Nov): `navHue` is the outline, which clears 3:1 on
+ * the sidebar (scripts/check-themes.ts), and `navFill` is the fill, the same
+ * hue mixed into the sidebar by `--nav-fill-mix` (more on the active row).
+ * So the outline is the darker shade in light mode and the lighter one in
+ * dark mode, in every theme, with no colour written here.
  */
 export type NavHue = NavIcon | "profile";
 export const navHue = (key: NavHue) => `var(--nav-${key})`;
+export const navFill = (key: NavHue, active = false) =>
+  `color-mix(in oklab, var(--nav-${key}) var(${active ? "--nav-fill-mix-active" : "--nav-fill-mix"}), var(--sidebar))`;
 
 export interface NavLink {
   label: string;

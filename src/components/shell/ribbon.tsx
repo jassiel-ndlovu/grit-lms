@@ -9,6 +9,7 @@ import { SECONDARY_HIDE_BELOW_PX, SECONDARY_TOP_CLASS } from "@/lib/ui-layout";
 import { cn } from "@/lib/utils";
 
 import { activeHref } from "./nav-config";
+import { SignatureStrip } from "./signature-strip";
 
 /**
  * Ribbon — the strip under a PageHeader (contracts/navigation.md).
@@ -33,6 +34,7 @@ export interface RibbonLink {
  * The secondary header of the page frame (#205): 40 px, sticky directly
  * under the PageHeader. Below 768 px it slides away while the page scrolls
  * down and comes back on the first scroll up, so phones keep the room.
+ * The signature strip runs under it (and goes with it when it hides).
  */
 export function Ribbon({ className, children }: { className?: string; children: React.ReactNode }) {
   const hidden = useHideOnScrollDown();
@@ -49,6 +51,7 @@ export function Ribbon({ className, children }: { className?: string; children: 
       )}
     >
       {children}
+      <SignatureStrip />
     </div>
   );
 }

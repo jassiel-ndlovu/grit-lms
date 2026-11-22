@@ -94,6 +94,12 @@
   --scrollbar-track: transparent;
   --scrollbar-thumb: #d3d3d0;
   --scrollbar-thumb-hover: #8f8f8b;
+
+  /* The signature strip under the page header (decorative): Calm keeps it
+     to its own blue, a teal and a soft violet. */
+  --strip-1: #2563eb;
+  --strip-2: #0f7b6c;
+  --strip-3: #7c3aed;
 }
 
 [data-ui="revamp"].dark,
@@ -116,8 +122,10 @@
   --accent: #2c2c2c;
   --accent-foreground: #e3e2e0;
 
-  --destructive: #c53030;
-  --destructive-foreground: #ffffff;
+  /* Lighter red with dark text, so error text on the page clears 4.5:1 too
+     (#c53030 was 3.21 on #191919). */
+  --destructive: #f07068;
+  --destructive-foreground: #191919;
   --success: #4dab9a;
   --success-foreground: #191919;
   --warning: #d9a441;
@@ -150,6 +158,10 @@
 
   --scrollbar-thumb: #3a3a3a;
   --scrollbar-thumb-hover: #727270;
+
+  --strip-1: #6ea8fe;
+  --strip-2: #4dab9a;
+  --strip-3: #a78bfa;
 }
 
 /* 14 px base for body copy (rem spacing is left alone). */

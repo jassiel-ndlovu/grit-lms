@@ -3,9 +3,15 @@
 
    CALM is the default: the grey revamp tokens in revamp-tokens.css, with no
    data-theme override. BRIGHT is for primary-school learners: a warm cream
-   page, a sunny sidebar, violet actions and livelier nav icons. Picked per
-   user in Settings (viewer.user.theme, saved with updateOwnPreferences);
-   PreferencesProvider sets data-theme="bright" on <html>.
+   page, a sunny sidebar, violet actions and livelier nav icons. OCEAN,
+   SUNSET and CONTRAST (owner, 22 Nov) are a cool blue-green, a warm earth
+   and a high-contrast violet. Picked per user in Settings; the list and the
+   data-theme ids live in src/lib/ui-themes.ts. PreferencesProvider sets
+   data-theme="<id>" on <html>.
+
+   Each theme defines, light and dark: the shadcn tokens, the nav icon hues
+   (--nav-*, the icon outline; the fill is mixed from it, see globals.css)
+   and the signature strip under the page header (--strip-1..3).
 
    Revamp UI only: the selectors need data-ui="revamp", so production's
    Inkwell look is untouched until REVAMP_UI ships.
@@ -13,7 +19,8 @@
    Contrast (WCAG 2.2 AA) is checked by scripts/check-themes.ts, which reads
    this file: text and its background at least 4.5:1, control outlines and
    nav icons at least 3:1. Keep every colour here a 6-digit hex so it can.
-   Adding a theme also needs a value in A's UiTheme enum (viewer.md 1.12).
+   A theme is saved on the account only once A's UiTheme enum has its id
+   (viewer.md 1.12); until then the picker keeps it on the device.
    ───────────────────────────────────────────────────────────────────────── */
 
 :root[data-ui="revamp"][data-theme="bright"],
@@ -88,6 +95,11 @@
   --nav-help: #0e7490;
   --nav-billing: #047857;
   --nav-fees: #4d7c0f;
+
+  /* The signature strip under the header: sun, berry and violet. */
+  --strip-1: #f59e0b;
+  --strip-2: #ec4899;
+  --strip-3: #7c3aed;
 }
 
 :root[data-ui="revamp"][data-theme="bright"].dark,
@@ -160,4 +172,477 @@
   --nav-help: #22d3ee;
   --nav-billing: #34d399;
   --nav-fees: #a3e635;
+
+  --strip-1: #fbbf24;
+  --strip-2: #f472b6;
+  --strip-3: #a78bfa;
+}
+
+/* ── OCEAN: cool blue-green. Pale sea-glass surfaces, a teal sidebar, deep
+   cyan actions. Dark mode is a deep-water navy with aqua highlights. ───── */
+
+:root[data-ui="revamp"][data-theme="ocean"],
+[data-ui="revamp"][data-theme="ocean"] {
+  --radius: 0.5rem;
+
+  --background: #f6fbfb;
+  --foreground: #0f2e36;
+  --card: #ffffff;
+  --card-foreground: #0f2e36;
+  --popover: #ffffff;
+  --popover-foreground: #0f2e36;
+
+  --primary: #0e7490;
+  --primary-foreground: #ffffff;
+
+  --secondary: #e0f2f1;
+  --secondary-foreground: #0f2e36;
+  --muted: #ebf6f6;
+  --muted-foreground: #44626b;
+  --accent: #d6eeee;
+  --accent-foreground: #0f2e36;
+
+  --destructive: #be1d2c;
+  --destructive-foreground: #ffffff;
+  --success: #047857;
+  --success-foreground: #ffffff;
+  --warning: #8a4b08;
+  --warning-foreground: #ffffff;
+  --link: #0b6580;
+
+  --border: #cde5e7;
+  --input: #6b8b93;
+  --ring: #0e7490;
+
+  --brand-terracotta: #0f766e;
+  --brand-terracotta-foreground: #ffffff;
+  --brand-slate: #0f2e36;
+  --brand-parchment: #f6fbfb;
+
+  --chart-1: #0e7490;
+  --chart-2: #0f766e;
+  --chart-3: #b45309;
+  --chart-4: #6d28d9;
+  --chart-5: #be123c;
+
+  --sidebar: #e7f4f4;
+  --sidebar-foreground: #0f2e36;
+  --sidebar-primary: #0e7490;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #cdeaeb;
+  --sidebar-accent-foreground: #0f2e36;
+  --sidebar-border: #c0e0e2;
+  --sidebar-ring: #0e7490;
+
+  --scrollbar-thumb: #c2dfe2;
+  --scrollbar-thumb-hover: #6b8b93;
+
+  --nav-home: #b4400b;
+  --nav-inbox: #b8123a;
+  --nav-book: #1d4ed8;
+  --nav-calendar: #6d28d9;
+  --nav-test: #0f6b64;
+  --nav-assignment: #9a4a07;
+  --nav-grades: #856006;
+  --nav-gradebook: #157238;
+  --nav-analytics: #03669a;
+  --nav-users: #b0175a;
+  --nav-profile: #4338ca;
+  --nav-settings: #475569;
+  --nav-help: #0b6a82;
+  --nav-billing: #046c4e;
+  --nav-fees: #45700d;
+
+  --strip-1: #0e7490;
+  --strip-2: #14b8a6;
+  --strip-3: #3b82f6;
+}
+
+:root[data-ui="revamp"][data-theme="ocean"].dark,
+.dark [data-ui="revamp"][data-theme="ocean"],
+[data-ui="revamp"][data-theme="ocean"].dark {
+  --background: #0b1c23;
+  --foreground: #e3f4f6;
+  --card: #10252e;
+  --card-foreground: #e3f4f6;
+  --popover: #142d37;
+  --popover-foreground: #e3f4f6;
+
+  --primary: #2bb3c9;
+  --primary-foreground: #06171d;
+
+  --secondary: #183743;
+  --secondary-foreground: #e3f4f6;
+  --muted: #13303b;
+  --muted-foreground: #a3c4cb;
+  --accent: #183743;
+  --accent-foreground: #e3f4f6;
+
+  --destructive: #f87171;
+  --destructive-foreground: #0b1c23;
+  --success: #34d399;
+  --success-foreground: #0b1c23;
+  --warning: #fbbf24;
+  --warning-foreground: #0b1c23;
+  --link: #67d8ea;
+
+  --border: #1f4250;
+  --input: #64909b;
+  --ring: #67d8ea;
+
+  --brand-terracotta: #2dd4bf;
+  --brand-terracotta-foreground: #0b1c23;
+  --brand-slate: #e3f4f6;
+  --brand-parchment: #0b1c23;
+
+  --chart-1: #67d8ea;
+  --chart-2: #5eead4;
+  --chart-3: #fcd34d;
+  --chart-4: #c4b5fd;
+  --chart-5: #fda4af;
+
+  --sidebar: #0f232b;
+  --sidebar-foreground: #e3f4f6;
+  --sidebar-primary: #67d8ea;
+  --sidebar-primary-foreground: #06171d;
+  --sidebar-accent: #183743;
+  --sidebar-accent-foreground: #e3f4f6;
+  --sidebar-border: #1f4250;
+  --sidebar-ring: #67d8ea;
+
+  --scrollbar-thumb: #1f4250;
+  --scrollbar-thumb-hover: #64909b;
+
+  --nav-home: #fb923c;
+  --nav-inbox: #fb7185;
+  --nav-book: #60a5fa;
+  --nav-calendar: #c084fc;
+  --nav-test: #2dd4bf;
+  --nav-assignment: #fbbf24;
+  --nav-grades: #facc15;
+  --nav-gradebook: #4ade80;
+  --nav-analytics: #38bdf8;
+  --nav-users: #f472b6;
+  --nav-profile: #a5b4fc;
+  --nav-settings: #94a3b8;
+  --nav-help: #22d3ee;
+  --nav-billing: #34d399;
+  --nav-fees: #a3e635;
+
+  --strip-1: #22d3ee;
+  --strip-2: #2dd4bf;
+  --strip-3: #60a5fa;
+}
+
+/* ── SUNSET: warm earth. Peach paper, a terracotta-orange accent and a
+   clay sidebar. Dark mode is a dusk brown with ember highlights. ──────── */
+
+:root[data-ui="revamp"][data-theme="sunset"],
+[data-ui="revamp"][data-theme="sunset"] {
+  --radius: 0.5rem;
+
+  --background: #fffaf5;
+  --foreground: #3a1f14;
+  --card: #ffffff;
+  --card-foreground: #3a1f14;
+  --popover: #ffffff;
+  --popover-foreground: #3a1f14;
+
+  --primary: #c2410c;
+  --primary-foreground: #ffffff;
+
+  --secondary: #fcebdc;
+  --secondary-foreground: #3a1f14;
+  --muted: #fdf1e6;
+  --muted-foreground: #74472f;
+  --accent: #fae0ca;
+  --accent-foreground: #3a1f14;
+
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --success: #15703a;
+  --success-foreground: #ffffff;
+  --warning: #8a3c0c;
+  --warning-foreground: #ffffff;
+  --link: #a3360a;
+
+  --border: #f1d6bf;
+  --input: #a0715a;
+  --ring: #c2410c;
+
+  --brand-terracotta: #b4440f;
+  --brand-terracotta-foreground: #ffffff;
+  --brand-slate: #3a1f14;
+  --brand-parchment: #fffaf5;
+
+  --chart-1: #c2410c;
+  --chart-2: #be123c;
+  --chart-3: #a16207;
+  --chart-4: #7c2d12;
+  --chart-5: #0f766e;
+
+  --sidebar: #fcefe2;
+  --sidebar-foreground: #3a1f14;
+  --sidebar-primary: #c2410c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f8dcc3;
+  --sidebar-accent-foreground: #3a1f14;
+  --sidebar-border: #f0cfb1;
+  --sidebar-ring: #c2410c;
+
+  --scrollbar-thumb: #edd0b6;
+  --scrollbar-thumb-hover: #a0715a;
+
+  --nav-home: #b03a0a;
+  --nav-inbox: #b8123a;
+  --nav-book: #1d4ed8;
+  --nav-calendar: #7e22ce;
+  --nav-test: #0f6b64;
+  --nav-assignment: #9a4a07;
+  --nav-grades: #835c06;
+  --nav-gradebook: #157238;
+  --nav-analytics: #03669a;
+  --nav-users: #b0175a;
+  --nav-profile: #4338ca;
+  --nav-settings: #5b4a44;
+  --nav-help: #0b6a82;
+  --nav-billing: #046c4e;
+  --nav-fees: #45700d;
+
+  --strip-1: #f59e0b;
+  --strip-2: #ea580c;
+  --strip-3: #db2777;
+}
+
+:root[data-ui="revamp"][data-theme="sunset"].dark,
+.dark [data-ui="revamp"][data-theme="sunset"],
+[data-ui="revamp"][data-theme="sunset"].dark {
+  --background: #1d1310;
+  --foreground: #fbede3;
+  --card: #281a15;
+  --card-foreground: #fbede3;
+  --popover: #2f1f19;
+  --popover-foreground: #fbede3;
+
+  --primary: #f97a35;
+  --primary-foreground: #1d1310;
+
+  --secondary: #3a271f;
+  --secondary-foreground: #fbede3;
+  --muted: #2e1f19;
+  --muted-foreground: #d4b4a2;
+  --accent: #3a271f;
+  --accent-foreground: #fbede3;
+
+  --destructive: #f87171;
+  --destructive-foreground: #1d1310;
+  --success: #4ade80;
+  --success-foreground: #1d1310;
+  --warning: #fbbf24;
+  --warning-foreground: #1d1310;
+  --link: #fdba74;
+
+  --border: #47302a;
+  --input: #9a7765;
+  --ring: #fdba74;
+
+  --brand-terracotta: #fb923c;
+  --brand-terracotta-foreground: #1d1310;
+  --brand-slate: #fbede3;
+  --brand-parchment: #1d1310;
+
+  --chart-1: #fdba74;
+  --chart-2: #fda4af;
+  --chart-3: #fcd34d;
+  --chart-4: #f0abfc;
+  --chart-5: #5eead4;
+
+  --sidebar: #241813;
+  --sidebar-foreground: #fbede3;
+  --sidebar-primary: #fdba74;
+  --sidebar-primary-foreground: #1d1310;
+  --sidebar-accent: #3a271f;
+  --sidebar-accent-foreground: #fbede3;
+  --sidebar-border: #47302a;
+  --sidebar-ring: #fdba74;
+
+  --scrollbar-thumb: #47302a;
+  --scrollbar-thumb-hover: #9a7765;
+
+  --nav-home: #fb923c;
+  --nav-inbox: #fb7185;
+  --nav-book: #60a5fa;
+  --nav-calendar: #c084fc;
+  --nav-test: #2dd4bf;
+  --nav-assignment: #fbbf24;
+  --nav-grades: #facc15;
+  --nav-gradebook: #4ade80;
+  --nav-analytics: #38bdf8;
+  --nav-users: #f472b6;
+  --nav-profile: #a5b4fc;
+  --nav-settings: #b8a59c;
+  --nav-help: #22d3ee;
+  --nav-billing: #34d399;
+  --nav-fees: #a3e635;
+
+  --strip-1: #fbbf24;
+  --strip-2: #f97316;
+  --strip-3: #f472b6;
+}
+
+/* ── CONTRAST: high contrast with violet. Black on white, firm outlines and
+   deep violet actions; dark mode is white on black with lilac. For anyone
+   who finds the softer themes hard to read. ──────────────────────────── */
+
+:root[data-ui="revamp"][data-theme="contrast"],
+[data-ui="revamp"][data-theme="contrast"] {
+  --radius: 0.375rem;
+
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+
+  --primary: #4c1d95;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1eff6;
+  --secondary-foreground: #000000;
+  --muted: #f4f4f5;
+  --muted-foreground: #2f2f36;
+  --accent: #e9e5f3;
+  --accent-foreground: #000000;
+
+  --destructive: #991b1b;
+  --destructive-foreground: #ffffff;
+  --success: #065f46;
+  --success-foreground: #ffffff;
+  --warning: #78350f;
+  --warning-foreground: #ffffff;
+  --link: #4c1d95;
+
+  --border: #6b6b76;
+  --input: #3f3f46;
+  --ring: #4c1d95;
+
+  --brand-terracotta: #4c1d95;
+  --brand-terracotta-foreground: #ffffff;
+  --brand-slate: #000000;
+  --brand-parchment: #ffffff;
+
+  --chart-1: #4c1d95;
+  --chart-2: #0e5d6b;
+  --chart-3: #92400e;
+  --chart-4: #9d174d;
+  --chart-5: #065f46;
+
+  --sidebar: #f6f5fa;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #4c1d95;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e4dff2;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #3f3f46;
+  --sidebar-ring: #4c1d95;
+
+  --scrollbar-thumb: #a1a1aa;
+  --scrollbar-thumb-hover: #3f3f46;
+
+  --nav-home: #9a3412;
+  --nav-inbox: #9f1239;
+  --nav-book: #1e40af;
+  --nav-calendar: #6b21a8;
+  --nav-test: #115e59;
+  --nav-assignment: #854d0e;
+  --nav-grades: #713f12;
+  --nav-gradebook: #166534;
+  --nav-analytics: #075985;
+  --nav-users: #9d174d;
+  --nav-profile: #3730a3;
+  --nav-settings: #334155;
+  --nav-help: #155e75;
+  --nav-billing: #065f46;
+  --nav-fees: #3f6212;
+
+  --strip-1: #4c1d95;
+  --strip-2: #7c3aed;
+  --strip-3: #000000;
+}
+
+:root[data-ui="revamp"][data-theme="contrast"].dark,
+.dark [data-ui="revamp"][data-theme="contrast"],
+[data-ui="revamp"][data-theme="contrast"].dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #0e0d12;
+  --card-foreground: #ffffff;
+  --popover: #15131b;
+  --popover-foreground: #ffffff;
+
+  --primary: #c4b5fd;
+  --primary-foreground: #000000;
+
+  --secondary: #1f1c29;
+  --secondary-foreground: #ffffff;
+  --muted: #141219;
+  --muted-foreground: #dcd9e4;
+  --accent: #262233;
+  --accent-foreground: #ffffff;
+
+  --destructive: #fca5a5;
+  --destructive-foreground: #000000;
+  --success: #6ee7b7;
+  --success-foreground: #000000;
+  --warning: #fcd34d;
+  --warning-foreground: #000000;
+  --link: #c4b5fd;
+
+  --border: #9e9aab;
+  --input: #d4d2dc;
+  --ring: #ddd6fe;
+
+  --brand-terracotta: #c4b5fd;
+  --brand-terracotta-foreground: #000000;
+  --brand-slate: #ffffff;
+  --brand-parchment: #000000;
+
+  --chart-1: #c4b5fd;
+  --chart-2: #67e8f9;
+  --chart-3: #fcd34d;
+  --chart-4: #f9a8d4;
+  --chart-5: #6ee7b7;
+
+  --sidebar: #0e0d12;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #c4b5fd;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #262233;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #9e9aab;
+  --sidebar-ring: #ddd6fe;
+
+  --scrollbar-thumb: #5b5868;
+  --scrollbar-thumb-hover: #d4d2dc;
+
+  --nav-home: #fdba74;
+  --nav-inbox: #fda4af;
+  --nav-book: #93c5fd;
+  --nav-calendar: #d8b4fe;
+  --nav-test: #5eead4;
+  --nav-assignment: #fcd34d;
+  --nav-grades: #fde047;
+  --nav-gradebook: #86efac;
+  --nav-analytics: #7dd3fc;
+  --nav-users: #f9a8d4;
+  --nav-profile: #c7d2fe;
+  --nav-settings: #cbd5e1;
+  --nav-help: #67e8f9;
+  --nav-billing: #6ee7b7;
+  --nav-fees: #bef264;
+
+  --strip-1: #c4b5fd;
+  --strip-2: #f0abfc;
+  --strip-3: #ffffff;
 }

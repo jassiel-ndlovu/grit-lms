@@ -37,7 +37,7 @@ import { appSignOut } from "@/lib/auth-client";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Award,
-  BarChart3,
+  ChartPie,
   Bell,
   BookOpen,
   Calendar,
@@ -61,7 +61,7 @@ import {
 } from "lucide-react";
 
 import type { ShellUser } from "@/components/shell/app-shell";
-import { navHue, type NavHue } from "@/components/shell/nav-config";
+import { navFill, navHue, type NavHue } from "@/components/shell/nav-config";
 import { APP_CONTACT, APP_LEGAL_NAME, APP_SHORT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 
@@ -92,7 +92,7 @@ const TUTOR_NAV_ITEMS: ReadonlyArray<NavItem> = [
   { icon: FileText, hue: "test", label: "Tests", link: "/dashboard/tutor-tests", description: "Grading" },
   { icon: PenTool, hue: "assignment", label: "Assignments", link: "/dashboard/assignments", description: "Review" },
   { icon: Award, hue: "gradebook", label: "Gradebook", link: "/dashboard/gradebook", description: "Weighted marks" },
-  { icon: BarChart3, hue: "analytics", label: "Analytics", link: "/dashboard/analytics", description: "Class performance" },
+  { icon: ChartPie, hue: "analytics", label: "Analytics", link: "/dashboard/analytics", description: "Class performance" },
   { icon: UserCog, hue: "users", label: "Students", link: "/dashboard/students", description: "Accounts and sign-in codes" },
   { icon: Bell, hue: "inbox", label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
@@ -478,7 +478,8 @@ function NavRow({ item, active, collapsed, onClick }: NavRowProps) {
           />
         )}
 
-        <Icon className="h-4 w-4 shrink-0" style={{ color: navHue(hue) }} />
+        {/* Filled in a tint of its hue, outlined in the hue (nav-config). */}
+        <Icon className="h-4 w-4 shrink-0" style={{ color: navHue(hue), fill: navFill(hue, active) }} />
 
         {!collapsed && (
           <div className="min-w-0 flex-1">
