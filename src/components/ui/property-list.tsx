@@ -33,7 +33,8 @@ function PropertyRow({ label, icon, children, className, ...props }: PropertyRow
         {icon}
         <span className="truncate">{label}</span>
       </dt>
-      <dd className="min-w-0 text-foreground">{children}</dd>
+      {/* overflow-wrap: anywhere, so a long email or link wraps instead of widening a phone page. */}
+      <dd className="min-w-0 text-foreground [overflow-wrap:anywhere]">{children}</dd>
     </div>
   );
 }

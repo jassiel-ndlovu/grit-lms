@@ -132,7 +132,8 @@ export function PageMessage({
   return (
     <PageFrame type="settings" breadcrumb={breadcrumb}>
       {title ? <PageTitle title={title} /> : null}
-      <div role="status" className="text-muted-foreground text-sm">
+      {/* Boxed, so a page with nothing to show still reads as a page, not a stray line. */}
+      <div role="status" className="border-border text-muted-foreground rounded-lg border border-dashed px-6 py-10 text-center text-sm">
         {children}
       </div>
     </PageFrame>
