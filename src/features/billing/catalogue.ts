@@ -67,7 +67,7 @@ export const SERVICES: Record<ServiceKey, ServiceInfo> = {
 
   "math-input": premium("math-input", "Visual maths input", "PLUS", "v1"),
   graphing: premium("graphing", "Graphs in lessons and graph answers", "PLUS", "v1"),
-  "question-bank": premium("question-bank", "Question bank and randomised tests", "PLUS", "later"),
+  "question-bank": premium("question-bank", "Question bank and randomised tests", "PLUS", "v1"),
   "live-sessions": premium("live-sessions", "Live-session scheduling and attendance", "PLUS", "v1"),
   "advanced-analytics": premium("advanced-analytics", "Item analysis and question difficulty", "PLUS", "later"),
   "custom-branding": premium("custom-branding", "Workspace logo, accent colour and sender name", "PLUS", "v1"),
