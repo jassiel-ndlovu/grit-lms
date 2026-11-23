@@ -14,6 +14,8 @@
 import { createAuthClient } from "better-auth/react";
 import { twoFactorClient, usernameClient } from "better-auth/client/plugins";
 
+import { clearOfflineData } from "./offline";
+
 /** Better Auth signs everyone in since the 2026-11-20 cutover. */
 const BETTER = true;
 
@@ -90,6 +92,8 @@ export async function signUpWithPassword(input: { name: string; email: string; p
 }
 
 export async function appSignOut(callbackUrl = "/") {
+  // Saved offline lessons go with the session (shared phones, #216).
+  await clearOfflineData().catch(() => undefined);
   await authClient.signOut();
   window.location.href = callbackUrl;
 }

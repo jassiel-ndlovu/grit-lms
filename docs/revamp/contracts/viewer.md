@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.17, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.18, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.18. Term report PDFs (`renderTermReportPdf`, `pdfResponse`) and offline reading (`public/sw.js`, `@/lib/offline`) |
 | 2026-11-23 | Draft 1.17. Roles as permission sets and branches (#216): `membership.roleKey`, `roleName`, `scope`, `branchIds`, `branchTeamIds`; six new permission keys; `staffScope`, `courseScopeOf` and `scopedCourseWhere`; role, branch and team actions in `@/features/workspaces/role-actions` |
 | 2026-11-23 | Draft 1.16. Parent and student referrals (`getReferralLink`, `listReferrals`, `/api/referrals/<code>`); the weekly parent summary email; the attendance register is Core (check-in codes and absence emails stay Plus) |
 | 2026-11-23 | Draft 1.15. Read-only workspaces keep every permission, so staff see their pages (#223); writes are refused on the server (`READ_ONLY: ...` from actions, 423 from API routes). `listListedCourses` also matches the tutor's name and takes `forUserIds`, returning `enrolledUserIds`; staff inbox rows carry `decidedBy` |
@@ -410,3 +411,41 @@ The three base roles are presets too, so existing members are unchanged. Presets
 | `setCourseTeam` | `teams.manage` | `{ courseId, teamId }` | Puts a course in a team, and so in that team's branch |
 
 **Not yet:** invitations aren't bound to a branch, so a branch manager inviting staff invites them to the organisation. Groups of organisations come later.
+
+### Term report PDFs (Draft 1.18)
+
+B's request. **B gathers the report; A turns it into a PDF.** It's rendered on request and nothing is stored, like invoices.
+
+- **Where:** `@/features/reports/term-report-pdf` (server code; pdf-lib).
+- **`renderTermReportPdf(data)`** returns `Uint8Array` (A4). `data` is a `TermReportPdfData`:
+  - `workspace: { name, logo?: Uint8Array, contact? }` (the logo is a PNG or JPEG's bytes; a broken one is skipped);
+  - `term: { title, from, to }`;
+  - `student: { name, grade?, username? }`;
+  - `courses: [{ name, tutor?, percent: number | null, symbol?, items: [{ title, kind?, score: number | null, outOf, weight? }], attendance?: { present, late, absent, excused }, comment? }]`;
+  - `overall?: { comment?, by? }`;
+  - `generatedAt` and `timeZone`.
+- **What it shows:** a header, a summary (courses, the average across marked courses, and attendance), one block per course with its assessments, attendance and the tutor's comment, a general comment, and signature lines.
+- **Long reports** run onto more pages with "continued" headers and page numbers. Characters outside the standard PDF fonts show as "?".
+- **How B calls it:** from B's own route handler, for example `src/app/dashboard/reports/[studentId]/[term]/route.ts`. Check permission there: staff with `grades.view` on the student's courses, or the parent or adult student. Then `return pdfResponse(await renderTermReportPdf(data), termReportFileName(name, term))`.
+- **Checked by** `scripts/check-term-report-pdf.ts` (in CI). Pass an output path to get sample PDFs.
+
+### Offline reading (Draft 1.18)
+
+Core, with B's data-saver mode.
+- **The service worker** (`public/sw.js`) keeps app files as they load, and keeps a lesson page only when the student saves it.
+- **Offline:** a saved lesson opens from the phone; any other page shows `/offline.html`, which lists the saved lessons.
+- **Never cached:** API calls, sign-in pages and anything but GET.
+- **Sign-out:** `appSignOut` clears saved lessons, for shared phones.
+- **Limits:** 50 lessons a device, oldest dropped first.
+
+From `@/lib/offline` (client):
+
+| Call | What it does |
+| --- | --- |
+| `registerOfflineSupport()` | Call once from a client component in the dashboard layout. Production builds only |
+| `saveLessonForOffline(path, title)` | For a "Save for offline" button on `/dashboard/courses/lessons/[id]`. Returns `{ ok, error? }` |
+| `removeSavedLesson(path)`, `listSavedLessons()` | For a "Saved for offline" list: `{ url, title, savedAt }[]` |
+| `clearOfflineData()` | Already called by `appSignOut` |
+| `offlineSupported()` | Hide the button where it can't work |
+
+**Note for B:** a saved page is the lesson's HTML as it was when saved. Videos and big images aren't kept, so show "Video needs a connection" in data-saver style.
