@@ -15,7 +15,7 @@ export type ServiceKey =
   | "calendar" | "messages" | "notifications" | "portals" | "fee-collection"
   | "storage-allowance" | "bulk-import" | "attendance"
   | "math-input" | "graphing" | "question-bank" | "live-sessions"
-  | "advanced-analytics" | "custom-branding" | "calendar-sync" | "session-booking"
+  | "advanced-analytics" | "custom-branding" | "calendar-sync" | "session-booking" | "ai-assist"
   | "secure-tests" | "ai-marking" | "at-risk-alerts" | "leaderboards" | "api-access"
   | "automarker" | "judge-mode" | "code-plagiarism";
 
@@ -75,6 +75,8 @@ export const SERVICES: Record<ServiceKey, ServiceInfo> = {
   "custom-branding": premium("custom-branding", "Workspace logo, accent colour and sender name", "PLUS", "v1"),
   "calendar-sync": premium("calendar-sync", "Calendar feed", "PLUS", "v1"),
   "session-booking": premium("session-booking", "Session booking with prepaid lesson packs", "PLUS", "v1"),
+  // Plus: capped runs a month; Pro: many more (features/ai-assist/limits.ts).
+  "ai-assist": premium("ai-assist", "AI help for tutors: question batches, course outlines and text tidying", "PLUS", "v1"),
   "secure-tests": premium("secure-tests", "Secure tests", "PRO", "v1"),
   "ai-marking": premium("ai-marking", "AI-suggested marks", "PRO", "v1", "AI_MARKS"),
   "at-risk-alerts": premium("at-risk-alerts", "At-risk alerts shared with parents and students", "PRO", "v1"),

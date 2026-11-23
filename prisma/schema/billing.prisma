@@ -979,3 +979,40 @@ model LessonCredit {
   @@index([learnerId, courseId])
   @@index([workspaceId, createdAt])
 }
+
+// AI help for tutors (#216 phase 2, Plus limited, Pro more; A).
+
+enum AiAssistFeature {
+  QUESTIONS
+  OUTLINE
+  TIDY
+}
+
+enum AiAssistStatus {
+  OK
+  FAILED
+  REFUSED
+}
+
+/// One AI help run: counts towards the plan's monthly cap and records cost. The output itself isn't kept.
+model AiAssistRun {
+  id           String          @id @default(cuid())
+  workspaceId  String
+  courseId     String?
+  userId       String
+  feature      AiAssistFeature
+  status       AiAssistStatus
+  /// The course's plan when it ran: CORE, PLUS or PRO.
+  tier         String          @db.VarChar(8)
+  model        String          @db.VarChar(64)
+  inputTokens  Int             @default(0)
+  outputTokens Int             @default(0)
+  costMicroUsd Int             @default(0)
+  credits      Int             @default(0)
+  createdAt    DateTime        @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, feature, createdAt])
+  @@index([userId, createdAt])
+}

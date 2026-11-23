@@ -3,6 +3,21 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 #216 phase 2: AI help for tutors (Plus limited, Pro more), `revamp/a-ai-assist`
+
+Migration `35_ai_assist`: AiAssistRun (counts and cost only), plus the `ai-assist` Service row, backfilled for courses on Plus or Pro. Viewer contract Draft 1.22, services Draft 1.7.
+
+Done:
+- **`ai-assist/limits.ts`** (pure): monthly caps per plan, refusal messages, `plainText` for lesson HTML.
+- **`ai-assist/model.ts`**: structured-output calls (Opus 5.5, refusal fallback, cached system prompt) for questions, outlines (text or PDF) and tidy or simplify. The material is wrapped in tags as data.
+- **`ai-assist/assist.ts`**: the gate (`courses.edit`, `ai-assist` service, the monthly cap, the AI credit check with billing on), the course context (level and curriculum topics; topic codes filtered to the list), run records, credit spends, and Blob-only file reads.
+- `ai-assist/actions.ts`.
+- `ai-marking/rules.ts` prices now include Opus 5.5. `check-billing` pins `ai-assist`.
+
+Tested:
+- `scripts/check-ai-assist.ts` (in CI).
+- One live run of each feature against the Preview DB with the production Anthropic key (about R1.90 in total). Results were sensible; run rows cleaned up.
+
 ## 2026-11-23 #216 phase 2: session booking with prepaid lesson packs (Plus), `revamp/a-booking`
 
 Migration `34_session_booking`:
