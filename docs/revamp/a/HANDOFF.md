@@ -3,6 +3,34 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Phase 1: AI credits, `revamp/a-ai-credits`
+
+Billing contract Draft 1.16 ("AI credits"). New A feature folder `src/features/ai-credits/`.
+
+Done:
+- **Migration `31_ai_credits`** (additive):
+  - `AiCreditEntry`, a signed ledger with pool, kind, spender, period key, feature, expiry and an idempotency key;
+  - `AiCreditAllowance`;
+  - `Workspace.aiPersonalCredits`.
+- **`credits-math.ts`** (pure, `scripts/check-ai-credits.ts` in CI): the credit unit, included credits per seat, purchase price, the spending plan and the 80% warning.
+- **`credits.ts`:**
+  - included grants made lazily per billing period (or trial), from seat charges;
+  - balances, allowances (person, team, branch, default), `canSpend` and `spendCredits` (with a per-workspace advisory lock; forced spends record debt on bought credits);
+  - the report, allowance and personal-credit settings, and the admin grant.
+  - Only with `BILLING=1`; comped workspaces are never refused.
+- **AI marking** checks credits before queueing and before each mark, and spends the real cost after.
+- **Actions:** `ai-credits/actions.ts` and `adminGrantAiCredits`.
+
+Tested:
+- 15 checks against Preview (with BILLING on):
+  - the seat-based pool, granted once;
+  - spends, the allowance stop, and own credits after the allowance;
+  - included then bought, the 80% warning, forced debt, and refusal when empty;
+  - the report, comped and trial workspaces, and billing off.
+- The pure checks, types and lint. The forced-debt path was wrong at first (the debt went to the included pool and left bought credits untouched); fixed.
+
+Open (owner): pool sizes, the credit unit, the 5% markup, and the legal check on how long bought credits last. Card purchases come with live payments in January.
+
 ## 2026-11-23 Phase 1: roles as permission sets, branches and teams, `revamp/a-roles-branches`
 
 Viewer contract Draft 1.17 ("Roles and branches").
