@@ -135,6 +135,9 @@ model Workspace {
   aiAssistRuns        AiAssistRun[]
   apiKeys             ApiKey[]
   webhookEndpoints    WebhookEndpoint[]
+  timesheets          Timesheet[]
+  payRates            PayRate[]
+  coverRequests       CoverRequest[]
 }
 
 /// Organisations only. A solo practice has no teams.
@@ -181,6 +184,9 @@ model Membership {
   bookingAvailability BookingAvailability[]
   bookingTimeOff      BookingTimeOff[]
   bookings            Booking[]
+
+  timesheets Timesheet[]
+  payRate    PayRate?
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -685,4 +691,118 @@ model WebhookDelivery {
 
   @@index([status, nextAttemptAt])
   @@index([endpointId, createdAt])
+}
+
+// Tutor timesheets, payroll export and cover (#216 phase 3, organisations; A).
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum TimesheetEntryKind {
+  SESSION
+  COVER
+  BOOKING
+  MANUAL
+}
+
+/// One tutor's month (YYYY-MM in the workspace's time zone).
+model Timesheet {
+  id           String          @id @default(cuid())
+  workspaceId  String
+  membershipId String
+  month        String          @db.VarChar(7)
+  status       TimesheetStatus @default(DRAFT)
+  submittedAt  DateTime?
+  decidedAt    DateTime?
+  decidedById  String?
+  decisionNote String?         @db.VarChar(500)
+  /// Set at approval: the rate and totals that payroll uses.
+  hourlyCents  Int?
+  totalMinutes Int             @default(0)
+  amountCents  Int?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  workspace  Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  membership Membership       @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  entries    TimesheetEntry[]
+
+  @@unique([membershipId, month])
+  @@index([workspaceId, month, status])
+}
+
+model TimesheetEntry {
+  id              String             @id @default(cuid())
+  timesheetId     String
+  kind            TimesheetEntryKind
+  /// For suggested entries: the class occurrence or booking, so it's added once.
+  key             String?            @db.VarChar(120)
+  courseId        String?
+  startsAt        DateTime
+  minutes         Int
+  label           String             @db.VarChar(200)
+  note            String?            @db.VarChar(300)
+  eventId         String?
+  occurrenceStart DateTime?
+  bookingId       String?
+  createdAt       DateTime           @default(now())
+
+  timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+
+  @@unique([timesheetId, key])
+  @@index([timesheetId, startsAt])
+}
+
+/// A tutor's hourly rate, for payroll. Snapshotted onto a timesheet when it's approved.
+model PayRate {
+  membershipId String   @id
+  workspaceId  String
+  hourlyCents  Int
+  updatedAt    DateTime @updatedAt
+  updatedById  String
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+enum CoverStatus {
+  OPEN
+  ASSIGNED
+  CANCELLED
+}
+
+/// A class occurrence whose tutor is away, and who covers it.
+model CoverRequest {
+  id                 String      @id @default(cuid())
+  workspaceId        String
+  courseId           String
+  eventId            String
+  occurrenceStart    DateTime
+  startsAt           DateTime
+  endsAt             DateTime
+  absentMembershipId String
+  coverMembershipId  String?
+  status             CoverStatus @default(OPEN)
+  /// "<eventId>@<occurrenceStart ISO>" while OPEN or ASSIGNED; null once cancelled.
+  liveKey            String?     @unique
+  reason             String?     @db.VarChar(300)
+  createdById        String
+  assignedById       String?
+  assignedAt         DateTime?
+  /// True when assigning added the cover tutor to the course; that access is removed a day after the class.
+  addedCourseStaff   Boolean     @default(false)
+  accessEndedAt      DateTime?
+  createdAt          DateTime    @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, startsAt])
+  @@index([coverMembershipId, startsAt])
+  @@index([absentMembershipId, startsAt])
 }

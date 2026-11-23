@@ -8,6 +8,7 @@
 
 import { pruneOldEnquiries } from "@/features/marketing/enquiries";
 import { runRiskAlerts } from "@/features/risk/evaluate";
+import { endCoverAccess } from "@/features/staff/cover";
 import { pruneWebhookDeliveries } from "@/features/api/webhooks";
 import { queueWeeklyParentSummaries } from "@/features/notifications/weekly-summary";
 import { anonymiseDueAccounts } from "@/features/users/deletion";
@@ -21,7 +22,7 @@ const KEEP_DAYS = 30;
 const job = defineJob("housekeeping", async () => {
   const before = new Date(Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000);
   const { count } = await prisma.jobRun.deleteMany({ where: { startedAt: { lt: before } } });
-  return { prunedJobRuns: count, accountDeletions: await anonymiseDueAccounts(), parentSummaries: await queueWeeklyParentSummaries(), prunedEnquiries: await pruneOldEnquiries(), riskAlerts: await runRiskAlerts(), prunedWebhookDeliveries: await pruneWebhookDeliveries() };
+  return { prunedJobRuns: count, accountDeletions: await anonymiseDueAccounts(), parentSummaries: await queueWeeklyParentSummaries(), prunedEnquiries: await pruneOldEnquiries(), riskAlerts: await runRiskAlerts(), prunedWebhookDeliveries: await pruneWebhookDeliveries(), coverAccessEnded: await endCoverAccess() };
 });
 export const GET = job.GET;
 export const POST = job.POST;

@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.23, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.24, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.24. Timesheets, pay rates, payroll export and cover for absent tutors |
 | 2026-11-24 | (No change here.) API keys, the REST API and webhooks have their own contract: `contracts/api.md` |
 | 2026-11-24 | Draft 1.23. Pro AI drafts: lessons, tests and assignments from documents; feedback; report comments; curriculum gaps |
 | 2026-11-23 | Draft 1.22. AI help for tutors (Plus limited, Pro more): question drafts, outlines, tidy text |
@@ -664,3 +665,49 @@ These use the same service, gate, credits and run records as above. They're in `
   - with `newLessonTitle` when it suggests a new one;
   - with an empty suggestion when the model skipped it.
 - **Cost on Preview** (1 credit = R0.01): lessons from a short document about 145 credits, feedback about 31, six report comments about 42, gaps about 113. Long drafts are streamed, so a big document won't time out.
+
+### Timesheets and cover (Draft 1.24)
+
+#216 phase 3, organisations. Actions are in `@/features/staff/actions`.
+- **Who:** a tutor works on their own timesheet. A manager with `timesheets.manage` (Finance, Branch manager, Admin, Owner) works on the staff in their scope: the whole organisation, or members of teams in their branches.
+- **Cover** needs `cover.manage`, with the same scoping.
+
+**Timesheets** run by month (`YYYY-MM` in the workspace's time zone):
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `getTimesheetAction` | `{ month, membershipId? }` | Returns `{ month, membershipId, name, as: "self" \| "manager", sheet: { id, status, submittedAt, decidedAt, decisionNote, hourlyCents, totalMinutes, amountCents }, entries, suggestions, totals: { minutes, hours, hourlyCents, amountCents }, editable }`. Opening a month creates its DRAFT |
+| `addTimesheetSuggestionsAction` | `{ timesheetId, keys? }` | Adds the suggested entries; without `keys`, all of them. Each suggestion is added once |
+| `addTimesheetEntryAction` | `{ timesheetId, startsAt, minutes, label, courseId?, note? }` | Other work, such as marking or preparation. 1 minute to 12 hours, dated inside the month |
+| `updateTimesheetEntryAction` / `removeTimesheetEntryAction` | `{ entryId, minutes?, note?, label? }` / `{ entryId }` | Only while DRAFT or REJECTED |
+| `submitTimesheetAction` | `{ timesheetId }` | DRAFT or REJECTED → SUBMITTED. Needs at least one entry |
+| `decideTimesheetAction` | `{ timesheetId, decision: "APPROVED" \| "REJECTED" \| "DRAFT", note? }` | Managers only, never on their own sheet. Rejecting needs a note. Approving records the rate and pay at that moment. `DRAFT` reopens an approved sheet |
+| `setPayRateAction` | `{ membershipId, hourlyCents }` | Managers. R0 to R10,000 an hour. Applies to sheets approved from then on |
+| `listTimesheetsAction` | `{ month, status? }` | Managers: one row per tutor in scope, even before they open the month: `{ membershipId, name, email, hourlyCents, timesheetId, status, totalMinutes, amountCents, submittedAt }` |
+
+- **Suggestions** come from:
+  - class occurrences of the tutor's courses: LECTURE, LIVE and EXAM, not cancelled, minus classes someone covered for them;
+  - classes they covered;
+  - their booked lessons marked COMPLETED or NO_SHOW.
+  - Each has a `kind` (SESSION, COVER or BOOKING), `minutes`, `label` and `startsAt`.
+- **Payroll download:** `GET /api/exports/payroll?month=YYYY-MM` gives one row per tutor with an APPROVED sheet: hours, rate and amount. Add `&detail=1` for one row per entry. It's audited.
+
+**Cover:**
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `requestCoverAction` | `{ eventId, occurrenceStart, absentMembershipId?, reason? }` | A tutor for their own class, or a manager for someone in scope. One live request per occurrence |
+| `coverCandidatesAction` | `{ coverId }` | Free tutors in scope: no class, booking or other cover at that time. Those who teach the course come first, then the same subject: `[{ membershipId, name, teachesCourse, sameSubject }]` |
+| `assignCoverAction` | `{ coverId, coverMembershipId }` | See below. Returns `{ ok, addedToCourse }` |
+| `cancelCoverAction` | `{ coverId }` | The absent tutor (while OPEN) or a manager. Removes access added only for this cover |
+| `listCoverAction` | `{ from, to, status? }` | A manager sees cover for the staff they manage; a tutor sees their own requests and their covers |
+
+**Assigning cover:**
+- If the cover tutor doesn't teach the course, they join it as ASSISTANT until a day after the class. Housekeeping then removes that access.
+- The cover tutor gets an email (`staff:cover-assigned`) and an in-app note; the absent tutor gets an in-app note.
+- The class moves to the cover tutor's timesheet suggestions as COVER.
+
+**For B:**
+- **"My timesheet":** month picker, suggestions with "Add all", entries, totals, Submit.
+- **"Timesheets" for managers:** month list with status badges, approve or reject with a note, pay rates, the payroll download.
+- **Calendar:** on an occurrence, "I need cover" for the tutor and "Arrange cover" for managers, with the candidate list.
