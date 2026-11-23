@@ -132,6 +132,7 @@ model Workspace {
   bookingLeadHours    Int                   @default(12)
   /// And at most this many days ahead.
   bookingHorizonDays  Int                   @default(28)
+  aiAssistRuns        AiAssistRun[]
 }
 
 /// Organisations only. A solo practice has no teams.

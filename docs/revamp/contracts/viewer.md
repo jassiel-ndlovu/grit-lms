@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.21, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.22, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.22. AI help for tutors (Plus limited, Pro more): question drafts, outlines, tidy text |
 | 2026-11-23 | Draft 1.21. Session booking with prepaid lesson packs (Plus): availability, slots, bookings, credits |
 | 2026-11-23 | Draft 1.20. At-risk alerts (Pro): `listRiskAlerts`, `shareRiskAlertAction`, `listMySharedRiskAlerts` and the rest |
 | 2026-11-23 | Draft 1.19. Landing page: `getPublicPlans`, `submitPlatformEnquiry`, admin enquiries, sitemap, robots and analytics |
@@ -600,3 +601,39 @@ From `@/lib/offline` (client):
 **Plus gate:** slots and booking refuse with "Session booking is part of the Plus plan for this course." when the course doesn't have the service.
 
 **Privacy:** bookings and the credit ledger are in the user export. Anonymising an account clears booking notes and reasons; the bookings stay as the tutor's record.
+
+### AI help for tutors (Draft 1.22)
+
+#216 phase 2. Service `ai-assist` (Plus). Owner, 22 Nov: "Plus gets a taste of AI and Pro gets all of it".
+
+All actions are in `@/features/ai-assist/actions` and need staff with `courses.edit` on the course. **Every result is a draft:** nothing is saved. B shows it, the tutor edits and picks, and B saves what they keep through B's own actions.
+
+| Action | Input | Returns |
+| --- | --- | --- |
+| `getAiAssistStatus` | `{ courseId }` | `{ available, tier, model, features: { QUESTIONS, OUTLINE, TIDY: { tier, limit, used, left } }, resetsOn }`. Hide the buttons when `available` is false; show "n left this month" |
+| `generateQuestionsAction` | `{ courseId, lessonId?, topic?, count 1–10, types: ("MULTIPLE_CHOICE" \| "MULTI_SELECT" \| "TRUE_FALSE" \| "SHORT_ANSWER" \| "NUMERIC" \| "ESSAY")[], difficulty: "easy" \| "medium" \| "hard" }` | `{ runId, questions: DraftQuestion[], note, allowance }` |
+| `outlineFromDocumentAction` | `{ courseId, text?, fileUrl? }`. `fileUrl` is a PDF or text file uploaded to Vercel Blob (your uploader), at most 15 MB; or pasted text, at most 120,000 characters | `{ runId, outline: { title, summary, sections: [{ title, objectives, lessons: [{ title, summary, topicCodes }] }], note }, allowance }` |
+| `tidyTextAction` | `{ courseId, text (20–12,000 characters), mode: "tidy" \| "simplify", readingLevel? }` | `{ runId, text, changes: string[], allowance }`. Show it as a before-and-after for the tutor to accept |
+
+**`DraftQuestion`** has: `type`, `question`, `points` (1–20), `options`, `correctOptions` (zero-based), `trueFalse`, `numericAnswer`, `numericTolerance`, `modelAnswer`, `explanation`, `topicCodes` and `difficulty`.
+- Maths is TeX between `\\( … \\)`.
+- Map it onto your `TestQuestion` or `BankQuestion` shapes: the options and answer JSON for each type, and `modelAnswer` plus `explanation` for the memo.
+- `topicCodes` only ever contains codes from the course's curriculum list (empty when the course has none).
+- Show `note` above the drafts when it isn't empty.
+
+**Limits:**
+- Runs a month per workspace (`AI_ASSIST_LIMITS`, provisional):
+  - **Plus:** 10 question batches, 3 outlines and 50 tidy-ups.
+  - **Pro:** 200, 50 and 500.
+  - **Core:** none.
+- The plan is the course's, from its switched-on services. Before billing is on, a Core course counts as Plus.
+- Refusals come back as `serverError`, written for people:
+  - Plus at its cap points to Pro;
+  - when AI credits run out, the message is the credits message.
+- With billing on, every run spends AI credits for what it cost, including failed runs.
+
+**Outline scope:** on Plus this is the outline only. Lessons, tests and assignments from documents are Pro, in phase 3.
+
+**Model:** Claude Opus 5.5 by default (`AI_ASSIST_MODEL` overrides), with Anthropic's refusal fallback. On Preview, a run of 2 questions cost about 63 credits, an outline about 107 and a tidy-up about 16 (1 credit = R0.01).
+
+**Privacy:** only the course's name and level, the lesson or document text, and up to 30 existing question stems (to avoid repeats) are sent. No names, emails or ids are sent. Run rows (`AiAssistRun`) keep counts and cost, never the text.
