@@ -79,7 +79,7 @@ export function GenerateFromBankDialog({
       if (items.length) onAdd(items);
       if (short.length) {
         toast.warning(
-          `Not enough saved questions: ${short.map((s) => `${title(s.topic)} ${s.got} of ${s.wanted}`).join("; ")}.`,
+          `Not enough unused questions in your bank: ${short.map((s) => `${title(s.topic)} ${s.got} of ${s.wanted}`).join("; ")}.`,
         );
       }
       if (items.length) setOpen(false);
