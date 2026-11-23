@@ -6,13 +6,16 @@
  * questions carry topic codes from the catalogue below:
  *
  *   caps:<subject>:<grade>:<topic>      e.g. caps:mathematics:10:functions
+ *   ieb:<subject>:<grade>:<topic>       topics only the IEB lists
  *
  * The catalogue lives in code, versioned with the app: a new subject or a
  * renamed topic needs no migration. Codes never change once shipped; a
  * retired topic stays readable (topicByCode) but isn't offered.
  *
- * IEB follows the CAPS content for these subjects, so an IEB course uses
- * the CAPS list. "Other" curricula have no catalogue yet.
+ * The IEB examines the national curriculum, so an IEB list is the CAPS list
+ * with that subject's differences (IEB_CHANGES). Shared topics keep their
+ * caps: codes, so tags and bank questions move between the two. "Other"
+ * curricula have no catalogue yet.
  *
  * Pure: safe in server and client components and in scripts.
  */
@@ -28,7 +31,37 @@ export const CURRICULUM_LABEL: Record<Curriculum, string> = {
 
 export type Topic = { code: string; title: string; subject: string; grade: number; order: number };
 
-type SubjectDef = { key: string; title: string; grades: Record<number, string[]> };
+type SubjectDef = {
+  key: string;
+  title: string;
+  /** Subjects only the IEB offers. */
+  iebOnly?: boolean;
+  grades: Record<number, string[]>;
+};
+
+/**
+ * The IEB's Advanced Programme Mathematics is one programme, examined in
+ * Grade 12, so every grade lists all of it. Schools teach one elective.
+ */
+const AP_MATHEMATICS = [
+  "Functions and limits",
+  "Trigonometry",
+  "Differentiation",
+  "Integration",
+  "Curve sketching",
+  "Applications of calculus",
+  "Real and complex roots",
+  "Exponents and logarithms",
+  "Absolute value",
+  "Mathematical induction",
+  "Statistics elective: probability fundamentals",
+  "Statistics elective: probability functions",
+  "Statistics elective: inferential statistics",
+  "Modelling elective: financial models",
+  "Modelling elective: recursive models",
+  "Matrices and graph theory elective: matrices",
+  "Matrices and graph theory elective: graph theory",
+];
 
 /**
  * CAPS Further Education and Training (Grades 10 to 12). Topic lists follow
@@ -79,7 +112,73 @@ const SUBJECTS: SubjectDef[] = [
         "Counting and probability",
       ],
     },
-  },  {
+  },
+  {
+    key: "mathematical-literacy",
+    title: "Mathematical Literacy",
+    grades: {
+      10: [
+        "Numbers and calculations with numbers",
+        "Patterns, relationships and representations",
+        "Conversions and time",
+        "Financial documents and tariff systems",
+        "Measuring length, weight, volume and temperature",
+        "Scale and map work",
+        "Probability",
+        "Income, expenditure, profit and loss, and budgets",
+        "Perimeter, area and volume",
+        "Models and plans",
+        "Interest, banking and taxation",
+        "Data handling",
+      ],
+      11: [
+        "Patterns, relationships and representations",
+        "Conversions and time",
+        "Financial documents and tariff systems",
+        "Income, expenditure, profit and loss, and budgets",
+        "Cost price and selling price",
+        "Break-even analysis",
+        "Interest and banking",
+        "Inflation",
+        "Measuring length, weight, volume and temperature",
+        "Scale and map work",
+        "Perimeter, area and volume",
+        "Models and plans",
+        "Taxation",
+        "Probability",
+        "Exchange rates",
+        "Data handling",
+      ],
+      12: [
+        "Conversions and time",
+        "Financial documents and tariff systems",
+        "Income, expenditure, profit and loss, and budgets",
+        "Cost price and selling price",
+        "Break-even analysis",
+        "Data handling",
+        "Interest and banking",
+        "Inflation",
+        "Scale and map work",
+        "Measuring length, weight, volume and temperature",
+        "Perimeter, area and volume",
+        "Taxation",
+        "Exchange rates",
+        "Models and plans",
+        "Probability",
+      ],
+    },
+  },
+  {
+    key: "advanced-programme-mathematics",
+    title: "Advanced Programme Mathematics",
+    iebOnly: true,
+    grades: {
+      10: AP_MATHEMATICS,
+      11: AP_MATHEMATICS,
+      12: AP_MATHEMATICS,
+    },
+  },
+  {
     key: "physical-sciences",
     title: "Physical Sciences",
     grades: {
@@ -226,7 +325,261 @@ const SUBJECTS: SubjectDef[] = [
       ],
     },
   },
+  {
+    key: "business-studies",
+    title: "Business Studies",
+    grades: {
+      10: [
+        "Micro environment",
+        "Market environment",
+        "Macro environment",
+        "Interrelationship between environments",
+        "Business sectors",
+        "Contemporary socio-economic issues",
+        "Social responsibility",
+        "Entrepreneurial qualities",
+        "Forms of ownership",
+        "Creative thinking and problem solving",
+        "Business opportunity",
+        "Business location",
+        "Contracts",
+        "Presentation of business information",
+        "Business plan",
+        "Self-management",
+        "Relationships and team performance",
+      ],
+      11: [
+        "Influences on and control of business environments",
+        "Challenges in business environments",
+        "Adapting to challenges in business environments",
+        "Impact of contemporary socio-economic issues",
+        "Business sectors",
+        "Benefits of a company over other forms of ownership",
+        "Avenues of acquiring a business",
+        "Creative thinking and problem solving",
+        "Stress, crisis and change management",
+        "Transforming a business plan into an action plan",
+        "Starting a business venture",
+        "Professionalism and ethics",
+        "Presentation of business information",
+        "Assessment of entrepreneurial qualities",
+        "Citizenship roles and responsibilities",
+        "Marketing activities",
+        "Technology for marketing",
+        "Imports and exports",
+        "Foreign marketing",
+        "Foreign marketing and the production function",
+        "Production function",
+        "Team dynamics and conflict management",
+        "Introduction to the human resources function",
+      ],
+      12: [
+        "Impact of recent legislation",
+        "Human resources function",
+        "Professionalism and ethics",
+        "Creative thinking",
+        "Strategies for the macro environment",
+        "Corporate social responsibility",
+        "Human rights, inclusivity and environmental issues",
+        "Team performance and conflict management",
+        "Business sectors and their environments",
+        "Management and leadership",
+        "Quality of performance",
+        "Investment: securities",
+        "Investment: insurance",
+        "Forms of ownership",
+        "Presentation of information and data response",
+      ],
+    },
+  },
+  {
+    key: "economics",
+    title: "Economics",
+    grades: {
+      10: [
+        "Basic concepts and the economic problem",
+        "Circular flow",
+        "Quantitative elements: production and income",
+        "Business cycles",
+        "Dynamics of markets",
+        "Production possibility curve",
+        "Public sector intervention",
+        "Growth, development and globalisation",
+        "South African growth and development: historical context",
+        "History of money and banking",
+        "Population and labour force",
+        "Unemployment",
+        "Labour relations",
+        "Economic redress",
+      ],
+      11: [
+        "Factors of production and their remuneration",
+        "Economic goods and services",
+        "Economic systems",
+        "South Africa's economic structures",
+        "Relationships between markets",
+        "Effects of cost and revenue on price and quantity",
+        "Price elasticity",
+        "Economic growth",
+        "Economic development",
+        "Poverty",
+        "Money and banking",
+        "South Africa's role in Africa",
+        "Globalisation",
+        "Environmental deterioration",
+      ],
+      12: [
+        "Circular flow",
+        "Business cycles",
+        "Public sector",
+        "Foreign exchange markets",
+        "Protectionism and free trade",
+        "Perfect markets",
+        "Imperfect markets",
+        "Market failures",
+        "Growth and development",
+        "Industrial development policies",
+        "Economic and social performance indicators",
+        "Inflation",
+        "Tourism",
+        "Environmental sustainability",
+      ],
+    },
+  },
+  {
+    key: "geography",
+    title: "Geography",
+    grades: {
+      10: [
+        "Geographical skills and techniques",
+        "The atmosphere",
+        "Geomorphology",
+        "Population",
+        "Water resources",
+      ],
+      11: [
+        "Geographical skills and techniques",
+        "The atmosphere",
+        "Geomorphology",
+        "Development geography",
+        "Resources and sustainability",
+      ],
+      12: [
+        "Geographical skills and techniques",
+        "Climate and weather",
+        "Geomorphology",
+        "Rural and urban settlement",
+        "Economic geography of South Africa",
+      ],
+    },
+  },
+  {
+    key: "history",
+    title: "History",
+    grades: {
+      10: [
+        "The world around 1600",
+        "Expansion and conquest, 15th to 18th centuries",
+        "The French Revolution",
+        "Transformations in southern Africa after 1750",
+        "Colonial expansion after 1750",
+        "The South African War and Union",
+      ],
+      11: [
+        "Communism in Russia, 1900 to 1940",
+        "Capitalism and the USA, 1900 to 1940",
+        "Ideas of race in the late 19th and 20th centuries",
+        "Nationalisms: South Africa, the Middle East and Africa",
+        "Apartheid South Africa, 1940s to 1960s",
+      ],
+      12: [
+        "The Cold War",
+        "Independent Africa",
+        "Civil society protests, 1950s to 1970s",
+        "Civil resistance in South Africa, 1970s to 1980s",
+        "The coming of democracy and coming to terms with the past",
+        "The end of the Cold War and a new world order",
+      ],
+    },
+  },
+  {
+    key: "computer-applications-technology",
+    title: "Computer Applications Technology",
+    grades: {
+      10: [
+        "Word processing",
+        "Spreadsheets",
+        "Presentations",
+        "Concepts of computing",
+        "Hardware",
+        "Software",
+        "Computer management",
+        "Networks",
+        "Internet and the World Wide Web",
+        "Electronic communications",
+        "Information management",
+        "Social implications",
+      ],
+      11: [
+        "Word processing",
+        "Spreadsheets",
+        "Databases",
+        "HTML and web design",
+        "Concepts of computing",
+        "Hardware",
+        "Software",
+        "Computer management",
+        "Networks",
+        "Internet and the World Wide Web",
+        "Electronic communications",
+        "Information management",
+        "Social implications",
+      ],
+      12: [
+        "Word processing",
+        "Spreadsheets",
+        "Databases",
+        "HTML and web design",
+        "Concepts of computing",
+        "Hardware",
+        "Software",
+        "Computer management",
+        "Networks",
+        "Internet and the World Wide Web",
+        "Electronic communications",
+        "Information management",
+        "Social implications",
+      ],
+    },
+  },
 ];
+
+/**
+ * What the IEB lists differently: CAPS topics it leaves out and topics it
+ * adds (`after`: the title it follows; null puts it first).
+ */
+const IEB_CHANGES: Record<string, Record<number, { drop?: string[]; add?: Array<{ title: string; after: string | null }> }>> = {
+  "physical-sciences": {
+    12: {
+      drop: ["Doppler effect", "Fertilisers"],
+      add: [
+        { title: "Newton's laws", after: null },
+        { title: "Gravitational and electric fields", after: "Work, energy and power" },
+        { title: "Chemical bonding", after: "Gravitational and electric fields" },
+        { title: "Energy changes in reactions", after: "Chemical bonding" },
+      ],
+    },
+  },
+  "life-sciences": { 12: { add: [{ title: "Environmental studies", after: "Human evolution" }] } },
+  accounting: {
+    12: {
+      add: [
+        { title: "Published financial statements", after: "Analysis and interpretation" },
+        { title: "Professional bodies and codes of conduct", after: "Audits and corporate governance" },
+      ],
+    },
+  },
+};
 
 /** "Finance, growth and decay" → "finance-growth-and-decay". */
 export function slug(title: string): string {
@@ -236,14 +589,46 @@ export function slug(title: string): string {
     .replace(/^-|-$/g, "");
 }
 
-const CATALOGUE: Topic[] = SUBJECTS.flatMap((s) =>
-  Object.entries(s.grades).flatMap(([g, titles]) =>
-    titles.map((title, i) => ({ code: `caps:${s.key}:${g}:${slug(title)}`, title, subject: s.key, grade: Number(g), order: i })),
-  ),
-);
-const BY_CODE = new Map(CATALOGUE.map((t) => [t.code, t]));
+const toTopic = (board: "caps" | "ieb", s: SubjectDef, g: number, title: string, order: number): Topic => ({
+  code: `${board}:${s.key}:${g}:${slug(title)}`,
+  title,
+  subject: s.key,
+  grade: g,
+  order,
+});
 
-export const SUBJECT_OPTIONS = SUBJECTS.map((s) => ({ key: s.key, title: s.title, grades: Object.keys(s.grades).map(Number) }));
+function iebList(s: SubjectDef, g: number, shared: Topic[]): Topic[] {
+  const { drop = [], add = [] } = IEB_CHANGES[s.key]?.[g] ?? {};
+  const list = shared.filter((t) => !drop.includes(t.title));
+  for (const { title, after } of add) {
+    const at = after === null ? 0 : list.findIndex((t) => t.title === after) + 1;
+    list.splice(at, 0, toTopic("ieb", s, g, title, 0));
+  }
+  return list.map((t, order) => ({ ...t, order }));
+}
+
+/** Topic lists by "<curriculum>:<subject>:<grade>". */
+const LISTS = new Map<string, Topic[]>();
+const BY_CODE = new Map<string, Topic>();
+for (const s of SUBJECTS) {
+  for (const [key, titles] of Object.entries(s.grades)) {
+    const g = Number(key);
+    const own = titles.map((title, i) => toTopic(s.iebOnly ? "ieb" : "caps", s, g, title, i));
+    const ieb = iebList(s, g, own);
+    if (!s.iebOnly) LISTS.set(`CAPS:${s.key}:${g}`, own);
+    LISTS.set(`IEB:${s.key}:${g}`, ieb);
+    for (const t of [...own, ...ieb]) if (!BY_CODE.has(t.code)) BY_CODE.set(t.code, t);
+  }
+}
+
+export type SubjectOption = { key: string; title: string; grades: number[] };
+
+const subjectsOf = (curriculum: Curriculum | null): SubjectDef[] =>
+  curriculum === "CAPS" ? SUBJECTS.filter((s) => !s.iebOnly) : curriculum === "IEB" ? SUBJECTS : [];
+
+/** The subjects a curriculum offers, with their grades. */
+export const subjectOptions = (curriculum: Curriculum | null): SubjectOption[] =>
+  subjectsOf(curriculum).map((s) => ({ key: s.key, title: s.title, grades: Object.keys(s.grades).map(Number) }));
 
 export const subjectTitle = (key: string | null | undefined) => SUBJECTS.find((s) => s.key === key)?.title ?? null;
 
@@ -254,8 +639,8 @@ export type CourseCurriculum = { curriculum: Curriculum | null; subject: string 
 
 /** The topics a course can tag, in teaching order; empty when it has no catalogue. */
 export function topicsFor(c: CourseCurriculum | null | undefined): Topic[] {
-  if (!c || (c.curriculum !== "CAPS" && c.curriculum !== "IEB") || !c.subject || c.gradeLevel == null) return [];
-  return CATALOGUE.filter((t) => t.subject === c.subject && t.grade === c.gradeLevel);
+  if (!c?.curriculum || !c.subject || c.gradeLevel == null) return [];
+  return LISTS.get(`${c.curriculum}:${c.subject}:${c.gradeLevel}`) ?? [];
 }
 
 export const MAX_TOPICS = 10;
@@ -276,7 +661,7 @@ export function curriculumToStore(raw: { curriculum?: unknown; subject?: unknown
   const curriculum = (CURRICULA as readonly unknown[]).includes(raw.curriculum) ? (raw.curriculum as Curriculum) : null;
   if (!curriculum) return { curriculum: null, subject: null, gradeLevel: null };
   if (curriculum === "OTHER") return { curriculum, subject: null, gradeLevel: null };
-  const subject = SUBJECTS.find((s) => s.key === raw.subject);
+  const subject = subjectsOf(curriculum).find((s) => s.key === raw.subject);
   const grade = Number(raw.gradeLevel);
   return {
     curriculum,
