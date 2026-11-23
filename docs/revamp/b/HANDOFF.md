@@ -3,6 +3,24 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Generate a test from the bank (#216, phase 2), `revamp/b-generate-test`
+
+Done:
+- **Generate from bank** in the test designer, for courses with the bank
+  and a topic list. The tutor picks topics and a count for each; the
+  server draws at random from their bank (`drawBankQuestions`,
+  `drawFromPool`) and the copies land in the test like "Add from bank".
+  - No repeats, and items already in the test are skipped.
+  - A topic that runs short says how many it found.
+  - The topic list shows how many saved questions each topic has.
+  - Every student sits the same questions. Per-student draws stay out of
+    scope (contract Draft 2).
+- No migration.
+- Checks: `npx tsx scripts/check-question-bank.ts` (draw checks added).
+
+Next (B-only): term reports once A's PDF helper lands. Ask the owner what
+comes after that.
+
 ## 2026-11-23 Question bank and three more subjects (#216, phase 2), `revamp/b-question-bank`
 
 Done:

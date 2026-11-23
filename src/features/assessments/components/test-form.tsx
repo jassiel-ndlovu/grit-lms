@@ -63,6 +63,7 @@ import {
 } from "./test-question-editor";
 import { TestMemoFiles } from "./test-memo-files";
 import { QuestionBankDialog } from "./question-bank-dialog";
+import { GenerateFromBankDialog } from "./generate-from-bank-dialog";
 import { saveQuestionToBank, type BankListItem } from "../bank-actions";
 import { bankNodeToEditor, editorToBankNode } from "../lib/question-bank";
 
@@ -303,6 +304,11 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
   }
   // Question bank (Plus): copies in, saves out (contracts/question-bank.md).
   const bankOn = Boolean(topicCourse?.questionBank);
+  // Bank items already copied in, so a generated draw doesn't repeat them.
+  const bankIdsInTest = React.useMemo(
+    () => questions.flatMap((q) => (q.bankQuestionId ? [q.bankQuestionId] : [])),
+    [questions],
+  );
   function addFromBank(items: BankListItem[]) {
     const copies = items.flatMap((item) => (item.data ? [bankNodeToEditor(item.data, () => blankQuestion().clientId, item.id)] : []));
     if (copies.length === 0) return;
@@ -590,6 +596,9 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
               <ArrowUpDown className="size-3.5" /> Rearrange
             </Button>
             {bankOn ? <QuestionBankDialog courseId={courseId} topics={topics} onAdd={addFromBank} /> : null}
+            {bankOn && topics.length > 0 ? (
+              <GenerateFromBankDialog courseId={courseId} topics={topics} exclude={bankIdsInTest} onAdd={addFromBank} />
+            ) : null}
             <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
               <Plus className="size-3" /> Add question
             </Button>

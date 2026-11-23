@@ -98,3 +98,50 @@ export function bankStem(node: ImportQuestion): string {
   const first = node.subQuestions?.[0];
   return first ? bankStem(first) : "";
 }
+
+/* ─── Generate a test: a random draw by topic ───────────────────────────── */
+
+/** One row of "Generate from bank": how many questions from a topic. */
+export type DrawPick = { topic: string; count: number };
+/** A topic that had fewer unused questions than asked for. */
+export type DrawShort = { topic: string; wanted: number; got: number };
+
+export const MAX_DRAW_ROWS = 20;
+export const MAX_DRAW_COUNT = 50;
+
+/**
+ * Draws questions at random, row by row, never the same item twice. An
+ * item tagged with two topics counts for whichever row draws it first.
+ * Rows asking for the same topic add up. `random` returns [0, 1).
+ */
+export function drawFromPool<T extends { id: string; topics: string[] }>(
+  pool: T[],
+  picks: DrawPick[],
+  random: () => number = Math.random,
+): { drawn: T[]; short: DrawShort[] } {
+  const used = new Set<string>();
+  const drawn: T[] = [];
+  const short: DrawShort[] = [];
+  for (const pick of picks) {
+    const want = Math.max(0, Math.min(MAX_DRAW_COUNT, Math.floor(pick.count)));
+    if (want === 0) continue;
+    const candidates = pool.filter((item) => !used.has(item.id) && item.topics.includes(pick.topic));
+    // Partial Fisher-Yates: only the first `want` places need settling.
+    const n = Math.min(want, candidates.length);
+    for (let i = 0; i < n; i++) {
+      const j = i + Math.floor(random() * (candidates.length - i));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      used.add(candidates[i].id);
+      drawn.push(candidates[i]);
+    }
+    if (n < want) short.push({ topic: pick.topic, wanted: want, got: n });
+  }
+  return { drawn, short };
+}
+
+/** How many bank items carry each topic. */
+export function topicCounts(items: Array<{ topics: string[] }>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const item of items) for (const t of new Set(item.topics)) out[t] = (out[t] ?? 0) + 1;
+  return out;
+}

@@ -18,7 +18,8 @@ import { tutorActionClient } from "@/lib/safe-action";
 import { getViewer } from "@/lib/viewer";
 
 import {
-  MAX_BANK_TREE, bankNodeCount, bankNodePoints, bankNodeTopics, bankStem, readBankNode,
+  MAX_BANK_TREE, MAX_DRAW_COUNT, MAX_DRAW_ROWS, bankNodeCount, bankNodePoints, bankNodeTopics, bankStem, drawFromPool,
+  readBankNode, topicCounts, type DrawShort,
 } from "./lib/question-bank";
 import { ImportQuestionSchema } from "./lib/test-io";
 
@@ -84,6 +85,24 @@ export type BankListItem = {
   data: z.infer<typeof ImportQuestionSchema> | null;
 };
 
+type BankRow = Awaited<ReturnType<typeof prisma.bankQuestion.findMany>>[number];
+
+function toListItem(r: BankRow): BankListItem {
+  const data = readBankNode(r.data);
+  return {
+    id: r.id,
+    stem: r.stem,
+    type: r.type,
+    points: r.points,
+    parts: data ? bankNodeCount(data) : 1,
+    topics: r.topics,
+    subject: r.subject,
+    gradeLevel: r.gradeLevel,
+    createdAt: r.createdAt.toISOString(),
+    data,
+  };
+}
+
 /** The user's bank items in the course's workspace, newest first. */
 export const listBankQuestions = tutorActionClient
   .schema(
@@ -109,21 +128,7 @@ export const listBankQuestions = tutorActionClient
     });
     return {
       more: rows.length > take,
-      items: rows.slice(0, take).map((r) => {
-        const data = readBankNode(r.data);
-        return {
-          id: r.id,
-          stem: r.stem,
-          type: r.type,
-          points: r.points,
-          parts: data ? bankNodeCount(data) : 1,
-          topics: r.topics,
-          subject: r.subject,
-          gradeLevel: r.gradeLevel,
-          createdAt: r.createdAt.toISOString(),
-          data,
-        };
-      }),
+      items: rows.slice(0, take).map(toListItem),
     };
   });
 
@@ -136,4 +141,50 @@ export const deleteBankQuestion = tutorActionClient
     });
     if (count === 0) throw new Error("That bank question is already gone");
     return { ok: true };
+  });
+
+/** Bank items per topic, for "Generate from bank". */
+export const bankTopicCounts = tutorActionClient
+  .schema(z.object({ courseId: z.string().min(1).max(40) }))
+  .action(async ({ parsedInput, ctx }) => {
+    const course = await bankCourse(parsedInput.courseId, ctx.session.user.id, ctx.session.user.email);
+    const rows = await prisma.bankQuestion.findMany({
+      where: { workspaceId: course.workspaceId, ownerUserId: ctx.session.user.id },
+      select: { topics: true },
+    });
+    return { counts: topicCounts(rows) };
+  });
+
+/**
+ * "Generate from bank": a random draw by topic. Returns copies to add to
+ * the test being edited; every student then sits the same questions.
+ */
+export const drawBankQuestions = tutorActionClient
+  .schema(
+    z.object({
+      courseId: z.string().min(1).max(40),
+      picks: z
+        .array(z.object({ topic: z.string().min(1).max(120), count: z.number().int().min(1).max(MAX_DRAW_COUNT) }))
+        .min(1)
+        .max(MAX_DRAW_ROWS),
+      /** Bank items already in the test, so the draw skips them. */
+      exclude: z.array(z.string().max(40)).max(500).default([]),
+    }),
+  )
+  .action(async ({ parsedInput, ctx }): Promise<{ items: BankListItem[]; short: DrawShort[] }> => {
+    const course = await bankCourse(parsedInput.courseId, ctx.session.user.id, ctx.session.user.email);
+    const topics = [...new Set(parsedInput.picks.map((p) => p.topic))];
+    const rows = await prisma.bankQuestion.findMany({
+      where: {
+        workspaceId: course.workspaceId,
+        ownerUserId: ctx.session.user.id,
+        topics: { hasSome: topics },
+        ...(parsedInput.exclude.length ? { id: { notIn: parsedInput.exclude } } : {}),
+      },
+      take: 5000,
+    });
+    // Unreadable items can't be copied, so they never enter the draw.
+    const pool = rows.map(toListItem).filter((i) => i.data);
+    const { drawn, short } = drawFromPool(pool, parsedInput.picks);
+    return { items: drawn, short };
   });
