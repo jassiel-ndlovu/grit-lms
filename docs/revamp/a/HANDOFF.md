@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Phase 1: term report PDFs and offline reading, `revamp/a-reports-offline`
+
+No migration. Viewer contract Draft 1.18. This closes A's phase 1 list in #216.
+
+Done:
+- **`reports/term-report-pdf.ts`:**
+  - `renderTermReportPdf` (A4, pdf-lib): header and logo, a summary, a block per course (assessments, attendance, comment), a general comment, signatures, page numbers, and "continued" headers;
+  - `termReportFileName` and `pdfResponse`.
+  - B gathers the data and serves it from B's own route.
+- **Offline reading:**
+  - `public/sw.js`: static files cached as they load; lessons only when saved; an offline fallback; saved lessons cleared on sign-out; API, auth and non-GET never cached; 50 lessons at most.
+  - `public/offline.html`, which lists saved lessons.
+  - `@/lib/offline`, for B's buttons.
+  - `next.config.ts` serves `sw.js` uncached.
+
+Tested:
+- `scripts/check-term-report-pdf.ts` (in CI) checks validity, one page against many, wrapping, line breaks (a bug turned them into "?"; fixed), safe text and a broken logo.
+- The service worker was checked in the browser pane on a local server: register, the static cache, save, list, remove and clear, and refusal of API and other-site addresses. Serving a saved lesson while offline couldn't be simulated there.
+- Types and lint.
+
 ## 2026-11-23 Phase 1: the business dashboard data; #236, `revamp/a-business-dashboard`
 
 No migration. Billing contract Draft 1.17 ("Business dashboard"). New A feature folder `src/features/reports/`.
