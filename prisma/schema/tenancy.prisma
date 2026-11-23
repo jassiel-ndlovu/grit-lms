@@ -103,6 +103,7 @@ model Workspace {
   referrals          Referral[]
   managedUsers       User[]              @relation("ManagedUsers")
   joinRequests       JoinRequest[]
+  reportTerms        ReportTerm[]
 
   // Billing and payments (billing.prisma, Phase 2).
   subscription        Subscription?
@@ -198,6 +199,9 @@ model Learner {
   enrollments  Enrollment[]
   feeSchedules FeeSchedule[]
   attendance   SessionAttendance[]
+
+  reportComments        ReportCourseComment[]
+  reportOverallComments ReportOverallComment[]
 
   @@unique([workspaceId, userId])
   @@index([userId])

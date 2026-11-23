@@ -2,11 +2,11 @@
 // Part of the multi-file schema in prisma/schema/. Edit only the files your agent owns.
 
 model Course {
-  id                 String              @id @default(cuid())
+  id                 String                @id @default(cuid())
   name               String
   description        String?
   imageUrl           String
-  createdAt          DateTime            @default(now())
+  createdAt          DateTime              @default(now())
   courseEvents       CourseEvent[]
   Grade              Grade[]
   lessons            Lesson[]
@@ -16,10 +16,11 @@ model Course {
   tests              Test[]
   timeAccommodations TimeAccommodation[]
   practiceSets       PracticeSet[]
+  reportComments     ReportCourseComment[]
   // enumitem-style label template per lesson nesting level, e.g.
   // ["\arabic*", "\arabic{enumi}.\arabic*"]. Empty = the default
   // scheme. See src/lib/enum-labels.ts.
-  lessonLabelScheme  String[]            @default([])
+  lessonLabelScheme  String[]              @default([])
 
   /// Curriculum tagging (#216, contracts/curriculum.md): the topic list the
   /// course's lessons and questions are tagged from. Null = not set.

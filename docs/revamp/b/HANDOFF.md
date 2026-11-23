@@ -3,6 +3,32 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Term reports (#216, phase 1), `revamp/b-term-reports`
+
+[contracts/term-reports.md](../contracts/term-reports.md), Draft 1. Core.
+**Migration `33_term_reports`** (three tables, additive).
+
+Done:
+- **Terms** at `/dashboard/reports`, from the Gradebook. The owner and admins
+  add, edit, release, take back and delete them.
+- **Comments:** per course, a box for each student that saves as you write.
+  The general comment is for whoever edits all of the student's courses.
+- **The PDF** is A's renderer, from a route that checks access. Staff who see
+  all of the student's courses, and once released the student's parents and
+  adult students.
+- Samples on `/design-system/term-reports`. Checks: `check-term-reports.ts`.
+
+In A's files, with the owner's OK:
+- `tenancy.prisma`: back-relations on `Workspace` and `Learner`.
+- `users/deletion.ts`, `users/export.ts`: the comments about a student.
+
+For A (not urgent):
+- `safe()` prints "?" for anything outside Latin-1, curly quotes included.
+  B cleans the text first (`pdfText`), so reports are fine; other PDFs of
+  yours with people's names aren't. An embedded font would print a Sepedi
+  "š" as it is.
+- `Workspace.logoUrl` is never set, so reports have no logo.
+
 ## 2026-11-23 Offline reading (#216, phase 1), `revamp/b-offline`
 
 Viewer contract Draft 1.18, B's side. Core. No migration.
