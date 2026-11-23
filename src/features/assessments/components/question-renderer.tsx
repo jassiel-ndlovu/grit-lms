@@ -223,7 +223,7 @@ function Numeric({ value, onChange, disabled }: QuestionRendererProps) {
       type="text"
       aria-label="Your answer"
       inputMode="decimal"
-      pattern="[-+]?[0-9]*[.,]?[0-9]+"
+      pattern="[\-+]?[0-9]*[.,]?[0-9]+"
       value={typeof value === "string" ? value : typeof value === "number" ? String(value) : ""}
       onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
       disabled={disabled}
