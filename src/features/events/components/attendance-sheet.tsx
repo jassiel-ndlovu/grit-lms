@@ -86,7 +86,7 @@ export function AttendanceSheet({ eventId, occurrenceStart, learners: initial }:
           Mark the rest present
         </Button>
       </div>
-      <Card className="divide-border divide-y overflow-hidden p-0">
+      <Card className="divide-border gap-0 divide-y overflow-hidden p-0">
         {rows.map((r) => (
           <div key={r.learnerId} className="px-3 py-2.5 sm:px-4">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

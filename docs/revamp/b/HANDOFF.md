@@ -3,6 +3,33 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Referrals, Find courses by workspace, attendance in Core (#216, phase 1), `revamp/b-referrals`
+
+Viewer contract Drafts 1.15 and 1.16, B's side. No migration.
+
+Done:
+- **`/dashboard/referrals`:** students and parents get their link per
+  workspace (Copy, Share, counts), as "Refer a friend" in the sidebar.
+  Owners and admins see who referred whom, as "Referrals". No mention of
+  rewards.
+- **Find courses:** `?workspace=` shows one workspace's courses, where a
+  referral link lands. Courses the viewer or their child is on say so.
+- **The way back for a signed-out family:** signed-out dashboard pages now
+  go to `/auth` (they went to the landing page, which dropped
+  `callbackUrl`). Sign-in and sign-up pass it to each other for Find
+  courses and invites only. A new account chooses its role, then goes on
+  to the referred courses.
+- **Join requests:** a decline note names its author.
+- **Attendance:** the register shows on every plan. Check-in codes, the
+  learner's Check in button and the absence-email wording show only with
+  `live-sessions`.
+- **Settings:** a parent's "Email notifications" mentions the Monday summary.
+- Checks: `check-join-requests.ts`, `check-shell-nav.ts`.
+
+A's files, for the owner's OK: `src/app/auth/page.tsx`,
+`src/app/auth/sign-up/page.tsx`, `src/middleware.ts` (unlisted),
+`role-chooser.tsx` and `settings-form.tsx` in `features/users`.
+
 ## 2026-11-23 Item analysis and practice sets (#216, phase 2), `revamp/b-item-analysis`
 
 Contract: `docs/revamp/contracts/practice.md` (Draft 1).

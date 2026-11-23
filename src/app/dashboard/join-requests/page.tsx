@@ -59,7 +59,7 @@ export default async function JoinRequestsPage({ searchParams }: PageProps) {
       />
       <ReadOnlyNote billingHref={can(viewer, "billing.view") ? "/dashboard/settings/billing" : null} />
       <PageSection id="requests">
-        {rows.length === 0 ? <NoJoinRequests status={status} /> : <StaffRequestList rows={rows} ctx={ctx} />}
+        {rows.length === 0 ? <NoJoinRequests status={status} /> : <StaffRequestList rows={rows} ctx={ctx} meId={viewer.user.id} />}
       </PageSection>
     </PageFrame>
   );

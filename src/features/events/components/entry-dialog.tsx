@@ -45,8 +45,8 @@ export type EntryContext = {
   locale: string;
   /** Courses whose events this viewer may change (staff). */
   editableCourseIds: string[];
-  /** Learners get Check in. */
-  learner: boolean;
+  /** A learner's courses with check-in codes (Plus). Empty for everyone else. */
+  checkInCourseIds: string[];
 };
 
 export function EntryDialog({ entry, onClose, ctx }: { entry: CalendarEntry | null; onClose: () => void; ctx: EntryContext }) {
@@ -162,7 +162,7 @@ export function EntryDialog({ entry, onClose, ctx }: { entry: CalendarEntry | nu
                     </a>
                   </Button>
                 )}
-                {ctx.learner && live && takesAttendance(e) && <CheckInButton size="sm" />}
+                {live && takesAttendance(e) && ctx.checkInCourseIds.includes(e.courseId) && <CheckInButton size="sm" />}
                 {e.href && (
                   <Button asChild variant="outline" size="sm">
                     <Link href={e.href}>

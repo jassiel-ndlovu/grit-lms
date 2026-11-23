@@ -15,7 +15,7 @@ export async function middleware(req: NextRequest) {
 
   // Signed out on a dashboard page: to sign-in, coming back afterwards.
   if (!isIn && pathname.startsWith("/dashboard")) {
-    const to = new URL("/", req.url);
+    const to = new URL("/auth", req.url);
     to.searchParams.set("callbackUrl", pathname + search);
     return NextResponse.redirect(to);
   }

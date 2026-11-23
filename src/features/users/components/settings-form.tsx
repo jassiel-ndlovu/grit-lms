@@ -229,7 +229,10 @@ export function SettingsForm({ role, email, emailVerified, defaults }: Props) {
             </div>
           )}
         </div>
-        <Row title="Email notifications" description="Get your alerts by email as well as in the app.">
+        <Row
+          title="Email notifications"
+          description={`Get your alerts by email as well as in the app.${role === "PARENT" ? " Includes a summary of each child's week on Mondays." : ""}`}
+        >
           <Switch
             checked={values.emailNotifications}
             onCheckedChange={(v) => {

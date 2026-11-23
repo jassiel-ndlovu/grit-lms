@@ -11,7 +11,7 @@
  * That hides UI; the page and its actions still check on the server.
  */
 
-import type { Permission, Persona, Viewer } from "@/lib/viewer-core";
+import { staffScope, type Permission, type Persona, type Viewer } from "@/lib/viewer-core";
 import { assignmentRoutes } from "@/features/assignments/routes";
 
 export type NavIcon =
@@ -43,6 +43,8 @@ export interface NavLink {
   keywords?: string[];
   /** Shown only when the viewer holds this permission. */
   requires?: Permission;
+  /** Shown only to staff whose role covers the whole workspace: no tutors or branch roles (viewer.md Draft 1.17). */
+  wholeWorkspace?: boolean;
   /** Shown only with billing on (BILLING=1). */
   billing?: boolean;
 }
@@ -59,6 +61,8 @@ const CALENDAR: NavLink = { label: "Calendar", href: "/dashboard/calendar", icon
 const PAY_FEES: NavLink = { label: "Fees", href: "/dashboard/fees", icon: "fees", keywords: ["pay", "invoices", "card"], requires: "fees.pay", billing: true };
 /** Listed courses a student (or a parent, for a child) asks to join (#206). */
 const FIND_COURSES: NavLink = { label: "Find courses", href: "/dashboard/courses/browse", icon: "book", keywords: ["browse", "join", "enrol", "catalogue"] };
+/** A student's or parent's referral link (viewer.md Draft 1.16). */
+const REFER: NavLink = { label: "Refer a friend", href: "/dashboard/referrals", icon: "users", keywords: ["referral", "invite", "share", "link"] };
 const INBOX: NavLink ={ label: "Notifications", href: "/dashboard/notifications", icon: "inbox", keywords: ["inbox", "updates"] };
 
 const BY_PERSONA: Record<Persona, NavSection[]> = {
@@ -75,7 +79,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Grades", href: "/dashboard/grades", icon: "grades", keywords: ["marks", "results"], requires: "grades.view" },
       ],
     },
-    { label: "Account", items: [PAY_FEES] },
+    { label: "Account", items: [PAY_FEES, REFER] },
   ],
   staff: [
     { items: [HOME, INBOX] },
@@ -95,6 +99,8 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       items: [
         { label: "Students", href: "/dashboard/students", icon: "users", keywords: ["learners", "parents", "sign-in code", "accounts"], requires: "learners.invite" },
         { label: "Join requests", href: "/dashboard/join-requests", icon: "inbox", keywords: ["enrol", "approve", "listed", "waiting"], requires: "learners.invite" },
+        // listReferrals needs learners.invite for the whole workspace.
+        { label: "Referrals", href: "/dashboard/referrals", icon: "users", keywords: ["referred", "families", "word of mouth"], requires: "learners.invite", wholeWorkspace: true },
         { label: "Members", href: "/dashboard/settings/members", icon: "users", keywords: ["tutors", "admins", "staff", "invite", "team"], requires: "members.invite" },
       ],
     },
@@ -118,7 +124,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
   ],
   // Guardians get their children's pages in Phase 1 (viewer.children).
   // Calendar: each child's sessions, one at a time (#149).
-  guardian: [{ items: [HOME, INBOX] }, { label: "Learning", items: [CALENDAR, FIND_COURSES] }, { label: "Account", items: [PAY_FEES] }],
+  guardian: [{ items: [HOME, INBOX] }, { label: "Learning", items: [CALENDAR, FIND_COURSES] }, { label: "Account", items: [PAY_FEES, REFER] }],
   none: [{ items: [HOME, INBOX] }],
 };
 
@@ -129,7 +135,7 @@ export const FOOTER_LINKS: NavLink[] = [
 ];
 
 /** The parts of the viewer the nav reads; the whole Viewer also fits. */
-export type NavViewer = Pick<Viewer, "persona" | "permissions">;
+export type NavViewer = Pick<Viewer, "persona" | "permissions"> & Partial<Pick<Viewer, "membership" | "mode">>;
 
 /**
  * The viewer's sections, with links they lack the permission for removed.
@@ -139,10 +145,11 @@ export type NavViewer = Pick<Viewer, "persona" | "permissions">;
 export function navSectionsFor(viewer: NavViewer | null, opts: { billing?: boolean } = {}): NavSection[] {
   const persona = viewer?.persona ?? "none";
   const held = new Set(viewer?.permissions ?? []);
+  const whole = viewer !== null && staffScope(viewer as Viewer) === "WORKSPACE";
   return (BY_PERSONA[persona] ?? BY_PERSONA.none)
     .map((s) => ({
       ...s,
-      items: s.items.filter((l) => (!l.requires || held.has(l.requires)) && (!l.billing || opts.billing === true)),
+      items: s.items.filter((l) => (!l.requires || held.has(l.requires)) && (!l.wholeWorkspace || whole) && (!l.billing || opts.billing === true)),
     }))
     .filter((s) => s.items.length > 0);
 }

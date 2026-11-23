@@ -17,6 +17,8 @@ import {
   ListedCourseGrid, MyRequestsList, NoJoinRequests, NoListedCourses, StaffRequestList,
   type ListedCourseRow, type MyRequestRow, type StaffRequestRow,
 } from "@/features/courses/components/join-views";
+import { ReferralLinkCard } from "@/features/courses/components/referral-link";
+import { ReferralList, ReferrerTable } from "@/features/courses/components/referral-views";
 import { askTargets } from "@/features/courses/lib/join-ui";
 import { canPreviewDesignSystem } from "@/lib/ui-flags";
 
@@ -27,7 +29,7 @@ const school = { id: "w1", name: "Riverside Maths Academy", kind: "ORGANISATION"
 
 const COURSES: ListedCourseRow[] = [
   { courseId: "c1", name: "Grade 10 Mathematics", description: "Functions, algebra and Euclidean geometry, term by term, with a weekly practice test.", imageUrl: "", workspace: school, tutors: ["Ms Dlamini"] },
-  { courseId: "c2", name: "Physical Sciences: Mechanics", description: "Vectors, Newton's laws and momentum.", imageUrl: "", workspace: school, tutors: ["Mr Naidoo", "Ms Dlamini"] },
+  { courseId: "c2", name: "Physical Sciences: Mechanics", description: "Vectors, Newton's laws and momentum.", imageUrl: "", workspace: school, tutors: ["Mr Naidoo", "Ms Dlamini"], enrolledUserIds: ["k1"] },
   { courseId: "c3", name: "Accounting for beginners", description: null, imageUrl: "", workspace: { id: "w2", name: "Bongi's Tutoring", kind: "SOLO", logoUrl: null }, tutors: ["Bongi"] },
 ];
 
@@ -80,10 +82,29 @@ export default function JoinPreviewPage() {
             </div>
           </PageSection>
 
+          <PageSection id="referral-link" title="Refer a friend" description="A student's or parent's link; the second workspace has no listed course.">
+            <div className="max-w-3xl space-y-4">
+              <ReferralLinkCard link={{ workspaceId: "w1", workspaceName: school.name, url: "https://example.test/api/referrals/abcdefghjk", requested: 3, joined: 2, hasListed: true }} />
+              <ReferralLinkCard link={{ workspaceId: "w2", workspaceName: "Bongi's Tutoring", url: "https://example.test/api/referrals/mnpqrstuvw", requested: 0, joined: 0, hasListed: false }} />
+            </div>
+          </PageSection>
+
+          <PageSection id="referrals" title="Referrals, for owners and admins">
+            <ReferrerTable rows={[{ referrerId: "p", name: "Sipho Dube", requested: 3, joined: 2 }, { referrerId: "s", name: "Lindi Nkosi", requested: 1, joined: 0 }]} />
+            <ReferralList
+              ctx={ctx}
+              rows={[
+                { referrerName: "Sipho Dube", referredName: "Ayanda Mokoena", status: "JOINED", createdAt: "2026-11-02T08:00:00.000Z", joinedAt: "2026-11-03T08:00:00.000Z" },
+                { referrerName: "Lindi Nkosi", referredName: "Kabelo Molefe", status: "REQUESTED", createdAt: "2026-11-01T08:00:00.000Z", joinedAt: null },
+              ]}
+            />
+          </PageSection>
+
           <PageSection id="empty" title="Empty states">
             <div className="grid gap-4 lg:grid-cols-2">
               <NoListedCourses searched={false} />
               <NoListedCourses searched />
+              <NoListedCourses searched={false} workspace />
               <NoJoinRequests status="PENDING" />
               <NoJoinRequests status="DECLINED" />
             </div>

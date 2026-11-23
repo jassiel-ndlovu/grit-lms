@@ -18,7 +18,7 @@ import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck } from "lucide-react";
 
 import { authClient, googleSignInAvailable, signInWithPassword } from "@/lib/auth-client";
-import { AuthFrame, Busy, Field, GoogleButton, INPUT, OrDivider, safeCallback, signUpOpen } from "@/components/auth/auth-parts";
+import { AuthFrame, Busy, Field, GoogleButton, INPUT, keepCallback, OrDivider, safeCallback, signUpOpen } from "@/components/auth/auth-parts";
 
 const SIGNUP_EMAIL = "nkosijassiel@gmail.com";
 const SIGNUP_SUBJECT = "Nexa LMS access request";
@@ -241,7 +241,7 @@ function SignInCard() {
           <p className="text-slate-700">Don&apos;t have an account yet?</p>
           {signUpOpen ? (
             <Link
-              href="/auth/sign-up"
+              href={keepCallback("/auth/sign-up", params.get("callbackUrl"))}
               className="mt-2 inline-flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
             >
               Create an account

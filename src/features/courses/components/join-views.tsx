@@ -12,7 +12,7 @@ import { StatusChip } from "@/components/shell/status-chip";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { formatDate, type DateContext } from "@/lib/datetime";
 
-import { askedBy, JOIN_STATUS_CHIP, openRequestFor, type AskFor, type JoinStatus } from "../lib/join-ui";
+import { askedBy, enrolledLabel, JOIN_STATUS_CHIP, noteFrom, openRequestFor, type AskFor, type JoinStatus } from "../lib/join-ui";
 import { courseCoverSrc } from "../lib/stock-covers";
 import {
   ApproveRequestButton, CancelRequestButton, DeclineRequestButton, RequestJoinButton,
@@ -26,6 +26,8 @@ export interface ListedCourseRow {
   imageUrl: string;
   workspace: { id: string; name: string; kind: "ORGANISATION" | "SOLO"; logoUrl: string | null };
   tutors: string[];
+  /** The viewer and their children already on it. */
+  enrolledUserIds?: string[];
 }
 
 /** A listMyJoinRequests row. */
@@ -53,6 +55,7 @@ export interface StaffRequestRow {
   course: { id: string; name: string };
   studentName: string;
   parentName: string | null;
+  decidedBy?: { id: string; name: string } | null;
 }
 
 const day = (iso: string, ctx: DateContext) => formatDate(new Date(iso), ctx, { day: "numeric", month: "short", year: "numeric" });
@@ -72,8 +75,11 @@ export function ListedCourseGrid({
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {courses.map((c) => {
-        const free = targets.filter((t) => !openRequestFor(mine, c.courseId, t.userId));
-        const waiting = targets.length > 0 && free.length === 0;
+        const enrolled = c.enrolledUserIds ?? [];
+        const onIt = enrolledLabel(targets, enrolled);
+        const notOnIt = targets.filter((t) => !enrolled.includes(t.userId));
+        const free = notOnIt.filter((t) => !openRequestFor(mine, c.courseId, t.userId));
+        const waiting = notOnIt.length > 0 && free.length === 0;
         return (
           <li key={c.courseId} className="border-border flex flex-col overflow-hidden rounded-lg border">
             <div className="bg-muted relative aspect-video w-full">
@@ -92,8 +98,11 @@ export function ListedCourseGrid({
                 </p>
               ) : null}
               {c.description ? <p className="text-muted-foreground line-clamp-3 text-sm">{c.description}</p> : null}
-              <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                {waiting ? <StatusChip tone="info">Request sent</StatusChip> : <span />}
+              <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
+                <span className="flex flex-wrap gap-1.5">
+                  {onIt ? <StatusChip tone="success">{onIt}</StatusChip> : null}
+                  {waiting ? <StatusChip tone="info">Request sent</StatusChip> : null}
+                </span>
                 <RequestJoinButton courseId={c.courseId} courseName={c.name} workspaceName={c.workspace.name} targets={free} />
               </div>
             </div>
@@ -135,7 +144,7 @@ export function MyRequestsList({ rows, ctx, meId }: { rows: MyRequestRow[]; ctx:
 
 /* ───── Staff inbox ───── */
 
-export function StaffRequestList({ rows, ctx }: { rows: StaffRequestRow[]; ctx: DateContext }) {
+export function StaffRequestList({ rows, ctx, meId }: { rows: StaffRequestRow[]; ctx: DateContext; /** The viewer's user id. */ meId?: string }) {
   if (rows.length === 0) return null;
   return (
     <ul className="divide-border border-border divide-y rounded-lg border">
@@ -153,7 +162,7 @@ export function StaffRequestList({ rows, ctx }: { rows: StaffRequestRow[]; ctx: 
               </p>
               {r.message ? <p className="bg-muted/60 rounded-md px-3 py-2 text-sm">&ldquo;{r.message}&rdquo;</p> : null}
               {r.status === "DECLINED" && r.declineReason ? (
-                <p className="text-muted-foreground text-xs">Your note: &ldquo;{r.declineReason}&rdquo;</p>
+                <p className="text-muted-foreground text-xs">{noteFrom(r.decidedBy, meId)}: &ldquo;{r.declineReason}&rdquo;</p>
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -173,7 +182,16 @@ export function StaffRequestList({ rows, ctx }: { rows: StaffRequestRow[]; ctx: 
   );
 }
 
-export function NoListedCourses({ searched }: { searched: boolean }) {
+export function NoListedCourses({ searched, workspace = false }: { searched: boolean; /** Filtered to one workspace. */ workspace?: boolean }) {
+  if (workspace && !searched) {
+    return (
+      <EmptyState
+        illustration={<Scene name="empty-courses" />}
+        title="No courses open here right now"
+        description="This tutor or school isn't taking new students through Find courses at the moment. You can look at the other courses."
+      />
+    );
+  }
   return (
     <EmptyState
       illustration={<Scene name={searched ? "search-no-results" : "empty-courses"} />}

@@ -242,7 +242,7 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
               compact
               illustration={<Scene name="calendar-empty" />}
               title="No attendance yet"
-              description="When a tutor marks a session, it shows here. You get an email if your child is marked absent."
+              description="When a tutor marks a session, it shows here."
             />
           }
         />
