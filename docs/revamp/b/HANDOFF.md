@@ -3,6 +3,28 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 More subjects and the IEB lists (#216, phase 2), `revamp/b-ieb-subjects`
+
+Done:
+- **Six more CAPS subjects**, Grades 10 to 12: Mathematical Literacy,
+  Business Studies, Economics, Geography, History and Computer
+  Applications Technology, from the Department's CAPS documents.
+- **IEB has its own lists.** An IEB list is the CAPS list with that
+  subject's differences; shared topics keep their `caps:` codes, so tags
+  and bank questions work in both. Advanced Programme Mathematics is
+  IEB only. The subject picker follows the curriculum
+  (`subjectOptions(curriculum)` replaces `SUBJECT_OPTIONS`).
+- No migration. No shipped code changed.
+- Checks: `npx tsx scripts/check-curriculum.ts`.
+
+Open: the IEB's current Subject Assessment Guidelines need a sign-in, so
+the differences rest on public papers and reports (table in
+contracts/curriculum.md, Draft 2). The owner reviews them.
+
+Next (B-only): term reports once A's PDF helper lands. Ask the owner what
+comes after that.
+
+
 ## 2026-11-23 Icons, stock photos and the landing page (owner's request, #216), `revamp/b-visual-polish`
 
 Done:

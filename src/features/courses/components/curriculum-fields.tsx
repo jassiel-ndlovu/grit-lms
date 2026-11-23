@@ -10,7 +10,7 @@ import * as React from "react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { CURRICULA, CURRICULUM_LABEL, SUBJECT_OPTIONS, type CourseCurriculum, type Curriculum } from "../lib/curriculum";
+import { CURRICULA, CURRICULUM_LABEL, subjectOptions, type CourseCurriculum, type Curriculum } from "../lib/curriculum";
 
 const NONE = "none";
 
@@ -25,7 +25,8 @@ export function CurriculumFields({
 }) {
   const id = React.useId();
   const hasCatalogue = value.curriculum === "CAPS" || value.curriculum === "IEB";
-  const subject = SUBJECT_OPTIONS.find((s) => s.key === value.subject) ?? null;
+  const options = subjectOptions(value.curriculum);
+  const subject = options.find((s) => s.key === value.subject) ?? null;
 
   return (
     <div className="space-y-2">
@@ -39,7 +40,7 @@ export function CurriculumFields({
             disabled={disabled}
             onValueChange={(v) => {
               const curriculum = v === NONE ? null : (v as Curriculum);
-              const keep = curriculum === "CAPS" || curriculum === "IEB";
+              const keep = subjectOptions(curriculum).some((s) => s.key === value.subject);
               onChange({ curriculum, subject: keep ? value.subject : null, gradeLevel: keep ? value.gradeLevel : null });
             }}
           >
@@ -66,7 +67,7 @@ export function CurriculumFields({
                 value={value.subject ?? NONE}
                 disabled={disabled}
                 onValueChange={(v) => {
-                  const next = SUBJECT_OPTIONS.find((s) => s.key === v) ?? null;
+                  const next = options.find((s) => s.key === v) ?? null;
                   onChange({
                     ...value,
                     subject: next?.key ?? null,
@@ -79,7 +80,7 @@ export function CurriculumFields({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE}>Not set</SelectItem>
-                  {SUBJECT_OPTIONS.map((s) => (
+                  {options.map((s) => (
                     <SelectItem key={s.key} value={s.key}>
                       {s.title}
                     </SelectItem>
@@ -115,7 +116,7 @@ export function CurriculumFields({
       <p className="text-muted-foreground text-xs">
         {value.curriculum === "OTHER"
           ? "Topic tagging covers CAPS and IEB subjects for now."
-          : "Lessons and questions can then be tagged with the curriculum's topics, and the course shows which topics are covered. IEB courses use the CAPS topics. Grades 10 to 12: Mathematics, Physical Sciences, Life Sciences and Accounting."}
+          : "Lessons and questions can then be tagged with the curriculum's topics, and the course shows which topics are covered. Subjects cover Grades 10 to 12."}
       </p>
     </div>
   );
