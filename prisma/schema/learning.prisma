@@ -54,6 +54,8 @@ model Course {
   listing      CourseListing?
   joinRequests JoinRequest[]
 
+  riskAlerts RiskAlert[]
+
   @@index([workspaceId])
 }
 

@@ -1,6 +1,6 @@
 # Contract: services and tiers
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1, 2026-11-16.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.5, 2026-11-23.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** Every feature that a tier or add-on gates has a stable kebab-case **service key**. A course's tier is the highest tier among the premium services switched on for it: Core R99, Plus R139 or Pro R179 per active student per month. B gates UI and server code with `hasService(viewer, courseId, key)`, and shows the switches with `getCourseServices()` and `setCourseService()`. Keys never change once shipped; a retired key is marked `retired`, not reused.
 
@@ -51,6 +51,7 @@ Prices live in the database (`Tier` rows, [a/design/03-billing.md](../a/design/0
 | `calendar-sync` | ICS calendar feed per user | `PLUS` | no | v1 |
 | `secure-tests` | Lockdown settings, tab-switch and focus logs (honours extra time) | `PRO` | no | v1 |
 | `ai-marking` | AI-suggested marks for written answers; the tutor approves every mark | `PRO` | answers above 30 per active student per period, pooled per course, billed at cost ÷ 0.8 | v1 |
+| `at-risk-alerts` | At-risk alerts (falling or low marks, missed work, absences) that staff share with parents and students | `PRO` | no | v1 |
 | `leaderboards` | Course leaderboards (everyone enrolled appears) | `PRO` | no | later |
 | `api-access` | Workspace API keys and outgoing webhooks | `PRO` | requests above a quota | later |
 | `automarker` | Coding automarker | `PRO` | runs | parked |
@@ -84,7 +85,7 @@ export type ServiceKey =
   | "storage-allowance" | "bulk-import" | "attendance"
   | "math-input" | "graphing" | "question-bank" | "live-sessions"
   | "advanced-analytics" | "custom-branding" | "calendar-sync"
-  | "secure-tests" | "ai-marking" | "leaderboards" | "api-access"
+  | "secure-tests" | "ai-marking" | "at-risk-alerts" | "leaderboards" | "api-access"
   | "automarker" | "judge-mode" | "code-plagiarism";
 
 export type ServiceInfo = {
@@ -150,6 +151,7 @@ if (!(await hasService(viewer, courseId, "ai-marking"))) {
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.5. New `PRO` service `at-risk-alerts` (#216 phase 2). Migration 33 switches it on wherever `ai-marking` is on, so courses already on Pro keep everything Pro |
 | 2026-11-20 | Draft 1.4. Rule 9: new courses start on Pro; tutors downgrade for a cheaper plan |
 | 2026-11-19 | Draft 1.3. `hasService` built; rules 8 (flag off) and 9 (trial) |
 | 2026-11-16 | Draft 1. Owner prices R99 / R139 / R179; `math-input` and `graphing` on Plus; automarker, judge mode and code plagiarism parked; `leaderboards` split from `judge-mode` (owner decision: everyone enrolled appears) |

@@ -27,6 +27,7 @@ import { renderFeeEmail, type FeeTemplate, type FeeTemplateData } from "./fee-te
 import { renderDeletionEmail, renderEmailChangedEmail, renderEmailConfirmEmail, renderGuardianLinkedEmail, renderInviteEmail, type DeletionData, type EmailChangedData, type EmailConfirmData, type GuardianLinkedData, type InviteData } from "./account-templates";
 import { renderAbsenceEmail, type AbsenceData } from "./attendance-templates";
 import { renderEnquiryEmail, type EnquiryEmailData } from "./enquiry-templates";
+import { renderRiskSharedEmail, type RiskSharedData } from "./risk-templates";
 import { renderJoinEmail, type JoinTemplate, type JoinTemplateData } from "./join-templates";
 import { renderWeeklySummaryEmail, type WeeklySummaryData } from "./parent-templates";
 import { renderPayoutEmail, type PayoutTemplate, type PayoutTemplateData } from "./payout-templates";
@@ -112,6 +113,7 @@ function renderRow(template: string, to: string, data: unknown): Rendered & { re
     const t = template.slice("fees:".length) as FeeTemplate;
     return renderFeeEmail(t, data as FeeTemplateData[typeof t]);
   }
+  if (template === "risk:shared") return renderRiskSharedEmail(data as RiskSharedData);
   if (template === "enquiry:new") return renderEnquiryEmail(data as EnquiryEmailData);
   if (template === "parent:weekly") return renderWeeklySummaryEmail(data as WeeklySummaryData);
   if (template.startsWith("join:")) {

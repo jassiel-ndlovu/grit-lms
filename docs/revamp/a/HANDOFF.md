@@ -3,6 +3,31 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 #216 phase 2: at-risk alerts (Pro), `revamp/a-at-risk`
+
+Migration `33_risk_alerts`:
+- adds RiskAlert, RiskLevel and RiskAlertStatus;
+- adds the `at-risk-alerts` Service row;
+- backfills CourseService wherever `ai-marking` is on.
+
+Viewer contract Draft 1.20, services Draft 1.5.
+
+Done:
+- **`risk/rules.ts`** (pure): `assessRisk` covers falling and low marks, missed work and absences, with WATCH or AT_RISK. Also `nextStep` (open, update, escalate, resolve) and `riskSummary` (plain language).
+- **`risk/evaluate.ts`**: `gatherCourse` (5 queries a course) and `runRiskAlerts`, which runs from housekeeping. It covers Pro courses (every course while billing is off) and skips read-only and cancelled workspaces. Staff get one in-app notification per course.
+- **`risk/alerts.ts` and `actions.ts`**:
+  - staff list and count, scoped by `grades.view`;
+  - share (by email and in-app notice to parents and/or the student, with a note; Pro and `messages.direct`);
+  - dismiss (14 quiet days) and resolve;
+  - the shared list for students and parents.
+- **Email** template `risk:shared` (parent and student versions).
+- **POPIA:** alerts are in the user export and deleted on anonymisation; FK cascades cover courses and workspaces.
+
+Tested:
+- `scripts/check-risk-rules.ts` (in CI).
+- Against the Preview database with a seeded course: open, the second run idempotent, the staff list, share to the student (email queued and the alert visible to the student), dismiss and quiet, reopen after the quiet period, resolve by hand, and auto-resolve. Cleaned up afterwards.
+- The full CI check set, `check-schema-split` included (the model lives in messaging.prisma).
+
 ## 2026-11-23 #216: landing page support, `revamp/a-landing-support`
 
 Migration `32_platform_enquiries` (PlatformEnquiry, EnquiryStatus). Viewer contract Draft 1.19.

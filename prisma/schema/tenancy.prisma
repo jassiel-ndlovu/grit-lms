@@ -121,6 +121,7 @@ model Workspace {
   feeSchedules        FeeSchedule[]
   feeInvoices         Invoice[]
   offsitePayments     OffsitePayment[]
+  riskAlerts          RiskAlert[]
 }
 
 /// Organisations only. A solo practice has no teams.

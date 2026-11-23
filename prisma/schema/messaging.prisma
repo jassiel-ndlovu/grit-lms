@@ -142,3 +142,57 @@ model PlatformEnquiry {
   @@index([email, createdAt])
   @@index([status, createdAt])
 }
+
+// At-risk alerts (#216 phase 2, Pro; A). Rules: src/features/risk/rules.ts.
+
+enum RiskLevel {
+  WATCH
+  AT_RISK
+}
+
+enum RiskAlertStatus {
+  OPEN
+  SHARED
+  RESOLVED
+  DISMISSED
+}
+
+/// One student in one course who the daily job flagged. Open while OPEN or
+/// SHARED (openKey set, one per course and student); RESOLVED when the
+/// rules stop firing or staff close it; DISMISSED keeps quiet until quietUntil.
+model RiskAlert {
+  id             String          @id @default(cuid())
+  workspaceId    String
+  courseId       String
+  /// The student's User id.
+  studentUserId  String
+  level          RiskLevel
+  status         RiskAlertStatus @default(OPEN)
+  /// RiskReason[] from the rules, as last evaluated.
+  reasons        Json
+  /// The plain-language summary, as last evaluated.
+  summary        String          @db.VarChar(2000)
+  /// "<courseId>:<studentUserId>" while open; null once closed.
+  openKey        String?         @unique
+  firstSeenAt    DateTime        @default(now())
+  lastSeenAt     DateTime        @default(now())
+  sharedAt       DateTime?
+  sharedByUserId String?
+  /// GUARDIANS and/or STUDENT.
+  sharedWith     String[]        @default([])
+  /// The staff member's note, sent with the summary.
+  shareNote      String?         @db.VarChar(1000)
+  /// What was sent: the summary when shared.
+  sharedSummary  String?         @db.VarChar(2000)
+  closedAt       DateTime?
+  /// Null when the job closed it because the rules stopped firing.
+  closedByUserId String?
+  quietUntil     DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([courseId, status])
+  @@index([studentUserId, status])
+}
