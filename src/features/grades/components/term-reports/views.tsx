@@ -169,19 +169,19 @@ function CourseBlock({ course }: { course: ReportCourse }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Assessment</TableHead>
+                <TableHead className="pl-4 sm:pl-5">Assessment</TableHead>
                 <TableHead className="text-right">Mark</TableHead>
-                <TableHead className="text-right">%</TableHead>
+                <TableHead className="pr-4 text-right sm:pr-5">%</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {course.items.map((i) => (
                 <TableRow key={i.id}>
-                  <TableCell className="whitespace-normal">
+                  <TableCell className="pl-4 whitespace-normal sm:pl-5">
                     {i.title} <span className="text-muted-foreground">({i.kind})</span>
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap tabular-nums">{i.score === null ? "–" : `${Math.round(i.score * 10) / 10} / ${i.outOf}`}</TableCell>
-                  <TableCell className="text-right tabular-nums">{i.score === null || i.outOf <= 0 ? "–" : `${Math.round((i.score / i.outOf) * 1000) / 10}%`}</TableCell>
+                  <TableCell className="pr-4 text-right tabular-nums sm:pr-5">{i.score === null || i.outOf <= 0 ? "–" : `${Math.round((i.score / i.outOf) * 1000) / 10}%`}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
