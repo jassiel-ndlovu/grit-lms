@@ -108,3 +108,37 @@ enum OutboundEmailStatus {
   FAILED
   SUPPRESSED
 }
+
+enum EnquiryStatus {
+  NEW
+  CONTACTED
+  CLOSED
+  SPAM
+}
+
+/// An enquiry to Nexa itself from the public landing page (#216). Not a
+/// workspace's own enquiry pipeline. Kept 12 months (housekeeping), then deleted.
+model PlatformEnquiry {
+  id           String        @id @default(cuid())
+  /// ACCESS (a tutor or school wanting an account), TEAM (an organisation), OTHER.
+  kind         String        @db.VarChar(16)
+  name         String        @db.VarChar(120)
+  email        String        @db.VarChar(254)
+  phone        String?       @db.VarChar(40)
+  organisation String?       @db.VarChar(160)
+  /// The number of students, as given.
+  students     Int?
+  message      String        @db.VarChar(4000)
+  /// The page or campaign it came from (a same-site path, or a utm_source).
+  source       String?       @db.VarChar(120)
+  status       EnquiryStatus @default(NEW)
+  note         String?       @db.VarChar(2000)
+  /// sha256 of the IP with a server secret, for rate limits only.
+  ipHash       String        @db.VarChar(64)
+  createdAt    DateTime      @default(now())
+  handledAt    DateTime?
+
+  @@index([ipHash, createdAt])
+  @@index([email, createdAt])
+  @@index([status, createdAt])
+}

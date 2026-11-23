@@ -26,6 +26,7 @@ import { renderBillingEmail, type BillingTemplate, type BillingTemplateData, typ
 import { renderFeeEmail, type FeeTemplate, type FeeTemplateData } from "./fee-templates";
 import { renderDeletionEmail, renderEmailChangedEmail, renderEmailConfirmEmail, renderGuardianLinkedEmail, renderInviteEmail, type DeletionData, type EmailChangedData, type EmailConfirmData, type GuardianLinkedData, type InviteData } from "./account-templates";
 import { renderAbsenceEmail, type AbsenceData } from "./attendance-templates";
+import { renderEnquiryEmail, type EnquiryEmailData } from "./enquiry-templates";
 import { renderJoinEmail, type JoinTemplate, type JoinTemplateData } from "./join-templates";
 import { renderWeeklySummaryEmail, type WeeklySummaryData } from "./parent-templates";
 import { renderPayoutEmail, type PayoutTemplate, type PayoutTemplateData } from "./payout-templates";
@@ -102,7 +103,7 @@ type VerifyData = { name: string; tokenSealed?: string; urlSealed?: string };
 type NotificationData = { item: EmailNotificationItem; notificationIds: string[] };
 type DigestData = { period: "daily" | "weekly"; items: EmailNotificationItem[]; notificationIds: string[] };
 
-function renderRow(template: string, to: string, data: unknown): Rendered {
+function renderRow(template: string, to: string, data: unknown): Rendered & { replyTo?: string } {
   if (template.startsWith("billing:")) {
     const t = template.slice("billing:".length) as BillingTemplate;
     return renderBillingEmail(t, data as BillingTemplateData[typeof t]);
@@ -111,6 +112,7 @@ function renderRow(template: string, to: string, data: unknown): Rendered {
     const t = template.slice("fees:".length) as FeeTemplate;
     return renderFeeEmail(t, data as FeeTemplateData[typeof t]);
   }
+  if (template === "enquiry:new") return renderEnquiryEmail(data as EnquiryEmailData);
   if (template === "parent:weekly") return renderWeeklySummaryEmail(data as WeeklySummaryData);
   if (template.startsWith("join:")) {
     const t = template.slice("join:".length) as JoinTemplate;

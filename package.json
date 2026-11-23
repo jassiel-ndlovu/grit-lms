@@ -41,6 +41,7 @@
     "@tiptap/static-renderer": "^3.34.0",
     "@tiptap/suggestion": "^3.34.0",
     "@upstash/qstash": "^2.12.2",
+    "@vercel/analytics": "2.0.1",
     "@vercel/blob": "^2.3.3",
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",

@@ -42,7 +42,7 @@ import { StockPhoto, type StockPhotoName } from "@/components/stock-photo";
 import { Button } from "@/components/ui/button";
 import { APP_CONTACT, APP_NAME, APP_TAGLINE } from "@/lib/branding";
 
-export const metadata = { title: { absolute: APP_NAME }, description: APP_TAGLINE };
+export const metadata = { title: { absolute: APP_NAME }, description: APP_TAGLINE, alternates: { canonical: "/" } };
 
 /* ─── Getting in ───────────────────────────────────────────────────────── */
 
