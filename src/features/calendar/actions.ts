@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { hasService } from "@/features/billing/services";
 import { prisma } from "@/lib/db";
+import { calendarCourseWhere } from "@/lib/viewer-core";
 import { viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
 import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 
@@ -27,10 +28,9 @@ const iso = z.string().refine((s) => !Number.isNaN(Date.parse(s)), "Must be a da
 async function visibleCourseIds(viewer: Viewer): Promise<string[]> {
   const ids = new Set<string>();
   if (viewer.persona === "staff" && viewer.workspace) {
-    const role = viewer.membership?.role;
-    const where = (role === "OWNER" || role === "ADMIN") && viewer.mode !== "tutor"
-      ? { workspaceId: viewer.workspace.id }
-      : { workspaceId: viewer.workspace.id, staff: { some: { membershipId: viewer.membership?.id ?? "-" } } };
+    // The role's scope (#243): whole workspace, branches, or own courses.
+    const scoped = calendarCourseWhere(viewer);
+    const where = scoped ? { AND: [{ workspaceId: viewer.workspace.id }, scoped] } : { workspaceId: viewer.workspace.id };
     for (const c of await prisma.course.findMany({ where, select: { id: true } })) ids.add(c.id);
   }
   const learnerOf = [viewer.user.id, ...viewer.children.map((c) => c.userId)];

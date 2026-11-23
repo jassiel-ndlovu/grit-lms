@@ -6,7 +6,7 @@
  */
 
 import { CUSTOM_ROLE_CEILING, effectiveRole, ROLE_PRESETS } from "../src/lib/roles";
-import { buildTenancyViewer, can, courseScopeOf, needsScope, scopedCourseWhere, staffScope, type TenancyInput } from "../src/lib/viewer-core";
+import { actorCourseWhere, buildTenancyViewer, calendarCourseWhere, can, courseScopeOf, needsScope, scopedCourseWhere, seesAllPayoutRecoveries, staffScope, type TenancyInput } from "../src/lib/viewer-core";
 
 let failures = 0;
 function check(name: string, got: unknown, want: unknown) {
@@ -47,6 +47,17 @@ check("a tutor's filter has no branch part", scopedCourseWhere({ membershipId: "
 const fin = viewerWith({ role: "ADMIN", presetRole: "FINANCE" });
 check("finance: money and timesheets, no courses", [can(fin, "fees.manage"), can(fin, "timesheets.manage"), can(fin, "courses.edit"), needsScope(fin, "fees.manage")], [true, true, false, false]);
 check("an owner preset name is ignored on a non-owner", effectiveRole({ role: "ADMIN", presetRole: "OWNER" }).key, "ADMIN");
+
+// #243: role scope in course teams, the calendar and payout recoveries.
+check("team move: a branch actor holds own, taught and branch courses", actorCourseWhere({ scope: "BRANCHES", membershipId: "m1", branchIds: ["b1"] }), { OR: [{ ownerMembershipId: "m1" }, { staff: { some: { membershipId: "m1" } } }, { team: { branchId: { in: ["b1"] } } }] });
+check("team move: an own-courses actor ignores branch ids", actorCourseWhere({ scope: "OWN_COURSES", membershipId: "m1", branchIds: ["b1"] }), { OR: [{ ownerMembershipId: "m1" }, { staff: { some: { membershipId: "m1" } } }] });
+check("team move: whole workspace is unrestricted", actorCourseWhere({ scope: "WORKSPACE", membershipId: "m1", branchIds: [] }), null);
+check("calendar: a branch manager sees own, taught and branch courses", calendarCourseWhere(bm), { OR: [{ ownerMembershipId: "m1" }, { staff: { some: { membershipId: "m1" } } }, { team: { branchId: { in: ["b1"] } } }] });
+check("calendar: an admin sees the whole workspace", calendarCourseWhere(admin), null);
+check("calendar: a tutor sees own and taught only", calendarCourseWhere(tutor), { OR: [{ ownerMembershipId: "m1" }, { staff: { some: { membershipId: "m1" } } }] });
+check("payout recoveries: a branch manager sees only their own account's", seesAllPayoutRecoveries(bm), false);
+check("payout recoveries: finance (whole organisation) sees all", seesAllPayoutRecoveries(fin), true);
+check("payout recoveries: a tutor sees only their own", seesAllPayoutRecoveries(tutor), false);
 
 // An organisation's own role.
 const custom = viewerWith({ role: "ADMIN", customRole: { id: "r1", name: "Coordinator", permissions: ["courses.edit", "reports.view", "workspace.delete", "admin.console"], scope: "BRANCHES" }, branchIds: ["b2"] });

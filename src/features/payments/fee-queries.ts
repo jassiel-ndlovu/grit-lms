@@ -9,7 +9,7 @@ import { assertBillingEnabled } from "@/features/billing/errors";
 import { prisma } from "@/lib/db";
 import { courseScopeOf, scopedCourseWhere } from "@/lib/viewer-core";
 import { requireViewer, ViewerError } from "@/lib/viewer";
-import { can, needsScope } from "@/lib/viewer-core";
+import { can, needsScope, seesAllPayoutRecoveries } from "@/lib/viewer-core";
 
 import { listPayableInvoicesFor } from "./checkout";
 import { listFeeDiscountCodesFor } from "./fee-discounts";
@@ -67,9 +67,10 @@ export async function listPayoutRecoveries() {
   const viewer = await requireViewer({ workspace: true });
   if (!can(viewer, "payouts.connect") && !can(viewer, "fees.manage")) throw new ViewerError("FORBIDDEN");
   const ws = viewer.workspace!.id;
-  const owner = viewer.membership?.role === "OWNER" || viewer.membership?.role === "ADMIN";
+  // Whole-organisation scope sees every account's recoveries; anyone narrower, their own (#243).
+  const all = seesAllPayoutRecoveries(viewer);
   const accounts = await prisma.payoutAccount.findMany({
-    where: { workspaceId: ws, ...(owner ? {} : { membershipId: viewer.membership?.id ?? "-" }) },
+    where: { workspaceId: ws, ...(all ? {} : { membershipId: viewer.membership?.id ?? "-" }) },
     select: { id: true },
   });
   return listRecoveriesFor(accounts.map((a) => a.id));
