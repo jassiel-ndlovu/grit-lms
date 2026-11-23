@@ -222,9 +222,11 @@ export default async function TestAnalysisPage({ params, searchParams }: PagePro
         <EmptyState
           compact
           illustration={<Scene name="nothing-to-grade" />}
-          title="No marked attempts yet"
+          title={marked.length ? "No marks per question" : "No marked attempts yet"}
           description={
-            toMark
+            marked.length
+              ? `${marked.length} marked ${marked.length === 1 ? "attempt has" : "attempts have"} a total but no marks for each question. The analysis needs those.`
+              : toMark
               ? `${toMark} ${toMark === 1 ? "attempt is" : "attempts are"} waiting to be marked. The analysis uses marked attempts only.`
               : "The analysis shows up after students sit the test and you mark it."
           }
