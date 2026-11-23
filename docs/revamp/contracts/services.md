@@ -36,6 +36,7 @@ Prices live in the database (`Tier` rows, [a/design/03-billing.md](../a/design/0
 | `fee-collection` | Invoicing parents and collecting fees (2% commission, card fees separate) | v1 |
 | `storage-allowance` | Storage per workspace plus per active student | v1 |
 | `bulk-import` | Add students by CSV or invite link; import tests from JSON | v1 |
+| `attendance` | The attendance register: mark present, late, absent or excused (moved to Core 22 Nov) | v1 |
 
 ### Premium
 
@@ -44,7 +45,7 @@ Prices live in the database (`Tier` rows, [a/design/03-billing.md](../a/design/0
 | `math-input` | Visual maths input (MathLive) | `PLUS` | no | v1 |
 | `graphing` | Graphs in lessons and graph answers (Mafs) | `PLUS` | no | v1 |
 | `question-bank` | Tagged question bank and randomised tests | `PLUS` | no | later |
-| `live-sessions` | Live-session scheduling and attendance (Meet link by default) | `PLUS` | no | v1 |
+| `live-sessions` | Live-session check-in codes, and emails to parents about absences (the register itself is Core) | `PLUS` | no | v1 |
 | `advanced-analytics` | Item analysis and question difficulty | `PLUS` | no | later |
 | `custom-branding` | Workspace logo, accent colour and sender name | `PLUS` | no | v1 |
 | `calendar-sync` | ICS calendar feed per user | `PLUS` | no | v1 |
@@ -80,7 +81,7 @@ export type Tier = "CORE" | "PLUS" | "PRO";
 export type ServiceKey =
   | "courses-lessons" | "templates" | "tests" | "assignments" | "gradebook"
   | "calendar" | "messages" | "notifications" | "portals" | "fee-collection"
-  | "storage-allowance" | "bulk-import"
+  | "storage-allowance" | "bulk-import" | "attendance"
   | "math-input" | "graphing" | "question-bank" | "live-sessions"
   | "advanced-analytics" | "custom-branding" | "calendar-sync"
   | "secure-tests" | "ai-marking" | "leaderboards" | "api-access"

@@ -43,7 +43,7 @@ check("parked keys", Object.values(SERVICES).filter((s) => s.status === "parked"
   ["automarker", "code-plagiarism", "judge-mode"]);
 check("Plus v1 keys", Object.values(SERVICES).filter((s) => s.tier === "PLUS" && s.status === "v1").map((s) => s.key).sort(),
   ["calendar-sync", "custom-branding", "graphing", "live-sessions", "math-input", "question-bank"]);
-check("12 basic keys", Object.values(SERVICES).filter((s) => s.kind === "basic").length, 12);
+check("13 basic keys (attendance register moved to Core, 22 Nov)", Object.values(SERVICES).filter((s) => s.kind === "basic").length, 13);
 check("add-on statuses", Object.values(ADDONS).map((a) => [a.key, a.status]),
   [["day-pass", "later"], ["ai-credits", "retired"], ["extra-storage", "v1"], ["live-room", "later"], ["runner-capacity", "parked"]]);
 

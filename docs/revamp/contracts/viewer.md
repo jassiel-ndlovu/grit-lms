@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.15, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.16, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.16. Parent and student referrals (`getReferralLink`, `listReferrals`, `/api/referrals/<code>`); the weekly parent summary email; the attendance register is Core (check-in codes and absence emails stay Plus) |
 | 2026-11-23 | Draft 1.15. Read-only workspaces keep every permission, so staff see their pages (#223); writes are refused on the server (`READ_ONLY: ...` from actions, 423 from API routes). `listListedCourses` also matches the tutor's name and takes `forUserIds`, returning `enrolledUserIds`; staff inbox rows carry `decidedBy` |
 | 2026-11-22 | Draft 1.14. Themes OCEAN, SUNSET and CONTRAST (#217); `user.textSize` and `user.readingFont` (#216); `workspace.meetingProvider` and `setMeetingProvider` (#211); `signUpWithPassword({ callbackUrl })` (#174); `writableViewerActionClient` (refused for staff in a read-only workspace). NextAuth is gone: no `/api/auth/*` route remains |
 | 2026-11-21 | Draft 1.13. Staff manage only the accounts their workspace made (`User.managedByWorkspaceId`, migration 23): `resetUserPassword`, `issueSignInCode` and `requestStudentAccountDeletion` refuse a self-made account with a `UserError` saying the person manages it themself. Tutors invoice or set fees only for a student on that course. `changeOwnPassword` works for accounts made since the cutover |
@@ -337,3 +338,26 @@ Students and parents find listed courses and ask to join; staff approve or decli
   - `q` also matches the lead tutor's name.
   - Pass the viewer's id and their children's ids in `forUserIds`. Each course then has `enrolledUserIds`: show "You're on this course" or the child's name instead of "Ask to join". `browseCourses` passes them for you.
 - **`listJoinRequestsForStaff` rows** have `decidedBy: { id, name } | null`. Compare `decidedBy.id` with the viewer before labelling a note "Your note".
+
+### Referrals, the weekly parent summary and attendance (Draft 1.16)
+
+**Referrals (Core):**
+- **`getReferralLink({ workspaceId? })`** in `@/features/workspaces/join-request-actions`, for a student or parent in the workspace (the active one if omitted). Returns `{ code, url, requested, joined }`. Show the URL with a copy button and a share button, and the two counts.
+- **The link** `/api/referrals/<code>` keeps the code for 30 days and opens `/dashboard/courses/browse?workspace=<id>`. **Please make Find courses filter by `workspace`.** A family that then asks to join a course in that workspace is credited to the referrer; approval marks it joined.
+- **What doesn't count:** your own link, a parent's link for their own child, or a student already in the workspace. Each student counts for one referrer: the first.
+- **`listReferrals({})`** for owners and admins: `{ referrals: [{ referrerName, referredName, status: "REQUESTED" | "JOINED", createdAt, joinedAt }], byReferrer: [{ referrerId, name, requested, joined }] }`.
+- **Rewards aren't decided yet** (the owner's call): show who referred whom, nothing about prizes.
+
+**Weekly parent summary (Core):**
+- Every Monday morning (South African time), each parent with a verified email gets one email covering each linked child:
+  - the past week's new marks;
+  - the coming week's tests and assignments, with whether each is done;
+  - the week's attendance.
+- Weeks with nothing to report send nothing. "Email notifications" off in settings turns it off. Nothing needed from B, apart from saying so on the notifications settings page if you like.
+
+**Attendance:**
+- **Core:** the register (`getAttendanceSheet`, `markAttendance`).
+- **Plus (`live-sessions`):**
+  - `openCheckIn` refuses with "Check-in codes are part of the Plus plan for this course".
+  - `markAttendance` emails parents about an absence only on Plus.
+- With billing off, every course has every service, as before.

@@ -14,6 +14,7 @@
  *   declineJoinRequest   the same
  */
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -22,6 +23,7 @@ import { canIn, ViewerError } from "@/lib/viewer";
 import { can, needsScope, type Permission, type Viewer } from "@/lib/viewer-core";
 
 import * as j from "./join-requests";
+import { listReferralsFor, REFERRAL_COOKIE, referralLinkFor } from "./referrals";
 
 const id = z.string().min(1).max(64);
 
@@ -53,7 +55,8 @@ export const browseCourses = viewerActionClient
 export const requestToJoin = viewerActionClient
   .schema(z.object({ courseId: id, studentUserId: id.optional(), message: z.string().max(j.JOIN.messageMax).optional() }))
   .action(async ({ parsedInput, ctx: { viewer } }) => {
-    const r = await j.requestToJoinFor(viewer.user.id, parsedInput);
+    const referralCode = (await cookies()).get(REFERRAL_COOKIE)?.value ?? null;
+    const r = await j.requestToJoinFor(viewer.user.id, { ...parsedInput, referralCode });
     revalidatePath("/dashboard", "layout");
     return r;
   });
@@ -99,4 +102,21 @@ export const declineJoinRequest = staffActionClient
     const r = await j.declineJoinRequestFor(viewer.user.id, s.workspaceId, parsedInput.requestId, parsedInput.reason ?? null);
     revalidatePath("/dashboard", "layout");
     return r;
+  });
+
+/** A student's or parent's referral link for a workspace they belong to, with how many families came through it. */
+export const getReferralLink = viewerActionClient
+  .schema(z.object({ workspaceId: id.optional() }))
+  .action(async ({ parsedInput, ctx: { viewer } }) => {
+    const workspaceId = parsedInput.workspaceId ?? viewer.workspace?.id;
+    if (!workspaceId) throw new ViewerError("FORBIDDEN");
+    return referralLinkFor(viewer.user.id, workspaceId);
+  });
+
+/** Who referred whom in the workspace, for owners and admins (learners.invite for the whole workspace). */
+export const listReferrals = viewerActionClient
+  .schema(z.object({}))
+  .action(async ({ ctx: { viewer } }) => {
+    if (!viewer.workspace || !can(viewer, "learners.invite") || needsScope(viewer, "learners.invite")) throw new ViewerError("FORBIDDEN");
+    return listReferralsFor(viewer.workspace.id);
   });
