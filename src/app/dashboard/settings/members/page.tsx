@@ -1,7 +1,8 @@
 /**
  * /dashboard/settings/members — the workspace's staff and invites (#174;
- * a/ux/01, section 5). Needs `members.invite`. Only the owner (or a Nexa
- * admin) can invite admins.
+ * a/ux/01, section 5). Needs `members.invite` or `members.role`. Only the
+ * owner (or a Nexa admin) can invite admins. In an organisation, people with
+ * `members.role` change roles here (viewer.md, "Roles and branches").
  */
 
 import Link from "next/link";
@@ -9,24 +10,33 @@ import { redirect } from "next/navigation";
 import { FileUp } from "lucide-react";
 
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
+import { MemberList, type RoleChoices } from "@/components/settings/roles/member-list";
+import { assignableRoles, grantsOf, roleRoutes, roleRows } from "@/components/settings/roles/role-ui";
 import { importRoutes } from "@/components/imports/import-ui";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InviteList, InviteStaffForm, type InviteRow } from "@/features/courses/components/accounts/staff-invites";
 import { listMembers } from "@/features/courses/lib/roster";
 import { listInvites } from "@/features/auth/invite-actions";
-import { can, getViewer } from "@/lib/viewer";
+import { listBranchesFor, listRolesFor } from "@/features/workspaces/roles";
+import { can, getViewer, type Viewer } from "@/lib/viewer";
 
 export const metadata = { title: "Members" };
 
-const ROLE_LABEL: Record<string, string> = { OWNER: "Owner", ADMIN: "Admin", TUTOR: "Tutor" };
+/** What the viewer may give people, or null when they can't change roles. */
+async function roleChoices(viewer: Viewer): Promise<RoleChoices | null> {
+  const grants = grantsOf(viewer);
+  if (!grants || !viewer.workspace || !can(viewer, "members.role")) return null;
+  const [roles, { branches }] = await Promise.all([listRolesFor(viewer.workspace.id), listBranchesFor(viewer.workspace.id)]);
+  return { grants, roles: assignableRoles(grants, roleRows(roles)), branches: branches.map(({ id, name }) => ({ id, name })) };
+}
 
 export default async function MembersPage() {
   const viewer = await getViewer();
   if (!viewer) redirect("/auth");
-  if (!viewer.workspace || !can(viewer, "members.invite")) redirect("/dashboard/settings");
+  const invitesPeople = can(viewer, "members.invite");
+  if (!viewer.workspace || !(invitesPeople || can(viewer, "members.role"))) redirect("/dashboard/settings");
 
-  const [members, invitesRes] = await Promise.all([listMembers(viewer), listInvites({})]);
+  const [members, invitesRes, choices] = await Promise.all([listMembers(viewer), invitesPeople ? listInvites({}) : undefined, roleChoices(viewer)]);
   const invites: InviteRow[] = (invitesRes?.data ?? []).map((i) => ({
     ...i,
     createdAt: String(i.createdAt),
@@ -39,59 +49,64 @@ export default async function MembersPage() {
       type="settings"
       breadcrumb={[{ label: "Settings", href: "/dashboard/settings" }, { label: "Members" }]}
       actions={
-        <Button asChild variant="outline" size="sm">
-          <Link href={importRoutes.start("staff")}>
-            <FileUp className="size-3.5" /> Import staff
-          </Link>
-        </Button>
+        invitesPeople ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href={importRoutes.start("staff")}>
+              <FileUp className="size-3.5" /> Import staff
+            </Link>
+          </Button>
+        ) : null
       }
     >
       <PageTitle
         title="Members"
         description={
           <>
-            The tutors and admins at {viewer.workspace.name}. Invite someone by email; they join when they sign in with that
-            address.
+            The people who work at {viewer.workspace.name}.
+            {invitesPeople ? " Invite someone by email; they join when they sign in with that address." : ""}
+            {choices ? (
+              <>
+                {" "}
+                <Link href={roleRoutes.index} className="text-foreground underline underline-offset-2">
+                  See what each role can do
+                </Link>
+                .
+              </>
+            ) : null}
           </>
         }
       />
 
-      <section aria-labelledby="invite-heading" className="border-border space-y-4 rounded-lg border p-5">
-        <h2 id="invite-heading" className="text-foreground text-sm font-semibold">
-          Invite people
-        </h2>
-        <InviteStaffForm canInviteAdmins={canInviteAdmins} />
-      </section>
+      {invitesPeople ? (
+        <section aria-labelledby="invite-heading" className="border-border space-y-4 rounded-lg border p-5">
+          <h2 id="invite-heading" className="text-foreground text-sm font-semibold">
+            Invite people
+          </h2>
+          <InviteStaffForm canInviteAdmins={canInviteAdmins} />
+        </section>
+      ) : null}
 
       <section aria-labelledby="members-heading" className="space-y-3">
         <h2 id="members-heading" className="text-foreground text-sm font-semibold">
           {members.length === 1 ? "1 member" : `${members.length} members`}
         </h2>
-        <ul className="divide-border border-border divide-y rounded-lg border">
-          {members.map((m) => (
-            <li key={m.membershipId} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
-              <span className="min-w-0">
-                <span className="text-foreground block font-medium">{m.name}</span>
-                <span className="text-muted-foreground block truncate text-xs">{m.email}</span>
-              </span>
-              <Badge variant="outline">{ROLE_LABEL[m.role] ?? m.role}</Badge>
-            </li>
-          ))}
-        </ul>
+        <MemberList members={members} choices={choices} />
       </section>
 
-      <section aria-labelledby="invites-heading" className="space-y-3">
-        <h2 id="invites-heading" className="text-foreground text-sm font-semibold">
-          Invites
-        </h2>
-        {invitesRes?.data ? (
-          <InviteList invites={invites} />
-        ) : (
-          <p role="alert" className="text-muted-foreground text-sm">
-            We couldn&apos;t load the invites just now. Refresh to try again.
-          </p>
-        )}
-      </section>
+      {invitesPeople ? (
+        <section aria-labelledby="invites-heading" className="space-y-3">
+          <h2 id="invites-heading" className="text-foreground text-sm font-semibold">
+            Invites
+          </h2>
+          {invitesRes?.data ? (
+            <InviteList invites={invites} />
+          ) : (
+            <p role="alert" className="text-muted-foreground text-sm">
+              We couldn&apos;t load the invites just now. Refresh to try again.
+            </p>
+          )}
+        </section>
+      ) : null}
     </PageFrame>
   );
 }

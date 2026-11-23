@@ -35,9 +35,11 @@ import { deleteCourse } from "../actions";
 export interface CourseActionsProps {
   courseId: string;
   courseName: string;
+  /** False for a role that edits courses but doesn't create them; the server checks too. */
+  canDelete?: boolean;
 }
 
-export function CourseActions({ courseId, courseName }: CourseActionsProps) {
+export function CourseActions({ courseId, courseName, canDelete = true }: CourseActionsProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
@@ -79,15 +81,17 @@ export function CourseActions({ courseId, courseName }: CourseActionsProps) {
               <Pencil className="size-4" /> Edit
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            variant="destructive"
-            onSelect={(e) => {
-              e.preventDefault();
-              setConfirmOpen(true);
-            }}
-          >
-            <Trash2 className="size-4" /> Delete
-          </DropdownMenuItem>
+          {canDelete ? (
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={(e) => {
+                e.preventDefault();
+                setConfirmOpen(true);
+              }}
+            >
+              <Trash2 className="size-4" /> Delete
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 

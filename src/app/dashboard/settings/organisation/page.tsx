@@ -53,7 +53,7 @@ export default async function OrganisationSettingsPage() {
         properties={
           <PropertyList>
             <PropertyRow label="Kind">Organisation</PropertyRow>
-            <PropertyRow label="Your role">{viewer.membership?.role === "OWNER" ? "Owner" : "Admin"}</PropertyRow>
+            <PropertyRow label="Your role">{viewer.membership?.roleName ?? (isOwner ? "Owner" : "Admin")}</PropertyRow>
           </PropertyList>
         }
       />

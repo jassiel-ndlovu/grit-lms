@@ -88,10 +88,10 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       items: [
         { label: "Courses", href: "/dashboard/manage-courses", icon: "book", keywords: ["lessons", "authoring"], requires: "courses.edit" },
         CALENDAR,
-        { label: "Tests", href: "/dashboard/tutor-tests", icon: "test", keywords: ["quiz", "grading", "marking"] },
-        { label: "Assignments", href: assignmentRoutes.index, icon: "assignment", keywords: ["submissions", "marking"] },
+        { label: "Tests", href: "/dashboard/tutor-tests", icon: "test", keywords: ["quiz", "grading", "marking"], requires: "courses.edit" },
+        { label: "Assignments", href: assignmentRoutes.index, icon: "assignment", keywords: ["submissions", "marking"], requires: "courses.edit" },
         { label: "Gradebook", href: "/dashboard/gradebook", icon: "gradebook", keywords: ["marks", "weights"], requires: "grades.view" },
-        { label: "Analytics", href: "/dashboard/analytics", icon: "analytics", keywords: ["performance"], requires: "grades.view" },
+        { label: "Analytics", href: "/dashboard/analytics", icon: "analytics", keywords: ["performance"], requires: "courses.edit" },
       ],
     },
     {

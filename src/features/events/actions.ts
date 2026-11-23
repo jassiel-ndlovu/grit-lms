@@ -13,7 +13,7 @@ import type { Prisma } from "@/generated/prisma";
 
 import { emitNotification } from "@/features/notifications/server";
 import { prisma } from "@/lib/db";
-import { staffFor } from "@/features/courses/lib/tenancy-where";
+import { courseAccessSelect } from "@/features/courses/lib/tenancy-where";
 import { tutorActionClient, tutorReadActionClient } from "@/lib/safe-action";
 
 import { eventChangeNotification } from "./notify";
@@ -35,7 +35,7 @@ export const createCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { workspaceId: true, staff: staffFor(ctx.session.user.email) },
+      select: { ...courseAccessSelect(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
@@ -76,7 +76,7 @@ export const updateCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.courseEvent.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Event not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
@@ -123,7 +123,7 @@ export const deleteCourseEvent = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.courseEvent.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Event not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
@@ -155,7 +155,7 @@ export const getCourseEventSeries = tutorReadActionClient
       select: {
         id: true, title: true, description: true, type: true, date: true, duration: true, location: true, link: true, timeZone: true,
         repeatFrequency: true, repeatInterval: true, repeatWeekdays: true, repeatUntil: true, repeatCount: true,
-        course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+        course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } },
       },
     });
     if (!e) throw new Error("Event not found");

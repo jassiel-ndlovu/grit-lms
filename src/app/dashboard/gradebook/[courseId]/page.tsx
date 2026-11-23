@@ -66,10 +66,9 @@ export default async function CourseGradebookPage({ params }: PageProps) {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard/grades");
 
-  const scope = await getCourseScope(session.user.id);
-
-  const owns = await canManageCourse(courseId, scope);
-  if (!owns) notFound();
+  const [viewScope, editScope] = await Promise.all([getCourseScope(session.user.id, "grades.view"), getCourseScope(session.user.id)]);
+  const [reads, edits] = await Promise.all([canManageCourse(courseId, viewScope), canManageCourse(courseId, editScope)]);
+  if (!reads) notFound();
 
   const book = await getCourseGradebook(courseId);
   if (!book) notFound();
@@ -139,7 +138,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
       </Card>
 
       {/* ───── Weights ───── */}
-      <WeightsEditor courseId={book.course.id} assessments={book.assessments} />
+      {edits ? <WeightsEditor courseId={book.course.id} assessments={book.assessments} /> : null}
 
       {/* ───── Grid ───── */}
       <Card className="overflow-hidden p-0">

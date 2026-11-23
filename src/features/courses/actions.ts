@@ -26,7 +26,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { tutorActionClient } from "@/lib/safe-action";
-import { getViewer } from "@/lib/viewer";
+import { UserError } from "@/lib/user-error";
+import { can, getViewer } from "@/lib/viewer";
 import { setCourseEnrollment, setUpCourseTenancy } from "@/features/workspaces/tenancy";
 import { deleteBlob } from "@/lib/blob/server";
 import { isStockCover } from "@/features/courses/lib/stock-covers";
@@ -37,7 +38,7 @@ import {
   DeleteCourseSchema,
   UpdateCourseSchema,
 } from "./schemas";
-import { getCourseScope } from "@/features/courses/course-access";
+import { getCourseScope, holdsInWorkspace } from "@/features/courses/course-access";
 import { managesCourse } from "@/features/courses/lib/course-access";
 import { curriculumToStore } from "@/features/courses/lib/curriculum";
 
@@ -51,6 +52,7 @@ export const createCourse = tutorActionClient
   .action(async ({ parsedInput }) => {
     const viewer = await getViewer();
     if (!viewer) throw new Error("Not signed in");
+    if (!can(viewer, "courses.create")) throw new UserError("Your role can't create courses. Ask an owner or admin.");
     const studentIds = parsedInput.studentIds ?? [];
 
     const created = await prisma.$transaction(
@@ -106,7 +108,7 @@ export const updateCourse = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.course.findUnique({
       where: { id: parsedInput.id },
-      include: { staff: staffFor(ctx.session.user.email) },
+      include: { staff: staffFor(ctx.session.user.email), team: { select: { branchId: true } } },
     });
 
     if (!existing) {
@@ -173,7 +175,7 @@ export const deleteCourse = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.course.findUnique({
       where: { id: parsedInput.id },
-      include: { staff: staffFor(ctx.session.user.email) },
+      include: { staff: staffFor(ctx.session.user.email), team: { select: { branchId: true } } },
     });
 
     if (!existing) {
@@ -181,6 +183,9 @@ export const deleteCourse = tutorActionClient
     }
     if (!managesCourse(await getCourseScope(ctx.session.user.id), existing)) {
       throw new Error("You don't own this course");
+    }
+    if (!(await holdsInWorkspace(ctx.session.user.id, existing.workspaceId, "courses.create"))) {
+      throw new UserError("Your role can't delete courses. Ask an owner or admin.");
     }
 
     await prisma.course.delete({ where: { id: parsedInput.id } });

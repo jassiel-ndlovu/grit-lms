@@ -3,6 +3,34 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Roles, branches and teams (#216, phase 1), `revamp/b-roles`
+
+Viewer contract Draft 1.17, B's side. No migration.
+
+Done:
+- **Course scope:** `course-access.ts` and `fee-courses.ts` use
+  `courseScopeOf` and `scopedCourseWhere`. A branch role manages the courses
+  in its branches' teams and those it owns, on every teaching page and in
+  every action (`courseAccessSelect` loads what `managesCourse` needs). The
+  Students page, adding students and Join requests follow too.
+- **Teaching needs a role that edits courses:** a CourseStaff row counts only
+  while the role holds `courses.edit` (`editingMembership`), so a tutor moved
+  to Finance or Support stops marking.
+- **Creating and deleting a course** needs `courses.create`.
+- **Gradebook** follows `grades.view`: an executive reads every course's
+  marks, without the weights editor or links into marking.
+- **Nav:** Tests, Assignments and Analytics need `courses.edit`.
+- **Screens:** `/dashboard/settings/roles` (list, copy, edit, delete),
+  `/dashboard/settings/branches` and its team pages, and "Change role" on
+  Members. Components in `src/components/settings/roles`; samples on
+  `/design-system/roles`.
+- Checks: `check-role-ui.ts` (new), `check-course-access.ts`,
+  `check-shell-nav.ts`.
+
+Not done:
+- Support staff and executives have no read-only course pages
+  (`content.view`); only the gradebook reads.
+
 ## 2026-11-23 Referrals, Find courses by workspace, attendance in Core (#216, phase 1), `revamp/b-referrals`
 
 Viewer contract Drafts 1.15 and 1.16, B's side. No migration.

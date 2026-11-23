@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { AddStudentForm } from "@/features/courses/components/accounts/add-student-form";
 import { coursesForAdding, listRoster } from "@/features/courses/lib/roster";
 import { can, getViewer } from "@/lib/viewer";
-import { needsScope } from "@/lib/viewer-core";
+import { courseScopeOf } from "@/lib/viewer-core";
 
 export const metadata = { title: "Students" };
 
@@ -26,7 +26,7 @@ export default async function StudentsPage() {
   if (!viewer.workspace || !can(viewer, "learners.invite")) redirect("/dashboard");
 
   const [students, courses] = await Promise.all([listRoster(viewer), coursesForAdding(viewer)]);
-  const scoped = needsScope(viewer, "learners.invite");
+  const scope = courseScopeOf(viewer, "learners.invite");
 
   return (
     <PageFrame
@@ -51,7 +51,7 @@ export default async function StudentsPage() {
         title="Students"
         description={
           <>
-            {scoped ? "Students on your courses." : `Everyone learning at ${viewer.workspace.name}.`} Add a student and hand them a
+            {scope ? (scope.branchIds.length ? "Students on your branches' courses." : "Students on your courses.") : `Everyone learning at ${viewer.workspace.name}.`} Add a student and hand them a
             sign-in card; they don&apos;t need an email.
           </>
         }
@@ -61,7 +61,7 @@ export default async function StudentsPage() {
         <h2 id="add-heading" className="text-foreground text-sm font-semibold">
           Add a student
         </h2>
-        <AddStudentForm courses={courses} workspaceName={viewer.workspace.name} coursesRequired={scoped} />
+        <AddStudentForm courses={courses} workspaceName={viewer.workspace.name} coursesRequired={scope !== null} />
       </section>
 
       <section aria-labelledby="list-heading" className="space-y-3">

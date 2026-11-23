@@ -24,7 +24,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
-import { staffFor, enrollmentFor } from "@/features/courses/lib/tenancy-where";
+import { courseAccessSelect, enrollmentFor } from "@/features/courses/lib/tenancy-where";
 import {
   studentActionClient,
   tutorActionClient,
@@ -263,7 +263,7 @@ export const createTest = tutorActionClient
     // Ownership: the tutor must own the course this test is for.
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) },
+      select: { id: true, ...courseAccessSelect(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
@@ -330,7 +330,7 @@ export const updateTest = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.test.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Test not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
@@ -427,7 +427,7 @@ export const deleteTest = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.test.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Test not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
@@ -711,7 +711,7 @@ export const gradeTestSubmission = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+            course: { select: { ...courseAccessSelect(ctx.session.user.email) } },
           },
         },
       },
@@ -917,7 +917,7 @@ export const deleteTestSubmission = tutorActionClient
           select: {
             id: true,
             courseId: true,
-            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+            course: { select: { ...courseAccessSelect(ctx.session.user.email) } },
           },
         },
       },
@@ -966,7 +966,7 @@ export const updateTestSubmissionStatus = tutorActionClient
           select: {
             id: true,
             courseId: true,
-            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+            course: { select: { ...courseAccessSelect(ctx.session.user.email) } },
           },
         },
       },
@@ -1013,7 +1013,7 @@ export const autoGradeSubmissionAction = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+            course: { select: { ...courseAccessSelect(ctx.session.user.email) } },
           },
         },
       },

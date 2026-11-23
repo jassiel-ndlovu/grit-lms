@@ -23,7 +23,7 @@ import { Prisma } from "@/generated/prisma";
 
 import { richColumnsFromInput } from "@/lib/content/columns";
 import { prisma } from "@/lib/db";
-import { staffFor, enrollmentFor } from "@/features/courses/lib/tenancy-where";
+import { courseAccessSelect, enrollmentFor } from "@/features/courses/lib/tenancy-where";
 import {
   studentActionClient,
   tutorActionClient,
@@ -56,7 +56,7 @@ export const createSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) },
+      select: { id: true, ...courseAccessSelect(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
@@ -118,7 +118,7 @@ export const updateSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.submission.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Assignment not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
@@ -191,7 +191,7 @@ export const deleteSubmission = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const existing = await prisma.submission.findUnique({
       where: { id: parsedInput.id },
-      include: { course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } },
+      include: { course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } } },
     });
     if (!existing) throw new Error("Assignment not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), existing.course)) {
@@ -240,7 +240,7 @@ export const deleteEntry = tutorActionClient
       select: {
         id: true,
         studentId: true,
-        submission: { select: { id: true, course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } } } },
+        submission: { select: { id: true, course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } } } },
       },
     });
     if (!entry) throw new Error("Hand-in not found");
@@ -377,7 +377,7 @@ export const gradeEntry = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+            course: { select: { ...courseAccessSelect(ctx.session.user.email) } },
           },
         },
       },
@@ -465,7 +465,7 @@ export const gradeEntryWithSections = tutorActionClient
             id: true,
             title: true,
             courseId: true,
-            course: { select: { workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+            course: { select: { ...courseAccessSelect(ctx.session.user.email) } },
           },
         },
       },
