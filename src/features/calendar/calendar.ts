@@ -13,6 +13,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { occurrencesOf } from "@/features/events/lib/recurrence";
 import { prisma } from "@/lib/db";
+import { emitWebhook } from "@/features/api/webhooks";
 import { enqueueEmail } from "@/lib/email/queue";
 
 import { applyExceptions, buildIcs, hashCode, newCheckInCode, untilBefore, type ExceptionRow, type Occurrence, type SeriesRow } from "./calendar-math";
@@ -166,6 +167,10 @@ export async function markAttendanceFor(actorUserId: string, input: { eventId: s
     });
     // Absence emails are part of Plus (live-sessions); the register is Core.
     if (m.status === "ABSENT" && !row.guardianNotifiedAt && opts.emailAbsences !== false) absences += await notifyGuardiansOfAbsence(row.id, sheet.title, occ);
+  }
+  const ev = await prisma.courseEvent.findUnique({ where: { id: input.eventId }, select: { courseId: true, course: { select: { workspaceId: true } } } });
+  if (ev?.course.workspaceId && input.marks.length) {
+    await emitWebhook(prisma, ev.course.workspaceId, "attendance.marked", { eventId: input.eventId, courseId: ev.courseId, occurrenceStart: occ.toISOString(), marks: input.marks.map((m) => ({ learnerId: m.learnerId, status: m.status })) });
   }
   return { marked: input.marks.length, guardiansEmailed: absences };
 }

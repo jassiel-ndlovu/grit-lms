@@ -6,6 +6,7 @@
  */
 
 import { sendBookingReminders } from "@/features/booking/bookings";
+import { drainWebhooks } from "@/features/api/webhooks";
 import { defineJob } from "@/lib/jobs/define";
 import { runAiMarking } from "@/features/ai-marking/jobs";
 import { aiMarkingConfigured } from "@/features/ai-marking/marker";
@@ -20,6 +21,7 @@ const job = defineJob("notifications", async () => ({
   aiMarking: aiMarkingConfigured() ? await runAiMarking({ limit: 25 }) : "not configured",
   imports: await advanceStaleImports(new Date(), 15_000),
   bookingReminders: await sendBookingReminders(),
+  webhooks: await drainWebhooks(),
 }));
 export const GET = job.GET;
 export const POST = job.POST;

@@ -27,6 +27,7 @@ import { assertCanAddLearners } from "@/features/billing/caps";
 import { newSignInCode, normaliseCode, pickUsername, placeholderEmail, usernameBase, USERNAME_RE } from "@/features/auth/codes";
 import { passwordProblem } from "@/features/auth/password-reset";
 import { prisma } from "@/lib/db";
+import { emitWebhook } from "@/features/api/webhooks";
 import { enqueueEmail } from "@/lib/email/queue";
 
 const ROUNDS = 10;
@@ -85,6 +86,7 @@ export async function createStudentAccountFor(actorUserId: string, workspaceId: 
     });
     if (courses.length) {
       await tx.enrollment.createMany({ data: courses.map((c) => ({ workspaceId, courseId: c.id, learnerId: learner.id, status: "ACTIVE" as const, startedAt: now })) });
+      for (const c of courses) await emitWebhook(tx, workspaceId, "enrolment.created", { courseId: c.id, learnerId: learner.id, studentUserId: user.id, source: "managed-account", startedAt: now.toISOString() });
     }
     await tx.auditLog.create({ data: { workspaceId, actorUserId, action: "learner.create", targetType: "User", targetId: user.id, data: { username, isMinor: input.isMinor, courses: courses.length, consentAttested: input.consentAttested } } });
     return { userId: user.id, learnerId: learner.id, username, email, code, codeExpiresAt: expiresAt };

@@ -13,6 +13,7 @@ import { randomBytes } from "node:crypto";
 import { Prisma } from "@/generated/prisma";
 import { BillingError } from "@/features/billing/errors";
 import { prisma } from "@/lib/db";
+import { emitWebhook } from "@/features/api/webhooks";
 import { enqueueEmail } from "@/lib/email/queue";
 
 import { DEFAULT_CHECKOUT_CONFIG, planCheckout } from "./checkout-math";
@@ -191,6 +192,7 @@ export async function applyCheckoutPayment(tx: Tx, input: { paymentId: string; p
       data: { status: "PAID", paidAt: input.paidAt, paidVia: "ONLINE", payerUserId: payment.payerUserId, lockedByPaymentId: null, lockedUntil: null },
     });
     if (ok.count === 0) unapplied.push(a.invoice.number);
+    else await emitWebhook(tx, a.invoice.workspaceId, "invoice.paid", { invoiceId: a.invoiceId, number: a.invoice.number, paidVia: "ONLINE", paidAt: input.paidAt.toISOString(), amountCents: a.amountCents });
     if (input.feeCents != null && payment.amountCents > 0) {
       await tx.paymentAllocation.update({ where: { id: a.id }, data: { feeShareCents: Math.round((input.feeCents * a.amountCents) / payment.amountCents) } });
     }
