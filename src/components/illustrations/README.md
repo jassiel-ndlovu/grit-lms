@@ -92,9 +92,9 @@ from 247 KB of PNG to 85 KB of WebP.
 | `header-profile` | Open Peeps `Templates/Standing/peep-standing-7.svg` |
 | `header-settings` | Open Peeps `Templates/Sitting/peep-sitting-11.svg` |
 | `header-tests` | Open Peeps `Templates/Sitting/peep-sitting-10.svg` |
-| `landing-tutor` | Open Peeps `Templates/Standing/peep-standing-24.svg` (landing hero) |
-| `landing-student` | Open Peeps `Templates/Sitting/peep-sitting-12.svg` (landing hero) |
-| `landing-launch` | Open Peeps `Templates/Standing/peep-standing-25.svg` (landing closing panel) |
+| `landing-tutor` | Open Peeps `Templates/Standing/peep-standing-24.svg` (not used since 23 Nov) |
+| `landing-student` | Open Peeps `Templates/Sitting/peep-sitting-12.svg` (not used since 23 Nov) |
+| `landing-launch` | Open Peeps `Templates/Standing/peep-standing-25.svg` (not used since 23 Nov) |
 | `avatar-01` to `avatar-32` | Open Peeps `Templates/Bust/peep-N.svg`, N = 6, 8, 10, 11, 13, 14, 17, 19, 26, 31, 33, 34, 37, 38, 39, 43, 46, 47, 51, 57, 59, 63, 66, 76, 78, 79, 87, 93, 96, 99, 100, 102 (in order) |
 | `spot-study` | Transhumans `Growth-Study.png` (login; landing, for students) |
 | `spot-school-run` | Transhumans `School-Run-Innocent.png` (sign-up; landing step 1) |

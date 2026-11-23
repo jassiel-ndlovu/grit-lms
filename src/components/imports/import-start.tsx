@@ -8,7 +8,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Download, FileUp, Loader2 } from "lucide-react";
+import { Download, FileUp, GraduationCap, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { WriteGuard } from "@/components/shell/workspace-access";
@@ -80,12 +80,17 @@ export function ImportStart({ types, initialKind }: { types: ImportType[]; initi
               aria-checked={on}
               onClick={() => setKind(t.kind)}
               className={cn(
-                "focus-visible:ring-ring rounded-lg border p-4 text-left outline-none focus-visible:ring-2",
+                "focus-visible:ring-ring flex items-start gap-3 rounded-lg border p-4 text-left outline-none focus-visible:ring-2",
                 on ? "border-primary ring-primary/30 ring-2" : "border-border hover:border-input",
               )}
             >
-              <span className="text-foreground block text-sm font-semibold">{t.title}</span>
-              {BLURB[t.kind] ? <span className="text-muted-foreground mt-1 block text-xs">{BLURB[t.kind]}</span> : null}
+              <span aria-hidden className="bg-muted text-foreground grid size-9 shrink-0 place-items-center rounded-lg">
+                {t.kind === "students" ? <GraduationCap className="size-4" /> : <Users className="size-4" />}
+              </span>
+              <span className="min-w-0">
+                <span className="text-foreground block text-sm font-semibold">{t.title}</span>
+                {BLURB[t.kind] ? <span className="text-muted-foreground mt-1 block text-xs">{BLURB[t.kind]}</span> : null}
+              </span>
             </button>
           );
         })}

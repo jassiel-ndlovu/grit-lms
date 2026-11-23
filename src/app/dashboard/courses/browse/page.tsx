@@ -67,6 +67,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
         </label>
         <Input id="course-search" name="q" defaultValue={q} placeholder="Course, school or tutor" maxLength={80} />
         <Button type="submit" variant="outline">
+          <Search aria-hidden className="size-4" />
           Search
         </Button>
       </form>

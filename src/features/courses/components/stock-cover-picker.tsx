@@ -29,7 +29,7 @@ export function StockCoverPicker({ value, fallback, onChange }: StockCoverPicker
 
   return (
     <div className="space-y-2">
-      <p className="text-muted-foreground text-xs">Or use a stock cover</p>
+      <p className="text-muted-foreground text-xs">Or use a stock photo or drawing</p>
       <div role="radiogroup" aria-label="Stock covers" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
         {STOCK_COVERS.map((cover) => {
           const selected = picked?.id === cover.id;

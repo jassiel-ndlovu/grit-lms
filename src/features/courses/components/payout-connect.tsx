@@ -12,7 +12,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Building2, CheckCircle2, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -205,6 +205,11 @@ export function PayoutModeSwitch({ mode }: { mode: "WORKSPACE" | "PER_TUTOR" }) 
         ).map(([v, label, hint]) => (
           <label key={v} className="flex items-start gap-2">
             <input type="radio" name="payout-mode" className="mt-1" checked={value === v} onChange={() => setValue(v)} />
+            {v === "WORKSPACE" ? (
+              <Building2 aria-hidden className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+            ) : (
+              <Users aria-hidden className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+            )}
             <span>
               <span className="text-foreground block">{label}</span>
               <span className="text-muted-foreground text-xs">{hint}</span>

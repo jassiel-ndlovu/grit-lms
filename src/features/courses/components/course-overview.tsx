@@ -6,7 +6,7 @@
  */
 
 import Link from "next/link";
-import { BookOpenText } from "lucide-react";
+import { BookOpenText, Pencil } from "lucide-react";
 
 import { PageTitle } from "@/components/shell/page-frame";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,10 @@ export function CourseOverview({ course, props, outline, work, ctx }: CourseOver
       course={course}
       actions={
         <Button asChild size="sm" variant="brand">
-          <Link href={courseRoutes.lessons(course.id)}>Edit lessons</Link>
+          <Link href={courseRoutes.lessons(course.id)}>
+            <Pencil aria-hidden className="size-4" />
+            Edit lessons
+          </Link>
         </Button>
       }
     >

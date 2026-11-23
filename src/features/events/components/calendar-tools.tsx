@@ -10,7 +10,7 @@
  */
 
 import * as React from "react";
-import { Check, CheckCircle2, Copy, Loader2, Rss, ScanLine } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, CheckCircle2, Copy, Loader2, Rss, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -158,11 +158,15 @@ export function SubscribeButton({ compact = false }: { compact?: boolean }) {
             <div className="flex flex-wrap gap-2">
               <Button asChild size="sm">
                 <a href={googleSubscribeUrl(feed.webcal)} target="_blank" rel="noreferrer">
+                  <CalendarPlus aria-hidden className="size-4" />
                   Add to Google Calendar
                 </a>
               </Button>
               <Button asChild size="sm" variant="outline">
-                <a href={feed.webcal}>Open in calendar app</a>
+                <a href={feed.webcal}>
+                  <CalendarDays aria-hidden className="size-4" />
+                  Open in calendar app
+                </a>
               </Button>
             </div>
           </div>

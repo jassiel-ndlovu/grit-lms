@@ -5,6 +5,7 @@
  */
 
 import Link from "next/link";
+import { LogIn } from "lucide-react";
 
 import { ErrorFrame, ErrorScreen } from "@/components/error-screen";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,10 @@ export default function Unauthorized() {
         actions={
           <>
             <Button asChild>
-              <Link href="/auth">Sign in</Link>
+              <Link href="/auth">
+                <LogIn aria-hidden className="size-4" />
+                Sign in
+              </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/">Go to the home page</Link>
