@@ -51,9 +51,17 @@ check(
   navSectionsFor({ persona: "admin", permissions: [] }).map((s) => s.label ?? ""),
   [""],
 );
-const inviter = (...permissions: Array<"learners.invite" | "members.invite">) => hrefsOf(navSectionsFor({ persona: "staff", permissions }));
-check("a tutor gets no Referrals link", inviter("learners.invite").includes("/dashboard/referrals"), false);
-check("an owner or admin does", inviter("learners.invite", "members.invite").includes("/dashboard/referrals"), true);
+const inviter = (role: "ADMIN" | "TUTOR", scope?: "WORKSPACE" | "BRANCHES" | "OWN_COURSES", mode: "organisation" | "tutor" = "organisation") =>
+  hrefsOf(
+    navSectionsFor({
+      persona: "staff", permissions: ["learners.invite", "members.invite"], mode,
+      membership: { id: "m", role, teamIds: [], leadTeamIds: [], scope },
+    }),
+  ).includes("/dashboard/referrals");
+check("a tutor gets no Referrals link", inviter("TUTOR"), false);
+check("an owner or admin does", inviter("ADMIN", "WORKSPACE"), true);
+check("a branch manager doesn't", inviter("ADMIN", "BRANCHES"), false);
+check("an owner in tutor mode doesn't", inviter("ADMIN", "WORKSPACE", "tutor"), false);
 const owner = { persona: "staff" as const, permissions: ["billing.view" as const] };
 check("billing off: no Billing link", hrefsOf(navSectionsFor(owner)).includes("/dashboard/settings/billing"), false);
 check("billing on, billing.view: Billing link", hrefsOf(navSectionsFor(owner, { billing: true })).includes("/dashboard/settings/billing"), true);
