@@ -986,6 +986,10 @@ enum AiAssistFeature {
   QUESTIONS
   OUTLINE
   TIDY
+  LESSONS
+  FEEDBACK
+  REPORT_COMMENTS
+  GAPS
 }
 
 enum AiAssistStatus {

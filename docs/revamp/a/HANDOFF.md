@@ -3,6 +3,25 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: Pro AI drafts, and B's #243, `revamp/a-pro-ai` and `revamp/a-role-scope-243`
+
+Migration `36_ai_assist_pro`: four `AiAssistFeature` enum values. Viewer contract Draft 1.23.
+
+Done:
+- **`ai-assist/pro.ts` and `model-pro.ts`** (Pro only, through the shared gate, credits and run records):
+  - lessons, tests and assignments from a document;
+  - feedback drafts (answers scrubbed);
+  - term-report comments (students sent as S1…; names filled in after);
+  - curriculum gaps (`uncoveredTopics` is pure) with restructure ideas.
+- `PRO_ONLY` and per-feature Pro caps in `limits.ts`.
+- `call()` now streams (`finalMessage()`), so long drafts don't hit the SDK's 10-minute non-streaming guard.
+- **#243 (PR #252, live):** role scope in `setCourseTeamFor`, the calendar's `visibleCourseIds` and `listPayoutRecoveries`. Pure helpers (`actorCourseWhere`, `calendarCourseWhere`, `seesAllPayoutRecoveries`) are covered in `check-roles`.
+
+Tested:
+- `check-ai-assist` (in CI).
+- One live run of each Pro feature against the Preview DB (about R3.30), with the course restored and run rows deleted.
+- All CI checks.
+
 ## 2026-11-23 #216 phase 2: AI help for tutors (Plus limited, Pro more), `revamp/a-ai-assist`
 
 Migration `35_ai_assist`: AiAssistRun (counts and cost only), plus the `ai-assist` Service row, backfilled for courses on Plus or Pro. Viewer contract Draft 1.22, services Draft 1.7.
