@@ -73,7 +73,7 @@ export default async function ReferralsPage() {
   const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
 
   return (
-    <PageFrame type="list" breadcrumb={[{ label: "Referrals" }]}>
+    <PageFrame type="list" breadcrumb={[{ label: staffWorkspace ? "Referrals" : "Refer a friend" }]}>
       <PageTitle
         icon={<Share2 />}
         title={staffWorkspace ? "Referrals" : "Refer a friend"}
