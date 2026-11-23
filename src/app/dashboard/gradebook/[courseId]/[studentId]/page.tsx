@@ -67,10 +67,9 @@ export default async function StudentGradebookPage({ params }: PageProps) {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard/grades");
 
-  const scope = await getCourseScope(session.user.id);
-
-  const owns = await canManageCourse(courseId, scope);
-  if (!owns) notFound();
+  const [viewScope, editScope] = await Promise.all([getCourseScope(session.user.id, "grades.view"), getCourseScope(session.user.id)]);
+  const [reads, edits] = await Promise.all([canManageCourse(courseId, viewScope), canManageCourse(courseId, editScope)]);
+  if (!reads) notFound();
 
   const book = await getCourseGradebook(courseId);
   if (!book) notFound();
@@ -174,7 +173,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
         ) : (
           <ul className="divide-border divide-y">
             {mark.rows.map((row) => {
-              const href = gradeHref(row.assessment.id, studentId);
+              const href = edits ? gradeHref(row.assessment.id, studentId) : null;
               const classAvg = assessmentAverage(row.assessment.id, allResults);
               return (
                 <li

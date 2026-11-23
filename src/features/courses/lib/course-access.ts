@@ -6,6 +6,11 @@
  * - A viewer whose grants are unscoped in the active workspace (OWNER or
  *   ADMIN: `needsScope(viewer, "courses.edit")` is false) also manages every
  *   course in that workspace, whoever teaches it.
+ * - A branch role (viewer.md, "Roles and branches") also manages every
+ *   course whose team is in one of its branches, and the ones it owns.
+ *
+ * Editing is the default. `courseScopeFor(viewer, "grades.view")` gives the
+ * courses whose marks someone may read, which can be wider (an executive).
  *
  * Pure: no database or session, so scripts/check-course-access.ts can run
  * it. The server half (`getCourseScope`, `canManageCourse`) is in
@@ -17,7 +22,7 @@
  */
 
 import type { Prisma } from "@/generated/prisma";
-import { can, needsScope, type Viewer } from "@/lib/viewer-core";
+import { can, courseScopeOf, needsScope, scopedCourseWhere, type Permission, type Viewer } from "@/lib/viewer-core";
 
 import { taughtByUser, teachesAsOwner, type TeachingMembership } from "./tenancy-where";
 
@@ -26,20 +31,26 @@ export interface CourseScope {
   userId: string;
   /** Set when every course in this workspace is in scope (owners and admins); null for tutors. */
   workspaceId: string | null;
+  /** Set for a branch role: courses in these branches, or owned by the membership, in this workspace. */
+  branches?: { workspaceId: string; membershipId: string; branchIds: string[] };
 }
 
 /** True when the viewer manages every course in their active workspace. */
-export function managesWholeWorkspace(viewer: Viewer): boolean {
+export function managesWholeWorkspace(viewer: Viewer, permission: Permission = "courses.edit"): boolean {
   if (viewer.persona !== "staff" || !viewer.workspace) return false;
   // Tutor mode (#192) makes needsScope true, so this is false there.
-  return can(viewer, "courses.edit") && !needsScope(viewer, "courses.edit");
+  return can(viewer, permission) && !needsScope(viewer, permission);
 }
 
-export function courseScopeFor(viewer: Viewer): CourseScope {
-  return {
+export function courseScopeFor(viewer: Viewer, permission: Permission = "courses.edit"): CourseScope {
+  const scope: CourseScope = {
     userId: viewer.user.id,
-    workspaceId: managesWholeWorkspace(viewer) ? viewer.workspace!.id : null,
+    workspaceId: managesWholeWorkspace(viewer, permission) ? viewer.workspace!.id : null,
   };
+  if (scope.workspaceId || viewer.persona !== "staff" || !viewer.workspace || !can(viewer, permission)) return scope;
+  const own = courseScopeOf(viewer, permission);
+  if (own?.branchIds.length) scope.branches = { workspaceId: viewer.workspace.id, ...own };
+  return scope;
 }
 
 /** A tutor-only scope, for callers with a user id and no viewer. */
@@ -49,20 +60,29 @@ export function tutorScope(userId: string): CourseScope {
 
 /** Prisma filter for the courses in scope. Replaces `taughtByUser(userId)` on B's teaching pages. */
 export function manageableBy(scope: CourseScope): Prisma.CourseWhereInput {
+  if (scope.branches) {
+    const { workspaceId, ...own } = scope.branches;
+    return { OR: [{ workspaceId, ...scopedCourseWhere(own) }, taughtByUser(scope.userId)] };
+  }
   if (!scope.workspaceId) return taughtByUser(scope.userId);
   return { OR: [{ workspaceId: scope.workspaceId }, taughtByUser(scope.userId)] };
 }
 
 /**
  * The same check on a course row already loaded with
- * `{ workspaceId, staff: staffFor(email) }`: the signed-in user's own staff
- * row, or the workspace they manage.
+ * `courseAccessSelect(email)`: the signed-in user's own staff row, or the
+ * workspace or branch they manage.
  */
 export function managesCourse(
   scope: CourseScope,
-  course: { workspaceId: string | null; staff: readonly unknown[] },
+  course: { workspaceId: string | null; ownerMembershipId: string | null; team: { branchId: string | null } | null; staff: readonly unknown[] },
 ): boolean {
   if (course.staff.length > 0) return true;
+  const b = scope.branches;
+  if (b && course.workspaceId === b.workspaceId) {
+    const branchId = course.team?.branchId;
+    if (course.ownerMembershipId === b.membershipId || (branchId != null && b.branchIds.includes(branchId))) return true;
+  }
   return scope.workspaceId != null && course.workspaceId === scope.workspaceId;
 }
 

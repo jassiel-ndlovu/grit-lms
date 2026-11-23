@@ -23,7 +23,7 @@ import { revalidatePath } from "next/cache";
 
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
-import { staffFor } from "@/features/courses/lib/tenancy-where";
+import { courseAccessSelect } from "@/features/courses/lib/tenancy-where";
 import { richColumnsFromInput } from "@/lib/content/columns";
 import { deleteBlob } from "@/lib/blob/server";
 import {
@@ -120,7 +120,7 @@ export const createLesson = tutorActionClient
     // Ownership check — the tutor must own the course this lesson is for.
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) },
+      select: { id: true, ...courseAccessSelect(ctx.session.user.email) },
     });
     if (!course) {
       throw new Error("Course not found");
@@ -205,7 +205,7 @@ export const updateLesson = tutorActionClient
       where: { id: parsedInput.id },
       include: {
         attachmentUrls: { select: { url: true } },
-        course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+        course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } },
       },
     });
 
@@ -312,7 +312,7 @@ export const deleteLesson = tutorActionClient
       where: { id: parsedInput.id },
       include: {
         attachmentUrls: { select: { url: true } },
-        course: { select: { id: true, workspaceId: true, staff: staffFor(ctx.session.user.email) } },
+        course: { select: { id: true, ...courseAccessSelect(ctx.session.user.email) } },
       },
     });
 
@@ -375,7 +375,7 @@ export const reorderLessons = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { workspaceId: true, staff: staffFor(ctx.session.user.email), lessons: { select: { id: true } } },
+      select: { ...courseAccessSelect(ctx.session.user.email), lessons: { select: { id: true } } },
     });
     if (!course) throw new Error("Course not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
@@ -418,7 +418,7 @@ export const updateLessonLabelScheme = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await prisma.course.findUnique({
       where: { id: parsedInput.courseId },
-      select: { workspaceId: true, staff: staffFor(ctx.session.user.email) },
+      select: { ...courseAccessSelect(ctx.session.user.email) },
     });
     if (!course) throw new Error("Course not found");
     if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {

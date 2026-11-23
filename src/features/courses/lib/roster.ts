@@ -3,13 +3,14 @@ import "server-only";
 /**
  * The workspace's students, for the Students pages (#174; a/ux/01,
  * sections 6 and 7). Owners and admins see every learner in the
- * workspace; a tutor sees the learners on courses they teach. A's actions
- * (account-actions.ts) check permissions again for every change.
+ * workspace; a tutor sees the learners on courses they teach, a branch role
+ * also those on its branches' courses. A's actions (account-actions.ts) check permissions again for every change.
  */
 
 import { DELETION_GRACE_DAYS } from "@/features/users/deletion";
 import { prisma } from "@/lib/db";
-import { can, needsScope, type Viewer } from "@/lib/viewer-core";
+import { effectiveRole, type RoleScope } from "@/lib/roles";
+import { can, courseScopeOf, needsScope, scopedCourseWhere, type Viewer } from "@/lib/viewer-core";
 
 export interface RosterCourse {
   id: string;
@@ -36,12 +37,12 @@ export interface RosterStudent {
 /** Courses the viewer may add students to: all in the workspace, or the ones they teach. */
 export async function coursesForAdding(viewer: Viewer): Promise<RosterCourse[]> {
   if (!viewer.workspace || !can(viewer, "learners.invite")) return [];
-  const scoped = needsScope(viewer, "learners.invite");
-  if (scoped && !viewer.membership) return [];
+  const scope = courseScopeOf(viewer, "learners.invite");
+  if (!scope && needsScope(viewer, "learners.invite")) return [];
   return prisma.course.findMany({
     where: {
       workspaceId: viewer.workspace.id,
-      ...(scoped ? { staff: { some: { membershipId: viewer.membership!.id } } } : {}),
+      ...(scope ? scopedCourseWhere(scope) : {}),
     },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
@@ -125,19 +126,40 @@ export interface MemberRow {
   membershipId: string;
   name: string;
   email: string;
-  role: string;
+  isSelf: boolean;
+  /** The effective role (viewer.md, "Roles and branches"). */
+  roleKey: string;
+  roleName: string;
+  scope: RoleScope;
+  permissions: string[];
+  /** For a branch role: where it applies. */
+  branches: Array<{ id: string; name: string }>;
 }
 
-/** Active staff in the viewer's workspace, owners first. Read-only; for the Members page. */
+/** Active staff in the viewer's workspace, owners then admins first. For the Members page. */
 export async function listMembers(viewer: Viewer): Promise<MemberRow[]> {
-  if (!viewer.workspace || !can(viewer, "members.invite")) return [];
-  const rows = await prisma.membership.findMany({
-    where: { workspaceId: viewer.workspace.id, status: "ACTIVE" },
-    select: { id: true, role: true, user: { select: { name: true, email: true } } },
-    take: 500,
-  });
-  const order: Record<string, number> = { OWNER: 0, ADMIN: 1, TUTOR: 2 };
+  if (!viewer.workspace || !(can(viewer, "members.invite") || can(viewer, "members.role"))) return [];
+  const [rows, branches] = await Promise.all([
+    prisma.membership.findMany({
+      where: { workspaceId: viewer.workspace.id, status: "ACTIVE" },
+      select: {
+        id: true, role: true, presetRole: true, branchIds: true,
+        customRole: { select: { id: true, name: true, permissions: true, scope: true } },
+        user: { select: { id: true, name: true, email: true } },
+      },
+      take: 500,
+    }),
+    prisma.branch.findMany({ where: { workspaceId: viewer.workspace.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
+  const order: Record<string, number> = { OWNER: 0, ADMIN: 1 };
   return rows
-    .map((m) => ({ membershipId: m.id, name: m.user.name, email: m.user.email, role: m.role }))
-    .sort((a, b) => (order[a.role] ?? 9) - (order[b.role] ?? 9) || a.name.localeCompare(b.name));
+    .map((m) => {
+      const r = effectiveRole(m);
+      return {
+        membershipId: m.id, name: m.user.name, email: m.user.email, isSelf: m.user.id === viewer.user.id,
+        roleKey: r.key, roleName: r.name, scope: r.scope, permissions: r.permissions,
+        branches: r.scope === "BRANCHES" ? branches.filter((b) => m.branchIds.includes(b.id)) : [],
+      };
+    })
+    .sort((a, b) => (order[a.roleKey] ?? 9) - (order[b.roleKey] ?? 9) || a.name.localeCompare(b.name));
 }

@@ -16,7 +16,7 @@ import { auth } from "@/lib/auth";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { listWorkspaceStudents } from "@/features/students/queries";
 import { workspaceIdFor } from "@/features/workspaces/tenancy";
-import { getViewer } from "@/lib/viewer";
+import { can, getViewer } from "@/lib/viewer";
 import { CourseCard } from "@/features/courses/components/course-card";
 import { CourseGrid } from "@/features/courses/components/course-grid";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
@@ -35,18 +35,18 @@ export default async function ManageCoursesPage() {
   // Courses this user teaches; owners and admins see the whole workspace (#192).
   const scope = await getCourseScope(session.user.id);
 
-  const [courses, students] = await Promise.all([
-    listCoursesByTutorId(scope),
-    getViewer().then((v) => listWorkspaceStudents(v ? workspaceIdFor(v) : null)),
-  ]);
+  const viewer = await getViewer();
+  // An assistant tutor edits courses but doesn't create or delete them.
+  const creates = viewer != null && can(viewer, "courses.create");
+  const [courses, students] = await Promise.all([listCoursesByTutorId(scope), listWorkspaceStudents(viewer ? workspaceIdFor(viewer) : null)]);
 
   return (
     <PageFrame
       type="list"
       breadcrumb={[{ label: "Courses" }]}
-      actions={<CreateCourseButton students={students} />}
+      actions={creates ? <CreateCourseButton students={students} /> : null}
     >
-      <PageTitle title="Manage courses" description="Create courses, manage enrolment, and edit content." />
+      <PageTitle title="Manage courses" description={creates ? "Create courses, manage enrolment, and edit content." : "Edit the content of your courses."} />
 
       <CourseGrid
         view={(await getUserPreferences(session.user.id)).preferredView}
@@ -56,7 +56,11 @@ export default async function ManageCoursesPage() {
             className="border-input rounded-lg border border-dashed"
             illustration={<Scene name="empty-courses" />}
             title="No courses yet"
-            description="Create your first course to start adding lessons and assessments, and enrolling students."
+            description={
+              creates
+                ? "Create your first course to start adding lessons and assessments, and enrolling students."
+                : "Courses you're added to appear here."
+            }
           />
         }
       >
@@ -66,7 +70,7 @@ export default async function ManageCoursesPage() {
             course={course}
             href={`/dashboard/manage-courses/${course.id}`}
             actions={
-              <CourseActions courseId={course.id} courseName={course.name} />
+              <CourseActions courseId={course.id} courseName={course.name} canDelete={creates} />
             }
           />
         ))}

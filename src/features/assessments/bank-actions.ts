@@ -11,7 +11,7 @@ import { z } from "zod";
 import { hasService } from "@/features/billing/services";
 import { getCourseScope } from "@/features/courses/course-access";
 import { managesCourse } from "@/features/courses/lib/course-access";
-import { staffFor } from "@/features/courses/lib/tenancy-where";
+import { courseAccessSelect } from "@/features/courses/lib/tenancy-where";
 import { topicsToStore } from "@/features/courses/lib/curriculum";
 import { prisma } from "@/lib/db";
 import { tutorActionClient } from "@/lib/safe-action";
@@ -30,7 +30,7 @@ const NOT_ON_PLAN = "The question bank is part of the Plus plan for this course"
 async function bankCourse(courseId: string, userId: string, email: string) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    select: { id: true, workspaceId: true, subject: true, gradeLevel: true, staff: staffFor(email) },
+    select: { id: true, subject: true, gradeLevel: true, ...courseAccessSelect(email) },
   });
   if (!course || !course.workspaceId || !managesCourse(await getCourseScope(userId), course)) {
     throw new UserError("Course not found");

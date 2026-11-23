@@ -45,7 +45,11 @@ export default async function SettingsPage() {
   // Billing (BILLING=1) is for people with billing.view in the active workspace.
   const showBilling = isBillingEnabled() && viewer?.workspace != null && can(viewer, "billing.view");
   // Payouts: whoever connects the account, or manages fees (tutors in per-tutor mode).
-  const showMembers = viewer?.workspace != null && can(viewer, "members.invite");
+  const showMembers = viewer?.workspace != null && (can(viewer, "members.invite") || can(viewer, "members.role"));
+  // Roles, branches and teams (viewer.md, "Roles and branches"): an organisation's staff.
+  const inOrganisation = viewer?.persona === "staff" && viewer.workspace?.kind === "ORGANISATION";
+  const showRoles = inOrganisation && can(viewer, "members.role");
+  const showBranches = inOrganisation && (can(viewer, "teams.manage") || can(viewer, "members.role"));
   // The teaching switch (#206): organisations, for owners and admins.
   const showOrganisation = viewer?.workspace?.kind === "ORGANISATION" && can(viewer, "workspace.settings");
   // The meeting app (#211): any workspace, for owners and admins.
@@ -125,7 +129,33 @@ export default async function SettingsPage() {
         >
           <span>
             <span className="text-foreground block font-semibold">Members</span>
-            <span className="text-muted-foreground">Invite tutors and admins, and see who&apos;s joined.</span>
+            <span className="text-muted-foreground">Invite people, change their roles, and see who&apos;s joined.</span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
+
+      {showRoles ? (
+        <Link
+          href="/dashboard/settings/roles"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">Roles</span>
+            <span className="text-muted-foreground">What each role can do, and roles of your own.</span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
+
+      {showBranches ? (
+        <Link
+          href="/dashboard/settings/branches"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">Branches and teams</span>
+            <span className="text-muted-foreground">The parts of your organisation, and who and what is in them.</span>
           </span>
           <span aria-hidden className="text-muted-foreground">→</span>
         </Link>

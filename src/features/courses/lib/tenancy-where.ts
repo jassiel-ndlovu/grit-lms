@@ -13,10 +13,27 @@
  */
 
 import type { Prisma } from "@/generated/prisma";
+import { ROLE_PRESETS, type PresetKey } from "@/lib/roles";
 
 const activeStaff = (user: Prisma.UserWhereInput): Prisma.CourseWhereInput => ({
   staff: { some: { membership: { status: "ACTIVE", user } } },
 });
+
+/** Presets holding courses.edit. The base roles all do, so a null presetRole counts. */
+const EDITING_PRESETS = (Object.keys(ROLE_PRESETS) as PresetKey[]).filter((k) => ROLE_PRESETS[k].permissions.includes("courses.edit"));
+
+/**
+ * Memberships whose effective role (viewer.md, "Roles and branches") holds
+ * courses.edit: being on a course's staff is only teaching it with that.
+ * Without it, a tutor moved to Finance or Support would keep marking.
+ * Mirrors effectiveRole in @/lib/roles.
+ */
+export const editingMembership: Prisma.MembershipWhereInput = {
+  OR: [
+    { customRole: { is: { permissions: { has: "courses.edit" } } } },
+    { customRoleId: null, OR: [{ presetRole: null }, { presetRole: { in: EDITING_PRESETS } }] },
+  ],
+};
 
 /** Courses the tutor (Tutor profile id) teaches. Replaces `{ tutorId }`. */
 export function taughtBy(tutorId: string): Prisma.CourseWhereInput {
@@ -30,7 +47,7 @@ export function taughtBy(tutorId: string): Prisma.CourseWhereInput {
  * courses. `taughtBy` stays for callers that still hold a Tutor profile id.
  */
 export function taughtByUser(userId: string): Prisma.CourseWhereInput {
-  return activeStaff({ id: userId });
+  return { staff: { some: { membership: { status: "ACTIVE", user: { id: userId }, ...editingMembership } } } };
 }
 
 /** Courses the signed-in user (by email) teaches. Replaces `tutor.email === email`. */
@@ -53,7 +70,8 @@ export const openEnrollmentCount = { enrollments: { where: { endedAt: null } } }
 
 /**
  * Nested `staff` select that returns the signed-in user's own active staff
- * row on the course: empty means they don't teach it. Replaces selecting
+ * row on the course (with a role that edits courses): empty means they
+ * don't teach it. Replaces selecting
  * `tutor: { select: { email: true } }` and comparing the email.
  */
 export function staffFor(email: string): {
@@ -61,9 +79,14 @@ export function staffFor(email: string): {
   select: { membershipId: true };
 } {
   return {
-    where: { membership: { status: "ACTIVE", user: { email: { equals: email, mode: "insensitive" } } } },
+    where: { membership: { status: "ACTIVE", user: { email: { equals: email, mode: "insensitive" } }, ...editingMembership } },
     select: { membershipId: true },
   };
+}
+
+/** What `managesCourse` needs of a course row, for the signed-in user (by email). */
+export function courseAccessSelect(email: string) {
+  return { workspaceId: true, ownerMembershipId: true, team: { select: { branchId: true } }, staff: staffFor(email) } as const;
 }
 
 /**

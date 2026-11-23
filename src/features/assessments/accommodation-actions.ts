@@ -11,7 +11,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { courseRoutes } from "@/features/courses/components/course-frame";
-import { enrollmentFor, staffFor } from "@/features/courses/lib/tenancy-where";
+import { enrollmentFor, courseAccessSelect } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { tutorActionClient } from "@/lib/safe-action";
 
@@ -34,8 +34,7 @@ export const setExtraTime = tutorActionClient
       where: { id: courseId },
       select: {
         id: true,
-        workspaceId: true,
-        staff: staffFor(ctx.session.user.email),
+        ...courseAccessSelect(ctx.session.user.email),
         enrollments: enrollmentFor(studentId),
       },
     });

@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { getCourseScope } from "@/features/courses/course-access";
 import { managesCourse } from "@/features/courses/lib/course-access";
-import { enrolledStudent, staffFor } from "@/features/courses/lib/tenancy-where";
+import { enrolledStudent, courseAccessSelect } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { studentActionClient, tutorActionClient } from "@/lib/safe-action";
 import { UserError } from "@/lib/user-error";
@@ -43,7 +43,7 @@ type User = { id: string; email: string };
 async function practiceCourse(courseId: string, user: User) {
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    select: { id: true, workspaceId: true, staff: staffFor(user.email) },
+    select: { id: true, ...courseAccessSelect(user.email) },
   });
   if (!course || !course.workspaceId || !managesCourse(await getCourseScope(user.id), course)) {
     throw new UserError("Course not found");

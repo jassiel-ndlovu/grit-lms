@@ -89,12 +89,46 @@ check("owner filter: workspace or teaches", manageableBy({ userId: "o", workspac
 });
 
 // The row check the server actions use.
+const row = (workspaceId: string | null, staff: unknown[], over: { ownerMembershipId?: string; branchId?: string | null } = {}) => ({
+  workspaceId, staff, ownerMembershipId: over.ownerMembershipId ?? null, team: over.branchId === undefined ? null : { branchId: over.branchId },
+});
 const ownerScope = { userId: "o", workspaceId: "w1" };
-check("teaches it", managesCourse(tutorScope("t"), { workspaceId: "w1", staff: [{ membershipId: "m" }] }), true);
-check("tutor, someone else's course: no (the 404)", managesCourse(tutorScope("t"), { workspaceId: "w1", staff: [] }), false);
-check("owner, a tutor's course in their workspace", managesCourse(ownerScope, { workspaceId: "w1", staff: [] }), true);
-check("owner, a course in another workspace", managesCourse(ownerScope, { workspaceId: "w2", staff: [] }), false);
-check("owner, a course with no workspace", managesCourse(ownerScope, { workspaceId: null, staff: [] }), false);
+check("teaches it", managesCourse(tutorScope("t"), row("w1", [{ membershipId: "m" }])), true);
+check("tutor, someone else's course: no (the 404)", managesCourse(tutorScope("t"), row("w1", [])), false);
+check("owner, a tutor's course in their workspace", managesCourse(ownerScope, row("w1", [])), true);
+check("owner, a course in another workspace", managesCourse(ownerScope, row("w2", [])), false);
+check("owner, a course with no workspace", managesCourse(ownerScope, row(null, [])), false);
+
+// Branch roles (viewer.md, "Roles and branches").
+const withRole = (presetRole: string, branchIds: string[] = [], role: MembershipRole = "ADMIN", mode?: "tutor") =>
+  buildTenancyViewer({
+    user: user("p"),
+    memberships: [{ id: "m_p", role, presetRole, branchIds, branchTeamIds: [], workspace: ws("w1"), teams: [], teaches: true }],
+    learners: [], children: [], hasActiveGuardian: false, activeWorkspaceId: null, mode,
+  });
+const branchScope = courseScopeFor(withRole("BRANCH_MANAGER", ["b1"]));
+check("branch manager: not the whole workspace", branchScope.workspaceId, null);
+check("branch manager: their branches", branchScope.branches, { workspaceId: "w1", membershipId: "m_p", branchIds: ["b1"] });
+check("branch manager with no branches: what they teach", courseScopeFor(withRole("BRANCH_MANAGER")).branches, undefined);
+check("branch manager in Tutor mode: what they teach", courseScopeFor(withRole("BRANCH_MANAGER", ["b1"], "ADMIN", "tutor")).branches, undefined);
+check("support staff edit no courses", courseScopeFor(withRole("SUPPORT", ["b1"])), { userId: "p", workspaceId: null });
+check("executive edits no courses", courseScopeFor(withRole("EXECUTIVE")).workspaceId, null);
+check("executive reads every course's marks", courseScopeFor(withRole("EXECUTIVE"), "grades.view").workspaceId, "w1");
+check("finance reads no marks", courseScopeFor(withRole("FINANCE"), "grades.view"), { userId: "p", workspaceId: null });
+check("branch manager reads their branches' marks", courseScopeFor(withRole("BRANCH_MANAGER", ["b1"]), "grades.view").branches?.branchIds, ["b1"]);
+check("branch filter: in this workspace, owned, taught or in the branch; or taught anywhere", manageableBy(branchScope), {
+  OR: [
+    { workspaceId: "w1", OR: [{ ownerMembershipId: "m_p" }, { staff: { some: { membershipId: "m_p" } } }, { team: { branchId: { in: ["b1"] } } }] },
+    taughtByUser("p"),
+  ],
+});
+check("branch course", managesCourse(branchScope, row("w1", [], { branchId: "b1" })), true);
+check("another branch's course", managesCourse(branchScope, row("w1", [], { branchId: "b2" })), false);
+check("a course in a team without a branch", managesCourse(branchScope, row("w1", [], { branchId: null })), false);
+check("a course in no team", managesCourse(branchScope, row("w1", [])), false);
+check("a course they own in no team", managesCourse(branchScope, row("w1", [], { ownerMembershipId: "m_p" })), true);
+check("the same branch id in another workspace", managesCourse(branchScope, row("w2", [], { branchId: "b1" })), false);
+check("teaches a course elsewhere", managesCourse(branchScope, row("w2", [{ membershipId: "x" }])), true);
 
 // "Taught by" on courses the viewer doesn't teach.
 const course = (id: string, name: string, fullName: string | null) => ({

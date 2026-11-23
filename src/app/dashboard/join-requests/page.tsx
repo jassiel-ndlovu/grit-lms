@@ -20,7 +20,7 @@ import { getUserPreferences } from "@/features/users/preferences";
 import { listJoinRequestsForStaff } from "@/features/workspaces/join-requests";
 import { DEFAULT_TIME_ZONE, resolveLocale } from "@/lib/datetime";
 import { can, getViewer } from "@/lib/viewer";
-import { needsScope } from "@/lib/viewer-core";
+import { courseScopeOf } from "@/lib/viewer-core";
 
 export const metadata = { title: "Join requests" };
 
@@ -34,9 +34,9 @@ export default async function JoinRequestsPage({ searchParams }: PageProps) {
   if (!viewer.workspace || viewer.persona !== "staff" || !can(viewer, "learners.invite")) notFound();
 
   const status = parseJoinStatus((await searchParams).status);
-  const scoped = needsScope(viewer, "learners.invite");
+  const scope = courseScopeOf(viewer, "learners.invite");
   const [rows, prefs] = await Promise.all([
-    listJoinRequestsForStaff(viewer.workspace.id, scoped ? (viewer.membership?.id ?? "none") : null, status),
+    listJoinRequestsForStaff(viewer.workspace.id, scope?.membershipId ?? null, status, scope?.branchIds),
     getUserPreferences(viewer.user.id),
   ]);
   const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
@@ -52,8 +52,8 @@ export default async function JoinRequestsPage({ searchParams }: PageProps) {
         icon={<Inbox />}
         title="Join requests"
         description={
-          scoped
-            ? "Students and parents asking to join the courses you teach."
+          scope
+            ? `Students and parents asking to join ${scope.branchIds.length ? "your branches' courses" : "the courses you teach"}.`
             : `Students and parents asking to join ${viewer.workspace.name}'s listed courses.`
         }
       />

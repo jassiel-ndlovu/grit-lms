@@ -28,7 +28,8 @@ export default async function GradebookIndexPage() {
   if (!session?.user) redirect("/");
   if (session.user.role !== "TUTOR") redirect("/dashboard/grades");
 
-  const scope = await getCourseScope(session.user.id);
+  // Reading marks: wider than editing for an executive (viewer.md, "Roles and branches").
+  const scope = await getCourseScope(session.user.id, "grades.view");
 
   const courses = await listGradebookCoursesForTutor(scope);
 
