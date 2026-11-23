@@ -91,17 +91,25 @@ async function recheck(ctx: ImportContext, kind: string, rows: ImportRow[]): Pro
 }
 
 /** 1. Reads the file and saves a job in PREVIEW. */
-export async function createImportFor(ctx: ImportContext, input: { kind: string; fileName: string; text: string }): Promise<ImportView> {
+export async function createImportFor(ctx: ImportContext, input: { kind: string; fileName: string; text: string; defaults?: Record<string, string> }): Promise<ImportView> {
   const importer = importerFor(input.kind);
   if (!importer) throw new ImportError("Unknown import type");
   if (input.text.length > CSV_LIMITS.maxBytes) throw new ImportError("That file is too big. Split it into files of up to 1 MB.");
-  const table = parseCsv(input.text);
-  if (!table.headers.length) throw new ImportError("That file is empty.");
-  if (table.rows.length > CSV_LIMITS.maxRows) throw new ImportError(`That file has ${table.rows.length} rows. Split it into files of up to ${CSV_LIMITS.maxRows}.`);
-  if (!table.rows.length) throw new ImportError("That file has a header row but no rows under it.");
-  const read = importer.read(table);
+  const ws = await prisma.workspace.findUniqueOrThrow({ where: { id: ctx.workspaceId }, select: { timezone: true } });
+  const extra = { timeZone: ws.timezone, defaults: input.defaults ?? {} };
+  let read: { rows: Record<string, string>[]; fileIssues: Issue[] };
+  if (importer.readText) {
+    read = importer.readText(input.text, extra);
+  } else {
+    const table = parseCsv(input.text);
+    if (!table.headers.length) throw new ImportError("That file is empty.");
+    if (!table.rows.length) throw new ImportError("That file has a header row but no rows under it.");
+    read = importer.read(table, extra);
+  }
+  if (read.rows.length > CSV_LIMITS.maxRows) throw new ImportError(`That file has ${read.rows.length} rows. Split it into files of up to ${CSV_LIMITS.maxRows}.`);
   const fatal = read.fileIssues.filter((i) => i.level === "error");
   if (fatal.length) throw new ImportError(fatal.map((i) => i.message).join(" "));
+  if (!read.rows.length) throw new ImportError("There's nothing to import in that file.");
   let rows: ImportRow[] = read.rows.map((data, i) => ({ n: i + 2, data, action: "create", issues: [] }));
   rows = await recheck(ctx, importer.kind, rows);
   const job = await prisma.importJob.create({

@@ -1,6 +1,6 @@
 # Contract: imports and exports
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1, 2026-11-22** (#216, phase 1). B asks for changes in an issue labelled `needs-a`.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.1, 2026-11-23** (#216, phase 1). B asks for changes in an issue labelled `needs-a`.
 
 **Answer first.** One engine runs every import:
 1. upload a CSV;
@@ -10,7 +10,7 @@ Owner: Agent A. Reader: Agent B. Status: **Draft 1, 2026-11-22** (#216, phase 1)
 5. watch progress;
 6. undo within 24 hours.
 
-Two importers exist: **students** (with parents) and **staff** (invitations). B's screens are the same for every import type. B adds QTI and Common Cartridge by writing an `Importer` (see the last section). Exports use the import template's columns, so a file can go out and come back.
+Three importers exist: **students** (with parents), **staff** (invitations) and **calendar** (an .ics file). B's screens are the same for every import type. B adds QTI and Common Cartridge by writing an `Importer` (see the last section). Exports use the import template's columns, so a file can go out and come back.
 
 ## Server code
 
@@ -29,8 +29,8 @@ All take and return plain objects through next-safe-action. Errors arrive in `se
 | Action | Who | Input | Returns |
 | --- | --- | --- | --- |
 | `listImportTypes` | signed in | `{}` | `[{ kind, title, headers }]`: only the types the viewer may run |
-| `getImportTemplate` | per type | `{ kind }` | `{ fileName, csv }`: a header row and two example rows; offer it as a download |
-| `startImport` | per type; not read-only | `{ kind, fileName, text }` (the file's text, up to 1 MB and 2,000 rows) | `ImportView` in PREVIEW |
+| `getImportTemplate` | per type | `{ kind }` | `{ fileName, csv }`: a header row and two example rows; offer it as a download. `null` for calendar (any .ics export works) |
+| `startImport` | per type; not read-only | `{ kind, fileName, text, defaults? }` (the file's text, up to 1 MB and 2,000 rows; `defaults` for calendar: `{ course: "<course name>", type? }`) | `ImportView` in PREVIEW |
 | `editImportRows` | per type | `{ jobId, edits?: [{ n, data: { field: value } }], remove?: [n] }` | `ImportView`; every row is checked again |
 | `confirmImport` | per type | `{ jobId, options?: { consentAttested? }, skipErrors? }` | `ImportView` in APPLYING; applying continues in the background |
 | `getImport` | per type | `{ jobId }` | `ImportView`. Poll every 2 seconds while APPLYING or UNDOING; polling also keeps a stalled job moving |
@@ -42,6 +42,7 @@ All take and return plain objects through next-safe-action. Errors arrive in `se
 **Who, per type:**
 - **students:** `learners.invite`. A tutor (or an owner in tutor mode) imports only into courses they teach or own, and each row must name at least one.
 - **staff:** `members.invite` for the whole workspace. Only owners invite admins.
+- **calendar:** `courses.edit`; a tutor only into courses they teach or own.
 - **A tutor** sees and acts on only the imports they started.
 
 ## `ImportView`
@@ -88,6 +89,24 @@ All take and return plain objects through next-safe-action. Errors arrive in `se
 - **Each row** sends the usual 7-day invitation. Current members are skipped.
 - **Undo** revokes invitations not yet accepted.
 
+## Calendar import
+
+- **The file:** an `.ics` export from Google Calendar, Outlook or Apple Calendar, or a school's term calendar. Read it as text in the browser and send it with `defaults: { course: "<name>" }`. The person picks the course before uploading, and can change it per row in the preview.
+- **What's read:**
+  - title, description, location and link;
+  - the start, in the event's own time zone (stored as UTC in `data.start`, with `data.time_zone`);
+  - the length, from DTEND or DURATION;
+  - all-day events, which come in as `HOLIDAY`;
+  - a repeat rule (daily, weekly on chosen days, monthly or yearly, with an end date or a count);
+  - skipped dates, which come in as cancelled occurrences.
+- **Warnings and skips:**
+  - Repeat details that can't be kept (for example "the 3rd of each month") give a warning.
+  - Changed single occurrences give a file warning.
+  - An event already on that course (same title and start) is skipped, so importing the same file twice adds nothing.
+- **Row fields you can edit:** `course`, `title`, `type` (lecture, test, reminder, submission, live, exam, meeting, holiday), `start`, `duration_minutes`, `repeat`, `location`, `link` and `description`. Show `start` in the workspace's time zone.
+- **Undo** deletes the events unless attendance was taken.
+- **Calendar links** (subscribing to a live URL) come later.
+
 ## Exports
 
 - **`GET /api/exports/students`** downloads a CSV in the students template's columns:
@@ -101,7 +120,7 @@ All take and return plain objects through next-safe-action. Errors arrive in `se
 1. Implement `Importer<D>` from `@/features/imports/types`:
    - `kind` and `title`;
    - `template`;
-   - `read(table)` turns a parsed file into rows of string fields;
+   - `read(table, extra)` turns a parsed CSV into rows of string fields (`extra` has the workspace's `timeZone` and the screen's `defaults`); a non-CSV importer implements `readText(text, extra)` instead, like the calendar one;
    - `check(ctx, rows)` returns `{ action, issues }` per row;
    - `needs?`;
    - `apply(ctx, row, options)` commits one row, returning `{ outcome, result, undo? }`;
@@ -124,4 +143,5 @@ Rules for importers:
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.1: calendar importer (.ics); `startImport` takes `defaults`; `readText` for non-CSV importers |
 | 2026-11-22 | Draft 1: engine, students and staff importers, sign-in cards, students export |

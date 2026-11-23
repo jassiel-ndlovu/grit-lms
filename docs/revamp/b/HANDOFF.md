@@ -33,7 +33,9 @@ Done:
 For A: account deletion and POPIA export of `PracticeReview`, and blob
 cleanup (contract, "Asks for A").
 
-Production needs `migrate deploy` for migration 29 (owner's OK first).
+Production needs `migrate deploy` for `29_practice_sets` (owner's OK first).
+It shares its number with A's `29_referrals`. The two don't touch each other,
+and Preview already has both names, so it keeps its own.
 
 Next (B-only): past-paper exam mode (check the papers' licence first), QTI
 import and export. Term reports wait on A's PDF helper.

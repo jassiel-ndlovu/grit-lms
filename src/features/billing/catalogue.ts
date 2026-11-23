@@ -13,7 +13,7 @@ export const TIER_KEYS: readonly TierKey[] = ["CORE", "PLUS", "PRO"];
 export type ServiceKey =
   | "courses-lessons" | "templates" | "tests" | "assignments" | "gradebook"
   | "calendar" | "messages" | "notifications" | "portals" | "fee-collection"
-  | "storage-allowance" | "bulk-import"
+  | "storage-allowance" | "bulk-import" | "attendance"
   | "math-input" | "graphing" | "question-bank" | "live-sessions"
   | "advanced-analytics" | "custom-branding" | "calendar-sync"
   | "secure-tests" | "ai-marking" | "leaderboards" | "api-access"
@@ -64,11 +64,13 @@ export const SERVICES: Record<ServiceKey, ServiceInfo> = {
   "fee-collection": basic("fee-collection", "Invoicing parents and collecting fees"),
   "storage-allowance": basic("storage-allowance", "Storage allowance"),
   "bulk-import": basic("bulk-import", "Bulk import"),
+  // The register itself is Core (owner, 22 Nov); check-in codes and absence emails stay Plus (live-sessions).
+  attendance: basic("attendance", "Attendance register"),
 
   "math-input": premium("math-input", "Visual maths input", "PLUS", "v1"),
   graphing: premium("graphing", "Graphs in lessons and graph answers", "PLUS", "v1"),
   "question-bank": premium("question-bank", "Question bank and randomised tests", "PLUS", "v1"),
-  "live-sessions": premium("live-sessions", "Live-session scheduling and attendance", "PLUS", "v1"),
+  "live-sessions": premium("live-sessions", "Live-session check-in codes and absence emails", "PLUS", "v1"),
   "advanced-analytics": premium("advanced-analytics", "Item analysis and question difficulty", "PLUS", "v1"),
   "custom-branding": premium("custom-branding", "Workspace logo, accent colour and sender name", "PLUS", "v1"),
   "calendar-sync": premium("calendar-sync", "Calendar feed", "PLUS", "v1"),

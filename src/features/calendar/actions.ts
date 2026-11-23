@@ -11,8 +11,9 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 
+import { hasService } from "@/features/billing/services";
 import { prisma } from "@/lib/db";
-import { viewerActionClient } from "@/lib/safe-action";
+import { viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
 import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 
 import {
@@ -37,9 +38,10 @@ async function visibleCourseIds(viewer: Viewer): Promise<string[]> {
   return [...ids];
 }
 
-async function staffOfEvent(viewer: Viewer, eventId: string) {
+async function staffOfEvent(viewer: Viewer, eventId: string): Promise<string> {
   const e = await prisma.courseEvent.findUnique({ where: { id: eventId }, select: { courseId: true } });
   if (!e || !(await canIn(viewer, "courses.edit", { courseId: e.courseId }))) throw new ViewerError("FORBIDDEN");
+  return e.courseId;
 }
 
 /** Occurrences between two dates (at most 120 days), with "this one only" changes and cancellations applied. */
@@ -66,7 +68,7 @@ const changes = z.object({
 });
 
 /** Edit at one occurrence: THIS (this one only), FOLLOWING (this and following) or ALL. */
-export const editCourseEventOccurrence = viewerActionClient
+export const editCourseEventOccurrence = writableViewerActionClient
   .schema(z.object({ eventId: z.string().min(1), occurrenceStart: iso, scope: z.enum(["THIS", "FOLLOWING", "ALL"]), changes }))
   .action(async ({ parsedInput }) => {
     const viewer = await requireViewer();
@@ -83,7 +85,7 @@ export const getAttendanceSheet = viewerActionClient
   });
 
 /** Marks Present / Late / Absent / Excused. A new Absent emails the learner's guardians once. */
-export const markAttendance = viewerActionClient
+export const markAttendance = writableViewerActionClient
   .schema(z.object({
     eventId: z.string().min(1),
     occurrenceStart: iso,
@@ -91,16 +93,18 @@ export const markAttendance = viewerActionClient
   }))
   .action(async ({ parsedInput }) => {
     const viewer = await requireViewer();
-    await staffOfEvent(viewer, parsedInput.eventId);
-    return markAttendanceFor(viewer.user.id, parsedInput);
+    const courseId = await staffOfEvent(viewer, parsedInput.eventId);
+    // The register is Core; emailing parents about absences is Plus (live-sessions).
+    return markAttendanceFor(viewer.user.id, parsedInput, { emailAbsences: await hasService(viewer, courseId, "live-sessions") });
   });
 
 /** Opens or rotates a check-in code (shown once) for 1 to 120 minutes, default 15. */
-export const openCheckIn = viewerActionClient
+export const openCheckIn = writableViewerActionClient
   .schema(z.object({ eventId: z.string().min(1), occurrenceStart: iso, minutes: z.number().int().min(1).max(120).optional() }))
   .action(async ({ parsedInput }) => {
     const viewer = await requireViewer();
-    await staffOfEvent(viewer, parsedInput.eventId);
+    const courseId = await staffOfEvent(viewer, parsedInput.eventId);
+    if (!(await hasService(viewer, courseId, "live-sessions"))) throw new UserError("Check-in codes are part of the Plus plan for this course.");
     return openCheckInFor(viewer.user.id, parsedInput);
   });
 

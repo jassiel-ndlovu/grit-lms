@@ -21,6 +21,8 @@ import { enqueueEmail } from "@/lib/email/queue";
 
 import { assertCanAddLearners } from "@/features/billing/caps";
 
+import { markReferralJoined, recordReferral } from "./referrals";
+
 export const JOIN = {
   /** Open requests one person may have at once. */
   maxPending: 5,
@@ -64,6 +66,12 @@ export type ListedCourse = {
   workspace: { id: string; name: string; kind: "ORGANISATION" | "SOLO"; logoUrl: string | null };
   tutors: string[];
   listedAt: string;
+  /**
+   * Who is already on the course among `forUserIds` (the viewer and their
+   * children): show "You're on this course" or the child's name instead of
+   * "Ask to join" (#223). Empty when no ids were given.
+   */
+  enrolledUserIds: string[];
 };
 
 /**
@@ -71,7 +79,7 @@ export type ListedCourse = {
  * read-only or cancelled workspace are hidden. `q` matches the course
  * name, its description or the workspace name.
  */
-export async function listListedCourses(input: { q?: string; workspaceId?: string; take?: number; cursor?: string } = {}): Promise<{ courses: ListedCourse[]; nextCursor: string | null }> {
+export async function listListedCourses(input: { q?: string; workspaceId?: string; take?: number; cursor?: string; forUserIds?: string[] } = {}): Promise<{ courses: ListedCourse[]; nextCursor: string | null }> {
   const take = Math.min(Math.max(input.take ?? 24, 1), 50);
   const q = input.q?.trim().slice(0, 80);
   const rows = await prisma.courseListing.findMany({
@@ -83,6 +91,8 @@ export async function listListedCourses(input: { q?: string; workspaceId?: strin
             { course: { name: { contains: q, mode: "insensitive" } } },
             { course: { description: { contains: q, mode: "insensitive" } } },
             { workspace: { name: { contains: q, mode: "insensitive" } } },
+            // The tutor's name, as the card shows it (#223).
+            { course: { staff: { some: { role: "LEAD", membership: { user: { name: { contains: q, mode: "insensitive" } } } } } } },
           ] }
         : {}),
     },
@@ -97,6 +107,7 @@ export async function listListedCourses(input: { q?: string; workspaceId?: strin
         select: {
           name: true, description: true, imageUrl: true,
           staff: { where: { role: "LEAD" }, select: { membership: { select: { user: { select: { name: true } } } } } },
+          enrollments: { where: { endedAt: null, learner: { userId: { in: input.forUserIds?.length ? input.forUserIds : ["-"] } } }, select: { learner: { select: { userId: true } } } },
         },
       },
     },
@@ -111,6 +122,7 @@ export async function listListedCourses(input: { q?: string; workspaceId?: strin
       workspace: r.workspace,
       tutors: r.course.staff.map((s) => s.membership.user.name),
       listedAt: r.listedAt.toISOString(),
+      enrolledUserIds: [...new Set(r.course.enrollments.map((e) => e.learner.userId))],
     })),
     nextCursor: rows.length > take ? page[page.length - 1].courseId : null,
   };
@@ -126,7 +138,7 @@ export async function listListedCourses(input: { q?: string; workspaceId?: strin
  * student is already on it, a request is already open, or the requester
  * is over the limits in JOIN.
  */
-export async function requestToJoinFor(requesterUserId: string, input: { courseId: string; studentUserId?: string | null; message?: string | null }, now: Date = new Date()) {
+export async function requestToJoinFor(requesterUserId: string, input: { courseId: string; studentUserId?: string | null; message?: string | null; referralCode?: string | null }, now: Date = new Date()) {
   const requester = await prisma.user.findUniqueOrThrow({ where: { id: requesterUserId }, select: { role: true, roleUnconfirmed: true, deletionRequestedAt: true } });
   if (requester.roleUnconfirmed || requester.deletionRequestedAt) throw new JoinRequestError("Finish setting up your account first.");
   const studentUserId = input.studentUserId && input.studentUserId !== requesterUserId ? input.studentUserId : requesterUserId;
@@ -175,6 +187,8 @@ export async function requestToJoinFor(requesterUserId: string, input: { courseI
           data: { studentName: r.student.name, courseName: r.course.name, byParent: forChild },
         });
       }
+      // Came through someone's referral link (#216): credit them.
+      await recordReferral(tx, { code: input.referralCode, workspaceId, requesterUserId, studentUserId, joinRequestId: r.id });
       return { id: r.id, status: "PENDING" as const };
     }, { timeout: 30_000 });
   } catch (e) {
@@ -230,8 +244,10 @@ export async function listJoinRequestsForStaff(workspaceId: string, teachingMemb
       course: { select: { id: true, name: true } },
       student: { select: { name: true } },
       requester: { select: { name: true } },
+      decidedById: true,
     },
   });
+  const deciders = new Map((await prisma.user.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.decidedById).filter((x): x is string => !!x))] } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   return rows.map((r) => ({
     id: r.id, status: r.status, message: r.message, declineReason: r.declineReason,
     createdAt: r.createdAt.toISOString(), decidedAt: r.decidedAt?.toISOString() ?? null,
@@ -239,6 +255,8 @@ export async function listJoinRequestsForStaff(workspaceId: string, teachingMemb
     studentName: r.student.name,
     /** Set when a parent asked for their child. */
     parentName: r.requesterUserId !== r.studentUserId ? r.requester.name : null,
+    /** Who approved or declined it (#223), so a decline note isn't shown as the viewer's own. */
+    decidedBy: r.decidedById ? { id: r.decidedById, name: deciders.get(r.decidedById) ?? "Former staff member" } : null,
   }));
 }
 
@@ -290,6 +308,7 @@ export async function approveJoinRequestFor(actorUserId: string, workspaceId: st
       await assertCanAddLearners(tx, workspaceId, [learner.id]);
       await tx.enrollment.create({ data: { workspaceId, courseId: req.courseId, learnerId: learner.id, status: "ACTIVE", startedAt: now } });
     }
+    await markReferralJoined(tx, { workspaceId, studentUserId: req.studentUserId }, now);
     await tx.auditLog.create({ data: { workspaceId, actorUserId, action: "join.approve", targetType: "JoinRequest", targetId: requestId, data: { courseId: req.courseId, learnerId: learner.id, isMinor: input.isMinor, byParent } } });
     if (!req.requester.emailIsPlaceholder) {
       await enqueueEmail(tx, {

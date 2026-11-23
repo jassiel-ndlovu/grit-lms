@@ -5,6 +5,7 @@
 
 import "server-only";
 
+import { calendarImporter } from "./importers/calendar";
 import { staffImporter } from "./importers/staff";
 import { studentsImporter } from "./importers/students";
 import type { Importer } from "./types";
@@ -12,6 +13,7 @@ import type { Importer } from "./types";
 const IMPORTERS: Record<string, Importer<never>> = {
   [studentsImporter.kind]: studentsImporter as unknown as Importer<never>,
   [staffImporter.kind]: staffImporter as unknown as Importer<never>,
+  [calendarImporter.kind]: calendarImporter as unknown as Importer<never>,
 };
 
 export function importerFor(kind: string): Importer | undefined {

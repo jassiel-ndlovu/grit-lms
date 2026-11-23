@@ -18,7 +18,7 @@ import { prisma } from "@/lib/db";
 import { emitNotification } from "@/features/notifications/server";
 import {
   forbidden,
-  requireApiRole,
+  requireApiStaffWrite,
   requireApiSession,
   tutorOwnsCourse,
   visibleCoursesWhere,
@@ -69,7 +69,7 @@ export async function GET(req: Request) {
 
 // POST /api/submissions
 export async function POST(req: Request) {
-  const guard = await requireApiRole("TUTOR");
+  const guard = await requireApiStaffWrite("TUTOR");
   if (!guard.ok) return guard.response;
 
   const body = await req.json();

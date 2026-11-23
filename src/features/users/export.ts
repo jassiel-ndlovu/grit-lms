@@ -40,7 +40,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     },
   });
   const studentId = u.studentProfile?.id;
-  const [tests, assignments, grades, invoices, payments] = await Promise.all([
+  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes] = await Promise.all([
     studentId ? prisma.testSubmission.findMany({
       where: { studentId },
       select: { startedAt: true, submittedAt: true, status: true, score: true, feedback: true, answers: true, test: { select: { title: true, course: { select: { name: true } } } }, aiSuggestions: { select: { questionId: true, totalAwarded: true, outOf: true, feedbackToStudent: true, tutorAction: true, model: true } } },
@@ -55,6 +55,10 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
       select: { number: true, status: true, issuedAt: true, dueAt: true, totalCents: true, discountCents: true, paidAt: true, paidVia: true, workspace: { select: { name: true } }, lines: { select: { description: true, amountCents: true } } },
     }),
     prisma.payment.findMany({ where: { payerUserId: targetUserId }, select: { reference: true, purpose: true, status: true, amountCents: true, paidAt: true, createdAt: true } }),
+    // B's question bank: questions this person saved (#228).
+    prisma.bankQuestion.findMany({ where: { ownerUserId: targetUserId }, orderBy: { createdAt: "asc" }, select: { stem: true, type: true, points: true, topics: true, subject: true, gradeLevel: true, data: true, createdAt: true } }),
+    // Referral links (#216): the code and how many families came through it.
+    prisma.referralCode.findMany({ where: { userId: targetUserId }, select: { code: true, createdAt: true, workspace: { select: { name: true } }, _count: { select: { referrals: true } } } }),
   ]);
   await prisma.auditLog.create({ data: { workspaceId: actor.workspaceId, actorUserId: actor.userId, action: "user.export", targetType: "User", targetId: targetUserId, data: { self: actor.userId === targetUserId } } });
 
@@ -82,6 +86,8 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     grades: grades.map((g) => ({ course: g.course.name, type: g.type, title: g.title, score: g.score, outOf: g.outOf, at: g.createdAt })),
     feeInvoices: invoices.map((i) => ({ workspace: i.workspace.name, number: i.number, status: i.status, issuedAt: i.issuedAt, dueAt: i.dueAt, totalCents: i.totalCents, discountCents: i.discountCents, paidAt: i.paidAt, paidVia: i.paidVia, lines: i.lines })),
     paymentsMade: payments,
+    savedQuestions: bankQuestions,
+    referralLinks: referralCodes.map((r) => ({ workspace: r.workspace.name, code: r.code, since: r.createdAt, familiesReferred: r._count.referrals })),
     notifications: u.notifications,
     activity: u.activities,
   };

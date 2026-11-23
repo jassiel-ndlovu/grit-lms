@@ -41,6 +41,7 @@ import bcrypt from "bcryptjs";
 
 import { PrismaClient, type Prisma } from "../src/generated/prisma";
 import { SERVICES } from "../src/features/billing/catalogue";
+import { encryptSecret } from "../src/features/payments/secrets";
 import { checkTarget } from "./seed-fake";
 
 const DOMAIN = "@example.test";
@@ -146,7 +147,13 @@ async function workspace(spec: WsSpec, ownerEmail: string) {
     data: {
       workspaceId: ws.id, billingEmail: ownerEmail,
       ...(paid ? {
-        status: "AUTHORISED", cardBrand: "visa", cardLast4: "4081", cardExpMonth: 12, cardExpYear: 2030,
+        status: "AUTHORISED",
+        // A saved card needs a (sealed) Paystack authorisation to count as one
+        // (#223): restart and renewals read authorizationCodeEnc, not the
+        // card details. Without PAYMENT_ENC_KEY the seed shows no card at all.
+        ...(process.env.PAYMENT_ENC_KEY
+          ? { authorizationCodeEnc: encryptSecret("AUTH_seed_preview_fake"), cardBrand: "visa", cardLast4: "4081", cardExpMonth: 12, cardExpYear: 2030 }
+          : {}),
         currentPeriodStart: periodStart, currentPeriodEnd: periodEnd, renewsAt: periodEnd, lastPaidAt: periodStart,
         deleteAfter: new Date(periodStart.getTime() + 61 * DAY),
         cancelAtPeriodEnd: spec.state === "CANCELLED", cancelledAt: spec.state === "CANCELLED" ? at(-3) : null,

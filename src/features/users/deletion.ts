@@ -108,6 +108,8 @@ export async function anonymiseAccount(userId: string, now: Date = new Date()) {
     await tx.emailVerificationToken.deleteMany({ where: { userId } });
     await tx.passwordResetToken.deleteMany({ where: { userId } });
     await tx.outboundEmail.deleteMany({ where: { userId } });
+    // B's question bank: questions this person saved (#228). Images stay: tests may use them too.
+    await tx.bankQuestion.deleteMany({ where: { ownerUserId: userId } });
     await tx.guardianship.updateMany({ where: { OR: [{ guardianUserId: userId }, { studentUserId: userId }] }, data: { status: "REVOKED" } });
     await tx.membership.updateMany({ where: { userId }, data: { status: "SUSPENDED" } });
     await tx.user.update({
