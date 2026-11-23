@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Search } from "lucide-react";
 
 import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,10 @@ export default async function StudentCoursesPage() {
       breadcrumb={[{ label: "My courses" }]}
       actions={
         <Button asChild variant="outline" size="sm">
-          <Link href={joinRoutes.browse}>Find courses</Link>
+          <Link href={joinRoutes.browse}>
+            <Search aria-hidden className="size-4" />
+            Find courses
+          </Link>
         </Button>
       }
     >

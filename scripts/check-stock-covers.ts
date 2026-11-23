@@ -4,23 +4,27 @@
  *   npx tsx scripts/check-stock-covers.ts
  *
  * Pure: no database, no network. Checks that every stock cover has an SVG
- * in public/covers/, that stockCoverFor is deterministic and spreads names
+ * in public/covers/ or a WebP under 200 KB in public/images/stock/ with a
+ * credit, that subject names get the subject's photo, that stockCoverFor is deterministic and spreads names
  * over all covers, that courseCoverSrc falls back for empty and invalid
  * values, and that the course schemas accept upload URLs and stock paths
  * but no other relative string. Exits 1 on any failure.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  ART_COVERS,
   CourseCoverSchema,
+  PHOTO_COVERS,
   STOCK_COVERS,
   courseCoverSrc,
   findStockCover,
   isStockCover,
   isValidCover,
   stockCoverFor,
+  subjectCoverFor,
 } from "../src/features/courses/lib/stock-covers";
 import { CreateCourseSchema, UpdateCourseSchema } from "../src/features/courses/schemas";
 
@@ -38,10 +42,20 @@ function check(name: string, got: unknown, want: unknown) {
 }
 
 // --- The list and the files ---------------------------------------------
-check("five or six covers", STOCK_COVERS.length >= 5 && STOCK_COVERS.length <= 6, true);
+check("six drawings, six photos", [ART_COVERS.length, PHOTO_COVERS.length], [6, 6]);
 check("ids unique", new Set(STOCK_COVERS.map((c) => c.id)).size, STOCK_COVERS.length);
 check("labels unique", new Set(STOCK_COVERS.map((c) => c.label)).size, STOCK_COVERS.length);
-for (const c of STOCK_COVERS) {
+for (const c of PHOTO_COVERS) {
+  check(`${c.id}: src is /images/stock/cover-<id>.webp`, c.src, `/images/stock/cover-${c.id}.webp`);
+}
+const stockDir = join(process.cwd(), "public", "images", "stock");
+const credits = readFileSync(join(stockDir, "CREDITS.md"), "utf8");
+const photos = readdirSync(stockDir).filter((f) => f !== "CREDITS.md");
+for (const f of photos) {
+  check(`${f}: webp under 200 KB with a credit`, [f.endsWith(".webp"), statSync(join(stockDir, f)).size <= 200 * 1024, credits.includes(f)], [true, true, true]);
+}
+check("every photo cover's file exists", PHOTO_COVERS.every((c) => photos.includes(c.src.split("/").pop()!)), true);
+for (const c of ART_COVERS) {
   check(`${c.id}: src is /covers/<id>.svg`, c.src, `/covers/${c.id}.svg`);
   const file = join(process.cwd(), "public", c.src);
   const exists = existsSync(file);
@@ -53,12 +67,22 @@ for (const c of STOCK_COVERS) {
 }
 
 // --- Picking by name ----------------------------------------------------
-check("deterministic", stockCoverFor("Grade 10 Algebra").id, stockCoverFor("Grade 10 Algebra").id);
-check("trim and case ignored", stockCoverFor("  grade 10 ALGEBRA ").id, stockCoverFor("Grade 10 Algebra").id);
+check("deterministic", stockCoverFor("Grade 10 Class").id, stockCoverFor("Grade 10 Class").id);
+check("trim and case ignored", stockCoverFor("  grade 10 CLASS ").id, stockCoverFor("Grade 10 Class").id);
 check("empty name still gets a cover", isStockCover(stockCoverFor("").src), true);
 const names = Array.from({ length: 300 }, (_, i) => `Course ${i}`);
 const used = new Set(names.map((n) => stockCoverFor(n).id));
-check("300 names use every cover", used.size, STOCK_COVERS.length);
+check("300 names use every drawing", used.size, ART_COVERS.length);
+for (const [name, id] of [
+  ["Grade 10 Mathematics", "maths"], ["Maths Lit Gr 11", "maths"], ["Wiskunde Graad 12", "maths"],
+  ["Physical Sciences 11", "science"], ["Life Sciences Grade 12", "life"], ["Accounting 10", "accounting"],
+  ["English Home Language", "languages"], ["Intro to Python", "computing"],
+] as const) {
+  check(`subject: ${name}`, subjectCoverFor(name)?.id, id);
+  check(`fallback uses it: ${name}`, stockCoverFor(name).id, id);
+}
+check("no subject in the name", subjectCoverFor("Thandi's class"), null);
+check("whole words only", subjectCoverFor("Aftermath club"), null);
 
 // --- Lookups --------------------------------------------------------------
 check("isStockCover: stock path", isStockCover("/covers/waves.svg"), true);

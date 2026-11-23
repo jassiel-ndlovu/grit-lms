@@ -13,7 +13,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { Receipt } from "lucide-react";
+import { Receipt, Tag } from "lucide-react";
 
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { isBillingEnabled } from "@/features/billing/errors";
@@ -63,7 +63,10 @@ export default async function FeesPage({ searchParams }: PageProps) {
         <>
           {needsScope(viewer, "fees.manage") ? null : (
             <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/fees/discounts">Discount codes</Link>
+              <Link href="/dashboard/fees/discounts">
+                <Tag aria-hidden className="size-4" />
+                Discount codes
+              </Link>
             </Button>
           )}
           <NewFeeButton courses={courses} />

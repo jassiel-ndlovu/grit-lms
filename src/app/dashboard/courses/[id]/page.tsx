@@ -7,7 +7,7 @@
  * reads from the new feature queries - zero client contexts.
  */
 
-import Image from "next/image";
+import { SaverCover } from "@/components/data-saver";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -170,8 +170,8 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
         title={course.name}
         description={course.description}
         illustration={
-          <div className="border-border relative aspect-video w-40 overflow-hidden rounded-lg border">
-            <Image src={courseCoverSrc(course)} alt="" fill sizes="160px" className="object-cover" />
+          <div className="border-border bg-muted relative aspect-video w-40 overflow-hidden rounded-lg border">
+            <SaverCover src={courseCoverSrc(course)} alt="" fill sizes="160px" className="object-cover" />
           </div>
         }
         properties={

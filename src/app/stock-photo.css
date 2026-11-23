@@ -1,0 +1,18 @@
+/*
+ * Stock photos (src/components/stock-photo.tsx).
+ *
+ * Data saver: data-saver="on" is set on <html> before paint
+ * (dataSaverBootScript). A lazy image inside a `display: none` box is never
+ * fetched. The photo's parent keeps its muted colour, or goes too when it
+ * carries data-photo-box (a photo on top of a card).
+ *
+ * Dark mode: photos are dimmed a little so they don't glare.
+ */
+[data-saver="on"] [data-stock-photo],
+[data-saver="on"] [data-photo-box] {
+  display: none;
+}
+
+.dark [data-stock-photo] {
+  filter: brightness(0.85);
+}

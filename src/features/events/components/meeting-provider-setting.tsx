@@ -18,6 +18,7 @@ import { MEETING_PROVIDERS, type MeetingProvider } from "@/lib/viewer-core";
 import { cn } from "@/lib/utils";
 
 import { MEETING_PROVIDER_INFO } from "../lib/calendar-ui";
+import { MeetingAppMark } from "./meeting-app-mark";
 
 export function MeetingProviderSetting({ initial }: { initial: MeetingProvider }) {
   const router = useRouter();
@@ -63,10 +64,11 @@ export function MeetingProviderSetting({ initial }: { initial: MeetingProvider }
               disabled={readOnly || pending}
               onClick={() => pick(p)}
               className={cn(
-                "focus-visible:ring-ring rounded-lg border px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
+                "focus-visible:ring-ring flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60",
                 on ? "border-primary ring-primary/30 ring-2" : "border-border hover:border-input",
               )}
             >
+              <MeetingAppMark provider={p} />
               {MEETING_PROVIDER_INFO[p].label}
             </button>
           );

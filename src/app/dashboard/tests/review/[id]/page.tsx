@@ -22,18 +22,7 @@ import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame
 import { StatusChip } from "@/components/shell/status-chip";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  CircleDot,
-  Clock,
-  ExternalLink,
-  FileText,
-  GraduationCap,
-  Hourglass,
-  Wand2,
-  XCircle,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, CircleDot, Clock, ExternalLink, FileText, GraduationCap, Hourglass, Wand2, XCircle } from "lucide-react";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -128,7 +117,10 @@ export default async function TestReviewPage({ params }: PageProps) {
         ]}
         actions={
           <Button asChild size="sm">
-            <Link href={`/dashboard/tests/${test.id}`}>Open test</Link>
+            <Link href={`/dashboard/tests/${test.id}`}>
+              Open test
+              <ArrowRight aria-hidden className="size-4" />
+            </Link>
           </Button>
         }
       >

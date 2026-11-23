@@ -16,7 +16,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2, Send, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { WriteGuard } from "@/components/shell/workspace-access";
@@ -90,7 +90,10 @@ export function RequestJoinButton({
   return (
     <Dialog open={open} onOpenChange={(o) => (setOpen(o), o || setError(null))}>
       <DialogTrigger asChild>
-        <Button size="sm">Ask to join</Button>
+        <Button size="sm">
+          <UserPlus aria-hidden className="size-4" />
+          Ask to join
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={submit} className="space-y-4">
@@ -132,7 +135,7 @@ export function RequestJoinButton({
               Cancel
             </Button>
             <Button type="submit" disabled={busy}>
-              <Busy on={busy} />
+              {busy ? <Busy on /> : <Send aria-hidden className="size-4" />}
               Send request
             </Button>
           </DialogFooter>
@@ -216,7 +219,10 @@ export function ApproveRequestButton({
     <WriteGuard label="Approve" variant="default">
       <Dialog open={open} onOpenChange={(o) => (setOpen(o), o || setError(null))}>
         <DialogTrigger asChild>
-          <Button size="sm">Approve</Button>
+          <Button size="sm">
+            <Check aria-hidden className="size-4" />
+            Approve
+          </Button>
         </DialogTrigger>
         <DialogContent>
           <form onSubmit={submit} className="space-y-4">
@@ -287,6 +293,7 @@ export function DeclineRequestButton({ requestId, studentName }: { requestId: st
       <Dialog open={open} onOpenChange={(o) => (setOpen(o), o || setError(null))}>
         <DialogTrigger asChild>
           <Button size="sm" variant="outline">
+            <X aria-hidden className="size-4" />
             Decline
           </Button>
         </DialogTrigger>

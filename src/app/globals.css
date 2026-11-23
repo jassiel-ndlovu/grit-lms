@@ -4,6 +4,7 @@
 @import "./page-frame.css";
 @import "./themes.css";
 @import "./a11y.css";
+@import "./stock-photo.css";
 
 @custom-variant dark (&:is(.dark *));
 

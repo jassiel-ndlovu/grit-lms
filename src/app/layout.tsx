@@ -6,6 +6,7 @@ import { APP_NAME, APP_TAGLINE, APP_DESCRIPTION } from "@/lib/branding";
 import { themeBootScript } from "@/lib/ui-themes";
 import { isRevampUi } from "@/lib/ui-flags";
 import { readingBootScript } from "@/lib/ui-a11y";
+import { dataSaverBootScript } from "@/lib/data-saver";
 
 /**
  * Inter — body / UI sans.
@@ -99,7 +100,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootScript + readingBootScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript + readingBootScript + dataSaverBootScript }} />
       </head>
       <body className="antialiased">
         {children}
