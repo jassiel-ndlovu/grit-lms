@@ -69,36 +69,40 @@ enum GuardianshipStatus {
 
 /// The tenant: an organisation with tutor teams, or a solo practice.
 model Workspace {
-  id              String          @id @default(cuid())
-  kind            WorkspaceKind
-  name            String
-  slug            String          @unique
-  timezone        String          @default("Africa/Johannesburg")
-  logoUrl         String?
-  accentColor     String?
-  billingState    BillingState    @default(TRIAL)
-  trialEndsAt     DateTime?
+  id                String          @id @default(cuid())
+  kind              WorkspaceKind
+  name              String
+  slug              String          @unique
+  timezone          String          @default("Africa/Johannesburg")
+  logoUrl           String?
+  accentColor       String?
+  billingState      BillingState    @default(TRIAL)
+  trialEndsAt       DateTime?
   /// Set when an organisation switched teaching off (owner decision 2026-11-21): its owners and admins no longer teach, and it has no tutor mode. Only a Nexa admin clears it. Null means it may teach.
-  teachingOffAt   DateTime?
-  teachingOffById String?
-  meetingProvider MeetingProvider @default(GOOGLE_MEET)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  teachingOffAt     DateTime?
+  teachingOffById   String?
+  meetingProvider   MeetingProvider @default(GOOGLE_MEET)
+  /// Whether tutors may add their own AI credits once the organisation's run out (#216). Management decides.
+  aiPersonalCredits Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
-  teams          Team[]
-  memberships    Membership[]
-  learners       Learner[]
-  auditLogs      AuditLog[]
-  courses        Course[]
-  enrollments    Enrollment[]
-  courseListings CourseListing[]
-  importJobs     ImportJob[]
-  referralCodes  ReferralCode[]
-  branches       Branch[]
-  roles          WorkspaceRole[]
-  referrals      Referral[]
-  managedUsers   User[]          @relation("ManagedUsers")
-  joinRequests   JoinRequest[]
+  teams              Team[]
+  memberships        Membership[]
+  learners           Learner[]
+  auditLogs          AuditLog[]
+  courses            Course[]
+  enrollments        Enrollment[]
+  courseListings     CourseListing[]
+  importJobs         ImportJob[]
+  referralCodes      ReferralCode[]
+  branches           Branch[]
+  roles              WorkspaceRole[]
+  aiCreditEntries    AiCreditEntry[]
+  aiCreditAllowances AiCreditAllowance[]
+  referrals          Referral[]
+  managedUsers       User[]              @relation("ManagedUsers")
+  joinRequests       JoinRequest[]
 
   // Billing and payments (billing.prisma, Phase 2).
   subscription        Subscription?

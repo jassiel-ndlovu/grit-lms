@@ -21,6 +21,8 @@ import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
 
 import { AnthropicMarker, PROMPT_VERSION, type Marker } from "./marker";
+import { canSpend, spendCredits } from "@/features/ai-credits/credits";
+import { creditsForCost } from "@/features/ai-credits/credits-math";
 import { costMicroUsd, injectionSignals, postCheck, rubricFor, scrubIdentifiers, shouldEscalate, type CheckedResult } from "./rules";
 
 const WRITTEN = ["SHORT_ANSWER", "ESSAY"] as const;
@@ -112,7 +114,7 @@ export async function runAiMarking(opts: { limit?: number; marker?: Marker; now?
     const s = await prisma.aiMarkSuggestion.findUniqueOrThrow({
       where: { id },
       select: {
-        id: true, requestId: true, attempts: true, workspaceId: true, questionId: true,
+        id: true, requestId: true, attempts: true, workspaceId: true, questionId: true, requestedByUserId: true,
         testSubmission: { select: { answers: true, student: { select: { fullName: true } }, test: { select: { courseId: true } } } },
       },
     });
@@ -121,6 +123,15 @@ export async function runAiMarking(opts: { limit?: number; marker?: Marker; now?
         await prisma.aiMarkSuggestion.update({ where: { id }, data: { status: "SKIPPED", error: "The workspace's AI mark limit for this period is reached" } });
         r.capped++;
         continue;
+      }
+      // AI credits (#216): the person who asked needs at least one credit's worth before the call.
+      if (s.workspaceId && s.requestedByUserId) {
+        const can = await canSpend(s.workspaceId, s.requestedByUserId, 1, now);
+        if (!can.ok) {
+          await prisma.aiMarkSuggestion.update({ where: { id }, data: { status: "SKIPPED", error: can.message } });
+          r.capped++;
+          continue;
+        }
       }
       const q = await prisma.testQuestion.findUniqueOrThrow({ where: { id: s.questionId }, select: { question: true, answer: true, points: true, rubric: true } });
       const courseId = s.testSubmission.test.courseId;
@@ -157,6 +168,10 @@ export async function runAiMarking(opts: { limit?: number; marker?: Marker; now?
       }
       if (escalated) r.escalated++;
       await recordUsage(s.workspaceId, courseId, usage.micro, now);
+      // The call has happened and cost money: spend its credits, even past the balance.
+      if (s.workspaceId && s.requestedByUserId) {
+        await spendCredits({ workspaceId: s.workspaceId, userId: s.requestedByUserId, credits: creditsForCost(usage.micro, ZAR_PER_USD), feature: "ai-marking", ref: id, force: true }, now);
+      }
       const common = { model: out.model, promptVersion: PROMPT_VERSION, escalated, inputTokens: usage.input, outputTokens: usage.output, cacheReadTokens: usage.cacheRead, costMicroUsd: usage.micro };
       if (!checked) {
         await prisma.aiMarkSuggestion.update({ where: { id }, data: { ...common, status: "FAILED", flags: ["needs_tutor"], error: out.refused ? "The model declined to mark this answer" : "No usable answer from the model" } });

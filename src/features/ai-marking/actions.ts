@@ -11,6 +11,7 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { canSpend } from "@/features/ai-credits/credits";
 import { hasService } from "@/features/billing/services";
 import { prisma } from "@/lib/db";
 import { viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
@@ -49,6 +50,10 @@ export const requestAiMarking = writableViewerActionClient
     const courseId = await tutorOfTest(viewer, parsedInput.testId);
     if (!aiMarkingConfigured()) throw new UserError("AI-assisted marking isn't set up yet");
     if (!(await hasService(viewer, courseId, "ai-marking"))) throw new UserError("AI-suggested marks are part of the Pro plan for this course");
+    if (viewer.workspace) {
+      const credits = await canSpend(viewer.workspace.id, viewer.user.id, 1);
+      if (!credits.ok) throw new UserError(credits.message);
+    }
     const r = await queueAiMarkingFor({ ...parsedInput, requestedByUserId: viewer.user.id });
     if (r.reason === "OFF") throw new UserError("Turn on AI-suggested marks for this test first");
     if (r.queued > 0) after(() => runAiMarking({ limit: 25 }).catch((e) => console.error("[ai-marking] run failed:", (e as Error).message)));

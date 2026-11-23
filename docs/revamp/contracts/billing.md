@@ -1,6 +1,6 @@
 # Contract: billing and payments
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1, 2026-11-16.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.16, 2026-11-23.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** These are the queries and server actions B's billing, payments, parent portal and admin screens call, with their inputs and return shapes. Workspaces pay Nexa in **30-day periods anchored to the payment date** (no calendar months, no proration). Tiers are Core R99, Plus R139 and Pro R179 per active student per course. Parents and adult students pay tutors through one checkout that can cover several children and tutors. B never computes a price; every amount comes from these calls.
 
@@ -160,10 +160,41 @@ Every admin action takes a `note` (or `reason`) and writes an `AuditLog` row.
 - A period is exactly **30 days** from the payment: paid 3 February, renews 5 March.
 - A late payment starts a new 30-day period **on the day it is paid**; `period.renewsAt` moves with it.
 
+## AI credits (Draft 1.16)
+
+Owner decisions of 22 Nov. One credit budget per organisation (or solo tutor) pays for AI. **Credits apply only with `BILLING=1`**, so production is unaffected until January.
+
+- **The unit:** 1 credit = R0.01 of Nexa's AI cost (provisional, like every number here). AI marking costs about 7 credits a mark today.
+- **Included pool:**
+  - renewed each billing period from paid seats: Pro 500 credits a seat, Plus 150, Core none;
+  - lapses at the period's end;
+  - a trial gets 300 once;
+  - a comped workspace is recorded but never refused.
+- **Bought credits** last. Card purchases arrive with live payments in January, priced at cost plus 5% (`purchasePriceCents`). Until then a Nexa admin grants them (`adminGrantAiCredits`), for example after an EFT.
+- **Tutors' own credits** are used only if management allows them (`setPersonalAiCredits`), and only after the organisation's.
+- **Allowances** cap how much of the organisation's credits a person uses each calendar month. The most specific applies: the person, then their team, then their branch, then the workspace default. No allowance means no personal limit.
+- **Spending order:** included, then bought (both within the allowance), then the person's own.
+  - Before a call there's a check (`canSpend`).
+  - After the call its real cost is spent. A shortfall is recorded as a debt on bought credits, which the next purchase repays.
+- **Warnings:** at 80% of the pool or of a person's allowance, `warning` is true in both views. Emails follow later.
+
+| Action | Where | Who | Returns |
+| --- | --- | --- | --- |
+| `getMyAiCredits` | `@/features/ai-credits/actions` | any staff | `{ organisationLeft, allowance, usedThisMonth, allowanceLeft, personal, personalAllowed, comped, warning }` |
+| `getAiCreditReport` | same | `ai.credits.allocate` | `{ included: { credits, left, renewsAt } \| null, bought, comped, warning, thisMonth: { byPerson, byFeature }, allowances, personalCreditsAllowed, creditValueCents }` |
+| `setAiAllowance` | same | `ai.credits.allocate` | `{ targetType: "WORKSPACE_DEFAULT" \| "BRANCH" \| "TEAM" \| "MEMBERSHIP", targetId?, monthlyCredits: number \| null }` (null removes it) |
+| `setPersonalAiCredits` | same | `ai.credits.allocate`, whole organisation | `{ allowed }` |
+| `adminGrantAiCredits` | `@/features/admin/workspace-actions` | Nexa admin | `{ workspaceId, credits, pool: "BOUGHT" \| "PERSONAL", userId?, note }` |
+
+**AI marking:**
+- `requestAiMarking` refuses with the reason when the person has no credits: "You've used your AI allowance for this month…" or "Your organisation's AI credits have run out…".
+- A mark that runs out mid-batch is skipped with that message.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.16. AI credits (#216): pools, allowances, spending order, actions and the admin grant ("AI credits" section). AI marking spends credits when billing is on |
 | 2026-11-21 | Draft 1.15. `restartWorkspace()` (#191; owner decisions 2026-11-20 and 21) for a CANCELLED or READ_ONLY workspace. Returns the next step: `{ status: "PAY_OUTSTANDING", invoiceIds }` (pay those with `payPlatformInvoice`, then call again), `{ status: "PAY_FIRST_PERIOD", activeStudents }` (call `startFirstPayment`), `{ status: "CARD_REQUIRED" }` (no students and no saved card: `startCardReplacement`, then call again), or `{ status: "RESTARTED", renewsAt }`. With no students and a saved card the restart is free: the workspace is ACTIVE at once with a R0 first period, `cancelAtPeriodEnd` cleared and the deletion date moved to 2 months out; students added later are billed as catch-up at the renewal. Any other state: `FORBIDDEN` |
 | 2026-11-20 | Draft 1.14. Student limits enforced: a hard-stop `ACTIVE_STUDENTS` limit (the trial's 20, or the owner's own) refuses the learner that would go over it, when creating a student into a course and when a course's enrolments open (`TRIAL_CAP_REACHED` in the trial, `FORBIDDEN` for the owner's limit). AI marks were already enforced. The daily billing job emails owners once at 80% and once at 100% of each limit per period (`billing:cap-warning`) |
 | 2026-11-20 | Draft 1.13. Parent-invoice discount codes: `createFeeDiscountCode`, `deactivateFeeDiscountCode`, `listFeeDiscountCodes` (owners and admins, since the discount comes out of every payee's share); `startCheckout` applies `discountCode`; new `previewCheckout` |

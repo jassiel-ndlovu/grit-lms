@@ -875,3 +875,72 @@ model PayoutRecoveryDeduction {
   @@unique([recoveryId, paymentId])
   @@index([paymentId])
 }
+
+/// Where AI credits come from (#216; owner decisions 22 Nov). INCLUDED renews each billing period with the subscription and lapses; BOUGHT lasts; PERSONAL is a tutor's own.
+enum AiCreditPool {
+  INCLUDED
+  BOUGHT
+  PERSONAL
+}
+
+enum AiCreditKind {
+  /// Included credits for a period, a trial's credits, or credits a Nexa admin gave.
+  GRANT
+  PURCHASE
+  SPEND
+  ADJUST
+}
+
+/// One movement of AI credits: a grant or purchase (positive) or a spend (negative). 1 credit = R0.01 of Nexa's AI cost (provisional). Balances are sums.
+model AiCreditEntry {
+  id          String       @id @default(cuid())
+  workspaceId String
+  pool        AiCreditPool
+  kind        AiCreditKind
+  /// Signed: grants and purchases positive, spends negative.
+  credits     Int
+  /// The spender (SPEND), or the owner of PERSONAL credits.
+  userId      String?
+  /// For INCLUDED: which grant ("period:<id>", "trial"); spends carry their grant's key.
+  periodKey   String?
+  /// What spent it: "ai-marking", "question-generation"…
+  feature     String?
+  /// The thing it was spent on (a suggestion id), for tracing.
+  ref         String?
+  note        String?
+  /// INCLUDED grants lapse at the period's end.
+  expiresAt   DateTime?
+  /// Idempotency: a grant or purchase happens once.
+  key         String?      @unique
+  createdById String?
+  createdAt   DateTime     @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, pool, createdAt])
+  @@index([workspaceId, userId, createdAt])
+  @@index([workspaceId, periodKey])
+}
+
+enum AiAllowanceTarget {
+  WORKSPACE_DEFAULT
+  BRANCH
+  TEAM
+  MEMBERSHIP
+}
+
+/// How many of the organisation's credits someone may use each calendar month (#216). The most specific wins: a person, then their team, then their branch, then the workspace default. No allowance: no personal limit.
+model AiCreditAllowance {
+  id             String            @id @default(cuid())
+  workspaceId    String
+  targetType     AiAllowanceTarget
+  /// Branch, team or membership id; "" for the workspace default.
+  targetId       String            @default("")
+  monthlyCredits Int
+  updatedById    String
+  updatedAt      DateTime          @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, targetType, targetId])
+}
