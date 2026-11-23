@@ -13,6 +13,8 @@ Done:
   `RELEASED_GRADE` for a Prisma `where`. `check-grade-release.ts` compares
   the two.
 - Someone else's grade is now a 404, not a message.
+- In A's file, with the owner's OK: the weekly parent email
+  (`notifications/weekly-summary.ts`) uses the same filter.
 
 For A:
 - Any read of `Grade` for a student or parent can spread `RELEASED_GRADE`
