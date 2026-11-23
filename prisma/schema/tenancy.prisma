@@ -94,6 +94,8 @@ model Workspace {
   courseListings CourseListing[]
   importJobs     ImportJob[]
   referralCodes  ReferralCode[]
+  branches       Branch[]
+  roles          WorkspaceRole[]
   referrals      Referral[]
   managedUsers   User[]          @relation("ManagedUsers")
   joinRequests   JoinRequest[]
@@ -121,8 +123,11 @@ model Team {
   id          String   @id @default(cuid())
   workspaceId String
   name        String
+  /// The branch this team belongs to (#216): a company has branches, a branch has teams.
+  branchId    String?
   createdAt   DateTime @default(now())
 
+  branch    Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members   TeamMember[]
   courses   Course[]
@@ -133,19 +138,26 @@ model Team {
 /// Staff in a workspace. Created ACTIVE when an invite is accepted
 /// (pending invites live in Invite, design 02).
 model Membership {
-  id          String           @id @default(cuid())
-  workspaceId String
-  userId      String
-  role        MembershipRole
-  status      MembershipStatus @default(ACTIVE)
-  invitedById String?
-  joinedAt    DateTime         @default(now())
+  id           String           @id @default(cuid())
+  workspaceId  String
+  userId       String
+  role         MembershipRole
+  status       MembershipStatus @default(ACTIVE)
+  /// A built-in role beyond the three base ones (#216), for example EXECUTIVE or FINANCE. Null: the base role's own preset.
+  presetRole   String?
+  /// An organisation's own role, made from a preset. Wins over presetRole.
+  customRoleId String?
+  /// For a role limited to branches: which ones. Empty for every other scope.
+  branchIds    String[]         @default([])
+  invitedById  String?
+  joinedAt     DateTime         @default(now())
 
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customRole   WorkspaceRole? @relation(fields: [customRoleId], references: [id], onDelete: SetNull)
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   teams        TeamMember[]
   courseStaff  CourseStaff[]
-  ownedCourses Course[]      @relation("CourseOwner")
+  ownedCourses Course[]       @relation("CourseOwner")
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -439,4 +451,45 @@ model Referral {
   /// A student is credited to one referrer per workspace: the first.
   @@unique([workspaceId, referredUserId])
   @@index([referrerUserId])
+}
+
+/// Where a role applies (#216): the whole workspace, some branches, or the courses the person teaches or owns.
+enum RoleScope {
+  WORKSPACE
+  BRANCHES
+  OWN_COURSES
+}
+
+/// A branch of an organisation (#216): a centre or campus. Teams sit in a branch; courses reach a branch through their team.
+model Branch {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  teams     Team[]
+
+  @@unique([workspaceId, name])
+}
+
+/// An organisation's own role (#216): a name, a set of permissions and a scope, copied from a preset and adjusted. Never more than an admin holds.
+model WorkspaceRole {
+  id          String         @id @default(cuid())
+  workspaceId String
+  name        String
+  /// The preset it was made from, for display.
+  basedOn     String
+  /// Used where code still checks the base role (ADMIN or TUTOR, never OWNER).
+  baseRole    MembershipRole
+  permissions String[]
+  scope       RoleScope
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+
+  @@unique([workspaceId, name])
 }
