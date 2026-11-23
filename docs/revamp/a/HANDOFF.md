@@ -3,6 +3,45 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Phase 1: term report PDFs and offline reading, `revamp/a-reports-offline`
+
+No migration. Viewer contract Draft 1.18. This closes A's phase 1 list in #216.
+
+Done:
+- **`reports/term-report-pdf.ts`:**
+  - `renderTermReportPdf` (A4, pdf-lib): header and logo, a summary, a block per course (assessments, attendance, comment), a general comment, signatures, page numbers, and "continued" headers;
+  - `termReportFileName` and `pdfResponse`.
+  - B gathers the data and serves it from B's own route.
+- **Offline reading:**
+  - `public/sw.js`: static files cached as they load; lessons only when saved; an offline fallback; saved lessons cleared on sign-out; API, auth and non-GET never cached; 50 lessons at most.
+  - `public/offline.html`, which lists saved lessons.
+  - `@/lib/offline`, for B's buttons.
+  - `next.config.ts` serves `sw.js` uncached.
+
+Tested:
+- `scripts/check-term-report-pdf.ts` (in CI) checks validity, one page against many, wrapping, line breaks (a bug turned them into "?"; fixed), safe text and a broken logo.
+- The service worker was checked in the browser pane on a local server: register, the static cache, save, list, remove and clear, and refusal of API and other-site addresses. Serving a saved lesson while offline couldn't be simulated there.
+- Types and lint.
+
+## 2026-11-23 Phase 1: the business dashboard data; #236, `revamp/a-business-dashboard`
+
+No migration. Billing contract Draft 1.17 ("Business dashboard"). New A feature folder `src/features/reports/`.
+
+Done:
+- **`reports/business.ts`:**
+  - money: invoiced, collected (and off-site), refunded, the collection rate, overdue, and due in the next 7 days;
+  - students: active, joined, left;
+  - six-month trend, per-tutor table, and AI credits used.
+  - A branch role's view counts invoice lines on its branches' courses.
+  - Available on Plus and Pro (any course with a Plus or Pro service), when comped, or with billing off.
+- **`reports/actions.ts`:** `getBusinessDashboardStatus` and `getBusinessDashboard` (`reports.view`).
+- **#236 (B's practice sets):** account deletion removes `PracticeReview` rows; the POPIA export has `practice`. The blob audit already scans `PracticeItem.data` (all JSON columns).
+- **`services.md`:** `question-bank` is `v1`, matching the catalogue.
+
+Tested:
+- 14 checks against Preview: every money figure, students, trend, per tutor, the branch view, the Plus/Pro gate with billing on, and the export's practice list.
+- Types and lint.
+
 ## 2026-11-23 Phase 1: AI credits, `revamp/a-ai-credits`
 
 Billing contract Draft 1.16 ("AI credits"). New A feature folder `src/features/ai-credits/`.

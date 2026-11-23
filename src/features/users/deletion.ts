@@ -94,6 +94,8 @@ export async function anonymiseAccount(userId: string, now: Date = new Date()) {
       await tx.testSubmission.deleteMany({ where: { id: { in: subs } } });
       await tx.submissionEntry.deleteMany({ where: { id: { in: entries } } });
       await tx.lessonCompletion.deleteMany({ where: { studentId: student.id } });
+      // B's practice sets (#236): the student's spaced-repetition progress.
+      await tx.practiceReview.deleteMany({ where: { studentId: student.id } });
       await tx.assessmentCompletion.deleteMany({ where: { studentId: student.id } });
       await tx.student.update({ where: { id: student.id }, data: { fullName: "Former user", email: gone, imageUrl: null } });
     }

@@ -1,6 +1,6 @@
 # Contract: billing and payments
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.16, 2026-11-23.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.17, 2026-11-23.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** These are the queries and server actions B's billing, payments, parent portal and admin screens call, with their inputs and return shapes. Workspaces pay Nexa in **30-day periods anchored to the payment date** (no calendar months, no proration). Tiers are Core R99, Plus R139 and Pro R179 per active student per course. Parents and adult students pay tutors through one checkout that can cover several children and tutors. B never computes a price; every amount comes from these calls.
 
@@ -190,10 +190,34 @@ Owner decisions of 22 Nov. One credit budget per organisation (or solo tutor) pa
 - `requestAiMarking` refuses with the reason when the person has no credits: "You've used your AI allowance for this month…" or "Your organisation's AI credits have run out…".
 - A mark that runs out mid-batch is skipped with that message.
 
+## Business dashboard (Draft 1.17)
+
+Plus and Pro only (owner decision 22 Nov). **Who sees it:** anyone with `reports.view` (owners, admins, executives, finance, branch and project managers). A branch role sees only its branches.
+
+| Action | Where | Returns |
+| --- | --- | --- |
+| `getBusinessDashboardStatus` | `@/features/reports/actions` | `{ canView, available }`: show the nav entry when `canView`; when it isn't `available`, show it as a Plus feature |
+| `getBusinessDashboard` | same | `{ from?, to? }` (ISO, up to a year; default the last 30 days) returns the dashboard below. Refuses with "The business dashboard is part of the Plus and Pro plans." when not available |
+
+**Available** when billing is off, the workspace is comped, or any course has a Plus or Pro service switched on.
+
+**The result** (amounts in rand cents):
+- **`period`**, `scope` (null for the whole organisation, or `{ branchIds }`), `currency: "ZAR"`, `generatedAt`.
+- **`money`:**
+  - `invoicedCents` (issued in the period) and `collectedCents` (paid in the period), of which `collectedOffsiteCents`;
+  - `refundedCents` (whole organisation only);
+  - `collectionRateBps`: of what fell due in the period, the share paid; null if nothing fell due;
+  - `overdue: { invoices, cents, oldestDueAt }` and `dueNext7Days: { invoices, cents }`.
+- **`students`:** `{ active, joined, left, courses }`. Active means on a course now. Joined means first enrolled in the period. Left means their last course ended in the period.
+- **`trend`:** six months of `{ month: "YYYY-MM", collectedCents, newStudents }`.
+- **`tutors`:** per lead tutor (or the course's owner), `{ membershipId, name, courses, activeStudents, invoicedCents, collectedCents, overdueCents }`, sorted by money collected. A course with two lead tutors splits its money evenly.
+- **`aiCreditsUsed`** in the period (whole organisation only), and **`notes`**. For a branch, money comes from invoice lines on its courses, before invoice-level discounts.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.17. The business dashboard (Plus and Pro): `getBusinessDashboardStatus`, `getBusinessDashboard` |
 | 2026-11-23 | Draft 1.16. AI credits (#216): pools, allowances, spending order, actions and the admin grant ("AI credits" section). AI marking spends credits when billing is on |
 | 2026-11-21 | Draft 1.15. `restartWorkspace()` (#191; owner decisions 2026-11-20 and 21) for a CANCELLED or READ_ONLY workspace. Returns the next step: `{ status: "PAY_OUTSTANDING", invoiceIds }` (pay those with `payPlatformInvoice`, then call again), `{ status: "PAY_FIRST_PERIOD", activeStudents }` (call `startFirstPayment`), `{ status: "CARD_REQUIRED" }` (no students and no saved card: `startCardReplacement`, then call again), or `{ status: "RESTARTED", renewsAt }`. With no students and a saved card the restart is free: the workspace is ACTIVE at once with a R0 first period, `cancelAtPeriodEnd` cleared and the deletion date moved to 2 months out; students added later are billed as catch-up at the renewal. Any other state: `FORBIDDEN` |
 | 2026-11-20 | Draft 1.14. Student limits enforced: a hard-stop `ACTIVE_STUDENTS` limit (the trial's 20, or the owner's own) refuses the learner that would go over it, when creating a student into a course and when a course's enrolments open (`TRIAL_CAP_REACHED` in the trial, `FORBIDDEN` for the owner's limit). AI marks were already enforced. The daily billing job emails owners once at 80% and once at 100% of each limit per period (`billing:cap-warning`) |

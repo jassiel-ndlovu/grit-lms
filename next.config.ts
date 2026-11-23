@@ -24,6 +24,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // The offline service worker (public/sw.js, #216) must never be served
+  // stale, or a fix to it would take days to reach phones.
+  async headers() {
+    return [
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Content-Type", value: "application/javascript; charset=utf-8" }] },
+      { source: "/offline.html", headers: [{ key: "Cache-Control", value: "no-cache" }] },
+    ];
+  },
 };
 
 // Sentry (docs/revamp/a/ops/sentry-setup.md). The build never needs a token:
