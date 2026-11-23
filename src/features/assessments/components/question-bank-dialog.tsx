@@ -175,13 +175,15 @@ export function QuestionBankDialog({
                     <Checkbox
                       id={id}
                       className="mt-0.5"
+                      aria-labelledby={`${id}-stem`}
+                      aria-describedby={`${id}-meta`}
                       checked={chosen.has(item.id)}
                       disabled={!item.data}
                       onCheckedChange={(v) => toggle(item.id, v === true)}
                     />
                     <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer space-y-0.5">
-                      <span className="text-foreground block text-sm [overflow-wrap:anywhere]">{item.stem}</span>
-                      <span className="text-muted-foreground block text-xs">
+                      <span id={`${id}-stem`} className="text-foreground block text-sm [overflow-wrap:anywhere]">{item.stem}</span>
+                      <span id={`${id}-meta`} className="text-muted-foreground block text-xs">
                         {TYPE_LABELS[item.type as EditorQuestionType] ?? item.type} · {item.points}{" "}
                         {item.points === 1 ? "mark" : "marks"}
                         {item.parts > 1 ? ` · ${item.parts} parts` : ""}
