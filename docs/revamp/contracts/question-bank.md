@@ -28,7 +28,7 @@ Owner: Agent B. Reader: Agent A. Status: **Draft 2, 2026-11-23** (#216, phase 2)
 
 ## Notes for A
 
-- **Service status.** `question-bank` is `later` in `src/features/billing/catalogue.ts`, so the bank stays hidden until A moves it to `v1`.
+- **Service status.** `question-bank` is `v1` in `src/features/billing/catalogue.ts` (switched in #229 with the owner's OK). Its name still says "and randomised tests"; renaming it is A's call.
 - **Workspace deletion.** When a workspace is deleted, `BankQuestion` rows with its `workspaceId` should go too, since there is no cascade.
 - **Account deletion and POPIA export.** A user's `BankQuestion` rows (`ownerUserId`) are theirs: include them in an export, and delete them with the account.
 - **Blob files.** A bank item can reference question images stored under the source test's path. Test deletion doesn't remove blobs today. Any future blob cleanup must treat a URL found in `BankQuestion.data` as in use.
