@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.18, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.19, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.19. Landing page: `getPublicPlans`, `submitPlatformEnquiry`, admin enquiries, sitemap, robots and analytics |
 | 2026-11-23 | Draft 1.18. Term report PDFs (`renderTermReportPdf`, `pdfResponse`) and offline reading (`public/sw.js`, `@/lib/offline`) |
 | 2026-11-23 | Draft 1.17. Roles as permission sets and branches (#216): `membership.roleKey`, `roleName`, `scope`, `branchIds`, `branchTeamIds`; six new permission keys; `staffScope`, `courseScopeOf` and `scopedCourseWhere`; role, branch and team actions in `@/features/workspaces/role-actions` |
 | 2026-11-23 | Draft 1.16. Parent and student referrals (`getReferralLink`, `listReferrals`, `/api/referrals/<code>`); the weekly parent summary email; the attendance register is Core (check-in codes and absence emails stay Plus) |
@@ -449,3 +450,45 @@ From `@/lib/offline` (client):
 | `offlineSupported()` | Hide the button where it can't work |
 
 **Note for B:** a saved page is the lesson's HTML as it was when saved. Videos and big images aren't kept, so show "Video needs a connection" in data-saver style.
+
+### Landing page (Draft 1.19)
+
+#216: B owns the page; A owns these parts.
+
+**Plan prices.** `getPublicPlans()` from `@/features/marketing/plans` (server; cached for an hour). It returns `PublicPlans`:
+- `live`: false until billing is switched on (January). **Show prices only when `live` is true.** Before that, show "Plans and prices are coming in January" or leave them out.
+- `plans`: Core, Plus and Pro, each `{ key, name, priceCents, priceLabel ("R139"), aiCreditsPerSeat, adds, includes }`.
+  - `adds` lists the v1 services the plan adds over the one below; `includes` lists everything on it. Show `adds` as "Everything in Core, plus …".
+- `unit` ("per active student, per course, per 30 days"), `vatNote` ("Prices exclude VAT.") and `trialDays` (14). Show the unit and VAT note beside the prices.
+- Prices are never written in the page: they come from the Tier rows, so a price change is a data change.
+
+**Enquiry form.** It replaces the `mailto:` "Request access" and team links.
+- Call `submitPlatformEnquiry` (next-safe-action, public) from `@/features/marketing/enquiry-actions` with:
+  - `kind`: `"ACCESS"` (a tutor wanting an account), `"TEAM"` (an organisation) or `"OTHER"`;
+  - `name`, `email` and `message` (10 to 4000 characters);
+  - optional `phone`, `organisation` and `students` (a number);
+  - `source`: the page path, or a utm_source;
+  - `startedAt`: `Date.now()` when the form was shown;
+  - `website`: a honeypot field. Keep it in the form but hidden from people (off-screen, `tabIndex={-1}`, `autoComplete="off"`, `aria-hidden`), and send what's in it.
+- It returns `{ ok: true }`. Show "Thanks, we'll be in touch within one working day." Errors come back as `serverError` strings written for the person (too many enquiries, or "reload the page"); show them as they are. Validation errors come back in `validationErrors`.
+- Each enquiry emails the Nexa inbox, with Reply-To set to the enquirer. Nothing is emailed to the enquirer.
+- Rate limits: 5 an hour from one address and 3 a day from one email. Bots and link spam get `{ ok: true }` but are saved as SPAM and never emailed.
+- Kept 12 months, then deleted. The IP is stored only as a keyed hash.
+
+**Admin enquiries** (B, a page under `/dashboard/admin`, Nexa admin only):
+- `adminListEnquiries({ status?, cursor?, limit? })` returns `{ items, nextCursor, newCount }`. Without `status` it shows everything but SPAM.
+- `adminUpdateEnquiry({ id, status: "NEW" | "CONTACTED" | "CLOSED" | "SPAM", note? })`.
+- Show `newCount` as a badge. The email's button links to `/dashboard/admin` until this page exists; tell A its path and A will point the email there.
+
+**Search setup:**
+- `/sitemap.xml` lists the public pages in `PUBLIC_PAGES` (`@/lib/site`). B adds a page there when shipping a new public page.
+- `/robots.txt` keeps crawlers out of signed-in areas and APIs. Preview deployments ask every crawler to stay out.
+- The root layout sets `metadataBase`, Open Graph and Twitter cards, and `noindex` off production.
+- Each public page should export `metadata` with `title`, `description` and `alternates.canonical`. A added it to support, privacy and terms, and a canonical to `/`.
+- **Social image:** add `src/app/opengraph-image.png` (1200×630) when the design is ready; Next picks it up.
+
+**Analytics:** Vercel Web Analytics (`<SiteAnalytics />` in the root layout, production only).
+- It uses no cookies, so no consent banner is needed.
+- It counts public pages only. Signed-in pages, invite links and query strings (except utm tags) are never sent.
+- The owner switches it on once in Vercel (Project, Analytics, Enable).
+- For a custom event, such as "enquiry sent", B may call `track("enquiry_sent", { kind })` from `@vercel/analytics`. Never include a name, email or id.

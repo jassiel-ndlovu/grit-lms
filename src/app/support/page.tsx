@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Footer from "../dashboard/models/footer";
 
+export const metadata = { title: "Support", description: "Get help with Nexa LMS.", alternates: { canonical: "/support" } };
+
 export default function SupportPage() {
   return (
     <div className="h-screen flex flex-col">
