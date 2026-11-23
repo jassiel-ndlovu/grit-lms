@@ -15,6 +15,7 @@ model Course {
   submissions        Submission[]
   tests              Test[]
   timeAccommodations TimeAccommodation[]
+  practiceSets       PracticeSet[]
   // enumitem-style label template per lesson nesting level, e.g.
   // ["\arabic*", "\arabic{enumi}.\arabic*"]. Empty = the default
   // scheme. See src/lib/enum-labels.ts.

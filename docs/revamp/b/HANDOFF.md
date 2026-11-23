@@ -3,6 +3,41 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Item analysis and practice sets (#216, phase 2), `revamp/b-item-analysis`
+
+Contract: `docs/revamp/contracts/practice.md` (Draft 1).
+
+Done:
+- **Item analysis** (Plus, `advanced-analytics`): an Analysis tab on a
+  test. It shows each question's average, full, part and no marks, blanks,
+  how well it separates students (from 10 marked attempts), the options
+  chosen, common wrong answers and the weakest topics. It warns about a
+  likely wrong key. Fully marked attempts only, one per student.
+  - The service is now `v1` in A's catalogue and `check-billing.ts`, with
+    the owner's OK.
+- **Practice sets** (Plus, on the `question-bank` service). Owner's
+  choices: questions come from the bank, never marked, tutors and parents
+  see progress.
+  - **Tutor:** a Practice tab on the course; make a set, add bank
+    questions, publish, see each student's standing.
+  - **Student:** a Practice tab once something is published. Untimed, one
+    question at a time, the answer straight away; missed ones come back in
+    the session and sooner after it (Leitner, six boxes, 0 to 30 days).
+  - **Parent:** a Practice section on the child page.
+  - Migration `29_practice_sets` (additive): `PracticeSet`,
+    `PracticeItem`, `PracticeReview`.
+- **Fixed:** the question bank's own error messages reach the tutor (they
+  were plain `Error`s, shown as "Something went wrong").
+- Checks: `npx tsx scripts/check-practice.ts`.
+
+For A: account deletion and POPIA export of `PracticeReview`, and blob
+cleanup (contract, "Asks for A").
+
+Production needs `migrate deploy` for migration 29 (owner's OK first).
+
+Next (B-only): past-paper exam mode (check the papers' licence first), QTI
+import and export. Term reports wait on A's PDF helper.
+
 ## 2026-11-23 More subjects and the IEB lists (#216, phase 2), `revamp/b-ieb-subjects`
 
 Done:

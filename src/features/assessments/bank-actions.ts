@@ -15,6 +15,7 @@ import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { topicsToStore } from "@/features/courses/lib/curriculum";
 import { prisma } from "@/lib/db";
 import { tutorActionClient } from "@/lib/safe-action";
+import { UserError } from "@/lib/user-error";
 import { getViewer } from "@/lib/viewer";
 
 import {
@@ -32,10 +33,10 @@ async function bankCourse(courseId: string, userId: string, email: string) {
     select: { id: true, workspaceId: true, subject: true, gradeLevel: true, staff: staffFor(email) },
   });
   if (!course || !course.workspaceId || !managesCourse(await getCourseScope(userId), course)) {
-    throw new Error("Course not found");
+    throw new UserError("Course not found");
   }
   const viewer = await getViewer();
-  if (!viewer || !(await hasService(viewer, course.id, "question-bank"))) throw new Error(NOT_ON_PLAN);
+  if (!viewer || !(await hasService(viewer, course.id, "question-bank"))) throw new UserError(NOT_ON_PLAN);
   return { ...course, workspaceId: course.workspaceId };
 }
 
@@ -50,9 +51,9 @@ export const saveQuestionToBank = tutorActionClient
   .action(async ({ parsedInput, ctx }) => {
     const course = await bankCourse(parsedInput.courseId, ctx.session.user.id, ctx.session.user.email);
     const node = parsedInput.question;
-    if (bankNodeCount(node) > MAX_BANK_TREE) throw new Error(`A bank question can hold at most ${MAX_BANK_TREE} parts`);
+    if (bankNodeCount(node) > MAX_BANK_TREE) throw new UserError(`A bank question can hold at most ${MAX_BANK_TREE} parts`);
     const stem = bankStem(node);
-    if (!stem && node.type !== "NONE") throw new Error("Write the question before saving it to the bank");
+    if (!stem && node.type !== "NONE") throw new UserError("Write the question before saving it to the bank");
     const item = await prisma.bankQuestion.create({
       data: {
         workspaceId: course.workspaceId,
@@ -139,7 +140,7 @@ export const deleteBankQuestion = tutorActionClient
     const { count } = await prisma.bankQuestion.deleteMany({
       where: { id: parsedInput.id, ownerUserId: ctx.session.user.id },
     });
-    if (count === 0) throw new Error("That bank question is already gone");
+    if (count === 0) throw new UserError("That bank question is already gone");
     return { ok: true };
   });
 

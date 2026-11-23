@@ -326,3 +326,57 @@ model BankQuestion {
 
   @@index([workspaceId, ownerUserId, createdAt])
 }
+
+/// A set of questions students practise on a course, untimed and unmarked (contracts/practice.md, Plus service "question-bank").
+model PracticeSet {
+  id              String         @id @default(cuid())
+  courseId        String
+  title           String
+  description     String?
+  /// Students see published sets only.
+  isPublished     Boolean        @default(false)
+  createdByUserId String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  course          Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  items           PracticeItem[]
+
+  @@index([courseId])
+}
+
+/// One question of a practice set, copied from the question bank. `data` is the tree in the test JSON format (lib/test-io.ts).
+model PracticeItem {
+  id             String           @id @default(cuid())
+  setId          String
+  order          Int
+  stem           String
+  topics         String[]         @default([])
+  data           Json
+  /// The bank item it was copied from. No foreign key: deleting the bank item keeps the copy.
+  bankQuestionId String?
+  createdAt      DateTime         @default(now())
+  set            PracticeSet      @relation(fields: [setId], references: [id], onDelete: Cascade)
+  reviews        PracticeReview[]
+
+  @@index([setId])
+}
+
+/// Where one student stands on one practice question: spaced repetition (lib/practice.ts).
+/// studentId has no relation because Student is A's model; rows go with the set.
+model PracticeReview {
+  id             String       @id @default(cuid())
+  itemId         String
+  studentId      String
+  /// 0 to 5: how many times in a row they've known it, roughly.
+  box            Int          @default(0)
+  dueAt          DateTime
+  lastAnsweredAt DateTime
+  /// The last answer's share of the marks, 0 to 1.
+  lastShare      Float
+  answered       Int          @default(0)
+  correct        Int          @default(0)
+  item           PracticeItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, studentId])
+  @@index([studentId, dueAt])
+}

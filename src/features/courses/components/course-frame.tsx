@@ -1,7 +1,7 @@
 /**
  * The frame of a tutor's course pages (UI draft "Course page"): a record
  * PageFrame (#205) with the course's views in the ribbon. Overview,
- * Lessons, Coverage, Services (billing on) and Settings are separate routes, so each
+ * Lessons, Coverage, Practice (Plus), Services (billing on) and Settings are separate routes, so each
  * view has its own URL. The lesson editor passes `type="editor"`, the
  * settings views `type="settings"`.
  *
@@ -11,6 +11,7 @@
 import { PageFrame } from "@/components/shell/page-frame";
 import type { Crumb } from "@/components/shell/page-header";
 import { RibbonNav } from "@/components/shell/ribbon";
+import { hasPractice } from "@/features/assessments/practice-queries";
 import { isBillingEnabled } from "@/features/billing/errors";
 import type { PageType } from "@/lib/ui-layout";
 
@@ -22,11 +23,14 @@ export const courseRoutes = {
   settings: (id: string) => `/dashboard/manage-courses/${id}/settings`,
   services: (id: string) => `/dashboard/manage-courses/${id}/services`,
   coverage: (id: string) => `/dashboard/manage-courses/${id}/coverage`,
+  practice: (id: string, setId?: string) => `/dashboard/manage-courses/${id}/practice${setId ? `/${setId}` : ""}`,
 };
 
-export function CourseFrame({
+export async function CourseFrame({
   course,
   page,
+  parent,
+  current,
   actions,
   type = "record",
   children,
@@ -34,6 +38,10 @@ export function CourseFrame({
   course: { id: string; name: string };
   /** The last crumb after the course name, e.g. "Lessons". Omit on the overview. */
   page?: string;
+  /** A crumb between the course and the page, for a page inside a view. */
+  parent?: Crumb;
+  /** The view to light for a page inside a view. */
+  current?: string;
   actions?: React.ReactNode;
   type?: PageType;
   children: React.ReactNode;
@@ -42,7 +50,9 @@ export function CourseFrame({
     { label: "Courses", href: courseRoutes.list },
     { label: course.name, href: page ? courseRoutes.overview(course.id) : undefined },
   ];
+  if (parent) crumbs.push(parent);
   if (page) crumbs.push({ label: page });
+  const practice = await hasPractice(course.id);
 
   return (
     <PageFrame
@@ -52,10 +62,12 @@ export function CourseFrame({
       secondary={
         <RibbonNav
           label="Course"
+          current={current}
           links={[
             { label: "Overview", href: courseRoutes.overview(course.id) },
             { label: "Lessons", href: courseRoutes.lessons(course.id) },
             { label: "Coverage", href: courseRoutes.coverage(course.id) },
+            ...(practice ? [{ label: "Practice", href: courseRoutes.practice(course.id) }] : []),
             // Premium services exist only with billing on (BILLING=1).
             ...(isBillingEnabled() ? [{ label: "Services", href: courseRoutes.services(course.id) }] : []),
             { label: "Settings", href: courseRoutes.settings(course.id) },
