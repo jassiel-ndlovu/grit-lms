@@ -15,6 +15,8 @@ export interface EmailMessage {
   subject: string;
   html: string;
   text: string;
+  /** Overrides EMAIL_REPLY_TO for this message (the enquirer, for enquiry emails). */
+  replyTo?: string;
 }
 
 export type SendEmailResult =
@@ -55,7 +57,7 @@ export async function sendEmail(message: EmailMessage, opts: { idempotencyKey?: 
         subject: message.subject,
         html: message.html,
         text: message.text,
-        ...(EMAIL_REPLY_TO ? { reply_to: EMAIL_REPLY_TO } : {}),
+        ...((message.replyTo ?? EMAIL_REPLY_TO) ? { reply_to: message.replyTo ?? EMAIL_REPLY_TO } : {}),
       }),
     });
 

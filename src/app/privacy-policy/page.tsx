@@ -1,6 +1,8 @@
 import Footer from "../dashboard/models/footer";
 import { APP_LEGAL_NAME } from "@/lib/branding";
 
+export const metadata = { title: "Privacy policy", description: "How Nexa LMS collects, uses and protects personal information.", alternates: { canonical: "/privacy-policy" } };
+
 export default function PrivacyPolicyPage() {
   return (
     <div className="h-screen flex flex-col">

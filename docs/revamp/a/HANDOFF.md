@@ -3,6 +3,27 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 #216: landing page support, `revamp/a-landing-support`
+
+Migration `32_platform_enquiries` (PlatformEnquiry, EnquiryStatus). Viewer contract Draft 1.19.
+
+Done:
+- **Plan prices:** `marketing/plans.ts` (`getPublicPlans`: Tier rows, cached for an hour, with `live` following BILLING) and `plans-math.ts` (pure).
+- **Enquiries:**
+  - `marketing/enquiry-rules.ts`: the schema, bot screening (honeypot, fill time) and spam (links).
+  - `marketing/enquiries.ts`: rate limits (5 an hour per IP hash, 3 a day per email), saving, the `enquiry:new` email to ENQUIRY_TO (else APP_CONTACT.email) with Reply-To the enquirer, list, update, and prune after 12 months (housekeeping).
+  - `enquiry-actions.ts`: public submit and the admin list and update actions.
+  - `sendEmail` now takes a per-message `replyTo`.
+- **Search setup:** `lib/site.ts`, `app/sitemap.ts` and `app/robots.ts` (production only indexable); root layout metadataBase, Open Graph and Twitter; metadata on support, privacy and terms; a canonical on `/`.
+- **Analytics:** `@vercel/analytics` 2.0.1 through `components/site/site-analytics.tsx`. Public paths only, utm tags only, production only.
+
+Tested:
+- `scripts/check-landing.ts` (in CI): validation, screening, sources, spam, plans from tier rows, siteUrl, indexable and public paths.
+- Against the Preview database: submit, the queued email, bot saved as SPAM without email, the per-email limit, stale forms, list and SPAM filter, update and un-handle, and prune. Cleaned up afterwards.
+- Tier rows in Preview and production give R99, R139 and R179.
+
+Owner: switch on Web Analytics in Vercel. Optional: set ENQUIRY_TO to a support inbox.
+
 ## 2026-11-23 Phase 1: term report PDFs and offline reading, `revamp/a-reports-offline`
 
 No migration. Viewer contract Draft 1.18. This closes A's phase 1 list in #216.
