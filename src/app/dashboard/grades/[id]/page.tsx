@@ -79,15 +79,9 @@ export default async function GradeDetailPage({ params }: PageProps) {
     );
   }
 
-  const grade = await getGradeWithDetails(id);
+  // Someone else's grade, or one that isn't released yet, is a 404 too.
+  const grade = await getGradeWithDetails(id, student.id);
   if (!grade) notFound();
-  if (grade.studentId !== student.id) {
-    return (
-      <PageMessage breadcrumb={[{ label: "Grades", href: "/dashboard/grades" }, { label: "Grade" }]}>
-        This grade isn&apos;t yours.
-      </PageMessage>
-    );
-  }
 
   const overallPct = pct(grade.score, grade.outOf);
   const isTest = grade.testSubmission !== null;

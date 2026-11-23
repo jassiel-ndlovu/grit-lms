@@ -3,6 +3,21 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Released marks only, `revamp/b-grades-release`
+
+Done:
+- Students see released marks only, the rule parents' pages already had:
+  Grades, a grade's page, home, the course page, the test and assignment
+  lists. On the test review nothing hints at a mark before release.
+- The rule is in `features/grades/lib/release.ts`: `isReleased` for rows,
+  `RELEASED_GRADE` for a Prisma `where`. `check-grade-release.ts` compares
+  the two.
+- Someone else's grade is now a 404, not a message.
+
+For A:
+- Any read of `Grade` for a student or parent can spread `RELEASED_GRADE`
+  into its `where`.
+
 ## 2026-11-23 Term reports (#216, phase 1), `revamp/b-term-reports`
 
 [contracts/term-reports.md](../contracts/term-reports.md), Draft 1. Core.

@@ -17,6 +17,7 @@ import type { Prisma } from "@/generated/prisma";
 
 import { prisma } from "@/lib/db";
 import { ownerTutor } from "@/features/courses/lib/tenancy-where";
+import { RELEASED_GRADE } from "@/features/grades/lib/release";
 
 const gradeInclude = {
   course: { select: { id: true, name: true } },
@@ -41,26 +42,26 @@ export type GradeListItem = Awaited<
 >[number];
 
 /**
- * All grades for one student, newest first. Used by the student "Grades"
- * page. Uses Prisma `include` to surface enough metadata that the row can
+ * One student's released grades, newest first. Used by the student "Grades"
+ * page and home: a mark the tutor hasn't released stays out. Uses Prisma `include` to surface enough metadata that the row can
  * render a title + course name without cross-fetching.
  */
 export const listGradesForStudent = cache(async (studentId: string) => {
   return prisma.grade.findMany({
-    where: { studentId },
+    where: { studentId, ...RELEASED_GRADE },
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     include: gradeInclude,
   });
 });
 
 /**
- * Grades for one student inside one course — the rollup shown on the
+ * Released grades for one student inside one course — the rollup shown on the
  * student course detail.
  */
 export const listGradesForStudentInCourse = cache(
   async (studentId: string, courseId: string) => {
     return prisma.grade.findMany({
-      where: { studentId, courseId },
+      where: { studentId, courseId, ...RELEASED_GRADE },
       orderBy: { updatedAt: "desc" },
       include: gradeInclude,
     });
@@ -174,12 +175,12 @@ export type GradeDetail = NonNullable<
  * + per-question grades) or submission entry (files + per-question grades),
  * plus the course/tutor summary the page header needs.
  *
- * Returns null if the grade doesn't exist; the page should `notFound()`.
- * Ownership/role gating happens in the page wrapper.
+ * Returns null if the grade doesn't exist, isn't this student's, or isn't
+ * released yet; the page should `notFound()`. Role gating is the page's.
  */
-export const getGradeWithDetails = cache(async (id: string) => {
-  return prisma.grade.findUnique({
-    where: { id },
+export const getGradeWithDetails = cache(async (id: string, studentId: string) => {
+  return prisma.grade.findFirst({
+    where: { id, studentId, ...RELEASED_GRADE },
     include: detailInclude,
   });
 });
@@ -188,7 +189,7 @@ export const getGradeWithDetails = cache(async (id: string) => {
  * Grades for one student with the fields that say whether each mark is
  * released (submission status, the test's release-auto-marks setting).
  * The parent's child view filters with `isReleased`
- * (features/activity/lib/child-overview.ts), so a parent never sees a mark
+ * (features/grades/lib/release.ts), so a parent never sees a mark
  * the student cannot.
  */
 export const listGradesWithReleaseForStudent = cache(async (studentId: string) => {

@@ -24,6 +24,7 @@ import {
   filterByBucket,
   type FilterBucket,
 } from "@/features/assessments/lib/filters";
+import { testMarksReleased } from "@/features/grades/lib/release";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import HeaderTests from "@/components/illustrations/generated/header-tests";
 import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
@@ -103,8 +104,9 @@ export default async function StudentTestsPage() {
               submission
                 ? {
                     status: submission.status as SubmissionStatus,
-                    score: submission.score,
-                    grade: submission.grade
+                    // Auto-marked but not released: no score on the card.
+                    score: testMarksReleased(submission.status, test.releaseAutoMarksToStudent) ? submission.score : null,
+                    grade: submission.grade && testMarksReleased(submission.status, test.releaseAutoMarksToStudent)
                       ? {
                           score: submission.grade.score,
                           outOf: submission.grade.outOf,
