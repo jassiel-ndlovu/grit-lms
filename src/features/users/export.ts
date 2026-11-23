@@ -40,7 +40,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     },
   });
   const studentId = u.studentProfile?.id;
-  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes] = await Promise.all([
+  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes, practice] = await Promise.all([
     studentId ? prisma.testSubmission.findMany({
       where: { studentId },
       select: { startedAt: true, submittedAt: true, status: true, score: true, feedback: true, answers: true, test: { select: { title: true, course: { select: { name: true } } } }, aiSuggestions: { select: { questionId: true, totalAwarded: true, outOf: true, feedbackToStudent: true, tutorAction: true, model: true } } },
@@ -59,6 +59,8 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     prisma.bankQuestion.findMany({ where: { ownerUserId: targetUserId }, orderBy: { createdAt: "asc" }, select: { stem: true, type: true, points: true, topics: true, subject: true, gradeLevel: true, data: true, createdAt: true } }),
     // Referral links (#216): the code and how many families came through it.
     prisma.referralCode.findMany({ where: { userId: targetUserId }, select: { code: true, createdAt: true, workspace: { select: { name: true } }, _count: { select: { referrals: true } } } }),
+    // B's practice sets (#236): progress on each practice item.
+    studentId ? prisma.practiceReview.findMany({ where: { studentId }, select: { box: true, dueAt: true, lastAnsweredAt: true, answered: true, correct: true, item: { select: { stem: true, set: { select: { title: true } } } } } }) : [],
   ]);
   await prisma.auditLog.create({ data: { workspaceId: actor.workspaceId, actorUserId: actor.userId, action: "user.export", targetType: "User", targetId: targetUserId, data: { self: actor.userId === targetUserId } } });
 
@@ -87,6 +89,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     feeInvoices: invoices.map((i) => ({ workspace: i.workspace.name, number: i.number, status: i.status, issuedAt: i.issuedAt, dueAt: i.dueAt, totalCents: i.totalCents, discountCents: i.discountCents, paidAt: i.paidAt, paidVia: i.paidVia, lines: i.lines })),
     paymentsMade: payments,
     savedQuestions: bankQuestions,
+    practice: practice.map((p) => ({ set: p.item.set.title, item: p.item.stem, answered: p.answered, correct: p.correct, lastAnsweredAt: p.lastAnsweredAt, nextDueAt: p.dueAt, box: p.box })),
     referralLinks: referralCodes.map((r) => ({ workspace: r.workspace.name, code: r.code, since: r.createdAt, familiesReferred: r._count.referrals })),
     notifications: u.notifications,
     activity: u.activities,
