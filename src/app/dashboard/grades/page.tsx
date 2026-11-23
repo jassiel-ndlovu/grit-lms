@@ -22,7 +22,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
+import { FamilyReports } from "@/features/grades/components/term-reports/views";
 import { listGradesForStudent } from "@/features/grades/queries";
+import { releasedReportsFor } from "@/features/grades/term-reports";
 import {
   BarChart,
   DonutChart,
@@ -34,6 +36,7 @@ import HeaderGrades from "@/components/illustrations/generated/header-grades";
 import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { schoolDateFormat } from "@/lib/datetime";
+import { getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "Grades" };
 
@@ -65,7 +68,8 @@ export default async function StudentGradesPage() {
     );
   }
 
-  const grades = await listGradesForStudent(student.id);
+  const viewer = await getViewer();
+  const [grades, reports] = await Promise.all([listGradesForStudent(student.id), viewer ? releasedReportsFor(viewer, viewer.user.id) : []]);
 
   // Group by course for the transcript layout + per-course averages.
   const byCourse = new Map<string, { name: string; rows: typeof grades }>();
@@ -281,6 +285,8 @@ export default async function StudentGradesPage() {
           </section>
         </>
       )}
+
+      <FamilyReports reports={reports} />
     </PageFrame>
   );
 }

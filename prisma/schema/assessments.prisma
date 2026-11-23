@@ -380,3 +380,56 @@ model PracticeReview {
   @@unique([itemId, studentId])
   @@index([studentId, dueAt])
 }
+
+/// A workspace's report term (#216, term reports). Days are the workspace's own.
+model ReportTerm {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  title           String
+  startsOn        DateTime  @db.Date
+  endsOn          DateTime  @db.Date
+  /// Families see the reports from here on. Null = staff only.
+  releasedAt      DateTime?
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace       Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  courseComments  ReportCourseComment[]
+  overallComments ReportOverallComment[]
+
+  @@index([workspaceId, startsOn])
+}
+
+/// A tutor's comment on one learner's course for a term.
+model ReportCourseComment {
+  termId       String
+  learnerId    String
+  courseId     String
+  text         String
+  authorUserId String
+  updatedAt    DateTime @updatedAt
+
+  term    ReportTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+  learner Learner    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  course  Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([termId, learnerId, courseId])
+  @@index([learnerId])
+  @@index([courseId])
+}
+
+/// The general comment at the end of one learner's report.
+model ReportOverallComment {
+  termId       String
+  learnerId    String
+  text         String
+  authorUserId String
+  updatedAt    DateTime @updatedAt
+
+  term    ReportTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+  learner Learner    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@id([termId, learnerId])
+  @@index([learnerId])
+}

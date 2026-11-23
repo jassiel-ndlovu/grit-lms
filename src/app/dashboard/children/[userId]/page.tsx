@@ -25,6 +25,8 @@ import { getChildOverview } from "@/features/activity/child-overview";
 import { getAttendanceHistory } from "@/features/calendar/actions";
 import { AttendanceHistory, type HistoryRow } from "@/features/events/components/attendance-history";
 import { calendarRoutes } from "@/features/events/lib/calendar-ui";
+import { FamilyReports } from "@/features/grades/components/term-reports/views";
+import { releasedReportsFor } from "@/features/grades/term-reports";
 import { childRoutes, UPCOMING_DAYS, upcomingStatusLabel, isHandedIn } from "@/features/activity/lib/child-overview";
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, formatDate, resolveLocale } from "@/lib/datetime";
@@ -44,10 +46,11 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
   const shortDate = (d: Date) => formatDate(d, dateCtx, { weekday: "short", month: "short", day: "numeric" });
 
   const now = new Date();
-  const [overview, attendance, practice] = await Promise.all([
+  const [overview, attendance, practice, reports] = await Promise.all([
     getChildOverview(child, now),
     getAttendanceHistory({ childUserId: userId }),
     practiceForChild(userId, now),
+    releasedReportsFor(viewer, userId),
   ]);
   const courseCount = overview.workspaces.reduce((s, w) => s + w.courses.length, 0);
   const latest = overview.marks[0] ?? null;
@@ -197,6 +200,8 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
           </Card>
         </section>
       </div>
+
+      <FamilyReports reports={reports} locale={dateCtx.locale} />
 
       {practice.length ? (
         <section className="space-y-4">

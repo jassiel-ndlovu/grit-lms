@@ -30,6 +30,9 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
           id: true, isMinor: true, paymentVisible: true, consentAttestedAt: true, createdAt: true, workspace: { select: { name: true } },
           enrollments: { select: { status: true, startedAt: true, endedAt: true, course: { select: { name: true } } } },
           attendance: { select: { occurrenceStart: true, status: true, note: true, event: { select: { title: true } } } },
+          // B's term reports: the comments on this student's reports.
+          reportComments: { select: { text: true, updatedAt: true, term: { select: { title: true } }, course: { select: { name: true } } } },
+          reportOverallComments: { select: { text: true, updatedAt: true, term: { select: { title: true } } } },
         },
       },
       guardianOf: { select: { relationship: true, status: true, createdAt: true, student: { select: { name: true } } } },
@@ -82,6 +85,10 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
       workspace: l.workspace.name, minor: l.isMinor, paysOwnFees: l.paymentVisible, parentConsentConfirmedByTutorAt: l.consentAttestedAt, since: l.createdAt,
       enrolments: l.enrollments.map((e) => ({ course: e.course.name, status: e.status, startedAt: e.startedAt, endedAt: e.endedAt })),
       attendance: l.attendance.map((a) => ({ class: a.event.title, at: a.occurrenceStart, status: a.status, note: a.note })),
+      termReportComments: [
+        ...l.reportComments.map((c) => ({ term: c.term.title, course: c.course.name, comment: c.text, at: c.updatedAt })),
+        ...l.reportOverallComments.map((c) => ({ term: c.term.title, course: null, comment: c.text, at: c.updatedAt })),
+      ],
     })),
     children: u.guardianOf.map((g) => ({ name: g.student.name, relationship: g.relationship, status: g.status, since: g.createdAt })),
     parents: u.guardedBy.map((g) => ({ name: g.guardian.name, relationship: g.relationship, status: g.status, since: g.createdAt })),
