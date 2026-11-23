@@ -3,6 +3,30 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Business dashboard (#216, phase 1), `revamp/b-business-dashboard`
+
+Billing contract Draft 1.17, B's side. No migration.
+
+Done:
+- **`/dashboard/business`** ("Business" in the sidebar, `reports.view`):
+  fees for a period, what's owed now, students, six months, and each tutor
+  (organisations). Five set periods or the viewer's own days, up to a year,
+  in their time zone.
+- A branch role sees its branches' figures, with A's note.
+- Without a Plus or Pro service the page says what opens it.
+- With billing off it shows students only.
+- Samples on `/design-system/business`. Checks: `check-business-ui.ts`.
+
+For A, a bug: `refundedCents` in `features/reports/business.ts` filters on
+`payment.workspaceId`, which `PARENT_CHECKOUT` payments don't have. Family
+refunds are missed, and refunds of card checks and plan payments are counted
+instead. It should go through `allocation.invoice.workspaceId`. The Preview
+seed has a processed R200 refund (`INV-SEED-U-007`) that shows as R0. The
+page leaves the figure out until then.
+
+For A, not urgent: the trend's months are UTC, so a payment in the first
+two hours of a month (South African time) counts for the month before.
+
 ## 2026-11-23 Referrals, Find courses by workspace, attendance in Core (#216, phase 1), `revamp/b-referrals`
 
 Viewer contract Drafts 1.15 and 1.16, B's side. No migration.
