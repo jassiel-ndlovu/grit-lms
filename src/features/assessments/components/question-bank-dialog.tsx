@@ -4,6 +4,8 @@
  * "Add from bank" in the test designer (contracts/question-bank.md). Lists
  * the tutor's saved questions, filtered by topic or text; the chosen ones
  * are copied into the test. Items can be removed from the bank here too.
+ * Practice sets use it as well, with `blocked` ruling out questions that
+ * can't be practised.
  */
 
 import * as React from "react";
@@ -28,11 +30,16 @@ export function QuestionBankDialog({
   courseId,
   topics,
   onAdd,
+  description = "Chosen questions are copied into this test. Editing the copy doesn't change the bank.",
+  blocked,
 }: {
   courseId: string;
   /** The course's topic list, for the filter. */
   topics: Topic[];
   onAdd: (items: BankListItem[]) => void;
+  description?: string;
+  /** Why an item can't be chosen here, or null when it can. */
+  blocked?: (item: BankListItem) => string | null;
 }) {
   const [open, setOpen] = React.useState(false);
   const [topic, setTopic] = React.useState(ALL);
@@ -91,11 +98,11 @@ export function QuestionBankDialog({
     }
     setItems((prev) => prev?.filter((i) => i.id !== item.id) ?? null);
     toggle(item.id, false);
-    toast.success("Removed from the bank. Tests that use it keep their copy.");
+    toast.success("Removed from the bank. Copies already in use stay.");
   }
 
   function add() {
-    const picked = (items ?? []).filter((i) => chosen.has(i.id) && i.data);
+    const picked = (items ?? []).filter((i) => chosen.has(i.id) && i.data && !blocked?.(i));
     onAdd(picked);
     setChosen(new Set());
     setOpen(false);
@@ -118,7 +125,7 @@ export function QuestionBankDialog({
         <DialogHeader>
           <DialogTitle>Add from your question bank</DialogTitle>
           <DialogDescription>
-            Chosen questions are copied into this test. Editing the copy doesn&apos;t change the bank.
+            {description}
           </DialogDescription>
         </DialogHeader>
 
@@ -169,6 +176,7 @@ export function QuestionBankDialog({
             <ul className="divide-border divide-y">
               {items.map((item) => {
                 const id = `bank-${item.id}`;
+                const why = item.data ? (blocked?.(item) ?? null) : "can't be read";
                 const tags = item.topics.map(topicTitle).filter(Boolean);
                 return (
                   <li key={item.id} className="flex items-start gap-3 py-2.5">
@@ -178,7 +186,7 @@ export function QuestionBankDialog({
                       aria-labelledby={`${id}-stem`}
                       aria-describedby={`${id}-meta`}
                       checked={chosen.has(item.id)}
-                      disabled={!item.data}
+                      disabled={why !== null}
                       onCheckedChange={(v) => toggle(item.id, v === true)}
                     />
                     <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer space-y-0.5">
@@ -188,7 +196,7 @@ export function QuestionBankDialog({
                         {item.points === 1 ? "mark" : "marks"}
                         {item.parts > 1 ? ` · ${item.parts} parts` : ""}
                         {tags.length ? ` · ${tags.join(", ")}` : ""}
-                        {item.data ? "" : " · can't be read"}
+                        {why ? ` · ${why}` : ""}
                       </span>
                     </label>
                     <Button

@@ -20,6 +20,7 @@ import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { practiceForChild } from "@/features/assessments/practice-queries";
 import { getChildOverview } from "@/features/activity/child-overview";
 import { getAttendanceHistory } from "@/features/calendar/actions";
 import { AttendanceHistory, type HistoryRow } from "@/features/events/components/attendance-history";
@@ -42,7 +43,12 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
   const dateCtx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
   const shortDate = (d: Date) => formatDate(d, dateCtx, { weekday: "short", month: "short", day: "numeric" });
 
-  const [overview, attendance] = await Promise.all([getChildOverview(child, new Date()), getAttendanceHistory({ childUserId: userId })]);
+  const now = new Date();
+  const [overview, attendance, practice] = await Promise.all([
+    getChildOverview(child, now),
+    getAttendanceHistory({ childUserId: userId }),
+    practiceForChild(userId, now),
+  ]);
   const courseCount = overview.workspaces.reduce((s, w) => s + w.courses.length, 0);
   const latest = overview.marks[0] ?? null;
 
@@ -191,6 +197,33 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
           </Card>
         </section>
       </div>
+
+      {practice.length ? (
+        <section className="space-y-4">
+          <h2 className="text-foreground text-base font-semibold">Practice</h2>
+          <Card className="overflow-hidden p-0">
+            <ul className="divide-border divide-y">
+              {practice.map(({ id, name, summary }) => (
+                <li key={id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 sm:px-5">
+                  <div className="min-w-0 flex-1 basis-48 space-y-0.5">
+                    <p className="truncate text-sm font-medium text-foreground">{name}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {summary.answered} of {summary.questions} questions practised · {summary.known} known
+                      {summary.lastAt ? ` · last practised ${shortDate(summary.lastAt)}` : ""}
+                    </p>
+                  </div>
+                  {summary.accuracy !== null ? (
+                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                      {Math.round(summary.accuracy * 100)}% of answers right
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <p className="text-muted-foreground text-xs">Practice doesn&apos;t count towards marks.</p>
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

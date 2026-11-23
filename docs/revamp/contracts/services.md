@@ -46,7 +46,7 @@ Prices live in the database (`Tier` rows, [a/design/03-billing.md](../a/design/0
 | `graphing` | Graphs in lessons and graph answers (Mafs) | `PLUS` | no | v1 |
 | `question-bank` | Tagged question bank and randomised tests | `PLUS` | no | later |
 | `live-sessions` | Live-session check-in codes, and emails to parents about absences (the register itself is Core) | `PLUS` | no | v1 |
-| `advanced-analytics` | Item analysis and question difficulty | `PLUS` | no | later |
+| `advanced-analytics` | Item analysis and question difficulty | `PLUS` | no | v1 |
 | `custom-branding` | Workspace logo, accent colour and sender name | `PLUS` | no | v1 |
 | `calendar-sync` | ICS calendar feed per user | `PLUS` | no | v1 |
 | `secure-tests` | Lockdown settings, tab-switch and focus logs (honours extra time) | `PRO` | no | v1 |

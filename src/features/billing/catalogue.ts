@@ -71,7 +71,7 @@ export const SERVICES: Record<ServiceKey, ServiceInfo> = {
   graphing: premium("graphing", "Graphs in lessons and graph answers", "PLUS", "v1"),
   "question-bank": premium("question-bank", "Question bank and randomised tests", "PLUS", "v1"),
   "live-sessions": premium("live-sessions", "Live-session check-in codes and absence emails", "PLUS", "v1"),
-  "advanced-analytics": premium("advanced-analytics", "Item analysis and question difficulty", "PLUS", "later"),
+  "advanced-analytics": premium("advanced-analytics", "Item analysis and question difficulty", "PLUS", "v1"),
   "custom-branding": premium("custom-branding", "Workspace logo, accent colour and sender name", "PLUS", "v1"),
   "calendar-sync": premium("calendar-sync", "Calendar feed", "PLUS", "v1"),
   "secure-tests": premium("secure-tests", "Secure tests", "PRO", "v1"),
