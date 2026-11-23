@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.19, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.20, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.20. At-risk alerts (Pro): `listRiskAlerts`, `shareRiskAlertAction`, `listMySharedRiskAlerts` and the rest |
 | 2026-11-23 | Draft 1.19. Landing page: `getPublicPlans`, `submitPlatformEnquiry`, admin enquiries, sitemap, robots and analytics |
 | 2026-11-23 | Draft 1.18. Term report PDFs (`renderTermReportPdf`, `pdfResponse`) and offline reading (`public/sw.js`, `@/lib/offline`) |
 | 2026-11-23 | Draft 1.17. Roles as permission sets and branches (#216): `membership.roleKey`, `roleName`, `scope`, `branchIds`, `branchTeamIds`; six new permission keys; `staffScope`, `courseScopeOf` and `scopedCourseWhere`; role, branch and team actions in `@/features/workspaces/role-actions` |
@@ -492,3 +493,50 @@ From `@/lib/offline` (client):
 - It counts public pages only. Signed-in pages, invite links and query strings (except utm tags) are never sent.
 - The owner switches it on once in Vercel (Project, Analytics, Enable).
 - For a custom event, such as "enquiry sent", B may call `track("enquiry_sent", { kind })` from `@vercel/analytics`. Never include a name, email or id.
+
+### At-risk alerts (Draft 1.20)
+
+#216 phase 2, **Pro** (service `at-risk-alerts`).
+
+**How it works:**
+- A daily job (from housekeeping) reads each enrolled student's last 28 days in every Pro course: marks, work whose due date passed without a hand-in, and attendance.
+- It applies the rules in `@/features/risk/rules` (`RISK_RULES` holds the thresholds, which are provisional):
+  - **Falling marks:** the last 3 marks average 15 or more points below the 5 before them.
+  - **Low marks:** the last 3 average below 50%.
+  - **Missed work:** 2 or more pieces.
+  - **Absences:** 2 or more unexcused absences, or under 75% over at least 4 sessions.
+- **Levels:**
+  - `WATCH` when one kind of problem fires.
+  - `AT_RISK` when two kinds fire, or one is serious: marks below 40%, 3 missed pieces, or 3 absences.
+- An alert opens once per course and student, is updated each day, escalates from WATCH to AT_RISK, and closes on its own (`RESOLVED`) when the rules stop firing.
+- Course staff get one in-app notification per course when alerts open or escalate. The link is `/dashboard/courses/<courseId>/at-risk`: please build that page, or tell me the path you choose.
+- **Nothing goes to students or parents until staff share it.**
+
+**Staff** (from `@/features/risk/actions`). Each needs `grades.view` on the course; branch and own-course scopes apply.
+
+| Action | Input | Returns |
+| --- | --- | --- |
+| `listRiskAlerts` | `{ courseId?, status?: "open" \| "closed" \| "all", limit? }` | `StaffRiskAlert[]`: `{ id, course, student: { userId, name }, level, status, reasons, summary, firstSeenAt, lastSeenAt, sharedAt, sharedWith, shareNote, closedAt, canShareWith: { guardians, student } }`, AT_RISK first |
+| `countRiskAlerts` | `{}` | `{ [courseId]: openCount }`, for badges |
+| `shareRiskAlertAction` | `{ alertId, withGuardians, withStudent, note? }` | `{ ok, sentTo, emailed }`. Also needs `messages.direct`. Pro only: otherwise `serverError` is "At-risk alerts are part of the Pro plan for this course." |
+| `dismissRiskAlertAction` | `{ alertId }` | "Not a concern": closes it and keeps quiet for 14 days |
+| `resolveRiskAlertAction` | `{ alertId }` | "Sorted": closes it; a new alert opens if the rules fire again |
+
+- **`summary`** is plain language, one sentence per reason, written about the student by first name. For example: "Thandi hasn't handed in 2 pieces of Mathematics work due since 3 November: Essay and Test 2." Show it as it is.
+- **`reasons`** is structured, for icons or chips: `{ rule: "FALLING_MARKS", from, to }`, `{ rule: "LOW_MARKS", average, count }`, `{ rule: "MISSED_WORK", count, titles, since }` or `{ rule: "ABSENCES", absent, sessions }`.
+- **The share dialog:**
+  - Show tick boxes for "Parents (n)" and "The student" from `canShareWith`, plus a note field (optional, up to 1000 characters).
+  - Show the summary as it will be sent.
+  - Disable a tick box when its count is 0 or its value is false.
+- **Sharing:**
+  - It emails each recipient (template `risk:shared`; a parent version and a student version) and leaves an in-app notice.
+  - It sets `status: "SHARED"`.
+  - Sharing again sends again.
+  - A recipient who switched email off gets the in-app notice only.
+- **Read-only workspaces:** the three write actions are refused.
+
+**Students and parents:** `listMySharedRiskAlerts({})` returns what was shared with them in the last 90 days: `{ id, course, student, summary, note, sharedAt, sharedBy, open }`. A student sees alerts shared with the student; a parent sees alerts shared with parents, for each linked child. Show it as "Notes from your tutors" on their home page.
+
+**Privacy:** alerts are part of a student's data export (`riskAlerts`) and are deleted with the account. Deleting a course or workspace deletes its alerts.
+
+**AI summary (Pro, later):** an optional AI rewrite of the summary comes with the AI service (phase 2, Plus AI), and will use AI credits.

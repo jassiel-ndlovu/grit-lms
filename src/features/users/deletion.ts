@@ -106,6 +106,8 @@ export async function anonymiseAccount(userId: string, now: Date = new Date()) {
     await tx.calendarFeedToken.deleteMany({ where: { userId } });
     await tx.userPreferences.deleteMany({ where: { userId } });
     await tx.notification.deleteMany({ where: { userId } });
+    // At-risk alerts about this student (#216 phase 2).
+    await tx.riskAlert.deleteMany({ where: { studentUserId: userId } });
     await tx.activityLog.deleteMany({ where: { userId } });
     await tx.emailVerificationToken.deleteMany({ where: { userId } });
     await tx.passwordResetToken.deleteMany({ where: { userId } });

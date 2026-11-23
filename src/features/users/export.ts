@@ -40,7 +40,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     },
   });
   const studentId = u.studentProfile?.id;
-  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes, practice] = await Promise.all([
+  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes, practice, riskAlerts] = await Promise.all([
     studentId ? prisma.testSubmission.findMany({
       where: { studentId },
       select: { startedAt: true, submittedAt: true, status: true, score: true, feedback: true, answers: true, test: { select: { title: true, course: { select: { name: true } } } }, aiSuggestions: { select: { questionId: true, totalAwarded: true, outOf: true, feedbackToStudent: true, tutorAction: true, model: true } } },
@@ -61,6 +61,8 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     prisma.referralCode.findMany({ where: { userId: targetUserId }, select: { code: true, createdAt: true, workspace: { select: { name: true } }, _count: { select: { referrals: true } } } }),
     // B's practice sets (#236): progress on each practice item.
     studentId ? prisma.practiceReview.findMany({ where: { studentId }, select: { box: true, dueAt: true, lastAnsweredAt: true, answered: true, correct: true, item: { select: { stem: true, set: { select: { title: true } } } } } }) : [],
+    // At-risk alerts about this person as a student (#216 phase 2).
+    prisma.riskAlert.findMany({ where: { studentUserId: targetUserId }, orderBy: { firstSeenAt: "desc" }, select: { level: true, status: true, summary: true, firstSeenAt: true, lastSeenAt: true, sharedAt: true, sharedWith: true, shareNote: true, closedAt: true, course: { select: { name: true } } } }),
   ]);
   await prisma.auditLog.create({ data: { workspaceId: actor.workspaceId, actorUserId: actor.userId, action: "user.export", targetType: "User", targetId: targetUserId, data: { self: actor.userId === targetUserId } } });
 
@@ -90,6 +92,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     paymentsMade: payments,
     savedQuestions: bankQuestions,
     practice: practice.map((p) => ({ set: p.item.set.title, item: p.item.stem, answered: p.answered, correct: p.correct, lastAnsweredAt: p.lastAnsweredAt, nextDueAt: p.dueAt, box: p.box })),
+    riskAlerts: riskAlerts.map((r) => ({ course: r.course.name, level: r.level, status: r.status, summary: r.summary, firstSeenAt: r.firstSeenAt, lastSeenAt: r.lastSeenAt, sharedAt: r.sharedAt, sharedWith: r.sharedWith, note: r.shareNote, closedAt: r.closedAt })),
     referralLinks: referralCodes.map((r) => ({ workspace: r.workspace.name, code: r.code, since: r.createdAt, familiesReferred: r._count.referrals })),
     notifications: u.notifications,
     activity: u.activities,
