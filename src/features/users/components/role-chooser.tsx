@@ -67,9 +67,14 @@ function ErrorText({ error }: { error: string | null }) {
   ) : null;
 }
 
-export function RoleChooser() {
+/** `after`: where a student or parent goes instead of their dashboard (a referral link's courses). */
+export function RoleChooser({ after }: { after?: string | null }) {
   const [chosen, setChosen] = React.useState<{ role: Role; next: string } | null>(null);
-  return chosen ? <PreferencesStep role={chosen.role} next={chosen.next} /> : <RoleStep onChosen={setChosen} />;
+  return chosen ? (
+    <PreferencesStep role={chosen.role} next={chosen.role !== "TUTOR" && after ? after : chosen.next} />
+  ) : (
+    <RoleStep onChosen={setChosen} />
+  );
 }
 
 function RoleStep({ onChosen }: { onChosen: (c: { role: Role; next: string }) => void }) {

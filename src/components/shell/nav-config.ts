@@ -59,6 +59,8 @@ const CALENDAR: NavLink = { label: "Calendar", href: "/dashboard/calendar", icon
 const PAY_FEES: NavLink = { label: "Fees", href: "/dashboard/fees", icon: "fees", keywords: ["pay", "invoices", "card"], requires: "fees.pay", billing: true };
 /** Listed courses a student (or a parent, for a child) asks to join (#206). */
 const FIND_COURSES: NavLink = { label: "Find courses", href: "/dashboard/courses/browse", icon: "book", keywords: ["browse", "join", "enrol", "catalogue"] };
+/** A student's or parent's referral link (viewer.md Draft 1.16). */
+const REFER: NavLink = { label: "Refer a friend", href: "/dashboard/referrals", icon: "users", keywords: ["referral", "invite", "share", "link"] };
 const INBOX: NavLink ={ label: "Notifications", href: "/dashboard/notifications", icon: "inbox", keywords: ["inbox", "updates"] };
 
 const BY_PERSONA: Record<Persona, NavSection[]> = {
@@ -75,7 +77,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Grades", href: "/dashboard/grades", icon: "grades", keywords: ["marks", "results"], requires: "grades.view" },
       ],
     },
-    { label: "Account", items: [PAY_FEES] },
+    { label: "Account", items: [PAY_FEES, REFER] },
   ],
   staff: [
     { items: [HOME, INBOX] },
@@ -95,6 +97,8 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       items: [
         { label: "Students", href: "/dashboard/students", icon: "users", keywords: ["learners", "parents", "sign-in code", "accounts"], requires: "learners.invite" },
         { label: "Join requests", href: "/dashboard/join-requests", icon: "inbox", keywords: ["enrol", "approve", "listed", "waiting"], requires: "learners.invite" },
+        // Owners and admins only (listReferrals needs the whole workspace); tutors hold learners.invite too, so this goes by members.invite.
+        { label: "Referrals", href: "/dashboard/referrals", icon: "users", keywords: ["referred", "families", "word of mouth"], requires: "members.invite" },
         { label: "Members", href: "/dashboard/settings/members", icon: "users", keywords: ["tutors", "admins", "staff", "invite", "team"], requires: "members.invite" },
       ],
     },
@@ -118,7 +122,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
   ],
   // Guardians get their children's pages in Phase 1 (viewer.children).
   // Calendar: each child's sessions, one at a time (#149).
-  guardian: [{ items: [HOME, INBOX] }, { label: "Learning", items: [CALENDAR, FIND_COURSES] }, { label: "Account", items: [PAY_FEES] }],
+  guardian: [{ items: [HOME, INBOX] }, { label: "Learning", items: [CALENDAR, FIND_COURSES] }, { label: "Account", items: [PAY_FEES, REFER] }],
   none: [{ items: [HOME, INBOX] }],
 };
 

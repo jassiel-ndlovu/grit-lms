@@ -16,7 +16,7 @@ import { useSearchParams } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck, User } from "lucide-react";
 
 import { googleSignInAvailable, signUpWithPassword } from "@/lib/auth-client";
-import { AuthFrame, Busy, Field, GoogleButton, INPUT, OrDivider, signUpOpen } from "@/components/auth/auth-parts";
+import { AuthFrame, Busy, Field, GoogleButton, INPUT, keepCallback, OrDivider, signUpOpen } from "@/components/auth/auth-parts";
 
 const MIN_PASSWORD = 10;
 
@@ -176,7 +176,7 @@ function SignUpCard() {
       </div>
       <p className="mt-6 text-center text-sm text-slate-600">
         Already have an account?{" "}
-        <Link href="/auth" className="font-medium text-slate-900 underline underline-offset-2">
+        <Link href={keepCallback("/auth", callbackUrl)} className="font-medium text-slate-900 underline underline-offset-2">
           Sign in
         </Link>
       </p>

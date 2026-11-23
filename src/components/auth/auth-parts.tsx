@@ -30,6 +30,15 @@ export function safeCallback(raw: string | null | undefined, fallback = "/dashbo
 }
 
 /**
+ * Links between sign-in and sign-up keep the way back, but only for pages a
+ * brand new account may open: Find courses (a referral link) and invites.
+ */
+export function keepCallback(path: "/auth" | "/auth/sign-up", raw: string | null | undefined): string {
+  const back = safeCallback(raw, "");
+  return back.startsWith("/dashboard/courses/browse") || back.startsWith("/auth/invite/") ? `${path}?callbackUrl=${encodeURIComponent(back)}` : path;
+}
+
+/**
  * The sign-in, sign-up and invite frame. From 1024 px a photo fills the
  * right half; below that it's hidden and, being lazy, never fetched.
  */

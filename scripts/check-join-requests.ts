@@ -8,7 +8,10 @@
  * Pure: no database, no network. Exits 1 on any failure.
  */
 
-import { askedBy, askTargets, joinRoutes, needsConsent, openRequestFor, parseJoinStatus } from "../src/features/courses/lib/join-ui";
+import {
+  askedBy, askTargets, browseNext, browseUrl, enrolledLabel, familyWorkspaces, joinRoutes, needsConsent, noteFrom, openRequestFor, parseJoinStatus,
+  referralCounts,
+} from "../src/features/courses/lib/join-ui";
 
 let failures = 0;
 function check(name: string, got: unknown, want: unknown) {
@@ -24,6 +27,34 @@ check("a student asks for themself", askTargets({ userId: "s", name: "Lindi", is
 check("a parent asks for each child", askTargets({ userId: "p", name: "Sipho", isStudent: false }, kids).map((t) => t.userId), ["k1", "k2"]);
 check("a parent is never a target", askTargets({ userId: "p", name: "Sipho", isStudent: false }, kids).some((t) => t.self), false);
 check("a tutor browsing gets no targets", askTargets({ userId: "t", name: "Tutor", isStudent: false }, []), []);
+
+// --- Find courses: filters, the way back, who is on a course already -----------
+check("no filters: the plain page", browseUrl({ q: "", workspace: null }), "/dashboard/courses/browse");
+check("filters survive, encoded", browseUrl({ workspace: "w1", q: "a&b", cursor: "c" }), "/dashboard/courses/browse?workspace=w1&q=a%26b&cursor=c");
+check("next: Find courses is fine", browseNext("/dashboard/courses/browse?workspace=w1"), "/dashboard/courses/browse?workspace=w1");
+for (const bad of [null, "", "https://evil.test", "//evil.test", "/dashboard/courses/browse.evil", "/dashboard/admin", `/dashboard/courses/browse?${"x".repeat(400)}`]) {
+  check(`next: refused (${String(bad).slice(0, 30)})`, browseNext(bad), null);
+}
+const targets = askTargets({ userId: "p", name: "Sipho", isStudent: false }, [{ userId: "k1", name: "Thandi Dube" }, { userId: "k2", name: "Musa Dube" }]);
+check("nobody on the course", enrolledLabel(targets, []), null);
+check("one child on it", enrolledLabel(targets, ["k1"]), "Thandi is on this course");
+check("both on it", enrolledLabel(targets, ["k2", "k1"]), "Thandi and Musa are on this course");
+check("the student is on it", enrolledLabel(askTargets({ userId: "s", name: "Lindi", isStudent: true }, []), ["s"]), "You're on this course");
+check("own decline note", noteFrom({ id: "me", name: "Ann" }, "me"), "Your note");
+check("someone else's note", noteFrom({ id: "x", name: "Ann" }, "me"), "Note from Ann");
+check("unknown author", noteFrom(null, "me"), "Note");
+
+// --- Referrals -----------------------------------------------------------------
+check(
+  "own and children's workspaces, once each, not the ones they work in",
+  familyWorkspaces({
+    workspaces: [{ id: "a", name: "A", as: "learner" }, { id: "s", name: "S", as: "staff" }],
+    children: [{ workspaces: [{ id: "a", name: "A" }, { id: "b", name: "B" }] }],
+  }).map((w) => w.id),
+  ["a", "b"],
+);
+check("counts: none", referralCounts(0, 0), "Nobody has asked to join through your link yet.");
+check("counts: some", referralCounts(3, 2), "3 asked to join through your link, 2 joined.");
 
 // --- Consent on approve --------------------------------------------------------
 check("minor who asked: consent needed", needsConsent(true, false), true);

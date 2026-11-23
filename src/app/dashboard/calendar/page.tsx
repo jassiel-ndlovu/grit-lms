@@ -20,6 +20,7 @@ import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { listCalendarOccurrences } from "@/features/calendar/actions";
 import { childRoutes } from "@/features/activity/lib/child-overview";
+import { hasService } from "@/features/billing/services";
 import { getCourseScope } from "@/features/courses/course-access";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { childCourseIds, dueForCourses, dueForStudent } from "@/features/events/calendar-feed";
@@ -31,6 +32,7 @@ import { calendarRoutes, dayKeyOf, daysFor, parseDayKey, parseView, rangeFor, ra
 import { getUserPreferences } from "@/features/users/preferences";
 import { auth } from "@/lib/auth";
 import { DEFAULT_TIME_ZONE, resolveLocale } from "@/lib/datetime";
+import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/viewer";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +78,18 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   if (onlyCourses) entries = entries.filter((e) => onlyCourses.has(e.courseId));
   entries = [...entries, ...due];
 
+  // Check-in codes come with live-sessions (Plus), course by course.
+  const checkInCourseIds: string[] = [];
+  if (learner) {
+    const enrolled = await prisma.enrollment.findMany({
+      where: { endedAt: null, learner: { userId: viewer.user.id } },
+      select: { courseId: true },
+      distinct: ["courseId"],
+    });
+    const on = await Promise.all(enrolled.map((e) => hasService(viewer, e.courseId, "live-sessions")));
+    checkInCourseIds.push(...enrolled.filter((_, i) => on[i]).map((e) => e.courseId));
+  }
+
   const label = rangeLabel(view, anchor, locale);
   const breadcrumb = child
     ? [{ label: child.name, href: childRoutes.child(child.userId) }, { label: "Calendar" }]
@@ -87,7 +101,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
       breadcrumb={breadcrumb}
       actions={
         <>
-          {learner && <CheckInButton size="sm" />}
+          {checkInCourseIds.length > 0 && <CheckInButton size="sm" />}
           <SubscribeButton compact />
           {tutor && <CreateEventButton courses={tutorCourses} timeZone={prefs.timeZone ?? viewer.workspace?.timezone ?? DEFAULT_TIME_ZONE} initialDate={view === "day" ? anchor : undefined} />}
         </>
@@ -132,7 +146,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         today={today}
         entries={entries}
         child={child?.userId}
-        ctx={{ timeZone, locale, editableCourseIds: tutorCourses.map((c) => c.id), learner }}
+        ctx={{ timeZone, locale, editableCourseIds: tutorCourses.map((c) => c.id), checkInCourseIds }}
         empty={
           <EmptyState
             compact

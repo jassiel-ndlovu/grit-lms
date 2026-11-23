@@ -27,13 +27,13 @@ check("no false prefix (tests vs tutor-tests)", activeHref("/dashboard/tutor-tes
 check("trailing segment boundary", activeHref("/dashboard/testsuite", hrefs), null);
 // Each legacy role, through today's bridge viewer: the links it had before the
 // viewer, plus Find courses (learners, guardians), Calendar for guardians
-// (#149) and Join requests (staff
-// with learners.invite) from #206.
+// (#149), Join requests (staff
+// with learners.invite) from #206, and referrals (learners and guardians).
 const BEFORE: Record<LegacyRole, string[]> = {
-  STUDENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses", "/dashboard/courses/browse", "/dashboard/calendar", "/dashboard/tests", "/dashboard/assignments", "/dashboard/grades"],
+  STUDENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses", "/dashboard/courses/browse", "/dashboard/calendar", "/dashboard/tests", "/dashboard/assignments", "/dashboard/grades", "/dashboard/referrals"],
   TUTOR: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-courses", "/dashboard/calendar", "/dashboard/tutor-tests", "/dashboard/assignments", "/dashboard/gradebook", "/dashboard/analytics", "/dashboard/students", "/dashboard/join-requests"],
   ADMIN: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-users"],
-  PARENT: ["/dashboard", "/dashboard/notifications", "/dashboard/calendar", "/dashboard/courses/browse"],
+  PARENT: ["/dashboard", "/dashboard/notifications", "/dashboard/calendar", "/dashboard/courses/browse", "/dashboard/referrals"],
 };
 for (const role of Object.keys(BEFORE) as LegacyRole[]) {
   check(`${role}: expected links`, hrefsOf(navSectionsFor(viewerFor(role))), BEFORE[role]);
@@ -51,6 +51,9 @@ check(
   navSectionsFor({ persona: "admin", permissions: [] }).map((s) => s.label ?? ""),
   [""],
 );
+const inviter = (...permissions: Array<"learners.invite" | "members.invite">) => hrefsOf(navSectionsFor({ persona: "staff", permissions }));
+check("a tutor gets no Referrals link", inviter("learners.invite").includes("/dashboard/referrals"), false);
+check("an owner or admin does", inviter("learners.invite", "members.invite").includes("/dashboard/referrals"), true);
 const owner = { persona: "staff" as const, permissions: ["billing.view" as const] };
 check("billing off: no Billing link", hrefsOf(navSectionsFor(owner)).includes("/dashboard/settings/billing"), false);
 check("billing on, billing.view: Billing link", hrefsOf(navSectionsFor(owner, { billing: true })).includes("/dashboard/settings/billing"), true);
