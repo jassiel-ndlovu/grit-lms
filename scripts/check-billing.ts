@@ -42,7 +42,7 @@ check("seed tier prices", SEED_TIERS.map((t) => [t.key, t.priceCents, t.aiMarksP
 check("parked keys", Object.values(SERVICES).filter((s) => s.status === "parked").map((s) => s.key).sort(),
   ["automarker", "code-plagiarism", "judge-mode"]);
 check("Plus v1 keys", Object.values(SERVICES).filter((s) => s.tier === "PLUS" && s.status === "v1").map((s) => s.key).sort(),
-  ["advanced-analytics", "calendar-sync", "custom-branding", "graphing", "live-sessions", "math-input", "question-bank"]);
+  ["advanced-analytics", "calendar-sync", "custom-branding", "graphing", "live-sessions", "math-input", "question-bank", "session-booking"]);
 check("13 basic keys (attendance register moved to Core, 22 Nov)", Object.values(SERVICES).filter((s) => s.kind === "basic").length, 13);
 check("add-on statuses", Object.values(ADDONS).map((a) => [a.key, a.status]),
   [["day-pass", "later"], ["ai-credits", "retired"], ["extra-storage", "v1"], ["live-room", "later"], ["runner-capacity", "parked"]]);
