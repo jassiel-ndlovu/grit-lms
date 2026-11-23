@@ -101,7 +101,7 @@ export const updateWorkspaceProfile = viewerActionClient
  * switches it back on (adminSwitchTeachingOn). Refused with a message
  * while an owner or admin still teaches a course.
  */
-export const switchTeachingOff = viewerActionClient
+export const switchTeachingOff = writableViewerActionClient
   .schema(z.object({ confirmName: z.string().trim().min(1).max(120) }))
   .action(async ({ parsedInput: { confirmName }, ctx: { viewer } }) => {
     if (!viewer.workspace || viewer.membership?.role !== "OWNER" || viewer.workspace.kind !== "ORGANISATION") throw new ViewerError("FORBIDDEN");

@@ -34,6 +34,7 @@ import {
 
 import { resetUserPassword } from "../actions";
 import type { ManagedUserRow } from "../queries";
+import { schoolDateFormat } from "@/lib/datetime";
 
 interface Props {
   users: ManagedUserRow[];
@@ -152,9 +153,7 @@ export function UserList({ users }: Props) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
-                    {new Intl.DateTimeFormat(undefined, {
-                      dateStyle: "medium",
-                    }).format(u.createdAt)}
+                    {schoolDateFormat({ dateStyle: "medium" }).format(u.createdAt)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button

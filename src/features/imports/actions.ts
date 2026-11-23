@@ -24,7 +24,7 @@ import * as engine from "./engine";
 import { importerFor, importerKinds } from "./registry";
 import type { ImportContext } from "./types";
 
-const PERMISSION: Record<string, Permission> = { students: "learners.invite", staff: "members.invite" };
+const PERMISSION: Record<string, Permission> = { students: "learners.invite", staff: "members.invite", calendar: "courses.edit" };
 const id = z.string().min(1).max(64);
 
 function contextFor(viewer: Viewer, kind: string): ImportContext {
@@ -71,12 +71,13 @@ export const getImportTemplate = viewerActionClient
   .action(async ({ parsedInput: { kind }, ctx: { viewer } }) => {
     contextFor(viewer, kind);
     const t = importerFor(kind)!.template;
+    if (!t.headers.length) return null; // not a CSV import (calendar: any .ics export)
     return { fileName: `nexa-${kind}-template.csv`, csv: toCsv(t.headers, t.examples) };
   });
 
 /** 1. Reads a CSV file (sent as text, up to 1 MB and 2,000 rows) and returns the preview. */
 export const startImport = writableViewerActionClient
-  .schema(z.object({ kind: z.string().max(40), fileName: z.string().min(1).max(200), text: z.string().max(1_100_000) }))
+  .schema(z.object({ kind: z.string().max(40), fileName: z.string().min(1).max(200), text: z.string().max(1_100_000), defaults: z.record(z.string(), z.string().max(200)).optional() }))
   .action(async ({ parsedInput, ctx: { viewer } }) => engine.createImportFor(contextFor(viewer, parsedInput.kind), parsedInput));
 
 /** 2. Changes cells in the preview (by row number `n`) and removes rows; every row is checked again. */

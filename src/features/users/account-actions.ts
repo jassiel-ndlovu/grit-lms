@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
-import { viewerActionClient } from "@/lib/safe-action";
+import { viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
 import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
 import { can, needsScope } from "@/lib/viewer-core";
 import { assertWorkspaceManages, UserError } from "@/lib/user-error";
@@ -38,7 +38,7 @@ async function assertManagesLearner(viewer: Viewer, learnerId: string, permissio
 }
 
 /** Creates a student and returns their username and one-time sign-in code (shown once). */
-export const createStudentAccount = viewerActionClient
+export const createStudentAccount = writableViewerActionClient
   .schema(z.object({
     fullName: z.string().trim().min(2).max(120),
     email: z.string().trim().email().max(200).nullable().optional(),
@@ -61,7 +61,7 @@ export const createStudentAccount = viewerActionClient
   });
 
 /** A new sign-in code for a student, or for a parent of one, whom the viewer manages. Not for staff accounts. */
-export const issueSignInCode = viewerActionClient
+export const issueSignInCode = writableViewerActionClient
   .schema(z.object({ userId: z.string().min(1) }))
   .action(async ({ parsedInput: { userId } }) => {
     const viewer = await requireViewer();
@@ -87,7 +87,7 @@ export const issueSignInCode = viewerActionClient
     return issueSignInCodeFor(viewer.user.id, ws, userId);
   });
 
-export const linkParent = viewerActionClient
+export const linkParent = writableViewerActionClient
   .schema(z.object({
     learnerId: z.string().min(1),
     name: z.string().trim().min(2).max(120),
@@ -110,7 +110,7 @@ export const listParents = viewerActionClient
     return parentsOf(learnerUserId);
   });
 
-export const revokeGuardianship = viewerActionClient
+export const revokeGuardianship = writableViewerActionClient
   .schema(z.object({ guardianshipId: z.string().min(1) }))
   .action(async ({ parsedInput }) => {
     const viewer = await requireViewer();

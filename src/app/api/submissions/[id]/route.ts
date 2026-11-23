@@ -13,7 +13,7 @@ import type { Session } from "@/lib/auth";
 import { taughtByEmail } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { emitNotification } from "@/features/notifications/server";
-import { forbidden, requireApiRole } from "@/lib/api-guard";
+import { forbidden, requireApiStaffWrite } from "@/lib/api-guard";
 
 async function tutorOwnsSubmission(session: Session, id: string) {
   // Teaching is read from CourseStaff, not Course.tutorId (issue #93).
@@ -28,7 +28,7 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const guard = await requireApiRole("TUTOR");
+  const guard = await requireApiStaffWrite("TUTOR");
   if (!guard.ok) return guard.response;
 
   const body = await req.json();
@@ -66,7 +66,7 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const guard = await requireApiRole("TUTOR");
+  const guard = await requireApiStaffWrite("TUTOR");
   if (!guard.ok) return guard.response;
 
   const { id } = await params;

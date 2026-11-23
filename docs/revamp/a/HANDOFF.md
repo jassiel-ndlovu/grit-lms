@@ -3,6 +3,32 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 B's findings (#223, #228) and calendar import, `revamp/a-calendar-import`
+
+No migration. Viewer contract Draft 1.15; imports contract Draft 1.1.
+
+Done:
+- **Read-only workspaces show their pages (#223.3).** Staff keep their permissions; writes are refused on the server instead.
+  - A's write actions on `viewerActionClient` moved to `writableViewerActionClient`: account actions, invites, calendar writes and the teaching switch.
+  - The legacy API write routes use the new `requireApiStaffWrite`, which answers 423. Before this they ignored read-only entirely.
+  - Billing, fees, payouts, settings and privacy requests still work.
+- **Find courses (#223.1, .2):** search matches the lead tutor's name; `enrolledUserIds` (from `forUserIds`) marks courses the viewer or their child is on. **Inbox:** `decidedBy` per request (#223.7).
+- **Smaller fixes (#223):** "switch teaching off" needs the exact name; the user list's date is in the school's zone; the Preview seed only shows a saved card when it can seal a (fake) authorisation (#223.4). The email-change message (#223.5) was already fixed in #220.
+- **#223.6:** migration 23's `password <> ''` clause can't catch real self sign-ups in production. Better Auth sign-ups leave `User.password` empty, and `changeOwnPassword` only started writing it after migration 23 ran. On Preview it caught the seed's adult, because the seed sets a password for everyone.
+- **Question bank (#228):**
+  - workspace deletion (retention) removes `BankQuestion` rows and their images;
+  - the POPIA export includes `savedQuestions`;
+  - account deletion removes the person's saved questions.
+  - The blob audit already scans every JSON column, so bank images count as in use.
+- **Calendar import (.ics):** `imports/ics.ts` (time zones, repeat rules, skipped dates, all-day, folded lines) and `importers/calendar.ts`. Checked by `scripts/check-imports-ics.ts` in CI. The engine gained `readText` and `defaults`.
+
+Tested:
+- 15 checks against Preview: read-only permissions, tutor-name search, enrolled marks, decline author, calendar import with re-import and undo, tutor course limits, saved questions in export and deletion.
+- Every static check script, types and lint.
+
+Still to do:
+- Re-seed Preview with `PAYMENT_ENC_KEY` set, so seed-lerato's card counts as saved.
+
 ## 2026-11-22 Phase 1: the import and export engine, `revamp/a-imports`
 
 Phase 1 of the backlog (#216). New contract `contracts/imports.md`, Draft 1. New A feature folder `src/features/imports/`.
