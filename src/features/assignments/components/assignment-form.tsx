@@ -20,7 +20,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarClock, Download, EyeOff, FileText, Loader2, Upload, X } from "lucide-react";
+import { CalendarClock, Download, EyeOff, FileText, FolderOpen, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -360,6 +360,7 @@ export function AssignmentForm({
             <Upload className="text-brand-terracotta size-5" />
             <p className="text-muted-foreground">Drop files here, or</p>
             <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+              <FolderOpen aria-hidden className="size-4" />
               Choose files
             </Button>
             <input

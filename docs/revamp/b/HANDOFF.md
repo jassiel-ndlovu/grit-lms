@@ -24,6 +24,48 @@ contracts/curriculum.md, Draft 2). The owner reviews them.
 Next (B-only): term reports once A's PDF helper lands. Ask the owner what
 comes after that.
 
+
+## 2026-11-23 Icons, stock photos and the landing page (owner's request, #216), `revamp/b-visual-polish`
+
+Done:
+- **Landing page** rebuilt (`src/app/page.tsx`, `components/landing/`):
+  hero, teach / mark / meet, tutors / organisations / students / parents,
+  what suits South African classes, getting started, questions, closing.
+  - Static, no framer-motion (`app/components/motion.tsx` is gone),
+    questions are `<details>`, product pictures are HTML in the app's tokens.
+  - "Create an account" shows when sign-up is open, else "Request access".
+  - Left to A: plan prices, the enquiry form's backend (a mail link for now),
+    search setup and analytics. No fees or plans in the copy, since billing is
+    off in production.
+- **Stock photos**: 14 real Unsplash photos in `public/images/stock/`, each
+  under 200 KB, with `CREDITS.md`. `scripts/fetch-stock-photos.mjs` holds
+  the list, downloads, resizes and writes the credits.
+  - `StockPhoto` works on static pages. A boot script in the root layout
+    puts `data-saver="on"` on `<html>` from the cookie or the browser's data
+    saver; CSS hides the photo's box and the lazy image is never fetched
+    (checked: 0 photo requests).
+  - Used on the landing page and beside sign-in, sign-up and invites
+    (`AuthFrame`, from 1024 px; phones don't fetch it).
+  - **Course covers**: six subject photos join the six drawings. With nothing
+    picked, a course name that says its subject (Afrikaans too) gets that
+    photo; other names keep the drawing they had.
+  - The course header and gradebook covers now respect data saver.
+- **Icons** on primary actions and choices: finding and asking to join a
+  course, approve and decline, edit lessons, onboarding next and finish, error
+  pages, attendance, calendar feed, import kinds, who is paid, how a fee was
+  paid, lesson or group.
+- **Meeting apps** (Settings › Online classes) have a neutral mark each
+  (`MeetingAppMark`), not the brands' logos: see the question below.
+- Checks: `check-stock-covers.ts` (extended), `check-data-saver.ts` (new).
+
+Questions for the owner:
+- **Meeting-app logos.** Zoom and Microsoft say their logos and icons can't be
+  used without a written licence; Google's published rules only cover
+  approved uses. Ask them (Zoom: brand@zoom.us), use them anyway at your own
+  risk, or keep the neutral marks? Swapping is one file.
+
+Next: the plans section once A's price data lands; a real enquiry form once
+A's backend does.
 ## 2026-11-23 Generate a test from the bank (#216, phase 2), `revamp/b-generate-test`
 
 Done:

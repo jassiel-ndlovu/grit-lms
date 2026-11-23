@@ -29,7 +29,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { FileText, FolderOpen, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -217,10 +217,10 @@ export function LessonForm({
                     <div className="border-border inline-flex w-fit rounded-md border p-0.5" role="radiogroup">
                       {(
                         [
-                          ["CONTENT", "Lesson"],
-                          ["NONE", "Group (no content)"],
+                          ["CONTENT", "Lesson", FileText],
+                          ["NONE", "Group (no content)", FolderOpen],
                         ] as const
-                      ).map(([v, name]) => (
+                      ).map(([v, name, Icon]) => (
                         <button
                           key={v}
                           type="button"
@@ -228,12 +228,13 @@ export function LessonForm({
                           aria-checked={field.value === v}
                           onClick={() => field.onChange(v)}
                           className={cn(
-                            "rounded px-3 py-1 text-xs transition-colors",
+                            "inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs transition-colors",
                             field.value === v
                               ? "bg-brand-terracotta text-brand-terracotta-foreground"
                               : "text-muted-foreground hover:text-foreground",
                           )}
                         >
+                          <Icon aria-hidden className="size-3.5" />
                           {name}
                         </button>
                       ))}

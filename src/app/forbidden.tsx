@@ -5,6 +5,7 @@
  */
 
 import Link from "next/link";
+import { House } from "lucide-react";
 
 import { BackButton } from "@/components/error-screen-client";
 import { ErrorFrame, ErrorScreen } from "@/components/error-screen";
@@ -20,7 +21,10 @@ export default function Forbidden() {
         actions={
           <>
             <Button asChild>
-              <Link href="/dashboard">Go to your dashboard</Link>
+              <Link href="/dashboard">
+                <House aria-hidden className="size-4" />
+                Go to your dashboard
+              </Link>
             </Button>
             <BackButton />
           </>

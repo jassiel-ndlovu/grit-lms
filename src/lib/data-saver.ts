@@ -37,6 +37,15 @@ export function dataSaverCookie(choice: DataSaverChoice): string {
     : `${DATA_SAVER_COOKIE}=${choice}; Path=/; Max-Age=31536000; SameSite=Lax`;
 }
 
+/**
+ * Inline script for <head> (next to the theme script): puts
+ * data-saver="on" on <html> before anything is drawn, from the cookie or
+ * the browser's own data saver. Public pages are static, so the server
+ * can't decide there. StockPhoto hides its photo's box under that
+ * attribute, and a lazy image in a hidden box is never fetched.
+ */
+export const dataSaverBootScript = `try{var m=document.cookie.match(/(?:^|; )${DATA_SAVER_COOKIE}=(on|off)/),c=navigator.connection;if(m?m[1]==="on":c&&c.saveData){document.documentElement.dataset.saver="on"}}catch(e){}`;
+
 /** "photo.jpg" from a URL, for the placeholder's label; "" when there's none. */
 export function fileNameOf(src: string): string {
   try {

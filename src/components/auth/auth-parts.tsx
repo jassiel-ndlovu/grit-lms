@@ -8,8 +8,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
+import { BrandMark } from "@/components/brand-mark";
+import { StockPhoto } from "@/components/stock-photo";
 import { signInWithGoogle } from "@/lib/auth-client";
 
 const APP_NAME = "Nexa LMS";
@@ -26,36 +29,43 @@ export function safeCallback(raw: string | null | undefined, fallback = "/dashbo
   return raw && raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\") ? raw : fallback;
 }
 
+/**
+ * The sign-in, sign-up and invite frame. From 1024 px a photo fills the
+ * right half; below that it's hidden and, being lazy, never fetched.
+ */
 export function AuthFrame({ title, lead, children }: { title: string; lead: string; children: React.ReactNode }) {
+  const joining = usePathname() !== "/auth";
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-orange-50/30 via-white to-white">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span aria-hidden className="flex size-8 items-center justify-center rounded-md bg-[#1f1e1b] font-serif text-sm text-[#f7f7f5]">
-              Nx
-            </span>
-            <span className="text-lg font-semibold tracking-tight text-slate-900">{APP_NAME}</span>
-          </Link>
-          <Link href="/" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
-            Back to home
-          </Link>
-        </div>
-      </header>
-      <main className="flex flex-1 items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="mb-6 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-            <p className="mt-1 text-sm text-slate-600">{lead}</p>
+    <div className="grid min-h-screen bg-white lg:grid-cols-[1.1fr_1fr]">
+      <div className="flex min-w-0 flex-col bg-gradient-to-b from-orange-50/30 via-white to-white">
+        <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
+          <div className="flex items-center justify-between gap-4 px-6 py-4">
+            <Link href="/" className="flex items-center gap-2">
+              <BrandMark className="dark:ring-0" />
+              <span className="text-lg font-semibold tracking-tight text-slate-900">{APP_NAME}</span>
+            </Link>
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-slate-600 transition-colors hover:text-slate-900">
+              <ArrowLeft aria-hidden className="size-4" />
+              Back to home
+            </Link>
           </div>
-          {children}
-        </div>
-      </main>
-      <footer className="py-6">
-        <div className="mx-auto max-w-6xl px-6 text-center text-xs text-slate-500">
+        </header>
+        <main className="flex flex-1 items-center justify-center px-4 py-12">
+          <div className="w-full max-w-md">
+            <div className="mb-6 text-center">
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+              <p className="mt-1 text-sm text-slate-600">{lead}</p>
+            </div>
+            {children}
+          </div>
+        </main>
+        <footer className="px-6 py-6 text-center text-xs text-slate-500">
           © {new Date().getFullYear()} {APP_NAME}
-        </div>
-      </footer>
+        </footer>
+      </div>
+      <div className="sticky top-0 hidden h-screen bg-slate-200 lg:block">
+        <StockPhoto name={joining ? "join" : "sign-in"} alt="" sizes="(max-width: 1023px) 1px, 48vw" />
+      </div>
     </div>
   );
 }

@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import { Loader2, MessageSquare, RefreshCw, ScanLine } from "lucide-react";
+import { CheckCheck, Loader2, MessageSquare, RefreshCw, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,7 @@ export function AttendanceSheet({ eventId, occurrenceStart, learners: initial }:
           title={readOnly ? READ_ONLY_REASON : undefined}
           onClick={() => save(unmarked.map((r) => ({ learnerId: r.learnerId, status: "PRESENT" })))}
         >
+          <CheckCheck aria-hidden className="size-4" />
           Mark the rest present
         </Button>
       </div>

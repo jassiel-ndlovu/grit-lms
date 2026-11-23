@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { isBillingEnabled } from "@/features/billing/errors";
@@ -86,7 +87,10 @@ export default async function OnboardingStepPage({ params }: PageProps) {
             <Link href={stepHref("course")}>Back</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={stepHref("payouts")}>Next</Link>
+            <Link href={stepHref("payouts")}>
+              Next
+              <ArrowRight aria-hidden className="size-4" />
+            </Link>
           </Button>
         </div>
       </OnboardingFrame>
@@ -96,7 +100,10 @@ export default async function OnboardingStepPage({ params }: PageProps) {
   // Payouts.
   const done = (
     <Button asChild>
-      <Link href="/dashboard">Finish setting up</Link>
+      <Link href="/dashboard">
+        <Check aria-hidden className="size-4" />
+        Finish setting up
+      </Link>
     </Button>
   );
   if (!can(viewer, "payouts.connect")) {

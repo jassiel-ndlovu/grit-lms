@@ -4,7 +4,7 @@
  * Server Component. Tutor-only; students keep using /dashboard/grades.
  */
 
-import Image from "next/image";
+import { SaverCover } from "@/components/data-saver";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BookOpen, ChevronRight, Users } from "lucide-react";
@@ -50,7 +50,7 @@ export default async function GradebookIndexPage() {
               <Link href={`/dashboard/gradebook/${c.id}`} className="block">
                 <Card className="hover:border-brand-terracotta/40 flex items-center gap-4 p-5 transition-colors">
                   <div className="bg-muted relative size-12 shrink-0 overflow-hidden rounded-md">
-                    <Image
+                    <SaverCover
                       src={courseCoverSrc(c)}
                       alt=""
                       fill

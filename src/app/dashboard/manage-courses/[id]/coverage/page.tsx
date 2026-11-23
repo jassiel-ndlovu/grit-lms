@@ -6,6 +6,7 @@
  */
 
 import Link from "next/link";
+import { Settings } from "lucide-react";
 
 import { PageMessage, PageTitle } from "@/components/shell/page-frame";
 import { StatusChip, type StatusTone } from "@/components/shell/status-chip";
@@ -45,7 +46,10 @@ export default async function CourseCoveragePage({ params }: { params: Promise<{
               : "Set the course's curriculum, subject and grade in Settings to see which topics are covered."}
           </p>
           <Button asChild variant="outline" size="sm">
-            <Link href={courseRoutes.settings(course.id)}>Course settings</Link>
+            <Link href={courseRoutes.settings(course.id)}>
+              <Settings aria-hidden className="size-4" />
+              Course settings
+            </Link>
           </Button>
         </div>
       </CourseFrame>

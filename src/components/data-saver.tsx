@@ -39,6 +39,11 @@ export function DataSaverProvider({
     setChoiceState(c);
   }, []);
   const value = React.useMemo(() => ({ on: dataSaverOn(choice, hint), choice, hint, setChoice }), [choice, hint, setChoice]);
+  // Keeps StockPhoto (CSS, no provider needed) in step with the setting.
+  React.useEffect(() => {
+    if (value.on) document.documentElement.dataset.saver = "on";
+    else delete document.documentElement.dataset.saver;
+  }, [value.on]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

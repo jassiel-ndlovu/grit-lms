@@ -12,7 +12,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, MoreHorizontal, Plus } from "lucide-react";
+import { Banknote, CircleEllipsis, Landmark, Loader2, MoreHorizontal, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -236,13 +236,14 @@ function OffsiteForm({ fee, onDone }: { fee: Fee; onDone: () => void }) {
         <div className="flex flex-wrap gap-4 text-sm">
           {(
             [
-              ["CASH", "Cash"],
-              ["EFT", "EFT to my account"],
-              ["OTHER", "Other"],
+              ["CASH", "Cash", Banknote],
+              ["EFT", "EFT to my account", Landmark],
+              ["OTHER", "Other", CircleEllipsis],
             ] as const
-          ).map(([v, label]) => (
+          ).map(([v, label, Icon]) => (
             <label key={v} className="inline-flex items-center gap-2">
               <input type="radio" name={`${ids}-method`} checked={method === v} onChange={() => setMethod(v)} />
+              <Icon aria-hidden className="text-muted-foreground size-4" />
               {label}
             </label>
           ))}
