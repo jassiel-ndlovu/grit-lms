@@ -42,6 +42,7 @@ import {
   Paperclip,
   Plus,
   Trash2,
+  BookmarkPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -105,12 +106,14 @@ export interface EditorQuestion {
   rubric?: Rubric | null;
   /** Curriculum topic codes (contracts/curriculum.md). */
   topics?: string[];
+  /** The bank item this question was copied from (contracts/question-bank.md). */
+  bankQuestionId?: string | null;
   subQuestions: EditorQuestion[];
 }
 
 export type MathModeValue = "EQUIVALENT" | "FORM" | "MARGIN";
 
-const TYPE_LABELS: Record<EditorQuestionType, string> = {
+export const TYPE_LABELS: Record<EditorQuestionType, string> = {
   MULTIPLE_CHOICE: "Multiple choice",
   TRUE_FALSE: "True / false",
   SHORT_ANSWER: "Short answer",
@@ -169,6 +172,8 @@ export interface TestQuestionEditorProps {
    * passes "draft" and the blobs simply live under tests/draft/.
    */
   testId?: string;
+  /** Shown on top-level questions when the course has the question bank. */
+  onSaveToBank?: () => void;
 }
 
 export function TestQuestionEditor({
@@ -181,6 +186,7 @@ export function TestQuestionEditor({
   labels,
   depth,
   testId = "draft",
+  onSaveToBank,
 }: TestQuestionEditorProps) {
   const isContext = question.type === "NONE";
   const [uploading, setUploading] = React.useState(false);
@@ -339,6 +345,19 @@ export function TestQuestionEditor({
               aria-label={`Move ${isContext ? "context" : "question"} ${label} down`}
             >
               <ChevronDown className="size-3.5" />
+            </Button>
+          )}
+          {onSaveToBank && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={onSaveToBank}
+              aria-label={`Save ${isContext ? "context" : "question"} ${label} to the question bank`}
+              title="Save to bank"
+            >
+              <BookmarkPlus className="size-3.5" />
             </Button>
           )}
           <Button

@@ -32,7 +32,7 @@ The code format is `caps:<subject>:<grade>:<topic-slug>`, for example `caps:math
 | `curriculumLabel(course)` | "CAPS · Mathematics · Grade 10". |
 | `coverage(topics, lessons, questions)` | Rows of `{ topic, lessons, questions, marks }`. |
 
-**Today:** CAPS Mathematics, Grades 10 to 12, following the CAPS document's topics per grade. IEB courses use the CAPS list, because IEB follows the CAPS content for these subjects.
+**Today:** CAPS Mathematics, Physical Sciences, Life Sciences and Accounting, Grades 10 to 12, following the CAPS document's topics per grade. IEB courses use the CAPS list, because IEB follows the CAPS content for these subjects.
 
 **Next:** more subjects (Mathematical Literacy, Physical Sciences, Life Sciences), Senior Phase grades, and topics a workspace adds itself. A workspace's own topics would need a table; that comes as Draft 2.
 

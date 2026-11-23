@@ -16,6 +16,8 @@ import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { TestForm } from "@/features/assessments/components/test-form";
 import { getCourseScope } from "@/features/courses/course-access";
+import { hasService } from "@/features/billing/services";
+import { getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "New test" };
 
@@ -46,11 +48,16 @@ export default async function NewTestPage() {
     );
   }
 
+  // The Plus question bank, per course (contracts/question-bank.md).
+  const viewer = await getViewer();
+  const withBank = viewer ? await Promise.all(courses.map(async (c) => ((await hasService(viewer, c.id, "question-bank")) ? c.id : null))) : [];
+  const bank = new Set(withBank.filter(Boolean));
+
   return (
     <PageFrame type="editor" breadcrumb={[{ label: "Tests", href: "/dashboard/tutor-tests" }, { label: "New test" }]}>
       <PageTitle title="New test" description="Draft first, publish when ready. Publishing sends a notification to enrolled students." />
 
-      <TestForm courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel } }))} />
+      <TestForm courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel }, questionBank: bank.has(c.id) }))} />
     </PageFrame>
   );
 }

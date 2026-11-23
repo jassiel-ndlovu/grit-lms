@@ -3,6 +3,33 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Question bank and three more subjects (#216, phase 2), `revamp/b-question-bank`
+
+Done:
+- **Curriculum catalogue:** CAPS Physical Sciences, Life Sciences and
+  Accounting, Grades 10 to 12, join Mathematics. Codes follow the same
+  shape (`caps:physical-sciences:11:electromagnetism`).
+- **Question bank** (Plus service `question-bank`), contract
+  `docs/revamp/contracts/question-bank.md` (Draft 1). Owner's choices:
+  copy into tests, gate on Plus, fill by saving from a test.
+  - **Save to bank:** a bookmark button on each top-level question in the
+    test designer. It saves the whole tree, answers and rubric included.
+  - **Add from bank:** a dialog in the designer with search, a topic
+    filter and remove. Chosen items are copied in with new ids;
+    `TestQuestion.bankQuestionId` records the source.
+  - Migration `28_question_bank` (additive): the `BankQuestion` table and
+    `TestQuestion.bankQuestionId`.
+- Checks: `npx tsx scripts/check-question-bank.ts`.
+
+Waiting on A: moving `question-bank` to `v1` in the billing catalogue.
+Until then the bank is hidden everywhere. The contract also lists
+workspace deletion, POPIA export and blob cleanup for A.
+
+Production needs `migrate deploy` for migration 28 (owner's OK first).
+
+Next (B-only): "Generate a test from topics" (random draw into the
+designer), then term reports once A's PDF helper lands.
+
 ## 2026-11-23 CAPS and IEB topic tagging and the coverage map (#216, phase 2), `revamp/b-caps-tags`
 
 Done:

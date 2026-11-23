@@ -62,12 +62,17 @@ import {
   type EditorQuestion,
 } from "./test-question-editor";
 import { TestMemoFiles } from "./test-memo-files";
+import { QuestionBankDialog } from "./question-bank-dialog";
+import { saveQuestionToBank, type BankListItem } from "../bank-actions";
+import { bankNodeToEditor, editorToBankNode } from "../lib/question-bank";
 
 export interface TestFormCourse {
   id: string;
   name: string;
   /** Picks the topics questions can be tagged with (contracts/curriculum.md). */
   curriculum?: CourseCurriculum;
+  /** The course has the Plus question bank (contracts/question-bank.md). */
+  questionBank?: boolean;
 }
 
 export interface TestFormProps {
@@ -131,6 +136,7 @@ function toServerTree(qs: EditorQuestion[]): unknown[] {
     mathMode: q.type === "MATH_EXPRESSION" ? q.mathMode ?? "EQUIVALENT" : null,
     rubric: q.rubric ?? null,
     topics: q.topics ?? [],
+    bankQuestionId: q.bankQuestionId ?? null,
     subQuestions: toServerTree(q.subQuestions),
   }));
 }
@@ -294,6 +300,24 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
 
   function addQuestion() {
     setQuestions((prev) => [...prev, blankQuestion()]);
+  }
+  // Question bank (Plus): copies in, saves out (contracts/question-bank.md).
+  const bankOn = Boolean(topicCourse?.questionBank);
+  function addFromBank(items: BankListItem[]) {
+    const copies = items.flatMap((item) => (item.data ? [bankNodeToEditor(item.data, () => blankQuestion().clientId, item.id)] : []));
+    if (copies.length === 0) return;
+    setQuestions((prev) => [...prev, ...copies]);
+    toast.success(copies.length === 1 ? "Question added from the bank" : `${copies.length} questions added from the bank`);
+  }
+  async function saveToBank(q: EditorQuestion) {
+    try {
+      const result = await saveQuestionToBank({ courseId, testId: defaultValues?.id ?? null, question: editorToBankNode(q) });
+      if (result?.serverError) throw new Error(result.serverError);
+      if (result?.validationErrors) throw new Error("This question can't be saved yet. Check its answer fields.");
+      toast.success("Saved to your question bank");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save to the bank");
+    }
   }
   function updateQuestion(i: number, next: EditorQuestion) {
     setQuestions((prev) => {
@@ -565,6 +589,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
             >
               <ArrowUpDown className="size-3.5" /> Rearrange
             </Button>
+            {bankOn ? <QuestionBankDialog courseId={courseId} topics={topics} onAdd={addFromBank} /> : null}
             <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
               <Plus className="size-3" /> Add question
             </Button>
@@ -631,6 +656,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
                 labels={labels}
                 depth={0}
                 testId={defaultValues?.id ?? "draft"}
+                onSaveToBank={bankOn ? () => saveToBank(q) : undefined}
               />
             ))}
           </div>
