@@ -55,6 +55,8 @@ model Course {
 
   riskAlerts RiskAlert[]
 
+  bookings Booking[]
+
   @@index([workspaceId])
 }
 

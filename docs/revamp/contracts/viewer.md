@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.20, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.21, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.21. Session booking with prepaid lesson packs (Plus): availability, slots, bookings, credits |
 | 2026-11-23 | Draft 1.20. At-risk alerts (Pro): `listRiskAlerts`, `shareRiskAlertAction`, `listMySharedRiskAlerts` and the rest |
 | 2026-11-23 | Draft 1.19. Landing page: `getPublicPlans`, `submitPlatformEnquiry`, admin enquiries, sitemap, robots and analytics |
 | 2026-11-23 | Draft 1.18. Term report PDFs (`renderTermReportPdf`, `pdfResponse`) and offline reading (`public/sw.js`, `@/lib/offline`) |
@@ -540,3 +541,62 @@ From `@/lib/offline` (client):
 **Privacy:** alerts are part of a student's data export (`riskAlerts`) and are deleted with the account. Deleting a course or workspace deletes its alerts.
 
 **AI summary (Pro, later):** an optional AI rewrite of the summary comes with the AI service (phase 2, Plus AI), and will use AI credits.
+
+### Session booking (Draft 1.21)
+
+#216 phase 2, **Plus** (service `session-booking`, per course). Everything is in `@/features/booking/actions` and uses the workspace's time zone (`timeZone` in the results). Times go in and out as ISO strings or `Date`.
+
+**Tutors' availability** (staff; their own, or anyone's with `cover.manage` by passing `membershipId`):
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `getBookingAvailability` | `{ membershipId? }` | Returns `{ membershipId, name, timeZone, rules, timeOff, policy }` |
+| `setBookingAvailability` | `{ membershipId?, rules: [{ weekday 0–6 (Sunday 0), startMinute, endMinute, slotMinutes = 60, bufferMinutes = 0, courseId? }] }` | Replaces all rules. Minutes count from local midnight (15:30 = 930). `courseId` limits a rule to one course the tutor teaches. Rules on the same day may not overlap. Errors are written for people |
+| `addBookingTimeOff` | `{ membershipId?, startsAt, endsAt, note? }` | Returns `{ id, bookingsInside }`. Existing bookings stay; if `bookingsInside > 0`, offer to cancel them |
+| `removeBookingTimeOff` | `{ id }` | |
+| `setBookingPolicyAction` | `{ cancelHours, leadHours, horizonDays }` | Needs `workspace.settings`. Defaults are 24 hours, 12 hours and 28 days |
+
+**Booking** (students for themselves; parents pass `learnerId` for a child; staff on the course pass the student's `learnerId`):
+
+| Action | Input | Returns |
+| --- | --- | --- |
+| `getBookingSlots` | `{ courseId, learnerId?, membershipId?, from, to }` (at most 31 days) | `{ timeZone, tutors: [{ membershipId, name, slots: [{ start, end }] }], credits: { needed, balance }, policy }` |
+| `bookSessionAction` | `{ courseId, membershipId, startsAt, learnerId?, note? }` | `{ id, startsAt, endsAt, usedCredit, creditsLeft }` |
+| `cancelBookingAction` | `{ bookingId, reason? }` | `{ ok, creditReturned }` |
+| `listBookingsAction` | `{ from, to, courseId?, membershipId? }` (at most 93 days) | `BookingRow[]`: `{ id, course, tutor, student, startsAt, endsAt, status, note, meetingLink, usedCredit, cancelledAt, cancelReason, creditReturned, canCancel, cancelReturnsCredit }` |
+| `markBookingAction` | `{ bookingId, status: "COMPLETED" \| "NO_SHOW" }` | Tutor or staff, once the lesson has started |
+| `setBookingLinkAction` | `{ bookingId, meetingLink }` | Tutor or staff; an https link, or null |
+
+**Slots:**
+- Free slots come from the weekly rules, minus time off, existing bookings and the tutor's own classes (every course they teach).
+- They start at least `leadHours` from now and at most `horizonDays` ahead.
+- A booking must be one of the free slots. If someone took it first, the error is "That time isn't free any more. Pick another."
+- A student can't hold two lessons at the same time.
+
+**Who sees bookings:**
+- `listBookingsAction` with no filters gives a tutor their own bookings, a student theirs, and a parent their children's.
+- With `courseId`, staff who may edit the course see all of its bookings.
+- With `membershipId`, `cover.manage` shows another tutor's bookings.
+
+**Cancelling:**
+- The family may cancel until the lesson starts. The credit comes back when they cancel at least `cancelHours` before.
+- A tutor or staff cancellation always returns the credit.
+- Show `cancelReturnsCredit` in the confirm dialog, for example "You'll get the lesson back" or "It's less than 24 hours away, so the lesson won't come back."
+
+**Emails:**
+- On booking and cancelling, the tutor, the student (with a real email) and their parents are emailed, except the person who did it.
+- A reminder goes about 24 hours before.
+- In-app, the tutor is told about new bookings.
+- Links point to `/dashboard/bookings`. Please build that page: the student and parent list, and the tutor's week.
+
+**Lesson packs and credits:**
+- A pack is a `LESSON_PACK` fee schedule (the existing fees screens set it up, with `lessonsInPack`).
+- **If a course sells packs, booking needs a credit**: "There are no lessons left on the pack for this course. Buy a pack to book." If it doesn't, booking is free.
+- A paid pack invoice (online or marked paid offsite) gives `lessonsInPack × quantity` credits for that course automatically. A fully refunded one takes them back.
+- `getLessonCredits({ learnerId? })` returns `{ learnerId, courses: [{ courseId, courseName, balance, needsCredits, packs: [{ id, description, amountCents, lessons }] }] }`. Students may omit `learnerId`.
+- `buyLessonPackAction({ feeScheduleId, learnerId? })` is for parents, or an adult student with `paymentVisible`. It returns `{ invoiceId }`: then use the usual checkout (`startCheckout`) for that invoice. It works once billing is on (January); until then hide "Buy".
+- `adjustLessonCreditsAction({ learnerId, courseId, lessons: ±n, note })` is for staff with `fees.manage`. Use it for a cash payment or a goodwill lesson.
+
+**Plus gate:** slots and booking refuse with "Session booking is part of the Plus plan for this course." when the course doesn't have the service.
+
+**Privacy:** bookings and the credit ledger are in the user export. Anonymising an account clears booking notes and reasons; the bookings stay as the tutor's record.
