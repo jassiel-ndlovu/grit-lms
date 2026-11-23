@@ -103,6 +103,7 @@ model Workspace {
   referrals          Referral[]
   managedUsers       User[]              @relation("ManagedUsers")
   joinRequests       JoinRequest[]
+  reportTerms        ReportTerm[]
 
   // Billing and payments (billing.prisma, Phase 2).
   subscription        Subscription?
@@ -120,6 +121,18 @@ model Workspace {
   feeSchedules        FeeSchedule[]
   feeInvoices         Invoice[]
   offsitePayments     OffsitePayment[]
+  riskAlerts          RiskAlert[]
+  bookingAvailability BookingAvailability[]
+  bookingTimeOff      BookingTimeOff[]
+  bookings            Booking[]
+  lessonCredits       LessonCredit[]
+  /// Session booking (#216): cancel at least this many hours before for the lesson credit back.
+  bookingCancelHours  Int                   @default(24)
+  /// Book at least this many hours ahead.
+  bookingLeadHours    Int                   @default(12)
+  /// And at most this many days ahead.
+  bookingHorizonDays  Int                   @default(28)
+  aiAssistRuns        AiAssistRun[]
 }
 
 /// Organisations only. A solo practice has no teams.
@@ -163,6 +176,10 @@ model Membership {
   courseStaff  CourseStaff[]
   ownedCourses Course[]       @relation("CourseOwner")
 
+  bookingAvailability BookingAvailability[]
+  bookingTimeOff      BookingTimeOff[]
+  bookings            Booking[]
+
   @@unique([workspaceId, userId])
   @@index([userId])
 }
@@ -198,6 +215,12 @@ model Learner {
   enrollments  Enrollment[]
   feeSchedules FeeSchedule[]
   attendance   SessionAttendance[]
+
+  reportComments        ReportCourseComment[]
+  reportOverallComments ReportOverallComment[]
+
+  bookings      Booking[]
+  lessonCredits LessonCredit[]
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -496,4 +519,88 @@ model WorkspaceRole {
   memberships Membership[]
 
   @@unique([workspaceId, name])
+}
+
+// Session booking (#216 phase 2, Plus; A). Arithmetic: src/features/booking/booking-math.ts.
+
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+/// A tutor's weekly bookable time, in the workspace's time zone.
+model BookingAvailability {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  membershipId  String
+  /// Null: any course the tutor teaches.
+  courseId      String?
+  /// 0 = Sunday … 6 = Saturday.
+  weekday       Int
+  /// Minutes after local midnight.
+  startMinute   Int
+  endMinute     Int
+  slotMinutes   Int      @default(60)
+  bufferMinutes Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId])
+  @@index([workspaceId])
+}
+
+/// Time a tutor can't be booked (leave, a holiday).
+model BookingTimeOff {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  membershipId String
+  startsAt     DateTime
+  endsAt       DateTime
+  note         String?  @db.VarChar(200)
+  createdAt    DateTime @default(now())
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId, startsAt])
+}
+
+/// One booked lesson: a learner with a tutor, for a course.
+model Booking {
+  id                String        @id @default(cuid())
+  workspaceId       String
+  courseId          String
+  /// The tutor.
+  membershipId      String
+  learnerId         String
+  startsAt          DateTime
+  endsAt            DateTime
+  status            BookingStatus @default(BOOKED)
+  /// "<membershipId>:<startsAt epoch ms>" while BOOKED, so a tutor can't be double-booked; null otherwise.
+  slotKey           String?       @unique
+  bookedByUserId    String
+  note              String?       @db.VarChar(500)
+  meetingLink       String?       @db.VarChar(500)
+  /// A lesson credit was used (the course sells lesson packs).
+  usedCredit        Boolean       @default(false)
+  cancelledAt       DateTime?
+  cancelledByUserId String?
+  cancelReason      String?       @db.VarChar(300)
+  creditReturned    Boolean       @default(false)
+  remindedAt        DateTime?
+  createdAt         DateTime      @default(now())
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  learner    Learner    @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([learnerId, startsAt])
+  @@index([membershipId, startsAt])
+  @@index([courseId, startsAt])
+  @@index([status, startsAt])
 }

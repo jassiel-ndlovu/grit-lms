@@ -7,15 +7,19 @@
 import { SaverCover } from "@/components/data-saver";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpen, ChevronRight, Users } from "lucide-react";
+import { BookOpen, ChevronRight, FileText, Users } from "lucide-react";
 
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { auth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 import { listGradebookCoursesForTutor } from "@/features/grades/gradebook";
+import { reportRoutes } from "@/features/grades/lib/term-report";
+import { reportStaff } from "@/features/grades/term-reports";
 import { getCourseScope } from "@/features/courses/course-access";
 import { courseCoverSrc } from "@/features/courses/lib/stock-covers";
+import { getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "Gradebook" };
 
@@ -29,8 +33,19 @@ export default async function GradebookIndexPage() {
 
   const courses = await listGradebookCoursesForTutor(scope);
 
+  const viewer = await getViewer();
+  const reports =
+    viewer && reportStaff(viewer) ? (
+      <Button asChild size="sm" variant="outline">
+        <Link href={reportRoutes.home}>
+          <FileText aria-hidden className="size-4" />
+          Term reports
+        </Link>
+      </Button>
+    ) : undefined;
+
   return (
-    <PageFrame type="list" breadcrumb={[{ label: "Gradebook" }]}>
+    <PageFrame type="list" breadcrumb={[{ label: "Gradebook" }]} actions={reports}>
       <PageTitle title="Gradebook" description="Weighted marks per course, for the class and for each student." />
 
       {courses.length === 0 ? (

@@ -19,6 +19,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { DataSaverProvider } from "@/components/data-saver";
+import { OfflineSupport } from "@/components/offline/offline-support";
 import { PreferencesProvider } from "@/components/preferences-provider";
 import { AppShell, type ShellUser } from "@/components/shell/app-shell";
 import { navSectionsFor } from "@/components/shell/nav-config";
@@ -74,6 +75,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         sections={navSectionsFor(viewer, { billing: isBillingEnabled() })}
         banner={viewer ? <AccountBanners viewer={viewer} /> : null}
       >
+        {viewer ? <OfflineSupport userId={viewer.user.id} /> : null}
         {children}
       </AppShell>
     </LegacyProviders>

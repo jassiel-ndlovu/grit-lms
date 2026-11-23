@@ -13,12 +13,9 @@ import { RibbonNav } from "@/components/shell/ribbon";
 import { studentHasPractice } from "@/features/assessments/practice-queries";
 import type { PageType } from "@/lib/ui-layout";
 
-export const studentCourseRoutes = {
-  list: "/dashboard/courses",
-  overview: (id: string) => `/dashboard/courses/${id}`,
-  lessons: (id: string, lessonId?: string) => `/dashboard/courses/lessons/${id}${lessonId ? `?lesson=${lessonId}` : ""}`,
-  practice: (id: string, setId?: string) => `/dashboard/courses/${id}/practice${setId ? `/${setId}` : ""}`,
-};
+import { studentCourseRoutes } from "../lib/student-routes";
+
+export { studentCourseRoutes };
 
 export async function StudentCourseFrame({
   course,

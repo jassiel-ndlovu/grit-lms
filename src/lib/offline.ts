@@ -32,10 +32,22 @@ export async function registerOfflineSupport(): Promise<boolean> {
   }
 }
 
+/**
+ * The worker to talk to, or null. `serviceWorker.ready` never settles when
+ * nothing is registered, so it's only awaited for a registration that is
+ * still installing, and then with a limit. Sign-out waits on this.
+ */
+async function activeWorker(waitMs: number): Promise<ServiceWorker | null> {
+  const reg = await navigator.serviceWorker.getRegistration().catch(() => undefined);
+  if (!reg) return null;
+  if (reg.active) return reg.active;
+  const limit = new Promise<null>((resolve) => setTimeout(() => resolve(null), waitMs));
+  return (await Promise.race([navigator.serviceWorker.ready, limit]))?.active ?? null;
+}
+
 async function ask(message: Record<string, unknown>, timeoutMs = 20_000): Promise<Reply> {
   if (!offlineSupported()) return { ok: false, error: "not-available" };
-  const reg = await navigator.serviceWorker.ready.catch(() => null);
-  const worker = reg?.active;
+  const worker = await activeWorker(timeoutMs);
   if (!worker) return { ok: false, error: "not-available" };
   return new Promise((resolve) => {
     const ch = new MessageChannel();

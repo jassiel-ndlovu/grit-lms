@@ -3,6 +3,121 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: Pro AI drafts, and B's #243, `revamp/a-pro-ai` and `revamp/a-role-scope-243`
+
+Migration `36_ai_assist_pro`: four `AiAssistFeature` enum values. Viewer contract Draft 1.23.
+
+Done:
+- **`ai-assist/pro.ts` and `model-pro.ts`** (Pro only, through the shared gate, credits and run records):
+  - lessons, tests and assignments from a document;
+  - feedback drafts (answers scrubbed);
+  - term-report comments (students sent as S1…; names filled in after);
+  - curriculum gaps (`uncoveredTopics` is pure) with restructure ideas.
+- `PRO_ONLY` and per-feature Pro caps in `limits.ts`.
+- `call()` now streams (`finalMessage()`), so long drafts don't hit the SDK's 10-minute non-streaming guard.
+- **#243 (PR #252, live):** role scope in `setCourseTeamFor`, the calendar's `visibleCourseIds` and `listPayoutRecoveries`. Pure helpers (`actorCourseWhere`, `calendarCourseWhere`, `seesAllPayoutRecoveries`) are covered in `check-roles`.
+
+Tested:
+- `check-ai-assist` (in CI).
+- One live run of each Pro feature against the Preview DB (about R3.30), with the course restored and run rows deleted.
+- All CI checks.
+
+## 2026-11-23 #216 phase 2: AI help for tutors (Plus limited, Pro more), `revamp/a-ai-assist`
+
+Migration `35_ai_assist`: AiAssistRun (counts and cost only), plus the `ai-assist` Service row, backfilled for courses on Plus or Pro. Viewer contract Draft 1.22, services Draft 1.7.
+
+Done:
+- **`ai-assist/limits.ts`** (pure): monthly caps per plan, refusal messages, `plainText` for lesson HTML.
+- **`ai-assist/model.ts`**: structured-output calls (Opus 5.5, refusal fallback, cached system prompt) for questions, outlines (text or PDF) and tidy or simplify. The material is wrapped in tags as data.
+- **`ai-assist/assist.ts`**: the gate (`courses.edit`, `ai-assist` service, the monthly cap, the AI credit check with billing on), the course context (level and curriculum topics; topic codes filtered to the list), run records, credit spends, and Blob-only file reads.
+- `ai-assist/actions.ts`.
+- `ai-marking/rules.ts` prices now include Opus 5.5. `check-billing` pins `ai-assist`.
+
+Tested:
+- `scripts/check-ai-assist.ts` (in CI).
+- One live run of each feature against the Preview DB with the production Anthropic key (about R1.90 in total). Results were sensible; run rows cleaned up.
+
+## 2026-11-23 #216 phase 2: session booking with prepaid lesson packs (Plus), `revamp/a-booking`
+
+Migration `34_session_booking`:
+- adds BookingAvailability, BookingTimeOff, Booking (`slotKey` unique while booked) and LessonCredit (`invoiceLineId` and `reversesLineId` unique);
+- adds Workspace booking policy columns;
+- adds the `session-booking` Service row, backfilled for courses already on Plus or Pro.
+
+Viewer contract Draft 1.21, services Draft 1.6.
+
+Done:
+- **`booking/booking-math.ts`** (pure): time-zone conversion, free slots (lead, horizon, buffers, time off, busy), the refund rule, rule validation and balances.
+- **`booking/credits.ts`**:
+  - `syncLessonCredits` credits paid LESSON_PACK invoice lines and reverses refunded ones, once each;
+  - balances, packs on sale, staff adjustments;
+  - `buyPack` issues an invoice for checkout (billing on).
+- **`booking/bookings.ts`**:
+  - availability and time off (own, or `cover.manage`) and the workspace policy;
+  - slots (the tutor's classes come from `occurrencesFor`);
+  - book (credit used in the same transaction; double-booking stopped by `slotKey`);
+  - cancel (credit returned by the policy), mark, meeting link, list;
+  - reminders from the notifications cron.
+- **Emails:** `booking:confirmed`, `booking:cancelled` and `booking:reminder`, for tutor, student and parent.
+- **POPIA:** export (bookings and the credit ledger); anonymising clears notes.
+- `check-billing`'s pinned Plus keys now include `session-booking`.
+
+Tested:
+- `scripts/check-booking-math.ts` (in CI).
+- Against the Preview database with BILLING off and on:
+  - availability, slots, booking, double-booking and odd times refused;
+  - a pack on sale with no credits refused, a paid pack credited once;
+  - a credit used, returned on early cancel, kept on late cancel;
+  - an adjustment, and the credits taken back after a refund;
+  - lists, marking before the start refused, a single reminder, tutor cancel.
+  - Cleaned up, with the tutor's availability restored.
+
+## 2026-11-23 #216 phase 2: at-risk alerts (Pro), `revamp/a-at-risk`
+
+Migration `33_risk_alerts`:
+- adds RiskAlert, RiskLevel and RiskAlertStatus;
+- adds the `at-risk-alerts` Service row;
+- backfills CourseService wherever `ai-marking` is on.
+
+Viewer contract Draft 1.20, services Draft 1.5.
+
+Done:
+- **`risk/rules.ts`** (pure): `assessRisk` covers falling and low marks, missed work and absences, with WATCH or AT_RISK. Also `nextStep` (open, update, escalate, resolve) and `riskSummary` (plain language).
+- **`risk/evaluate.ts`**: `gatherCourse` (5 queries a course) and `runRiskAlerts`, which runs from housekeeping. It covers Pro courses (every course while billing is off) and skips read-only and cancelled workspaces. Staff get one in-app notification per course.
+- **`risk/alerts.ts` and `actions.ts`**:
+  - staff list and count, scoped by `grades.view`;
+  - share (by email and in-app notice to parents and/or the student, with a note; Pro and `messages.direct`);
+  - dismiss (14 quiet days) and resolve;
+  - the shared list for students and parents.
+- **Email** template `risk:shared` (parent and student versions).
+- **POPIA:** alerts are in the user export and deleted on anonymisation; FK cascades cover courses and workspaces.
+
+Tested:
+- `scripts/check-risk-rules.ts` (in CI).
+- Against the Preview database with a seeded course: open, the second run idempotent, the staff list, share to the student (email queued and the alert visible to the student), dismiss and quiet, reopen after the quiet period, resolve by hand, and auto-resolve. Cleaned up afterwards.
+- The full CI check set, `check-schema-split` included (the model lives in messaging.prisma).
+
+## 2026-11-23 #216: landing page support, `revamp/a-landing-support`
+
+Migration `32_platform_enquiries` (PlatformEnquiry, EnquiryStatus). Viewer contract Draft 1.19.
+
+Done:
+- **Plan prices:** `marketing/plans.ts` (`getPublicPlans`: Tier rows, cached for an hour, with `live` following BILLING) and `plans-math.ts` (pure).
+- **Enquiries:**
+  - `marketing/enquiry-rules.ts`: the schema, bot screening (honeypot, fill time) and spam (links).
+  - `marketing/enquiries.ts`: rate limits (5 an hour per IP hash, 3 a day per email), saving, the `enquiry:new` email to ENQUIRY_TO (else APP_CONTACT.email) with Reply-To the enquirer, list, update, and prune after 12 months (housekeeping).
+  - `enquiry-actions.ts`: public submit and the admin list and update actions.
+  - `sendEmail` now takes a per-message `replyTo`.
+- **Search setup:** `lib/site.ts`, `app/sitemap.ts` and `app/robots.ts` (production only indexable); root layout metadataBase, Open Graph and Twitter; metadata on support, privacy and terms; a canonical on `/`.
+- **Analytics:** `@vercel/analytics` 2.0.1 through `components/site/site-analytics.tsx`. Public paths only, utm tags only, production only.
+
+Tested:
+- `scripts/check-landing.ts` (in CI): validation, screening, sources, spam, plans from tier rows, siteUrl, indexable and public paths.
+- Against the Preview database: submit, the queued email, bot saved as SPAM without email, the per-email limit, stale forms, list and SPAM filter, update and un-handle, and prune. Cleaned up afterwards.
+- Tier rows in Preview and production give R99, R139 and R179.
+
+Owner: switch on Web Analytics in Vercel. Optional: set ENQUIRY_TO to a support inbox.
+
 ## 2026-11-23 Phase 1: term report PDFs and offline reading, `revamp/a-reports-offline`
 
 No migration. Viewer contract Draft 1.18. This closes A's phase 1 list in #216.

@@ -15,11 +15,12 @@ import "server-only";
 
 import type { MembershipRole } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { actorCourseWhere } from "@/lib/viewer-core";
 import { ASSIGNABLE_PRESETS, CUSTOM_ROLE_CEILING, effectiveRole, isPresetKey, ROLE_PRESETS, type RoleScope } from "@/lib/roles";
 import { UserError } from "@/lib/user-error";
 import type { Permission } from "@/lib/viewer-core";
 
-export type RoleActor = { userId: string; workspaceId: string; permissions: Permission[]; scope: RoleScope; branchIds: string[] };
+export type RoleActor = { userId: string; workspaceId: string; membershipId: string; permissions: Permission[]; scope: RoleScope; branchIds: string[] };
 
 const SCOPE_RANK: Record<RoleScope, number> = { OWN_COURSES: 0, BRANCHES: 1, WORKSPACE: 2 };
 const baseRoleFor = (scope: RoleScope): MembershipRole => (scope === "OWN_COURSES" ? "TUTOR" : "ADMIN");
@@ -254,6 +255,11 @@ export async function setTeamMemberFor(actor: RoleActor, teamId: string, input: 
 export async function setCourseTeamFor(actor: RoleActor, courseId: string, teamId: string | null) {
   const course = await prisma.course.findFirst({ where: { id: courseId, workspaceId: actor.workspaceId }, select: { teamId: true } });
   if (!course) throw new UserError("Course not found.");
+  // Below WORKSPACE scope the actor must already hold the course (#243), team or no team.
+  const held = actorCourseWhere(actor);
+  if (held && !(await prisma.course.findFirst({ where: { AND: [{ id: courseId }, held] }, select: { id: true } }))) {
+    throw new UserError("You can only move courses you run or teach, or that are in your branches.");
+  }
   // The actor must reach the course's current team (if any) and the new one.
   if (course.teamId) await loadTeam(actor, course.teamId);
   if (teamId) await loadTeam(actor, teamId);

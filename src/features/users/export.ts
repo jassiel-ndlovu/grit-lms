@@ -30,6 +30,9 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
           id: true, isMinor: true, paymentVisible: true, consentAttestedAt: true, createdAt: true, workspace: { select: { name: true } },
           enrollments: { select: { status: true, startedAt: true, endedAt: true, course: { select: { name: true } } } },
           attendance: { select: { occurrenceStart: true, status: true, note: true, event: { select: { title: true } } } },
+          // B's term reports: the comments on this student's reports.
+          reportComments: { select: { text: true, updatedAt: true, term: { select: { title: true } }, course: { select: { name: true } } } },
+          reportOverallComments: { select: { text: true, updatedAt: true, term: { select: { title: true } } } },
         },
       },
       guardianOf: { select: { relationship: true, status: true, createdAt: true, student: { select: { name: true } } } },
@@ -40,7 +43,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     },
   });
   const studentId = u.studentProfile?.id;
-  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes, practice] = await Promise.all([
+  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes, practice, riskAlerts, bookings, lessonCredits] = await Promise.all([
     studentId ? prisma.testSubmission.findMany({
       where: { studentId },
       select: { startedAt: true, submittedAt: true, status: true, score: true, feedback: true, answers: true, test: { select: { title: true, course: { select: { name: true } } } }, aiSuggestions: { select: { questionId: true, totalAwarded: true, outOf: true, feedbackToStudent: true, tutorAction: true, model: true } } },
@@ -61,6 +64,11 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     prisma.referralCode.findMany({ where: { userId: targetUserId }, select: { code: true, createdAt: true, workspace: { select: { name: true } }, _count: { select: { referrals: true } } } }),
     // B's practice sets (#236): progress on each practice item.
     studentId ? prisma.practiceReview.findMany({ where: { studentId }, select: { box: true, dueAt: true, lastAnsweredAt: true, answered: true, correct: true, item: { select: { stem: true, set: { select: { title: true } } } } } }) : [],
+    // At-risk alerts about this person as a student (#216 phase 2).
+    prisma.riskAlert.findMany({ where: { studentUserId: targetUserId }, orderBy: { firstSeenAt: "desc" }, select: { level: true, status: true, summary: true, firstSeenAt: true, lastSeenAt: true, sharedAt: true, sharedWith: true, shareNote: true, closedAt: true, course: { select: { name: true } } } }),
+    // Session booking (#216): lessons booked and lesson credits, as a student.
+    prisma.booking.findMany({ where: { learner: { userId: targetUserId } }, orderBy: { startsAt: "desc" }, select: { startsAt: true, endsAt: true, status: true, note: true, meetingLink: true, cancelledAt: true, cancelReason: true, course: { select: { name: true } }, membership: { select: { user: { select: { name: true } } } } } }),
+    prisma.lessonCredit.findMany({ where: { learner: { userId: targetUserId } }, orderBy: { createdAt: "desc" }, select: { kind: true, lessons: true, note: true, createdAt: true, courseId: true } }),
   ]);
   await prisma.auditLog.create({ data: { workspaceId: actor.workspaceId, actorUserId: actor.userId, action: "user.export", targetType: "User", targetId: targetUserId, data: { self: actor.userId === targetUserId } } });
 
@@ -77,6 +85,10 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
       workspace: l.workspace.name, minor: l.isMinor, paysOwnFees: l.paymentVisible, parentConsentConfirmedByTutorAt: l.consentAttestedAt, since: l.createdAt,
       enrolments: l.enrollments.map((e) => ({ course: e.course.name, status: e.status, startedAt: e.startedAt, endedAt: e.endedAt })),
       attendance: l.attendance.map((a) => ({ class: a.event.title, at: a.occurrenceStart, status: a.status, note: a.note })),
+      termReportComments: [
+        ...l.reportComments.map((c) => ({ term: c.term.title, course: c.course.name, comment: c.text, at: c.updatedAt })),
+        ...l.reportOverallComments.map((c) => ({ term: c.term.title, course: null, comment: c.text, at: c.updatedAt })),
+      ],
     })),
     children: u.guardianOf.map((g) => ({ name: g.student.name, relationship: g.relationship, status: g.status, since: g.createdAt })),
     parents: u.guardedBy.map((g) => ({ name: g.guardian.name, relationship: g.relationship, status: g.status, since: g.createdAt })),
@@ -90,6 +102,9 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     paymentsMade: payments,
     savedQuestions: bankQuestions,
     practice: practice.map((p) => ({ set: p.item.set.title, item: p.item.stem, answered: p.answered, correct: p.correct, lastAnsweredAt: p.lastAnsweredAt, nextDueAt: p.dueAt, box: p.box })),
+    bookings: bookings.map((x) => ({ course: x.course.name, tutor: x.membership.user.name, startsAt: x.startsAt, endsAt: x.endsAt, status: x.status, note: x.note, meetingLink: x.meetingLink, cancelledAt: x.cancelledAt, cancelReason: x.cancelReason })),
+    lessonCredits: lessonCredits.map((x) => ({ courseId: x.courseId, kind: x.kind, lessons: x.lessons, note: x.note, at: x.createdAt })),
+    riskAlerts: riskAlerts.map((r) => ({ course: r.course.name, level: r.level, status: r.status, summary: r.summary, firstSeenAt: r.firstSeenAt, lastSeenAt: r.lastSeenAt, sharedAt: r.sharedAt, sharedWith: r.sharedWith, note: r.shareNote, closedAt: r.closedAt })),
     referralLinks: referralCodes.map((r) => ({ workspace: r.workspace.name, code: r.code, since: r.createdAt, familiesReferred: r._count.referrals })),
     notifications: u.notifications,
     activity: u.activities,

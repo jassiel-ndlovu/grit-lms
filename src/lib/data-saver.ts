@@ -10,8 +10,6 @@
  *   (none)     automatic: on when the browser sends `Save-Data: on`
  *              (Android's and Chrome's data saver)
  *
- * Offline reading (the service worker) is A's and comes later.
- *
  * Pure: safe in server and client components and in scripts.
  */
 

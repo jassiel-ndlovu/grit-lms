@@ -99,6 +99,9 @@ export async function anonymiseAccount(userId: string, now: Date = new Date()) {
       await tx.assessmentCompletion.deleteMany({ where: { studentId: student.id } });
       await tx.student.update({ where: { id: student.id }, data: { fullName: "Former user", email: gone, imageUrl: null } });
     }
+    // B's term reports: the comments written about this student.
+    await tx.reportCourseComment.deleteMany({ where: { learner: { userId } } });
+    await tx.reportOverallComment.deleteMany({ where: { learner: { userId } } });
     await tx.tutor.updateMany({ where: { userId }, data: { fullName: "Former user", email: gone, profileImageUrl: null, bio: null } });
     await tx.session.deleteMany({ where: { userId } });
     await tx.account.deleteMany({ where: { userId } });
@@ -106,6 +109,10 @@ export async function anonymiseAccount(userId: string, now: Date = new Date()) {
     await tx.calendarFeedToken.deleteMany({ where: { userId } });
     await tx.userPreferences.deleteMany({ where: { userId } });
     await tx.notification.deleteMany({ where: { userId } });
+    // At-risk alerts about this student (#216 phase 2).
+    await tx.riskAlert.deleteMany({ where: { studentUserId: userId } });
+    // Session booking (#216): bookings stay as the tutor's record, without the free-text notes.
+    await tx.booking.updateMany({ where: { learner: { userId } }, data: { note: null, cancelReason: null } });
     await tx.activityLog.deleteMany({ where: { userId } });
     await tx.emailVerificationToken.deleteMany({ where: { userId } });
     await tx.passwordResetToken.deleteMany({ where: { userId } });

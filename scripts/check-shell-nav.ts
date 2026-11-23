@@ -73,6 +73,7 @@ check(
 const feesTutor = { persona: "staff" as const, permissions: ["fees.manage" as const] };
 check("fees: billing off hides Fees", hrefsOf(navSectionsFor(feesTutor)).includes("/dashboard/fees"), false);
 check("fees: billing on, fees.manage shows Fees", hrefsOf(navSectionsFor(feesTutor, { billing: true })).includes("/dashboard/fees"), true);
+check("business: needs reports.view", [["reports.view" as const], ["grades.view" as const]].map((permissions) => hrefsOf(navSectionsFor({ persona: "staff", permissions })).includes("/dashboard/business")), [true, false]);
 const nexaAdmin = { persona: "admin" as const, permissions: ["admin.console" as const] };
 check("admin, billing off: no billing admin link", hrefsOf(navSectionsFor(nexaAdmin)).includes("/dashboard/admin/billing"), false);
 check("admin, billing on: billing admin link", hrefsOf(navSectionsFor(nexaAdmin, { billing: true })).includes("/dashboard/admin/billing"), true);

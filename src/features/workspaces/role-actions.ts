@@ -30,7 +30,8 @@ function actorFor(viewer: Viewer, ...needed: Permission[]): r.RoleActor {
   if (!viewer.workspace || viewer.persona !== "staff" || viewer.workspace.kind !== "ORGANISATION") throw new ViewerError("FORBIDDEN");
   if (!needed.some((p) => can(viewer, p))) throw new ViewerError("FORBIDDEN");
   const s = staffScope(viewer);
-  return { userId: viewer.user.id, workspaceId: viewer.workspace.id, permissions: viewer.permissions, scope: s, branchIds: s === "BRANCHES" ? (viewer.membership?.branchIds ?? []) : [] };
+  if (!viewer.membership) throw new ViewerError("FORBIDDEN");
+  return { userId: viewer.user.id, workspaceId: viewer.workspace.id, membershipId: viewer.membership.id, permissions: viewer.permissions, scope: s, branchIds: s === "BRANCHES" ? (viewer.membership.branchIds ?? []) : [] };
 }
 
 const done = <T,>(v: T): T => {

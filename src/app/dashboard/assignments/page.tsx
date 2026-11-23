@@ -35,6 +35,7 @@ import {
   type FilterBucket,
 } from "@/features/assessments/lib/filters";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { entryMarkReleased } from "@/features/grades/lib/release";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import HeaderAssignments from "@/components/illustrations/generated/header-assignments";
 import { WriteGuard } from "@/components/shell/workspace-access";
@@ -117,7 +118,7 @@ export default async function SubmissionsIndexPage() {
                         | "LATE"
                         | "NOT_SUBMITTED",
                       attemptNumber: entry.attemptNumber,
-                      grade: entry.grade
+                      grade: entry.grade && entryMarkReleased(entry.status)
                         ? {
                             score: entry.grade.score,
                             outOf: entry.grade.outOf,

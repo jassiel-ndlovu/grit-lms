@@ -1,6 +1,8 @@
 import Footer from "../dashboard/models/footer";
 import { APP_LEGAL_NAME } from "@/lib/branding";
 
+export const metadata = { title: "Terms of service", description: "The terms for using Nexa LMS.", alternates: { canonical: "/terms-of-service" } };
+
 export default function TermsOfServicePage() {
   return (
     <div className="h-screen flex flex-col">

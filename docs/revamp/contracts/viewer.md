@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.18, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.23, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,11 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.23. Pro AI drafts: lessons, tests and assignments from documents; feedback; report comments; curriculum gaps |
+| 2026-11-23 | Draft 1.22. AI help for tutors (Plus limited, Pro more): question drafts, outlines, tidy text |
+| 2026-11-23 | Draft 1.21. Session booking with prepaid lesson packs (Plus): availability, slots, bookings, credits |
+| 2026-11-23 | Draft 1.20. At-risk alerts (Pro): `listRiskAlerts`, `shareRiskAlertAction`, `listMySharedRiskAlerts` and the rest |
+| 2026-11-23 | Draft 1.19. Landing page: `getPublicPlans`, `submitPlatformEnquiry`, admin enquiries, sitemap, robots and analytics |
 | 2026-11-23 | Draft 1.18. Term report PDFs (`renderTermReportPdf`, `pdfResponse`) and offline reading (`public/sw.js`, `@/lib/offline`) |
 | 2026-11-23 | Draft 1.17. Roles as permission sets and branches (#216): `membership.roleKey`, `roleName`, `scope`, `branchIds`, `branchTeamIds`; six new permission keys; `staffScope`, `courseScopeOf` and `scopedCourseWhere`; role, branch and team actions in `@/features/workspaces/role-actions` |
 | 2026-11-23 | Draft 1.16. Parent and student referrals (`getReferralLink`, `listReferrals`, `/api/referrals/<code>`); the weekly parent summary email; the attendance register is Core (check-in codes and absence emails stay Plus) |
@@ -449,3 +454,212 @@ From `@/lib/offline` (client):
 | `offlineSupported()` | Hide the button where it can't work |
 
 **Note for B:** a saved page is the lesson's HTML as it was when saved. Videos and big images aren't kept, so show "Video needs a connection" in data-saver style.
+
+### Landing page (Draft 1.19)
+
+#216: B owns the page; A owns these parts.
+
+**Plan prices.** `getPublicPlans()` from `@/features/marketing/plans` (server; cached for an hour). It returns `PublicPlans`:
+- `live`: false until billing is switched on (January). **Show prices only when `live` is true.** Before that, show "Plans and prices are coming in January" or leave them out.
+- `plans`: Core, Plus and Pro, each `{ key, name, priceCents, priceLabel ("R139"), aiCreditsPerSeat, adds, includes }`.
+  - `adds` lists the v1 services the plan adds over the one below; `includes` lists everything on it. Show `adds` as "Everything in Core, plus …".
+- `unit` ("per active student, per course, per 30 days"), `vatNote` ("Prices exclude VAT.") and `trialDays` (14). Show the unit and VAT note beside the prices.
+- Prices are never written in the page: they come from the Tier rows, so a price change is a data change.
+
+**Enquiry form.** It replaces the `mailto:` "Request access" and team links.
+- Call `submitPlatformEnquiry` (next-safe-action, public) from `@/features/marketing/enquiry-actions` with:
+  - `kind`: `"ACCESS"` (a tutor wanting an account), `"TEAM"` (an organisation) or `"OTHER"`;
+  - `name`, `email` and `message` (10 to 4000 characters);
+  - optional `phone`, `organisation` and `students` (a number);
+  - `source`: the page path, or a utm_source;
+  - `startedAt`: `Date.now()` when the form was shown;
+  - `website`: a honeypot field. Keep it in the form but hidden from people (off-screen, `tabIndex={-1}`, `autoComplete="off"`, `aria-hidden`), and send what's in it.
+- It returns `{ ok: true }`. Show "Thanks, we'll be in touch within one working day." Errors come back as `serverError` strings written for the person (too many enquiries, or "reload the page"); show them as they are. Validation errors come back in `validationErrors`.
+- Each enquiry emails the Nexa inbox, with Reply-To set to the enquirer. Nothing is emailed to the enquirer.
+- Rate limits: 5 an hour from one address and 3 a day from one email. Bots and link spam get `{ ok: true }` but are saved as SPAM and never emailed.
+- Kept 12 months, then deleted. The IP is stored only as a keyed hash.
+
+**Admin enquiries** (B, a page under `/dashboard/admin`, Nexa admin only):
+- `adminListEnquiries({ status?, cursor?, limit? })` returns `{ items, nextCursor, newCount }`. Without `status` it shows everything but SPAM.
+- `adminUpdateEnquiry({ id, status: "NEW" | "CONTACTED" | "CLOSED" | "SPAM", note? })`.
+- Show `newCount` as a badge. The email's button links to `/dashboard/admin` until this page exists; tell A its path and A will point the email there.
+
+**Search setup:**
+- `/sitemap.xml` lists the public pages in `PUBLIC_PAGES` (`@/lib/site`). B adds a page there when shipping a new public page.
+- `/robots.txt` keeps crawlers out of signed-in areas and APIs. Preview deployments ask every crawler to stay out.
+- The root layout sets `metadataBase`, Open Graph and Twitter cards, and `noindex` off production.
+- Each public page should export `metadata` with `title`, `description` and `alternates.canonical`. A added it to support, privacy and terms, and a canonical to `/`.
+- **Social image:** add `src/app/opengraph-image.png` (1200×630) when the design is ready; Next picks it up.
+
+**Analytics:** Vercel Web Analytics (`<SiteAnalytics />` in the root layout, production only).
+- It uses no cookies, so no consent banner is needed.
+- It counts public pages only. Signed-in pages, invite links and query strings (except utm tags) are never sent.
+- The owner switches it on once in Vercel (Project, Analytics, Enable).
+- For a custom event, such as "enquiry sent", B may call `track("enquiry_sent", { kind })` from `@vercel/analytics`. Never include a name, email or id.
+
+### At-risk alerts (Draft 1.20)
+
+#216 phase 2, **Pro** (service `at-risk-alerts`).
+
+**How it works:**
+- A daily job (from housekeeping) reads each enrolled student's last 28 days in every Pro course: marks, work whose due date passed without a hand-in, and attendance.
+- It applies the rules in `@/features/risk/rules` (`RISK_RULES` holds the thresholds, which are provisional):
+  - **Falling marks:** the last 3 marks average 15 or more points below the 5 before them.
+  - **Low marks:** the last 3 average below 50%.
+  - **Missed work:** 2 or more pieces.
+  - **Absences:** 2 or more unexcused absences, or under 75% over at least 4 sessions.
+- **Levels:**
+  - `WATCH` when one kind of problem fires.
+  - `AT_RISK` when two kinds fire, or one is serious: marks below 40%, 3 missed pieces, or 3 absences.
+- An alert opens once per course and student, is updated each day, escalates from WATCH to AT_RISK, and closes on its own (`RESOLVED`) when the rules stop firing.
+- Course staff get one in-app notification per course when alerts open or escalate. The link is `/dashboard/courses/<courseId>/at-risk`: please build that page, or tell me the path you choose.
+- **Nothing goes to students or parents until staff share it.**
+
+**Staff** (from `@/features/risk/actions`). Each needs `grades.view` on the course; branch and own-course scopes apply.
+
+| Action | Input | Returns |
+| --- | --- | --- |
+| `listRiskAlerts` | `{ courseId?, status?: "open" \| "closed" \| "all", limit? }` | `StaffRiskAlert[]`: `{ id, course, student: { userId, name }, level, status, reasons, summary, firstSeenAt, lastSeenAt, sharedAt, sharedWith, shareNote, closedAt, canShareWith: { guardians, student } }`, AT_RISK first |
+| `countRiskAlerts` | `{}` | `{ [courseId]: openCount }`, for badges |
+| `shareRiskAlertAction` | `{ alertId, withGuardians, withStudent, note? }` | `{ ok, sentTo, emailed }`. Also needs `messages.direct`. Pro only: otherwise `serverError` is "At-risk alerts are part of the Pro plan for this course." |
+| `dismissRiskAlertAction` | `{ alertId }` | "Not a concern": closes it and keeps quiet for 14 days |
+| `resolveRiskAlertAction` | `{ alertId }` | "Sorted": closes it; a new alert opens if the rules fire again |
+
+- **`summary`** is plain language, one sentence per reason, written about the student by first name. For example: "Thandi hasn't handed in 2 pieces of Mathematics work due since 3 November: Essay and Test 2." Show it as it is.
+- **`reasons`** is structured, for icons or chips: `{ rule: "FALLING_MARKS", from, to }`, `{ rule: "LOW_MARKS", average, count }`, `{ rule: "MISSED_WORK", count, titles, since }` or `{ rule: "ABSENCES", absent, sessions }`.
+- **The share dialog:**
+  - Show tick boxes for "Parents (n)" and "The student" from `canShareWith`, plus a note field (optional, up to 1000 characters).
+  - Show the summary as it will be sent.
+  - Disable a tick box when its count is 0 or its value is false.
+- **Sharing:**
+  - It emails each recipient (template `risk:shared`; a parent version and a student version) and leaves an in-app notice.
+  - It sets `status: "SHARED"`.
+  - Sharing again sends again.
+  - A recipient who switched email off gets the in-app notice only.
+- **Read-only workspaces:** the three write actions are refused.
+
+**Students and parents:** `listMySharedRiskAlerts({})` returns what was shared with them in the last 90 days: `{ id, course, student, summary, note, sharedAt, sharedBy, open }`. A student sees alerts shared with the student; a parent sees alerts shared with parents, for each linked child. Show it as "Notes from your tutors" on their home page.
+
+**Privacy:** alerts are part of a student's data export (`riskAlerts`) and are deleted with the account. Deleting a course or workspace deletes its alerts.
+
+**AI summary (Pro, later):** an optional AI rewrite of the summary comes with the AI service (phase 2, Plus AI), and will use AI credits.
+
+### Session booking (Draft 1.21)
+
+#216 phase 2, **Plus** (service `session-booking`, per course). Everything is in `@/features/booking/actions` and uses the workspace's time zone (`timeZone` in the results). Times go in and out as ISO strings or `Date`.
+
+**Tutors' availability** (staff; their own, or anyone's with `cover.manage` by passing `membershipId`):
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `getBookingAvailability` | `{ membershipId? }` | Returns `{ membershipId, name, timeZone, rules, timeOff, policy }` |
+| `setBookingAvailability` | `{ membershipId?, rules: [{ weekday 0–6 (Sunday 0), startMinute, endMinute, slotMinutes = 60, bufferMinutes = 0, courseId? }] }` | Replaces all rules. Minutes count from local midnight (15:30 = 930). `courseId` limits a rule to one course the tutor teaches. Rules on the same day may not overlap. Errors are written for people |
+| `addBookingTimeOff` | `{ membershipId?, startsAt, endsAt, note? }` | Returns `{ id, bookingsInside }`. Existing bookings stay; if `bookingsInside > 0`, offer to cancel them |
+| `removeBookingTimeOff` | `{ id }` | |
+| `setBookingPolicyAction` | `{ cancelHours, leadHours, horizonDays }` | Needs `workspace.settings`. Defaults are 24 hours, 12 hours and 28 days |
+
+**Booking** (students for themselves; parents pass `learnerId` for a child; staff on the course pass the student's `learnerId`):
+
+| Action | Input | Returns |
+| --- | --- | --- |
+| `getBookingSlots` | `{ courseId, learnerId?, membershipId?, from, to }` (at most 31 days) | `{ timeZone, tutors: [{ membershipId, name, slots: [{ start, end }] }], credits: { needed, balance }, policy }` |
+| `bookSessionAction` | `{ courseId, membershipId, startsAt, learnerId?, note? }` | `{ id, startsAt, endsAt, usedCredit, creditsLeft }` |
+| `cancelBookingAction` | `{ bookingId, reason? }` | `{ ok, creditReturned }` |
+| `listBookingsAction` | `{ from, to, courseId?, membershipId? }` (at most 93 days) | `BookingRow[]`: `{ id, course, tutor, student, startsAt, endsAt, status, note, meetingLink, usedCredit, cancelledAt, cancelReason, creditReturned, canCancel, cancelReturnsCredit }` |
+| `markBookingAction` | `{ bookingId, status: "COMPLETED" \| "NO_SHOW" }` | Tutor or staff, once the lesson has started |
+| `setBookingLinkAction` | `{ bookingId, meetingLink }` | Tutor or staff; an https link, or null |
+
+**Slots:**
+- Free slots come from the weekly rules, minus time off, existing bookings and the tutor's own classes (every course they teach).
+- They start at least `leadHours` from now and at most `horizonDays` ahead.
+- A booking must be one of the free slots. If someone took it first, the error is "That time isn't free any more. Pick another."
+- A student can't hold two lessons at the same time.
+
+**Who sees bookings:**
+- `listBookingsAction` with no filters gives a tutor their own bookings, a student theirs, and a parent their children's.
+- With `courseId`, staff who may edit the course see all of its bookings.
+- With `membershipId`, `cover.manage` shows another tutor's bookings.
+
+**Cancelling:**
+- The family may cancel until the lesson starts. The credit comes back when they cancel at least `cancelHours` before.
+- A tutor or staff cancellation always returns the credit.
+- Show `cancelReturnsCredit` in the confirm dialog, for example "You'll get the lesson back" or "It's less than 24 hours away, so the lesson won't come back."
+
+**Emails:**
+- On booking and cancelling, the tutor, the student (with a real email) and their parents are emailed, except the person who did it.
+- A reminder goes about 24 hours before.
+- In-app, the tutor is told about new bookings.
+- Links point to `/dashboard/bookings`. Please build that page: the student and parent list, and the tutor's week.
+
+**Lesson packs and credits:**
+- A pack is a `LESSON_PACK` fee schedule (the existing fees screens set it up, with `lessonsInPack`).
+- **If a course sells packs, booking needs a credit**: "There are no lessons left on the pack for this course. Buy a pack to book." If it doesn't, booking is free.
+- A paid pack invoice (online or marked paid offsite) gives `lessonsInPack × quantity` credits for that course automatically. A fully refunded one takes them back.
+- `getLessonCredits({ learnerId? })` returns `{ learnerId, courses: [{ courseId, courseName, balance, needsCredits, packs: [{ id, description, amountCents, lessons }] }] }`. Students may omit `learnerId`.
+- `buyLessonPackAction({ feeScheduleId, learnerId? })` is for parents, or an adult student with `paymentVisible`. It returns `{ invoiceId }`: then use the usual checkout (`startCheckout`) for that invoice. It works once billing is on (January); until then hide "Buy".
+- `adjustLessonCreditsAction({ learnerId, courseId, lessons: ±n, note })` is for staff with `fees.manage`. Use it for a cash payment or a goodwill lesson.
+
+**Plus gate:** slots and booking refuse with "Session booking is part of the Plus plan for this course." when the course doesn't have the service.
+
+**Privacy:** bookings and the credit ledger are in the user export. Anonymising an account clears booking notes and reasons; the bookings stay as the tutor's record.
+
+### AI help for tutors (Draft 1.22)
+
+#216 phase 2. Service `ai-assist` (Plus). Owner, 22 Nov: "Plus gets a taste of AI and Pro gets all of it".
+
+All actions are in `@/features/ai-assist/actions` and need staff with `courses.edit` on the course. **Every result is a draft:** nothing is saved. B shows it, the tutor edits and picks, and B saves what they keep through B's own actions.
+
+| Action | Input | Returns |
+| --- | --- | --- |
+| `getAiAssistStatus` | `{ courseId }` | `{ available, tier, model, features: { QUESTIONS, OUTLINE, TIDY: { tier, limit, used, left } }, resetsOn }`. Hide the buttons when `available` is false; show "n left this month" |
+| `generateQuestionsAction` | `{ courseId, lessonId?, topic?, count 1–10, types: ("MULTIPLE_CHOICE" \| "MULTI_SELECT" \| "TRUE_FALSE" \| "SHORT_ANSWER" \| "NUMERIC" \| "ESSAY")[], difficulty: "easy" \| "medium" \| "hard" }` | `{ runId, questions: DraftQuestion[], note, allowance }` |
+| `outlineFromDocumentAction` | `{ courseId, text?, fileUrl? }`. `fileUrl` is a PDF or text file uploaded to Vercel Blob (your uploader), at most 15 MB; or pasted text, at most 120,000 characters | `{ runId, outline: { title, summary, sections: [{ title, objectives, lessons: [{ title, summary, topicCodes }] }], note }, allowance }` |
+| `tidyTextAction` | `{ courseId, text (20–12,000 characters), mode: "tidy" \| "simplify", readingLevel? }` | `{ runId, text, changes: string[], allowance }`. Show it as a before-and-after for the tutor to accept |
+
+**`DraftQuestion`** has: `type`, `question`, `points` (1–20), `options`, `correctOptions` (zero-based), `trueFalse`, `numericAnswer`, `numericTolerance`, `modelAnswer`, `explanation`, `topicCodes` and `difficulty`.
+- Maths is TeX between `\\( … \\)`.
+- Map it onto your `TestQuestion` or `BankQuestion` shapes: the options and answer JSON for each type, and `modelAnswer` plus `explanation` for the memo.
+- `topicCodes` only ever contains codes from the course's curriculum list (empty when the course has none).
+- Show `note` above the drafts when it isn't empty.
+
+**Limits:**
+- Runs a month per workspace (`AI_ASSIST_LIMITS`, provisional):
+  - **Plus:** 10 question batches, 3 outlines and 50 tidy-ups.
+  - **Pro:** 200, 50 and 500.
+  - **Core:** none.
+- The plan is the course's, from its switched-on services. Before billing is on, a Core course counts as Plus.
+- Refusals come back as `serverError`, written for people:
+  - Plus at its cap points to Pro;
+  - when AI credits run out, the message is the credits message.
+- With billing on, every run spends AI credits for what it cost, including failed runs.
+
+**Outline scope:** on Plus this is the outline only. Lessons, tests and assignments from documents are Pro, in phase 3.
+
+**Model:** Claude Opus 5.5 by default (`AI_ASSIST_MODEL` overrides), with Anthropic's refusal fallback. On Preview, a run of 2 questions cost about 63 credits, an outline about 107 and a tidy-up about 16 (1 credit = R0.01).
+
+**Privacy:** only the course's name and level, the lesson or document text, and up to 30 existing question stems (to avoid repeats) are sent. No names, emails or ids are sent. Run rows (`AiAssistRun`) keep counts and cost, never the text.
+
+#### Pro AI drafts (Draft 1.23)
+
+#216 phase 3. **Pro only.** Plus and Core get "This AI help is part of the Pro plan for this course."
+
+These use the same service, gate, credits and run records as above. They're in `@/features/ai-assist/actions`, need staff with `courses.edit` on the course, and return drafts only. `getAiAssistStatus` now lists all seven features.
+
+| Action | Input | Returns | Monthly runs on Pro |
+| --- | --- | --- | --- |
+| `lessonsFromDocumentAction` | `{ courseId, text? \| fileUrl?, lessons 1–8 = 4, tests 0–2 = 1, questionsPerTest 1–10 = 8, assignments 0–2 = 0, focus? }` | `{ runId, drafts: { lessons: [{ title, summary, body, topicCodes }], tests: [{ title, instructions, questions: DraftQuestion[] }], assignments: [{ title, brief, rubric: [{ criterion, points }], modelAnswer }], note }, allowance }` | 40 |
+| `feedbackDraftAction` | `{ courseId, question, answer, memo?, maxPoints?, tone?: "warm" \| "direct", studentUserId? }` | `{ runId, feedback, strengths, nextSteps, suggestedMark, allowance }` | 2000 |
+| `reportCommentsAction` | `{ courseId, from, to, term, learnerIds? (up to 40), notes?: { [learnerId]: string }, tone?: "warm" \| "formal" }` | `{ runId, comments: [{ learnerId, studentUserId, name, comment }], allowance }` | 100 batches |
+| `curriculumGapsAction` | `{ courseId }` | `{ runId, covered, total, missing: [{ code, title, suggestion, lessonId, lessonTitle, newLessonTitle }], restructure: [{ suggestion, why }], note, allowance }` | 30 |
+
+- **Lessons:** `body` is plain text. Lines starting `## ` are headings, `- ` are list items, and maths is TeX. Convert it to your lesson document format. The review screen should let the tutor pick which lessons, tests and assignments to create.
+- **Feedback:** it goes in the grading screen beside the answer. Pass the student's `studentUserId` so their name is scrubbed; emails, phone and ID numbers are always scrubbed. `suggestedMark` is a suggestion only; the tutor marks.
+- **Report comments:**
+  - A gathers each student's marks, attendance and missed work for the course between `from` and `to`.
+  - Students go to the model as S1, S2…, and names are filled in afterwards.
+  - Use it in your term-report screen. `notes` are the tutor's own short notes per learner, used as a hint.
+- **Curriculum gaps:** the course needs its curriculum, subject and grade set; otherwise the error says so. `missing` lists every topic no lesson or question tags yet, in curriculum order:
+  - with `lessonId` when the AI suggests extending that lesson;
+  - with `newLessonTitle` when it suggests a new one;
+  - with an empty suggestion when the model skipped it.
+- **Cost on Preview** (1 credit = R0.01): lessons from a short document about 145 credits, feedback about 31, six report comments about 42, gaps about 113. Long drafts are streamed, so a big document won't time out.

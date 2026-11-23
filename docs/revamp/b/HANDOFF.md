@@ -31,6 +31,99 @@ Not done:
 - Support staff and executives have no read-only course pages
   (`content.view`); only the gradebook reads.
 
+## 2026-11-24 Released marks only, `revamp/b-grades-release`
+
+Done:
+- Students see released marks only, the rule parents' pages already had:
+  Grades, a grade's page, home, the course page, the test and assignment
+  lists. On the test review nothing hints at a mark before release.
+- The rule is in `features/grades/lib/release.ts`: `isReleased` for rows,
+  `RELEASED_GRADE` for a Prisma `where`. `check-grade-release.ts` compares
+  the two.
+- Someone else's grade is now a 404, not a message.
+
+For A:
+- Any read of `Grade` for a student or parent can spread `RELEASED_GRADE`
+  into its `where`.
+
+## 2026-11-23 Term reports (#216, phase 1), `revamp/b-term-reports`
+
+[contracts/term-reports.md](../contracts/term-reports.md), Draft 1. Core.
+**Migration `33_term_reports`** (three tables, additive). Production: applied
+2026-11-23 21:53 UTC, after Neon backup branch `backup-term-reports-20261123`.
+
+Done:
+- **Terms** at `/dashboard/reports`, from the Gradebook. The owner and admins
+  add, edit, release, take back and delete them.
+- **Comments:** per course, a box for each student that saves as you write.
+  The general comment is for whoever edits all of the student's courses.
+- **The PDF** is A's renderer, from a route that checks access. Staff who see
+  all of the student's courses, and once released the student's parents and
+  adult students.
+- Samples on `/design-system/term-reports`. Checks: `check-term-reports.ts`.
+
+In A's files, with the owner's OK:
+- `tenancy.prisma`: back-relations on `Workspace` and `Learner`.
+- `users/deletion.ts`, `users/export.ts`: the comments about a student.
+
+For A (not urgent):
+- `safe()` prints "?" for anything outside Latin-1, curly quotes included.
+  B cleans the text first (`pdfText`), so reports are fine; other PDFs of
+  yours with people's names aren't. An embedded font would print a Sepedi
+  "š" as it is.
+- `Workspace.logoUrl` is never set, so reports have no logo.
+
+## 2026-11-23 Offline reading (#216, phase 1), `revamp/b-offline`
+
+Viewer contract Draft 1.18, B's side. Core. No migration.
+
+Done:
+- **Each lesson has its own path:** `/dashboard/courses/lessons/<course>/<lesson>`.
+  The service worker keeps a page per path, so `?lesson=` would have kept
+  one lesson per course. Old `?lesson=` links redirect.
+- **"Save for offline"** on a lesson. It also fetches the app files the page
+  names, so they're kept even if they loaded before the worker started. A
+  saved copy is refreshed when the tutor has changed the lesson.
+- **`/dashboard/courses/saved`:** the saved lessons, from My courses.
+- **No connection:** a notice on dashboard pages (not the test runner), and
+  "Video needs a connection" or "Image needs a connection" in a lesson.
+- **Shared devices:** besides sign-out, saved lessons go when another
+  account uses the device.
+- The service worker is registered from the dashboard layout.
+- Samples on `/design-system/offline`. Checks: `check-offline-ui.ts`.
+
+For A (not urgent):
+- `nexa-static-v1` only grows: files of earlier deployments are never
+  removed. Keeping those that a saved lesson names would be enough.
+- MathJax comes from jsDelivr, which the worker doesn't keep. Formulas show
+  offline while the browser still holds it.
+- `isStaticAsset` matches image names before `neverCache` is asked, so an
+  image served under `/api/` would be kept past sign-out. None is today.
+
+## 2026-11-23 Business dashboard (#216, phase 1), `revamp/b-business-dashboard`
+
+Billing contract Draft 1.17, B's side. No migration.
+
+Done:
+- **`/dashboard/business`** ("Business" in the sidebar, `reports.view`):
+  fees for a period, what's owed now, students, six months, and each tutor
+  (organisations). Five set periods or the viewer's own days, up to a year,
+  in their time zone.
+- A branch role sees its branches' figures, with A's note.
+- Without a Plus or Pro service the page says what opens it.
+- With billing off it shows students only.
+- Samples on `/design-system/business`. Checks: `check-business-ui.ts`.
+
+For A, a bug: `refundedCents` in `features/reports/business.ts` filters on
+`payment.workspaceId`, which `PARENT_CHECKOUT` payments don't have. Family
+refunds are missed, and refunds of card checks and plan payments are counted
+instead. It should go through `allocation.invoice.workspaceId`. The Preview
+seed has a processed R200 refund (`INV-SEED-U-007`) that shows as R0. The
+page leaves the figure out until then.
+
+For A, not urgent: the trend's months are UTC, so a payment in the first
+two hours of a month (South African time) counts for the month before.
+
 ## 2026-11-23 Referrals, Find courses by workspace, attendance in Core (#216, phase 1), `revamp/b-referrals`
 
 Viewer contract Drafts 1.15 and 1.16, B's side. No migration.

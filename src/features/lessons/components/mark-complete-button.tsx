@@ -35,6 +35,7 @@ export function MarkCompleteButton({
   const [pending, startTransition] = React.useTransition();
 
   function toggle() {
+    if (!navigator.onLine) return void toast.error("You're offline. Try again when you're connected.");
     const next = !completed;
     setCompleted(next); // optimistic
 
