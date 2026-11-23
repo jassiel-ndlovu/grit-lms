@@ -15,6 +15,7 @@ import { USERNAME_RE } from "@/features/auth/codes";
 import { assertCanAddLearners } from "@/features/billing/caps";
 import { createStudentAccountFor, linkParentFor } from "@/features/users/accounts";
 import { prisma } from "@/lib/db";
+import { scopedCourseWhere } from "@/lib/viewer-core";
 import { UserError } from "@/lib/user-error";
 
 import { mapHeaders, parseYesNo, splitList } from "../csv";
@@ -54,7 +55,7 @@ async function courseNames(ctx: ImportContext) {
   const courses = await prisma.course.findMany({
     where: {
       workspaceId: ctx.workspaceId,
-      ...(ctx.teachingMembershipId ? { OR: [{ ownerMembershipId: ctx.teachingMembershipId }, { staff: { some: { membershipId: ctx.teachingMembershipId } } }] } : {}),
+      ...(ctx.teachingMembershipId ? scopedCourseWhere({ membershipId: ctx.teachingMembershipId, branchIds: ctx.branchIds }) : {}),
     },
     select: { id: true, name: true },
   });
@@ -158,7 +159,7 @@ export const studentsImporter: Importer<StudentRow> = {
 
       const courseIds = resolveCourses(byName, r.courses, issues);
       if (!courseIds.length && !issues.some((i) => i.field === "courses")) {
-        if (ctx.teachingMembershipId) issues.push({ field: "courses", level: "error", message: "List at least one of your courses." });
+        if (ctx.teachingMembershipId) issues.push({ field: "courses", level: "error", message: "List at least one course you can enrol into." });
         else issues.push({ field: "courses", level: "warning", message: "Not enrolled on any course yet." });
       }
 

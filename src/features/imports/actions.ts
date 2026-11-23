@@ -17,7 +17,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
 import { ViewerError } from "@/lib/viewer";
-import { can, needsScope, type Permission, type Viewer } from "@/lib/viewer-core";
+import { can, courseScopeOf, needsScope, type Permission, type Viewer } from "@/lib/viewer-core";
 
 import { toCsv } from "./csv";
 import * as engine from "./engine";
@@ -38,6 +38,7 @@ function contextFor(viewer: Viewer, kind: string): ImportContext {
     workspaceId: viewer.workspace.id,
     actor: { userId: viewer.user.id, name: viewer.user.name },
     teachingMembershipId: scoped ? viewer.membership!.id : null,
+    branchIds: scoped ? (courseScopeOf(viewer, permission)?.branchIds ?? []) : [],
     actorRole,
   };
 }

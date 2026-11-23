@@ -25,6 +25,8 @@ import {
   can,
   hasTenancy,
   needsScope,
+  scopedCourseWhere,
+  staffScope,
   type LegacyRole,
   type Permission,
   type Persona,
@@ -86,6 +88,9 @@ const loadViewer = cache(
             workspace: { select: workspaceSelect },
             teams: { select: { teamId: true, isLead: true } },
             _count: { select: { courseStaff: true } },
+            presetRole: true,
+            branchIds: true,
+            customRole: { select: { id: true, name: true, permissions: true, scope: true } },
           },
         },
         learners: {
@@ -133,10 +138,18 @@ const loadViewer = cache(
       readingFont: user.preferences?.readingFont ?? "DEFAULT",
     };
 
+    // Branch roles (#216): the teams in the branches each membership names.
+    const allBranchIds = [...new Set(user.memberships.flatMap((m) => m.branchIds))];
+    const teamsByBranch = new Map<string, string[]>();
+    if (allBranchIds.length) {
+      for (const tm of await prisma.team.findMany({ where: { branchId: { in: allBranchIds } }, select: { id: true, branchId: true } })) {
+        teamsByBranch.set(tm.branchId!, [...(teamsByBranch.get(tm.branchId!) ?? []), tm.id]);
+      }
+    }
     if (hasTenancy({ user: base, memberships: user.memberships, learners: user.learners, children })) {
       return buildTenancyViewer({
         user: base,
-        memberships: user.memberships.map(({ _count, ...m }) => ({ ...m, teaches: _count.courseStaff > 0 })),
+        memberships: user.memberships.map(({ _count, ...m }) => ({ ...m, teaches: _count.courseStaff > 0, branchTeamIds: m.branchIds.flatMap((b) => teamsByBranch.get(b) ?? []) })),
         learners: user.learners,
         children,
         hasActiveGuardian: user.guardedBy.length > 0,
@@ -230,7 +243,7 @@ export async function canIn(
     return false;
   }
   if (!needsScope(viewer, permission)) return true;
-  if (scope.teamId) return viewer.membership?.leadTeamIds.includes(scope.teamId) ?? false;
+  if (scope.teamId) return (viewer.membership?.leadTeamIds.includes(scope.teamId) || viewer.membership?.branchTeamIds?.includes(scope.teamId)) ?? false;
   if (scope.childUserId) return viewer.children.some((c) => c.userId === scope.childUserId);
   // A scoped permission with no scope given is never enough.
   return false;
@@ -252,9 +265,7 @@ async function isCourseStaff(viewer: Viewer, courseId: string, mustTeach: boolea
     where: {
       id: courseId,
       workspaceId: viewer.workspace.id,
-      ...(mustTeach
-        ? { OR: [{ ownerMembershipId: membershipId }, { staff: { some: { membershipId } } }] }
-        : {}),
+      ...(mustTeach ? scopedCourseWhere({ membershipId, branchIds: staffScope(viewer) === "BRANCHES" ? viewer.membership.branchIds : [] }) : {}),
     },
     select: { id: true },
   });

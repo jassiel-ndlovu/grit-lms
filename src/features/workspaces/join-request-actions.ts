@@ -20,7 +20,7 @@ import { z } from "zod";
 
 import { staffActionClient, viewerActionClient } from "@/lib/safe-action";
 import { canIn, ViewerError } from "@/lib/viewer";
-import { can, needsScope, type Permission, type Viewer } from "@/lib/viewer-core";
+import { can, courseScopeOf, needsScope, type Permission, type Viewer } from "@/lib/viewer-core";
 
 import * as j from "./join-requests";
 import { listReferralsFor, REFERRAL_COOKIE, referralLinkFor } from "./referrals";
@@ -28,9 +28,10 @@ import { listReferralsFor, REFERRAL_COOKIE, referralLinkFor } from "./referrals"
 const id = z.string().min(1).max(64);
 
 /** The workspace, and the membership whose courses bound the action (null: the whole workspace). */
-function staffScope(viewer: Viewer, permission: Permission): { workspaceId: string; teachingMembershipId: string | null } {
+function staffScope(viewer: Viewer, permission: Permission): { workspaceId: string; teachingMembershipId: string | null; branchIds: string[] } {
   if (!viewer.workspace || viewer.persona !== "staff" || !can(viewer, permission)) throw new ViewerError("FORBIDDEN");
-  return { workspaceId: viewer.workspace.id, teachingMembershipId: needsScope(viewer, permission) ? (viewer.membership?.id ?? "none") : null };
+  const scope = courseScopeOf(viewer, permission);
+  return { workspaceId: viewer.workspace.id, teachingMembershipId: needsScope(viewer, permission) ? (viewer.membership?.id ?? "none") : null, branchIds: scope?.branchIds ?? [] };
 }
 
 /** For a scoped viewer: they may act on this course (they teach or own it), as canIn decides everywhere else. */
@@ -77,7 +78,7 @@ export const listJoinRequests = viewerActionClient
   .schema(z.object({ status: z.enum(["PENDING", "APPROVED", "DECLINED", "CANCELLED"]).default("PENDING") }))
   .action(async ({ parsedInput, ctx: { viewer } }) => {
     const s = staffScope(viewer, "learners.invite");
-    return j.listJoinRequestsForStaff(s.workspaceId, s.teachingMembershipId, parsedInput.status);
+    return j.listJoinRequestsForStaff(s.workspaceId, s.teachingMembershipId, parsedInput.status, s.branchIds);
   });
 
 export const approveJoinRequest = staffActionClient

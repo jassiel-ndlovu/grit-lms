@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 import { studentsCsvFor } from "@/features/imports/exports";
 import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/viewer";
-import { can, needsScope } from "@/lib/viewer-core";
+import { can, courseScopeOf, needsScope } from "@/lib/viewer-core";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function GET() {
   if (!viewer.workspace || !can(viewer, "learners.invite")) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   const scoped = needsScope(viewer, "learners.invite");
   if (scoped && !viewer.membership) return NextResponse.json({ error: "Not allowed" }, { status: 403 });
-  const { csv, rows } = await studentsCsvFor(viewer.workspace.id, scoped ? viewer.membership!.id : null);
+  const { csv, rows } = await studentsCsvFor(viewer.workspace.id, courseScopeOf(viewer, "learners.invite"));
   await prisma.auditLog.create({ data: { workspaceId: viewer.workspace.id, actorUserId: viewer.user.id, action: "export.students", targetType: "Workspace", targetId: viewer.workspace.id, data: { rows } } });
   const date = new Date().toISOString().slice(0, 10);
   return new NextResponse(csv, {

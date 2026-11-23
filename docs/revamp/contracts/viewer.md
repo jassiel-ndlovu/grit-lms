@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.16, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.17, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.17. Roles as permission sets and branches (#216): `membership.roleKey`, `roleName`, `scope`, `branchIds`, `branchTeamIds`; six new permission keys; `staffScope`, `courseScopeOf` and `scopedCourseWhere`; role, branch and team actions in `@/features/workspaces/role-actions` |
 | 2026-11-23 | Draft 1.16. Parent and student referrals (`getReferralLink`, `listReferrals`, `/api/referrals/<code>`); the weekly parent summary email; the attendance register is Core (check-in codes and absence emails stay Plus) |
 | 2026-11-23 | Draft 1.15. Read-only workspaces keep every permission, so staff see their pages (#223); writes are refused on the server (`READ_ONLY: ...` from actions, 423 from API routes). `listListedCourses` also matches the tutor's name and takes `forUserIds`, returning `enrolledUserIds`; staff inbox rows carry `decidedBy` |
 | 2026-11-22 | Draft 1.14. Themes OCEAN, SUNSET and CONTRAST (#217); `user.textSize` and `user.readingFont` (#216); `workspace.meetingProvider` and `setMeetingProvider` (#211); `signUpWithPassword({ callbackUrl })` (#174); `writableViewerActionClient` (refused for staff in a read-only workspace). NextAuth is gone: no `/api/auth/*` route remains |
@@ -361,3 +362,51 @@ Students and parents find listed courses and ask to join; staff approve or decli
   - `openCheckIn` refuses with "Check-in codes are part of the Plus plan for this course".
   - `markAttendance` emails parents about an absence only on Plus.
 - With billing off, every course has every service, as before.
+
+### Roles and branches (Draft 1.17)
+
+Owner decision of 22 Nov. A role is a name, a set of permissions and a **scope**:
+- `WORKSPACE`: the whole organisation;
+- `BRANCHES`: the courses of chosen branches, reached through their teams;
+- `OWN_COURSES`: the courses the person teaches or owns.
+
+The three base roles are presets too, so existing members are unchanged. Presets are in `@/lib/roles` (client-safe):
+
+| Preset | Scope | Holds |
+| --- | --- | --- |
+| Owner | workspace | everything |
+| Admin | workspace | everything except closing the organisation and connecting payouts |
+| Tutor | own courses | teaching, marking, fees for their students |
+| Executive | workspace | reads reports, content, grades, billing; changes nothing |
+| Branch manager | branches | staff, courses, students, fees, enquiries, cover, reports |
+| Project manager | branches | courses, enrolments, timetable, reports; no money |
+| Finance | workspace | billing, fees, payouts, timesheets, AI credits |
+| Support staff | branches | students, parents, sign-in codes, messages, enquiries |
+| Assistant tutor | own courses | marks and comments; no setup or fees |
+
+**New permission keys** (gate the coming tools on them): `reports.view`, `timesheets.manage`, `enquiries.manage`, `cover.manage`, `ai.credits.allocate`, `staff.reviews`. Owners and admins hold all six.
+
+**On the viewer:**
+- `viewer.membership` gains `roleKey` (a preset key or `custom:<id>`), `roleName`, `scope`, `branchIds` and `branchTeamIds`. Show `roleName` wherever you show someone's role.
+- **`needsScope(viewer, p)`** is now true for branch roles as well as tutors.
+- **`staffScope(viewer)`** gives the scope.
+- **`courseScopeOf(viewer, p)`** returns `{ membershipId, branchIds }`, or null for the whole workspace.
+- **`scopedCourseWhere(scope)`** is the Prisma filter for those courses: owned, taught, or in a branch's team.
+- **`canIn`** handles branches for `courseId` and `teamId`.
+- **Please move B's course scope onto these:** `features/courses/lib/course-access.ts` (`manageableBy`) and `features/courses/fee-courses.ts`. Until then, a branch manager sees only the courses they teach on your pages, which is too narrow but never too wide.
+
+**Actions** in `@/features/workspaces/role-actions`, organisations only, writes refused when read-only:
+
+| Action | Needs | Input | Returns |
+| --- | --- | --- | --- |
+| `listRoles` | `members.role` | `{}` | `{ presets: [{ key, name, description, scope, permissions, assignable, members }], custom: [{ key, id, name, basedOn, scope, permissions, members }] }` |
+| `createRole` | `members.role` | `{ name, basedOn, permissions, scope }` | `{ key, id }`. Never more than an admin, nor more than the creator holds |
+| `updateRole`, `deleteRole` | `members.role` | `{ roleId, ... }` / `{ roleId }` | a role in use can't be deleted |
+| `setMemberRole` | `members.role` | `{ membershipId, roleKey, branchIds? }` | `{ roleKey, roleName, scope, branchIds }`. Branch roles need at least one branch. Nobody changes their own role or an owner's, or gives more than they hold |
+| `listBranches` | `teams.manage` or `members.role` | `{}` | `{ branches: [{ id, name, people, teams: [{ id, name, courses, members }] }], teamsWithoutBranch }` |
+| `createBranch`, `renameBranch`, `deleteBranch` | `teams.manage` | `{ name }` / `{ branchId, name }` / `{ branchId }` | Only whole-organisation roles add or remove branches. A branch with teams or people can't be deleted |
+| `createTeam`, `updateTeam`, `deleteTeam` | `teams.manage` | `{ name, branchId? }` / `{ teamId, name?, branchId? }` / `{ teamId }` | A branch manager manages teams only in their branches. A team with courses can't be deleted |
+| `setTeamMember` | `teams.manage` | `{ teamId, membershipId, member, isLead? }` | |
+| `setCourseTeam` | `teams.manage` | `{ courseId, teamId }` | Puts a course in a team, and so in that team's branch |
+
+**Not yet:** invitations aren't bound to a branch, so a branch manager inviting staff invites them to the organisation. Groups of organisations come later.

@@ -3,6 +3,35 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Phase 1: roles as permission sets, branches and teams, `revamp/a-roles-branches`
+
+Viewer contract Draft 1.17 ("Roles and branches").
+
+Done:
+- **Migration `30_branches_roles`** (additive):
+  - `Branch` and `Team.branchId`;
+  - `WorkspaceRole` and `RoleScope`;
+  - on `Membership`: `presetRole`, `customRoleId` and `branchIds`.
+- **`src/lib/roles.ts`:** nine presets (the three base roles plus executive, branch manager, project manager, finance, support staff and assistant tutor), `effectiveRole`, and a ceiling (no custom role holds more than an admin). Six new permission keys for the coming tools.
+- **Viewer:**
+  - permissions come from the effective role;
+  - `membership.scope`, `branchIds` and `branchTeamIds`;
+  - `needsScope` covers branch roles;
+  - `staffScope`, `courseScopeOf` and `scopedCourseWhere`;
+  - `canIn` reaches branch courses and teams.
+  - Existing members are unchanged: base roles map to their presets with the same grants.
+- **A's course-scope call sites now use `scopedCourseWhere`:** imports (both importers, the export, the hourly context), the join-request inbox, fee invoices and `canIn`.
+- **Actions** (`role-actions.ts`): roles (list, create, update, delete), member role, branches and teams (create, rename, delete), team members, and course to team. Nobody gives more than they hold or a wider scope; owners are never changed here.
+
+Tested:
+- `scripts/check-roles.ts` (pure, in CI).
+- 22 checks against Preview covering branches and teams, roles and their limits, branch reach in `canIn`, custom roles, and the branch-scoped inbox.
+- Every static check script, types and lint.
+
+For B:
+- Move `course-access.ts` (`manageableBy`) and `fee-courses.ts` onto `courseScopeOf` and `scopedCourseWhere`, so branch managers see their branches' courses.
+- Screens: roles, member role, and branches and teams in organisation settings.
+
 ## 2026-11-23 Phase 1: attendance in Core, weekly parent summary, referrals, `revamp/a-core-parents`
 
 Viewer contract Draft 1.16; services contract updated.

@@ -18,6 +18,7 @@ import "server-only";
 
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { effectiveRole } from "@/lib/roles";
 import { sealForQueue, unsealFromQueue } from "@/lib/email/queue";
 import { UserError } from "@/lib/user-error";
 
@@ -210,10 +211,16 @@ export async function signInCardsFor(workspaceId: string, jobId: string, now: Da
 
 /** The context a job runs under, rebuilt from its creator when no request is around (the hourly job). */
 async function contextForJob(job: NonNullable<JobRow>): Promise<ImportContext> {
-  const actor = await prisma.user.findUniqueOrThrow({ where: { id: job.createdById }, select: { id: true, name: true, platformRole: true, memberships: { where: { workspaceId: job.workspaceId, status: "ACTIVE" }, select: { id: true, role: true } } } });
+  const actor = await prisma.user.findUniqueOrThrow({ where: { id: job.createdById }, select: { id: true, name: true, platformRole: true, memberships: { where: { workspaceId: job.workspaceId, status: "ACTIVE" }, select: { id: true, role: true, presetRole: true, branchIds: true, customRole: { select: { id: true, name: true, permissions: true, scope: true } } } } } });
   const m = actor.memberships[0];
   const role = m?.role ?? (actor.platformRole === "NEXA_ADMIN" ? "NEXA_ADMIN" : "TUTOR");
-  return { workspaceId: job.workspaceId, actor: { userId: actor.id, name: actor.name }, teachingMembershipId: role === "TUTOR" ? (m?.id ?? null) : null, actorRole: role };
+  const scope = m ? effectiveRole(m).scope : "WORKSPACE";
+  return {
+    workspaceId: job.workspaceId, actor: { userId: actor.id, name: actor.name },
+    teachingMembershipId: scope !== "WORKSPACE" ? (m?.id ?? null) : null,
+    branchIds: scope === "BRANCHES" ? (m?.branchIds ?? []) : [],
+    actorRole: role,
+  };
 }
 
 /**
