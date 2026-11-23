@@ -48,7 +48,7 @@ export const setCourseListed = staffActionClient
 
 export const browseCourses = viewerActionClient
   .schema(z.object({ q: z.string().max(80).optional(), workspaceId: id.optional(), cursor: id.optional() }))
-  .action(async ({ parsedInput }) => j.listListedCourses({ ...parsedInput, take: 24 }));
+  .action(async ({ parsedInput, ctx: { viewer } }) => j.listListedCourses({ ...parsedInput, take: 24, forUserIds: [viewer.user.id, ...viewer.children.map((c) => c.userId)] }));
 
 export const requestToJoin = viewerActionClient
   .schema(z.object({ courseId: id, studentUserId: id.optional(), message: z.string().max(j.JOIN.messageMax).optional() }))

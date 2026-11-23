@@ -50,7 +50,8 @@ export async function switchTeachingOffFor(workspaceId: string, actorUserId: str
   if (ws.teachingOffAt) return { teaches: false as const, since: ws.teachingOffAt.toISOString() };
   const owner = await prisma.membership.findFirst({ where: { workspaceId, userId: actorUserId, role: "OWNER", status: "ACTIVE" }, select: { id: true } });
   if (!owner) throw new TeachingError("Only an owner can switch teaching off.");
-  if (confirmName.trim().toLowerCase() !== ws.name.trim().toLowerCase()) {
+  // Exact, apart from spaces at either end (#223).
+  if (confirmName.trim() !== ws.name.trim()) {
     throw new TeachingError("Type the organisation's name exactly to confirm.");
   }
   const stillTeaching = await prisma.courseStaff.findMany({

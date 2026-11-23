@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.14, 2026-11-22** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.15, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-23 | Draft 1.15. Read-only workspaces keep every permission, so staff see their pages (#223); writes are refused on the server (`READ_ONLY: ...` from actions, 423 from API routes). `listListedCourses` also matches the tutor's name and takes `forUserIds`, returning `enrolledUserIds`; staff inbox rows carry `decidedBy` |
 | 2026-11-22 | Draft 1.14. Themes OCEAN, SUNSET and CONTRAST (#217); `user.textSize` and `user.readingFont` (#216); `workspace.meetingProvider` and `setMeetingProvider` (#211); `signUpWithPassword({ callbackUrl })` (#174); `writableViewerActionClient` (refused for staff in a read-only workspace). NextAuth is gone: no `/api/auth/*` route remains |
 | 2026-11-21 | Draft 1.13. Staff manage only the accounts their workspace made (`User.managedByWorkspaceId`, migration 23): `resetUserPassword`, `issueSignInCode` and `requestStudentAccountDeletion` refuse a self-made account with a `UserError` saying the person manages it themself. Tutors invoice or set fees only for a student on that course. `changeOwnPassword` works for accounts made since the cutover |
 | 2026-11-21 | Draft 1.12. Owner decisions of 21 Nov (#206): `workspace.teaches`, `switchTeachingOff` and `adminSwitchTeachingOn`; course listings and join requests; `user.theme` and `updateOwnPreferences({ theme })`. Action errors written for the user (`UserError`) now reach `serverError` as written, instead of "Something went wrong" |
@@ -326,3 +327,13 @@ Students and parents find listed courses and ask to join; staff approve or decli
 - **`viewer.workspace.meetingProvider`** is `"GOOGLE_MEET"` (default), `"ZOOM"`, `"TEAMS"` or `"OTHER"` (`MEETING_PROVIDERS`). Owners and admins change it with `setMeetingProvider({ meetingProvider })` in `@/features/workspaces/actions`. It's audited and refused in a read-only workspace.
 - **`signUpWithPassword({ name, email, password, callbackUrl? })`:** the verification link returns to `callbackUrl` when it's a same-site path (for example `/auth/invite/<token>`), otherwise to `/dashboard/welcome`.
 - **`writableViewerActionClient`** (`@/lib/safe-action`) is `viewerActionClient` plus the read-only guard. The AI marking writes (`setTestAiMarking`, `requestAiMarking`, `recordAiSuggestionAction`) now use it, so in a read-only workspace they return `READ_ONLY: …` instead of "You don't have access".
+
+### Read-only workspaces and Find courses (Draft 1.15)
+
+- **Read-only staff keep every permission** (#223). Show pages and navigation as usual. Lock buttons with `WriteGuard` (`viewer.workspace.readOnly`).
+  - The server refuses writes: the tutor, staff and writable action clients return `READ_ONLY: ...`, and the API write routes answer 423.
+  - Billing, fees, payouts, workspace settings, privacy requests and the learner side keep working.
+- **`listListedCourses({ q, forUserIds })`:**
+  - `q` also matches the lead tutor's name.
+  - Pass the viewer's id and their children's ids in `forUserIds`. Each course then has `enrolledUserIds`: show "You're on this course" or the child's name instead of "Ask to join". `browseCourses` passes them for you.
+- **`listJoinRequestsForStaff` rows** have `decidedBy: { id, name } | null`. Compare `decidedBy.id` with the viewer before labelling a note "Your note".

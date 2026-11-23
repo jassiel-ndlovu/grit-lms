@@ -5,7 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { actionClient, viewerActionClient } from "@/lib/safe-action";
+import { actionClient, viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
 import { requireViewer, ViewerError } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";
 
@@ -18,7 +18,7 @@ async function inviter() {
 }
 
 /** Invites by email (up to 50). Returns per address: INVITED, RESENT (a pending invite got a new link) or ALREADY_MEMBER. */
-export const inviteStaff = viewerActionClient
+export const inviteStaff = writableViewerActionClient
   .schema(z.object({ emails: z.array(z.string().trim().email()).min(1).max(50), role: z.enum(["ADMIN", "TUTOR"]), courseIds: z.array(z.string().min(1)).max(50).optional() }))
   .action(async ({ parsedInput }) => {
     const { viewer, workspaceId } = await inviter();
@@ -35,7 +35,7 @@ export const listInvites = viewerActionClient
     return listInvitesFor(workspaceId);
   });
 
-export const revokeInvite = viewerActionClient
+export const revokeInvite = writableViewerActionClient
   .schema(z.object({ inviteId: z.string().min(1) }))
   .action(async ({ parsedInput }) => {
     const { viewer, workspaceId } = await inviter();

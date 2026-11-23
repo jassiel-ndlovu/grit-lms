@@ -96,6 +96,8 @@ export type RetentionCounts = CourseContentCounts & {
   learners: number;
   memberships: number;
   usageRows: number;
+  /** B's question bank rows saved in this workspace (#228). */
+  bankQuestions: number;
   files: number;
 };
 
@@ -103,6 +105,18 @@ const ZERO_CONTENT: CourseContentCounts = {
   uploadedFiles: 0, grades: 0, questionGrades: 0, assessmentCompletions: 0, testSubmissions: 0, testQuestions: 0, tests: 0,
   assignmentEntries: 0, assignments: 0, quizzes: 0, lessonCompletions: 0, attachments: 0, lessons: 0, courseEvents: 0,
 };
+
+/** Every https URL inside a JSON value (question data holds image links in text). */
+export function blobUrlsIn(value: unknown): string[] {
+  const out: string[] = [];
+  const walk = (v: unknown) => {
+    if (typeof v === "string") for (const m of v.matchAll(/https:\/\/[^\s"'()<>\]]+/g)) out.push(m[0]);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  };
+  walk(value);
+  return out;
+}
 
 /** Only files in our Blob store are ours to delete. */
 export function isOwnBlobUrl(url: string): boolean {
@@ -148,7 +162,7 @@ export async function deleteWorkspaceData(
   const now = opts.now ?? new Date();
   await assertDue(workspaceId, now);
   const TX = { timeout: 60_000, maxWait: 10_000 };
-  const counts: RetentionCounts = { ...ZERO_CONTENT, courses: 0, enrollments: 0, learners: 0, memberships: 0, usageRows: 0, files: 0 };
+  const counts: RetentionCounts = { ...ZERO_CONTENT, courses: 0, enrollments: 0, learners: 0, memberships: 0, usageRows: 0, bankQuestions: 0, files: 0 };
   const add = (c: CourseContentCounts) => {
     for (const k of Object.keys(ZERO_CONTENT) as Array<keyof CourseContentCounts>) counts[k] += c[k];
   };
@@ -189,6 +203,12 @@ export async function deleteWorkspaceData(
     select: { logoUrl: true, subscription: { select: { legalName: true } } },
   });
   if (ws.logoUrl && isOwnBlobUrl(ws.logoUrl)) counts.files++;
+  // B's question bank (#228): rows carry the workspace id without a foreign
+  // key, so they go here; images they point to go with them.
+  const bank = await prisma.bankQuestion.findMany({ where: { workspaceId }, select: { data: true } });
+  const bankFiles = [...new Set(bank.flatMap((b) => blobUrlsIn(b.data)))].filter(isOwnBlobUrl);
+  counts.bankQuestions = bank.length;
+  counts.files += bankFiles.length;
   if (opts.dryRun) return counts;
 
   await prisma.$transaction(async (tx) => {
@@ -197,6 +217,7 @@ export async function deleteWorkspaceData(
     await tx.membership.deleteMany({ where: { workspaceId } });
     await tx.usageRecord.deleteMany({ where: { workspaceId } });
     await tx.usageCap.deleteMany({ where: { workspaceId } });
+    await tx.bankQuestion.deleteMany({ where: { workspaceId } });
     await tx.workspace.update({
       where: { id: workspaceId },
       data: { name: ws.subscription?.legalName || "Deleted workspace", logoUrl: null, accentColor: null },
@@ -205,5 +226,6 @@ export async function deleteWorkspaceData(
     await tx.subscription.update({ where: { workspaceId }, data: { deleteAfter: null } });
   }, TX);
   if (ws.logoUrl && isOwnBlobUrl(ws.logoUrl)) await removeFiles([ws.logoUrl]);
+  if (bankFiles.length) await removeFiles(bankFiles);
   return counts;
 }

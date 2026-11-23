@@ -22,6 +22,7 @@ import type { Session } from "@/lib/auth";
 
 import type { Prisma } from "@/generated/prisma";
 import { auth } from "@/lib/auth";
+import { getViewer } from "@/lib/viewer";
 import { prisma } from "@/lib/db";
 import type { Role } from "@/features/shared/enums";
 import { taughtByEmail } from "@/features/courses/lib/tenancy-where";
@@ -61,6 +62,20 @@ export async function requireApiRole(...roles: Role[]): Promise<GuardResult> {
   if (!guard.ok) return guard;
   if (!roles.includes(guard.session.user.role as Role)) {
     return { ok: false, response: forbidden(`Requires role: ${roles.join(" or ")}`) };
+  }
+  return guard;
+}
+
+/**
+ * requireApiRole for writes: also refused with 423 for staff in a
+ * read-only workspace, as the action clients do (#189, #223).
+ */
+export async function requireApiStaffWrite(...roles: Role[]): Promise<GuardResult> {
+  const guard = await requireApiRole(...roles);
+  if (!guard.ok) return guard;
+  const viewer = await getViewer();
+  if (viewer?.persona === "staff" && viewer.workspace?.readOnly) {
+    return { ok: false, response: NextResponse.json({ error: "READ_ONLY: Your workspace is read-only. Pay to unlock it." }, { status: 423 }) };
   }
   return guard;
 }

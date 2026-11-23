@@ -20,7 +20,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { emitNotification } from "@/features/notifications/server";
 import { eventChangeNotification } from "@/features/events/notify";
-import { forbidden, gone, requireApiRole, tutorOwnsCourse } from "@/lib/api-guard";
+import { forbidden, gone, requireApiStaffWrite, tutorOwnsCourse } from "@/lib/api-guard";
 
 /**
  * Retired — read events through `src/features/events/queries.ts`.
@@ -30,7 +30,7 @@ export function GET() {
 }
 
 export async function POST(req: Request) {
-  const guard = await requireApiRole("TUTOR");
+  const guard = await requireApiStaffWrite("TUTOR");
   if (!guard.ok) return guard.response;
 
   try {

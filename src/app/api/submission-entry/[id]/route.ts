@@ -18,7 +18,7 @@ import { NextResponse } from "next/server";
 
 import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
-import { forbidden, gone, requireApiRole } from "@/lib/api-guard";
+import { forbidden, gone, requireApiRole, requireApiStaffWrite } from "@/lib/api-guard";
 
 /**
  * Retired — entries are read through `src/features/submissions/queries.ts`.
@@ -68,7 +68,7 @@ export async function DELETE(
   _: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const guard = await requireApiRole("TUTOR");
+  const guard = await requireApiStaffWrite("TUTOR");
   if (!guard.ok) return guard.response;
 
   const { id } = await params;

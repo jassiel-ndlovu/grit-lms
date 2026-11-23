@@ -41,6 +41,9 @@ export type SignInCard = { name: string; username: string; code: string; expires
 
 export type ApplyResult = { outcome: RowOutcome; result: string; undo?: unknown; cards?: SignInCard[] };
 
+/** What reading gets besides the file: the workspace's time zone, and defaults the screen chose (for example { course: "Maths 10" }). */
+export type ReadExtra = { timeZone: string; defaults: Record<string, string> };
+
 /** Options a job may need at confirm time. */
 export type ConfirmOptions = { consentAttested?: boolean };
 
@@ -50,8 +53,10 @@ export interface Importer<D extends Record<string, string> = Record<string, stri
   title: string;
   /** The template's header row and two example rows, for "Download a template". */
   template: { headers: string[]; examples: string[][] };
-  /** Reads a parsed file into rows. File-level problems (no name column) go in `fileIssues` and stop the import. */
-  read(table: CsvTable): { rows: D[]; fileIssues: Issue[] };
+  /** Reads a parsed CSV file into rows. File-level problems (no name column) go in `fileIssues`; errors stop the import. */
+  read(table: CsvTable, extra: ReadExtra): { rows: D[]; fileIssues: Issue[] };
+  /** For files that aren't CSV (an .ics calendar): reads the raw text instead of `read`. */
+  readText?(text: string, extra: ReadExtra): { rows: D[]; fileIssues: Issue[] };
   /** Checks every row against the file and the workspace. Runs on upload, after every edit, and again at confirm. */
   check(ctx: ImportContext, rows: D[]): Promise<Array<{ action: RowAction; issues: Issue[] }>>;
   /** Options confirm must carry for these rows, with the reason shown to the person. */
