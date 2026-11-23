@@ -16,7 +16,7 @@
  *   - mode="tutor"   — links to /dashboard/manage-courses/lessons/{courseId}?lesson={id}
  *                      Optionally renders an `actions` slot (LessonActions)
  *                      next to each row.
- *   - mode="student" — links to /dashboard/courses/lessons/{courseId}?lesson={id}
+ *   - mode="student" — links to /dashboard/courses/lessons/{courseId}/{id}
  *                      Renders a check-mark for completed lessons.
  */
 
@@ -96,7 +96,7 @@ export function LessonSidebar({
             const isGroup = lesson.type === "NONE";
             const isCompleted =
               mode === "student" && completedLessonIds?.has(lesson.id);
-            const href = `${basePath}?lesson=${lesson.id}`;
+            const href = mode === "student" ? `${basePath}/${lesson.id}` : `${basePath}?lesson=${lesson.id}`;
             const indent = { paddingLeft: `${0.5 + depth * 0.875}rem` };
 
             if (isGroup && mode === "student") {

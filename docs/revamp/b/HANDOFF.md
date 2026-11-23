@@ -3,6 +3,33 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Offline reading (#216, phase 1), `revamp/b-offline`
+
+Viewer contract Draft 1.18, B's side. Core. No migration.
+
+Done:
+- **Each lesson has its own path:** `/dashboard/courses/lessons/<course>/<lesson>`.
+  The service worker keeps a page per path, so `?lesson=` would have kept
+  one lesson per course. Old `?lesson=` links redirect.
+- **"Save for offline"** on a lesson. It also fetches the app files the page
+  names, so they're kept even if they loaded before the worker started. A
+  saved copy is refreshed when the tutor has changed the lesson.
+- **`/dashboard/courses/saved`:** the saved lessons, from My courses.
+- **No connection:** a notice on dashboard pages (not the test runner), and
+  "Video needs a connection" or "Image needs a connection" in a lesson.
+- **Shared devices:** besides sign-out, saved lessons go when another
+  account uses the device.
+- The service worker is registered from the dashboard layout.
+- Samples on `/design-system/offline`. Checks: `check-offline-ui.ts`.
+
+For A (not urgent):
+- `nexa-static-v1` only grows: files of earlier deployments are never
+  removed. Keeping those that a saved lesson names would be enough.
+- MathJax comes from jsDelivr, which the worker doesn't keep. Formulas show
+  offline while the browser still holds it.
+- `isStaticAsset` matches image names before `neverCache` is asked, so an
+  image served under `/api/` would be kept past sign-out. None is today.
+
 ## 2026-11-23 Business dashboard (#216, phase 1), `revamp/b-business-dashboard`
 
 Billing contract Draft 1.17, B's side. No migration.

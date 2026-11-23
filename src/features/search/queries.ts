@@ -118,7 +118,7 @@ async function searchAsStudent(email: string, q: string): Promise<SearchGroup[]>
       id: l.id,
       title: l.title,
       subtitle: l.course.name,
-      href: `/dashboard/courses/lessons/${l.course.id}?lesson=${l.id}`,
+      href: `/dashboard/courses/lessons/${l.course.id}/${l.id}`,
     }))),
     group("tests", "Tests", tests.map((t) => {
       // Same routing as the tests list: finished attempts open the review,
