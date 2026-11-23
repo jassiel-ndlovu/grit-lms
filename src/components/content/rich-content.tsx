@@ -31,8 +31,8 @@ interface RichContentProps {
 /**
  * A short fingerprint of the content (FNV-1a), used as the React key.
  * MathJax typesets once, on mount, and rewrites the DOM under React. When a
- * page swaps one lesson for another in place (the learner page's ?lesson=
- * links), the new content must remount, or it shows the old formulas or raw
+ * page swaps one lesson for another in place (the learner page's
+ * lesson links), the new content must remount, or it shows the old formulas or raw
  * TeX.
  */
 function contentKey(text: string): string {

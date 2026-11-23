@@ -214,7 +214,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
                 return (
                   <li key={lesson.id}>
                     <Link
-                      href={`/dashboard/courses/lessons/${courseId}?lesson=${lesson.id}`}
+                      href={`/dashboard/courses/lessons/${courseId}/${lesson.id}`}
                       className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 transition-colors"
                     >
                       <span
