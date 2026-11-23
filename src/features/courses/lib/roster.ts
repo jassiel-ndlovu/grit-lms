@@ -136,7 +136,7 @@ export interface MemberRow {
   branches: Array<{ id: string; name: string }>;
 }
 
-/** Active staff in the viewer's workspace, owners first. Read-only; for the Members page. */
+/** Active staff in the viewer's workspace, owners then admins first. For the Members page. */
 export async function listMembers(viewer: Viewer): Promise<MemberRow[]> {
   if (!viewer.workspace || !(can(viewer, "members.invite") || can(viewer, "members.role"))) return [];
   const [rows, branches] = await Promise.all([
@@ -151,9 +151,8 @@ export async function listMembers(viewer: Viewer): Promise<MemberRow[]> {
     }),
     prisma.branch.findMany({ where: { workspaceId: viewer.workspace.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
-  const order: Record<string, number> = { OWNER: 0, ADMIN: 1, TUTOR: 2 };
+  const order: Record<string, number> = { OWNER: 0, ADMIN: 1 };
   return rows
-    .sort((a, b) => (order[a.role] ?? 9) - (order[b.role] ?? 9) || a.user.name.localeCompare(b.user.name))
     .map((m) => {
       const r = effectiveRole(m);
       return {
@@ -161,5 +160,6 @@ export async function listMembers(viewer: Viewer): Promise<MemberRow[]> {
         roleKey: r.key, roleName: r.name, scope: r.scope, permissions: r.permissions,
         branches: r.scope === "BRANCHES" ? branches.filter((b) => m.branchIds.includes(b.id)) : [],
       };
-    });
+    })
+    .sort((a, b) => (order[a.roleKey] ?? 9) - (order[b.roleKey] ?? 9) || a.name.localeCompare(b.name));
 }

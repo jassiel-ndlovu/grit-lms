@@ -80,6 +80,10 @@ function ChangeRoleDialog({ member, choices, onClose }: { member: MemberRow; cho
   // Ids outside the viewer's branches (a colleague's other branch) would be refused, so only theirs are sent.
   const picked = branchIds.filter((b) => branches.some((x) => x.id === b));
 
+  // Nothing to save: the same role and the same branches.
+  const unchanged =
+    roleKey === member.roleKey && (role?.scope !== "BRANCHES" || (picked.length === member.branches.length && member.branches.every((b) => picked.includes(b.id))));
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -156,7 +160,7 @@ function ChangeRoleDialog({ member, choices, onClose }: { member: MemberRow; cho
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={busy || !role}>
+            <Button type="submit" disabled={busy || !role || unchanged}>
               {busy ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
               Change role
             </Button>

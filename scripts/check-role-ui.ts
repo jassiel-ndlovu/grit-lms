@@ -26,7 +26,7 @@ function check(name: string, got: unknown, want: unknown) {
 const listed = PERMISSION_GROUPS.flatMap((g) => g.items.map((i) => i.key));
 check("every permission a role can hold is listed once", [...listed].sort(), [...CUSTOM_ROLE_CEILING].sort());
 check("no label twice", new Set(PERMISSION_GROUPS.flatMap((g) => g.items.map((i) => i.label))).size, listed.length);
-check("an owner's two extra keys have no label", permissionLabels(["workspace.delete", "payouts.connect"]), []);
+check("every permission of every preset has a label", Object.values(ROLE_PRESETS).filter((p) => permissionLabels(p.permissions).length !== p.permissions.length).map((p) => p.key), []);
 check("labels in the editor's order", permissionLabels(["grades.view", "courses.edit"]), ["Edit courses, set and mark work", "See marks"]);
 check("a narrowed permission isn't marked organisation-wide", [...NOT_NARROWED].filter((p) => SCOPED_FOR_TUTOR.has(p)), []);
 

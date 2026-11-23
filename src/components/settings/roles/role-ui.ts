@@ -84,9 +84,14 @@ export const PERMISSION_GROUPS: Array<{ title: string; items: PermissionOption[]
   },
 ];
 
-const LABELS = new Map(PERMISSION_GROUPS.flatMap((g) => g.items.map((i) => [i.key as string, i.label] as const)));
+const LABELS = new Map<string, string>([
+  ...PERMISSION_GROUPS.flatMap((g) => g.items.map((i) => [i.key, i.label] as const)),
+  // An owner's own two: shown in the list, never offered in the editor.
+  ["payouts.connect", "Connect payouts"],
+  ["workspace.delete", "Close the organisation"],
+]);
 
-/** The labels of the permissions held, in the order the editor lists them. Keys without a label (an owner's two) are left out. */
+/** The labels of the permissions held, in the order the editor lists them. */
 export function permissionLabels(held: readonly string[]): string[] {
   return [...LABELS].filter(([k]) => held.includes(k)).map(([, label]) => label);
 }
