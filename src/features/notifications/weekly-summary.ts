@@ -13,6 +13,7 @@ import { getPreferencesForUsers } from "@/features/users/preferences";
 import { prisma } from "@/lib/db";
 import { enqueueEmail } from "@/lib/email/queue";
 import type { WeeklySummaryData } from "@/lib/email/parent-templates";
+import { RELEASED_GRADE } from "@/features/grades/lib/release";
 
 const DAY = 24 * 60 * 60 * 1000;
 const ZONE = "Africa/Johannesburg";
@@ -38,7 +39,7 @@ async function childWeek(child: { id: string; name: string; studentProfileId: st
   if (!courseIds.length) return null;
   const sid = child.studentProfileId;
   const [grades, tests, assignments, attendance] = await Promise.all([
-    sid ? prisma.grade.findMany({ where: { studentId: sid, courseId: { in: courseIds }, updatedAt: { gte: weekAgo } }, orderBy: { updatedAt: "desc" }, take: 10, select: { title: true, score: true, outOf: true, course: { select: { name: true } } } }) : [],
+    sid ? prisma.grade.findMany({ where: { studentId: sid, courseId: { in: courseIds }, updatedAt: { gte: weekAgo }, ...RELEASED_GRADE }, orderBy: { updatedAt: "desc" }, take: 10, select: { title: true, score: true, outOf: true, course: { select: { name: true } } } }) : [],
     prisma.test.findMany({
       where: { courseId: { in: courseIds }, isActive: true, dueDate: { gte: now, lte: weekAhead } }, orderBy: { dueDate: "asc" }, take: 10,
       select: { title: true, dueDate: true, course: { select: { name: true } }, submissions: sid ? { where: { studentId: sid, status: { not: "IN_PROGRESS" } }, select: { id: true }, take: 1 } : false },
