@@ -17,6 +17,7 @@ import { UserError } from "@/lib/user-error";
 
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { scopedCourseWhere } from "@/lib/viewer-core";
 import { enqueueEmail } from "@/lib/email/queue";
 
 import { assertCanAddLearners } from "@/features/billing/caps";
@@ -234,9 +235,9 @@ export async function listMyJoinRequests(userId: string) {
  * membership teaches or owns (a tutor, or an owner in tutor mode); null shows the
  * whole workspace.
  */
-export async function listJoinRequestsForStaff(workspaceId: string, teachingMembershipId: string | null, status: "PENDING" | "APPROVED" | "DECLINED" | "CANCELLED" = "PENDING") {
+export async function listJoinRequestsForStaff(workspaceId: string, teachingMembershipId: string | null, status: "PENDING" | "APPROVED" | "DECLINED" | "CANCELLED" = "PENDING", branchIds: string[] = []) {
   const rows = await prisma.joinRequest.findMany({
-    where: { workspaceId, status, ...(teachingMembershipId ? { course: { OR: [{ ownerMembershipId: teachingMembershipId }, { staff: { some: { membershipId: teachingMembershipId } } }] } } : {}) },
+    where: { workspaceId, status, ...(teachingMembershipId ? { course: scopedCourseWhere({ membershipId: teachingMembershipId, branchIds }) } : {}) },
     orderBy: { createdAt: status === "PENDING" ? "asc" : "desc" },
     take: 100,
     select: {

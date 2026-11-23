@@ -7,17 +7,16 @@
 import "server-only";
 
 import { prisma } from "@/lib/db";
+import { scopedCourseWhere } from "@/lib/viewer-core";
 
 import { toCsv } from "./csv";
 import { studentsImporter } from "./importers/students";
 
 /** The workspace's active students (for a tutor: those on their courses), with their first parent. */
-export async function studentsCsvFor(workspaceId: string, teachingMembershipId: string | null): Promise<{ csv: string; rows: number }> {
-  const courseScope = teachingMembershipId
-    ? { OR: [{ ownerMembershipId: teachingMembershipId }, { staff: { some: { membershipId: teachingMembershipId } } }] }
-    : {};
+export async function studentsCsvFor(workspaceId: string, scope: { membershipId: string; branchIds?: string[] } | null): Promise<{ csv: string; rows: number }> {
+  const courseScope = scope ? scopedCourseWhere(scope) : {};
   const learners = await prisma.learner.findMany({
-    where: { workspaceId, status: "ACTIVE", ...(teachingMembershipId ? { enrollments: { some: { endedAt: null, course: courseScope } } } : {}) },
+    where: { workspaceId, status: "ACTIVE", ...(scope ? { enrollments: { some: { endedAt: null, course: courseScope } } } : {}) },
     orderBy: { user: { name: "asc" } },
     select: {
       isMinor: true,

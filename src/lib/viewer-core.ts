@@ -8,6 +8,12 @@
  * and check scripts can import it.
  */
 
+import type { Prisma } from "@/generated/prisma";
+
+import { effectiveRole, ROLE_PRESETS, type RoleScope } from "./roles";
+
+export type { RoleScope } from "./roles";
+
 export type PlatformRole = "USER" | "NEXA_ADMIN";
 export type WorkspaceKind = "ORGANISATION" | "SOLO";
 export type MembershipRole = "OWNER" | "ADMIN" | "TUTOR";
@@ -46,6 +52,13 @@ export const PERMISSIONS = [
   "admin.console",
   "admin.impersonate",
   "admin.override",
+  // Organisation roles (#216): gate the dashboards and tools that come next.
+  "reports.view",
+  "timesheets.manage",
+  "enquiries.manage",
+  "cover.manage",
+  "ai.credits.allocate",
+  "staff.reviews",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -127,9 +140,18 @@ export type Viewer = {
   mode: ViewerMode | null;
   membership: {
     id: string;
+    /** The base role, for code that still checks it. Permissions come from `roleKey`. */
     role: MembershipRole;
     teamIds: string[];
     leadTeamIds: string[];
+    /** The effective role (#216): a preset key ("BRANCH_MANAGER") or "custom:<id>". */
+    roleKey?: string;
+    roleName?: string;
+    /** Where scoped permissions apply: everything, chosen branches, or own courses. */
+    scope?: RoleScope;
+    /** For BRANCHES: the branches, and the teams in them. */
+    branchIds?: string[];
+    branchTeamIds?: string[];
   } | null;
   learner: { id: string; isMinor: boolean; paymentVisible: boolean } | null;
   children: Array<{
@@ -151,29 +173,9 @@ export type Viewer = {
  * child only) is granted here and narrowed by `canIn()` with a scope.
  */
 const STAFF: Record<MembershipRole, readonly Permission[]> = {
-  OWNER: [
-    "workspace.settings", "workspace.branding", "workspace.delete",
-    "members.invite", "members.role", "teams.manage",
-    "courses.create", "courses.edit", "courses.services",
-    "learners.invite", "learners.paymentVisibility", "guardians.link",
-    "messages.announce", "messages.direct", "content.view", "grades.view",
-    "billing.view", "billing.manage", "fees.manage", "fees.markOffsite",
-    "payouts.connect",
-  ],
-  ADMIN: [
-    "workspace.settings", "workspace.branding",
-    "members.invite", "members.role", "teams.manage",
-    "courses.create", "courses.edit", "courses.services",
-    "learners.invite", "learners.paymentVisibility", "guardians.link",
-    "messages.announce", "messages.direct", "content.view", "grades.view",
-    "billing.view", "billing.manage", "fees.manage", "fees.markOffsite",
-  ],
-  TUTOR: [
-    "courses.create", "courses.edit", "courses.services",
-    "learners.invite", "learners.paymentVisibility", "guardians.link",
-    "messages.announce", "messages.direct", "content.view", "grades.view",
-    "fees.manage", "fees.markOffsite",
-  ],
+  OWNER: ROLE_PRESETS.OWNER.permissions,
+  ADMIN: ROLE_PRESETS.ADMIN.permissions,
+  TUTOR: ROLE_PRESETS.TUTOR.permissions,
 };
 
 const LEARNER: readonly Permission[] = ["content.view", "grades.view", "messages.direct"];
@@ -205,6 +207,8 @@ export const SCOPED_FOR_TUTOR: ReadonlySet<Permission> = new Set([
 export function permissionsFor(input: {
   persona: Persona;
   membershipRole: MembershipRole | null;
+  /** The effective role's permissions (#216); the base role's when absent. */
+  rolePermissions?: readonly Permission[];
   workspaceKind: WorkspaceKind | null;
   learnerPaymentVisible: boolean;
   hasActiveGuardian: boolean;
@@ -213,7 +217,7 @@ export function permissionsFor(input: {
   switch (input.persona) {
     case "staff": {
       const role = input.membershipRole ?? "TUTOR";
-      STAFF[role].forEach((p) => out.add(p));
+      (input.rolePermissions ?? STAFF[role]).forEach((p) => out.add(p));
       // A solo owner connects their own payouts; in an organisation only the
       // owner does (or each tutor, in PER_TUTOR payout mode — design 04).
       if (role === "TUTOR" && input.workspaceKind === "SOLO") out.add("payouts.connect");
@@ -235,6 +239,30 @@ export function permissionsFor(input: {
   return PERMISSIONS.filter((p) => out.has(p));
 }
 
+/** Where a staff viewer's scoped permissions apply (#216). Tutor mode is always own courses. */
+export function staffScope(viewer: Viewer): RoleScope {
+  if (viewer.mode === "tutor") return "OWN_COURSES";
+  return viewer.membership?.scope ?? (viewer.membership?.role === "TUTOR" ? "OWN_COURSES" : "WORKSPACE");
+}
+
+/**
+ * The courses a scoped staff viewer may act on, as a Prisma filter: those
+ * they own or teach, plus, for a branch role, every course whose team is in
+ * one of their branches. Null when the viewer's scope is the whole
+ * workspace (#216). Use it wherever a list is narrowed for tutors.
+ */
+export function scopedCourseWhere(scope: { membershipId: string; branchIds?: string[] | null }): Prisma.CourseWhereInput {
+  const own: Prisma.CourseWhereInput[] = [{ ownerMembershipId: scope.membershipId }, { staff: { some: { membershipId: scope.membershipId } } }];
+  if (scope.branchIds?.length) own.push({ team: { branchId: { in: scope.branchIds } } });
+  return { OR: own };
+}
+
+/** The scope a viewer's course lists use for `permission`: null for the whole workspace. */
+export function courseScopeOf(viewer: Viewer, permission: Permission): { membershipId: string; branchIds: string[] } | null {
+  if (!needsScope(viewer, permission) || !viewer.membership) return null;
+  return { membershipId: viewer.membership.id, branchIds: staffScope(viewer) === "BRANCHES" ? (viewer.membership.branchIds ?? []) : [] };
+}
+
 /** Workspace-level check. UI hint only; server actions check again. */
 export function can(viewer: Viewer, permission: Permission): boolean {
   return viewer.permissions.includes(permission);
@@ -244,8 +272,7 @@ export function can(viewer: Viewer, permission: Permission): boolean {
 export function needsScope(viewer: Viewer, permission: Permission): boolean {
   if (viewer.persona === "admin") return false;
   if (viewer.persona === "staff") {
-    const role = viewer.membership?.role;
-    return (role === "TUTOR" || viewer.mode === "tutor") && SCOPED_FOR_TUTOR.has(permission);
+    return staffScope(viewer) !== "WORKSPACE" && SCOPED_FOR_TUTOR.has(permission);
   }
   // Learners and guardians only ever act on their own courses or children.
   return viewer.persona === "learner" || viewer.persona === "guardian";
@@ -310,7 +337,7 @@ export function buildLegacyViewer(input: {
     persona = "staff";
     workspace = ws;
     workspaces = [summary("staff", "TUTOR")];
-    membership = { id: `legacy_${profileId ?? user.id}`, role: "TUTOR", teamIds: [], leadTeamIds: [] };
+    membership = { id: `legacy_${profileId ?? user.id}`, role: "TUTOR", teamIds: [], leadTeamIds: [], roleKey: "TUTOR", roleName: "Tutor", scope: "OWN_COURSES", branchIds: [], branchTeamIds: [] };
   } else if (user.role === "STUDENT") {
     persona = "learner";
     workspace = ws;
@@ -398,6 +425,12 @@ export type TenancyInput = {
     teams: Array<{ teamId: string; isLead: boolean }>;
     /** Whether this membership teaches any course (CourseStaff rows). */
     teaches?: boolean;
+    /** Roles as permission sets (#216). Absent: the base role's preset. */
+    presetRole?: string | null;
+    customRole?: { id: string; name: string; permissions: string[]; scope: RoleScope } | null;
+    branchIds?: string[];
+    /** Teams in those branches (the viewer loads them). */
+    branchTeamIds?: string[];
   }>;
   learners: Array<{
     id: string;
@@ -478,10 +511,14 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
       ? (input.mode === "tutor" ? "tutor" : "organisation")
       : null;
 
+  // The effective role (#216): an organisation's own role, a preset, or the
+  // base role's preset. Tutor mode always uses a tutor's grants.
+  const eff = m ? effectiveRole(m) : null;
   const perms = new Set(
     permissionsFor({
       persona,
       membershipRole: mode === "tutor" ? "TUTOR" : (m?.role ?? null),
+      rolePermissions: mode === "tutor" || !eff ? undefined : eff.permissions,
       workspaceKind: workspace?.kind ?? null,
       learnerPaymentVisible: l ? l.paymentVisible && !l.isMinor : false,
       hasActiveGuardian: input.hasActiveGuardian,
@@ -525,6 +562,11 @@ export function buildTenancyViewer(input: TenancyInput): Viewer {
           role: m.role,
           teamIds: m.teams.map((t) => t.teamId),
           leadTeamIds: m.teams.filter((t) => t.isLead).map((t) => t.teamId),
+          roleKey: eff!.key,
+          roleName: eff!.name,
+          scope: eff!.scope,
+          branchIds: eff!.scope === "BRANCHES" ? (m.branchIds ?? []) : [],
+          branchTeamIds: eff!.scope === "BRANCHES" ? (m.branchTeamIds ?? []) : [],
         }
       : null,
     learner: l ? { id: l.id, isMinor: l.isMinor, paymentVisible: l.paymentVisible && !l.isMinor } : null,

@@ -13,6 +13,7 @@ import "server-only";
 
 import type { EventType } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { scopedCourseWhere } from "@/lib/viewer-core";
 import { UserError } from "@/lib/user-error";
 
 import { parseRRule, readIcs, repeatText } from "../ics";
@@ -44,7 +45,7 @@ async function coursesFor(ctx: ImportContext) {
   const courses = await prisma.course.findMany({
     where: {
       workspaceId: ctx.workspaceId,
-      ...(ctx.teachingMembershipId ? { OR: [{ ownerMembershipId: ctx.teachingMembershipId }, { staff: { some: { membershipId: ctx.teachingMembershipId } } }] } : {}),
+      ...(ctx.teachingMembershipId ? scopedCourseWhere({ membershipId: ctx.teachingMembershipId, branchIds: ctx.branchIds }) : {}),
     },
     select: { id: true, name: true },
   });

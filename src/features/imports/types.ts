@@ -32,6 +32,8 @@ export type ImportContext = {
   actor: { userId: string; name: string };
   /** Set when the actor may act only on the courses this membership teaches or owns (a tutor, or tutor mode). */
   teachingMembershipId: string | null;
+  /** With teachingMembershipId: a branch role's branches (#216), whose courses are also in reach. */
+  branchIds?: string[];
   /** The actor's role in the workspace, for checks such as "only owners invite admins". */
   actorRole: "OWNER" | "ADMIN" | "TUTOR" | "NEXA_ADMIN";
 };

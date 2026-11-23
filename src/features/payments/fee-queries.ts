@@ -7,6 +7,7 @@ import "server-only";
 
 import { assertBillingEnabled } from "@/features/billing/errors";
 import { prisma } from "@/lib/db";
+import { courseScopeOf, scopedCourseWhere } from "@/lib/viewer-core";
 import { requireViewer, ViewerError } from "@/lib/viewer";
 import { can, needsScope } from "@/lib/viewer-core";
 
@@ -36,9 +37,9 @@ export async function listFeeInvoices(input: { courseId?: string; learnerId?: st
   const viewer = await requireViewer({ permission: "fees.manage", workspace: true });
   let courseIds: string[] | undefined;
   if (needsScope(viewer, "fees.manage")) {
-    const membershipId = viewer.membership?.id;
+    const scope = courseScopeOf(viewer, "fees.manage");
     const rows = await prisma.course.findMany({
-      where: { workspaceId: viewer.workspace!.id, OR: [{ ownerMembershipId: membershipId }, { staff: { some: { membershipId } } }] },
+      where: { workspaceId: viewer.workspace!.id, ...(scope ? scopedCourseWhere(scope) : { id: "-" }) },
       select: { id: true },
     });
     courseIds = rows.map((r) => r.id);
