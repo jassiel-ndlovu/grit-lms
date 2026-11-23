@@ -15,6 +15,7 @@ import { USERNAME_RE } from "@/features/auth/codes";
 import { assertCanAddLearners } from "@/features/billing/caps";
 import { createStudentAccountFor, linkParentFor } from "@/features/users/accounts";
 import { prisma } from "@/lib/db";
+import { emitWebhook } from "@/features/api/webhooks";
 import { scopedCourseWhere } from "@/lib/viewer-core";
 import { UserError } from "@/lib/user-error";
 
@@ -212,6 +213,7 @@ export const studentsImporter: Importer<StudentRow> = {
           for (const courseId of add) {
             const e = await tx.enrollment.create({ data: { workspaceId: ctx.workspaceId, courseId, learnerId, status: "ACTIVE" }, select: { id: true } });
             enrollmentIds.push(e.id);
+            await emitWebhook(tx, ctx.workspaceId, "enrolment.created", { courseId, learnerId, source: "import" });
           }
         }, { timeout: 30_000 });
       }

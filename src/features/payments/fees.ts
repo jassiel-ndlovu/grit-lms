@@ -14,6 +14,7 @@ import "server-only";
 import { Prisma } from "@/generated/prisma";
 import { BillingError } from "@/features/billing/errors";
 import { prisma } from "@/lib/db";
+import { emitWebhook } from "@/features/api/webhooks";
 
 import { queueFeeEmail } from "./fee-emails";
 import { getProvider, type PaymentProvider } from "./provider";
@@ -293,6 +294,7 @@ export async function markInvoicePaidOffsite(
       select: { id: true },
     });
     await tx.invoice.update({ where: { id: input.invoiceId }, data: { status: "PAID", paidAt: receivedOn, paidVia: "OFFSITE" } });
+    await emitWebhook(tx, workspaceId, "invoice.paid", { invoiceId: input.invoiceId, number: inv.number, paidVia: "OFFSITE", paidAt: receivedOn.toISOString(), amountCents: input.amountCents });
     await audit(tx, actor, workspaceId, "fees.invoice.offsite", "Invoice", input.invoiceId, { number: inv.number, amountCents: input.amountCents, method: input.method, offsitePaymentId: off.id });
     return { status: "PAID" as const };
   }, TX);

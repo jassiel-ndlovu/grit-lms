@@ -3,6 +3,34 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: API keys, read-only REST API and webhooks (Pro), `revamp/a-api-webhooks`
+
+Migration `37_api_webhooks`: ApiKey, WebhookEndpoint, WebhookDelivery and WebhookDeliveryStatus. New contract `contracts/api.md` (Draft 1).
+
+Done:
+- **`api/api-math.ts`** (pure): keys (shown once, sha256 stored), bearer parsing, scopes, webhook URL rules, private-address checks, HMAC signatures (`t=…,v1=…`), retry timing, cursors, the per-key minute rate limit.
+- **`api/manage.ts` and `actions.ts`**: the Pro gate (`apiAccessAvailable`), keys (create, list, revoke), endpoints (create, update, rotate the secret, delete, test, deliveries, retry), `authenticateApi`, and audit rows.
+- **`api/v1.ts` and `app/api/v1/*`**: courses, learners, grades, attendance, invoices and bookings, paged and workspace-scoped.
+- **`api/webhooks.ts`**:
+  - `emitWebhook` writes rows, inside the caller's transaction when given one;
+  - `drainWebhooks` runs from the notifications job: DNS-checked, signed, retried, and switches an endpoint off after 3 days of failures;
+  - deliveries are pruned after 30 days by housekeeping.
+  - Secrets are sealed with a key derived from NEXTAUTH_SECRET.
+- **Events emitted from A's code:**
+  - `invoice.paid` (online and offsite);
+  - `booking.created` and `booking.cancelled`;
+  - `attendance.marked`;
+  - `risk_alert.opened`;
+  - `enrolment.created` (join requests, managed accounts, import).
+  - B emits `grade.released`.
+
+Tested:
+- `scripts/check-api.ts` (in CI).
+- Against the Preview DB, with fetch stubbed (no real POSTs), 24 checks covering:
+  - keys, 401, 403, 400, 429 and paging;
+  - emit, drain, the signature, a 500 retried, switched off after 3 days, the test ping, and secret rotation.
+  - Cleaned up afterwards.
+
 ## 2026-11-24 #216 phase 3: Pro AI drafts, and B's #243, `revamp/a-pro-ai` and `revamp/a-role-scope-243`
 
 Migration `36_ai_assist_pro`: four `AiAssistFeature` enum values. Viewer contract Draft 1.23.
