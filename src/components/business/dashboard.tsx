@@ -108,7 +108,6 @@ export function BusinessDashboard({
   // Days, not instants: shown as written whatever the zone.
   const calendarDay = (d: string) => formatDate(`${d}T00:00:00Z`, { ...ctx, timeZone: "UTC" });
   const span = period.fromDay === period.toDay ? calendarDay(period.fromDay) : `${calendarDay(period.fromDay)} to ${calendarDay(period.toDay)}`;
-  const whole = data.scope === null;
 
   return (
     <>
@@ -119,14 +118,14 @@ export function BusinessDashboard({
             <Figure
               label="Collected"
               value={formatRand(money.collectedCents)}
-              note={money.collectedOffsiteCents > 0 ? `${formatRand(money.collectedOffsiteCents)} of it outside Nexa` : undefined}
+              note={`Before refunds${money.collectedOffsiteCents > 0 ? `; ${formatRand(money.collectedOffsiteCents)} of it outside Nexa` : ""}`}
             />
             <Figure
               label="Collection rate"
               value={money.collectionRateBps === null ? "–" : ratePercent(money.collectionRateBps)}
               note={money.collectionRateBps === null ? "No fees were due" : "of the fees due are paid"}
             />
-            {whole ? <Figure label="Refunded" value={formatRand(money.refundedCents)} /> : null}
+            {/* money.refundedCents isn't shown: A's query misses family refunds (b/HANDOFF.md, 23 Nov). */}
           </Figures>
         </PageSection>
       ) : null}

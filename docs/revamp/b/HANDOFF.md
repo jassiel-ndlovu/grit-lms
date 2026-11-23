@@ -17,6 +17,13 @@ Done:
 - With billing off it shows students only.
 - Samples on `/design-system/business`. Checks: `check-business-ui.ts`.
 
+For A, a bug: `refundedCents` in `features/reports/business.ts` filters on
+`payment.workspaceId`, which `PARENT_CHECKOUT` payments don't have. Family
+refunds are missed, and refunds of card checks and plan payments are counted
+instead. It should go through `allocation.invoice.workspaceId`. The Preview
+seed has a processed R200 refund (`INV-SEED-U-007`) that shows as R0. The
+page leaves the figure out until then.
+
 For A, not urgent: the trend's months are UTC, so a payment in the first
 two hours of a month (South African time) counts for the month before.
 
