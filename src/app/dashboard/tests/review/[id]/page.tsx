@@ -32,6 +32,7 @@ import { labelTree, normalizeScheme } from "@/lib/enum-labels";
 import { isManuallyMarked } from "@/features/assessments/lib/auto-grade";
 import { criterionBreakdown, readRubric } from "@/features/assessments/lib/rubric";
 import { questionStatusTone } from "@/features/assessments/lib/review-status";
+import { testMarksReleased } from "@/features/grades/lib/release";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -133,13 +134,13 @@ export default async function TestReviewPage({ params }: PageProps) {
     );
   }
 
-  // Whether the tutor allowed auto-marked grades to reach the student.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const releaseAutoMarks: boolean = (test as any).releaseAutoMarksToStudent ?? false;
+  // Released, or auto-marks allowed to reach the student.
+  const canSeeGrades = testMarksReleased(submission.status, test.releaseAutoMarksToStudent);
 
-  // Index per-question grades by questionId.
+  // Per-question grades by questionId. None until they're released, so
+  // nothing below (a tint, a label) can give a mark away.
   const qgByQ = new Map(
-    submission.questionGrades.map((qg) => [qg.questionId, qg]),
+    canSeeGrades ? submission.questionGrades.map((qg) => [qg.questionId, qg]) : [],
   );
   // Coerce answers JSON into a record.
   const answers: Record<string, unknown> =
@@ -195,7 +196,6 @@ export default async function TestReviewPage({ params }: PageProps) {
   const status = submission.status;
   const graded = status === "GRADED";
   const grade = submission.grade;
-  const canSeeGrades = releaseAutoMarks || graded;
 
   return (
     <PageFrame

@@ -48,26 +48,8 @@ export function percentOf(score: number, outOf: number): number {
 }
 
 /** The fields of a Grade row that decide whether the student may see it. */
-export type GradeRelease = {
-  testSubmission: { status: string; test: { releaseAutoMarksToStudent: boolean } } | null;
-  submissionEntry: { status: string } | null;
-};
-
-/**
- * True when the mark has been released to the student, so a parent may see
- * it too. A tutor can auto-mark a test before releasing it; that Grade row
- * exists but stays hidden until the submission is GRADED, unless the test
- * releases auto-marks at submit time. An assignment mark shows once the
- * entry is GRADED. A grade linked to neither is a manual entry, already
- * released.
- */
-export function isReleased(g: GradeRelease): boolean {
-  if (g.testSubmission) {
-    return g.testSubmission.status === "GRADED" || g.testSubmission.test.releaseAutoMarksToStudent;
-  }
-  if (g.submissionEntry) return g.submissionEntry.status === "GRADED";
-  return true;
-}
+/** Which marks are released: features/grades/lib/release.ts. */
+export { isReleased, type GradeRelease } from "@/features/grades/lib/release";
 
 export type UpcomingItem = {
   kind: "test" | "assignment";

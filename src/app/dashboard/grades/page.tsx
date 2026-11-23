@@ -1,7 +1,7 @@
 /**
  * /dashboard/grades — student's gradebook with analytics.
  *
- * Server Component. Lists every Grade row owned by the calling student,
+ * Server Component. Lists every released Grade of the calling student,
  * plus three charts:
  *   - score-over-time line (one line per course)
  *   - average-per-course bar
