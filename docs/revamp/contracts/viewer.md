@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.22, 2026-11-23** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.23, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.23. Pro AI drafts: lessons, tests and assignments from documents; feedback; report comments; curriculum gaps |
 | 2026-11-23 | Draft 1.22. AI help for tutors (Plus limited, Pro more): question drafts, outlines, tidy text |
 | 2026-11-23 | Draft 1.21. Session booking with prepaid lesson packs (Plus): availability, slots, bookings, credits |
 | 2026-11-23 | Draft 1.20. At-risk alerts (Pro): `listRiskAlerts`, `shareRiskAlertAction`, `listMySharedRiskAlerts` and the rest |
@@ -637,3 +638,28 @@ All actions are in `@/features/ai-assist/actions` and need staff with `courses.e
 **Model:** Claude Opus 5.5 by default (`AI_ASSIST_MODEL` overrides), with Anthropic's refusal fallback. On Preview, a run of 2 questions cost about 63 credits, an outline about 107 and a tidy-up about 16 (1 credit = R0.01).
 
 **Privacy:** only the course's name and level, the lesson or document text, and up to 30 existing question stems (to avoid repeats) are sent. No names, emails or ids are sent. Run rows (`AiAssistRun`) keep counts and cost, never the text.
+
+#### Pro AI drafts (Draft 1.23)
+
+#216 phase 3. **Pro only.** Plus and Core get "This AI help is part of the Pro plan for this course."
+
+These use the same service, gate, credits and run records as above. They're in `@/features/ai-assist/actions`, need staff with `courses.edit` on the course, and return drafts only. `getAiAssistStatus` now lists all seven features.
+
+| Action | Input | Returns | Monthly runs on Pro |
+| --- | --- | --- | --- |
+| `lessonsFromDocumentAction` | `{ courseId, text? \| fileUrl?, lessons 1–8 = 4, tests 0–2 = 1, questionsPerTest 1–10 = 8, assignments 0–2 = 0, focus? }` | `{ runId, drafts: { lessons: [{ title, summary, body, topicCodes }], tests: [{ title, instructions, questions: DraftQuestion[] }], assignments: [{ title, brief, rubric: [{ criterion, points }], modelAnswer }], note }, allowance }` | 40 |
+| `feedbackDraftAction` | `{ courseId, question, answer, memo?, maxPoints?, tone?: "warm" \| "direct", studentUserId? }` | `{ runId, feedback, strengths, nextSteps, suggestedMark, allowance }` | 2000 |
+| `reportCommentsAction` | `{ courseId, from, to, term, learnerIds? (up to 40), notes?: { [learnerId]: string }, tone?: "warm" \| "formal" }` | `{ runId, comments: [{ learnerId, studentUserId, name, comment }], allowance }` | 100 batches |
+| `curriculumGapsAction` | `{ courseId }` | `{ runId, covered, total, missing: [{ code, title, suggestion, lessonId, lessonTitle, newLessonTitle }], restructure: [{ suggestion, why }], note, allowance }` | 30 |
+
+- **Lessons:** `body` is plain text. Lines starting `## ` are headings, `- ` are list items, and maths is TeX. Convert it to your lesson document format. The review screen should let the tutor pick which lessons, tests and assignments to create.
+- **Feedback:** it goes in the grading screen beside the answer. Pass the student's `studentUserId` so their name is scrubbed; emails, phone and ID numbers are always scrubbed. `suggestedMark` is a suggestion only; the tutor marks.
+- **Report comments:**
+  - A gathers each student's marks, attendance and missed work for the course between `from` and `to`.
+  - Students go to the model as S1, S2…, and names are filled in afterwards.
+  - Use it in your term-report screen. `notes` are the tutor's own short notes per learner, used as a hint.
+- **Curriculum gaps:** the course needs its curriculum, subject and grade set; otherwise the error says so. `missing` lists every topic no lesson or question tags yet, in curriculum order:
+  - with `lessonId` when the AI suggests extending that lesson;
+  - with `newLessonTitle` when it suggests a new one;
+  - with an empty suggestion when the model skipped it.
+- **Cost on Preview** (1 credit = R0.01): lessons from a short document about 145 credits, feedback about 31, six report comments about 42, gaps about 113. Long drafts are streamed, so a big document won't time out.

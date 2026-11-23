@@ -20,7 +20,7 @@ import { prisma } from "@/lib/db";
 import { UserError } from "@/lib/user-error";
 import { canIn, ViewerError, type Viewer } from "@/lib/viewer";
 
-import { AI_ASSIST_INPUT, allowance, monthStart, plainText, refusal, type Allowance, type AssistFeature, type AssistTier } from "./limits";
+import { AI_ASSIST_INPUT, allowance, ASSIST_FEATURES, monthStart, plainText, refusal, type Allowance, type AssistFeature, type AssistTier } from "./limits";
 import {
   aiAssistConfigured, ASSIST_MODEL, draftOutline, draftQuestions, tidyText,
   type CallResult, type CourseContext, type DraftOutline, type DraftQuestion, type DraftQuestionType,
@@ -28,9 +28,9 @@ import {
 
 const ZAR_PER_USD = Number(process.env.AI_USD_TO_ZAR ?? 18.5);
 /** Credits held back before a run (rand cents of cost), so a near-empty budget is refused up front. */
-const ESTIMATE_CREDITS: Record<AssistFeature, number> = { QUESTIONS: 150, OUTLINE: 250, TIDY: 40 };
+const ESTIMATE_CREDITS: Record<AssistFeature, number> = { QUESTIONS: 150, OUTLINE: 250, TIDY: 40, LESSONS: 600, FEEDBACK: 40, REPORT_COMMENTS: 300, GAPS: 150 };
 
-type CourseRow = { id: string; name: string; workspaceId: string; curriculum: string | null; subject: string | null; gradeLevel: number | null };
+export type CourseRow = { id: string; name: string; workspaceId: string; curriculum: string | null; subject: string | null; gradeLevel: number | null };
 
 /** The course's plan for AI help: from its switched-on services. Before billing is on, at least Plus. */
 async function courseTier(courseId: string): Promise<AssistTier> {
@@ -44,7 +44,7 @@ async function usedThisMonth(workspaceId: string, feature: AssistFeature, now: D
 }
 
 /** Checks the tutor may use AI help on this course and has runs left; returns the course and allowance. */
-async function gate(viewer: Viewer, courseId: string, feature: AssistFeature, now: Date): Promise<{ course: CourseRow; allowance: Allowance }> {
+export async function gate(viewer: Viewer, courseId: string, feature: AssistFeature, now: Date): Promise<{ course: CourseRow; allowance: Allowance }> {
   if (viewer.persona !== "staff" && viewer.persona !== "admin") throw new ViewerError("FORBIDDEN");
   if (!(await canIn(viewer, "courses.edit", { courseId }))) throw new ViewerError("FORBIDDEN");
   const course = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, name: true, workspaceId: true, curriculum: true, subject: true, gradeLevel: true } });
@@ -61,7 +61,7 @@ async function gate(viewer: Viewer, courseId: string, feature: AssistFeature, no
   return { course: { ...course, workspaceId: course.workspaceId }, allowance: a };
 }
 
-function contextFor(course: CourseRow): CourseContext {
+export function contextFor(course: CourseRow): CourseContext {
   const cc = { curriculum: course.curriculum as never, subject: course.subject, gradeLevel: course.gradeLevel };
   const topics = topicsFor(cc).slice(0, 200).map((t) => ({ code: t.code, title: t.title }));
   const level = [
@@ -73,7 +73,7 @@ function contextFor(course: CourseRow): CourseContext {
 }
 
 /** Records the run and spends credits for what it cost. */
-async function record<T>(viewer: Viewer, course: CourseRow, feature: AssistFeature, tier: AssistTier, runId: string, r: CallResult<T>, now: Date) {
+export async function record<T>(viewer: Viewer, course: CourseRow, feature: AssistFeature, tier: AssistTier, runId: string, r: CallResult<T>, now: Date) {
   const micro = costMicroUsd(r.model, r.usage);
   const credits = micro > 0 ? creditsForCost(micro, ZAR_PER_USD) : 0;
   await prisma.aiAssistRun.create({
@@ -89,11 +89,11 @@ async function record<T>(viewer: Viewer, course: CourseRow, feature: AssistFeatu
   }
 }
 
-function newRunId(): string {
+export function newRunId(): string {
   return `aar_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
 }
 
-function failed(r: { refused: boolean }): never {
+export function failed(r: { refused: boolean }): never {
   throw new UserError(r.refused ? "The AI couldn't help with this material. Try different wording or a smaller part." : "The AI didn't finish. Try again with less material or fewer questions.");
 }
 
@@ -140,7 +140,7 @@ export async function generateQuestions(
 }
 
 /** A file the tutor uploaded to Vercel Blob (B's uploader): a PDF, or plain text. */
-async function readUpload(url: string): Promise<{ pdfBase64: string | null; text: string | null }> {
+export async function readUpload(url: string): Promise<{ pdfBase64: string | null; text: string | null }> {
   let u: URL;
   try { u = new URL(url); } catch { throw new UserError("That file link isn't valid."); }
   if (u.protocol !== "https:" || !u.hostname.endsWith(".public.blob.vercel-storage.com")) throw new UserError("Upload the file to Nexa first.");
@@ -195,6 +195,6 @@ export async function assistStatus(viewer: Viewer, input: { courseId: string }, 
   const available = aiAssistConfigured() && (await hasService(viewer, input.courseId, "ai-assist"));
   const tier = await courseTier(input.courseId);
   const out = {} as Record<AssistFeature, Allowance>;
-  for (const f of ["QUESTIONS", "OUTLINE", "TIDY"] as const) out[f] = allowance(available ? tier : "CORE", f, await usedThisMonth(course.workspaceId, f, now));
+  for (const f of ASSIST_FEATURES) out[f] = allowance(available ? tier : "CORE", f, await usedThisMonth(course.workspaceId, f, now));
   return { available, tier: available ? tier : ("CORE" as const), model: ASSIST_MODEL, features: out, resetsOn: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)) };
 }
