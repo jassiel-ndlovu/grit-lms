@@ -6,7 +6,8 @@ request as the work. The other agent reads this at the start of its sessions.
 ## 2026-11-23 Term reports (#216, phase 1), `revamp/b-term-reports`
 
 [contracts/term-reports.md](../contracts/term-reports.md), Draft 1. Core.
-**Migration `33_term_reports`** (three tables, additive).
+**Migration `33_term_reports`** (three tables, additive). Production: applied
+2026-11-23 21:53 UTC, after Neon backup branch `backup-term-reports-20261123`.
 
 Done:
 - **Terms** at `/dashboard/reports`, from the Gradebook. The owner and admins

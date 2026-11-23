@@ -3,6 +3,41 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 #216 phase 2: session booking with prepaid lesson packs (Plus), `revamp/a-booking`
+
+Migration `34_session_booking`:
+- adds BookingAvailability, BookingTimeOff, Booking (`slotKey` unique while booked) and LessonCredit (`invoiceLineId` and `reversesLineId` unique);
+- adds Workspace booking policy columns;
+- adds the `session-booking` Service row, backfilled for courses already on Plus or Pro.
+
+Viewer contract Draft 1.21, services Draft 1.6.
+
+Done:
+- **`booking/booking-math.ts`** (pure): time-zone conversion, free slots (lead, horizon, buffers, time off, busy), the refund rule, rule validation and balances.
+- **`booking/credits.ts`**:
+  - `syncLessonCredits` credits paid LESSON_PACK invoice lines and reverses refunded ones, once each;
+  - balances, packs on sale, staff adjustments;
+  - `buyPack` issues an invoice for checkout (billing on).
+- **`booking/bookings.ts`**:
+  - availability and time off (own, or `cover.manage`) and the workspace policy;
+  - slots (the tutor's classes come from `occurrencesFor`);
+  - book (credit used in the same transaction; double-booking stopped by `slotKey`);
+  - cancel (credit returned by the policy), mark, meeting link, list;
+  - reminders from the notifications cron.
+- **Emails:** `booking:confirmed`, `booking:cancelled` and `booking:reminder`, for tutor, student and parent.
+- **POPIA:** export (bookings and the credit ledger); anonymising clears notes.
+- `check-billing`'s pinned Plus keys now include `session-booking`.
+
+Tested:
+- `scripts/check-booking-math.ts` (in CI).
+- Against the Preview database with BILLING off and on:
+  - availability, slots, booking, double-booking and odd times refused;
+  - a pack on sale with no credits refused, a paid pack credited once;
+  - a credit used, returned on early cancel, kept on late cancel;
+  - an adjustment, and the credits taken back after a refund;
+  - lists, marking before the start refused, a single reminder, tutor cancel.
+  - Cleaned up, with the tutor's availability restored.
+
 ## 2026-11-23 #216 phase 2: at-risk alerts (Pro), `revamp/a-at-risk`
 
 Migration `33_risk_alerts`:

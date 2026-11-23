@@ -944,3 +944,38 @@ model AiCreditAllowance {
 
   @@unique([workspaceId, targetType, targetId])
 }
+
+// Lesson credits from prepaid lesson packs (#216 phase 2, Plus; A).
+
+enum LessonCreditKind {
+  PURCHASE
+  BOOKING
+  CANCEL_RETURN
+  REFUND_REVERSAL
+  ADJUSTMENT
+}
+
+/// Ledger of lesson credits per learner and course: + for a paid pack, - for a booking, + when a cancellation returns it.
+model LessonCredit {
+  id             String           @id @default(cuid())
+  workspaceId    String
+  learnerId      String
+  courseId       String
+  kind           LessonCreditKind
+  lessons        Int
+  /// PURCHASE: the paid invoice line (once only).
+  invoiceLineId  String?          @unique
+  /// REFUND_REVERSAL: the refunded invoice line (once only).
+  reversesLineId String?          @unique
+  bookingId      String?
+  byUserId       String?
+  note           String?          @db.VarChar(300)
+  createdAt      DateTime         @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  learner   Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, kind])
+  @@index([learnerId, courseId])
+  @@index([workspaceId, createdAt])
+}

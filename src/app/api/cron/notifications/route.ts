@@ -5,6 +5,7 @@
  * clearing old imports and expired sign-in codes. Schedule: src/lib/jobs/registry.ts.
  */
 
+import { sendBookingReminders } from "@/features/booking/bookings";
 import { defineJob } from "@/lib/jobs/define";
 import { runAiMarking } from "@/features/ai-marking/jobs";
 import { aiMarkingConfigured } from "@/features/ai-marking/marker";
@@ -18,6 +19,7 @@ const job = defineJob("notifications", async () => ({
   results: await runNotificationJobs(),
   aiMarking: aiMarkingConfigured() ? await runAiMarking({ limit: 25 }) : "not configured",
   imports: await advanceStaleImports(new Date(), 15_000),
+  bookingReminders: await sendBookingReminders(),
 }));
 export const GET = job.GET;
 export const POST = job.POST;

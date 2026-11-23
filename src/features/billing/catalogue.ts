@@ -15,7 +15,7 @@ export type ServiceKey =
   | "calendar" | "messages" | "notifications" | "portals" | "fee-collection"
   | "storage-allowance" | "bulk-import" | "attendance"
   | "math-input" | "graphing" | "question-bank" | "live-sessions"
-  | "advanced-analytics" | "custom-branding" | "calendar-sync"
+  | "advanced-analytics" | "custom-branding" | "calendar-sync" | "session-booking"
   | "secure-tests" | "ai-marking" | "at-risk-alerts" | "leaderboards" | "api-access"
   | "automarker" | "judge-mode" | "code-plagiarism";
 
@@ -74,6 +74,7 @@ export const SERVICES: Record<ServiceKey, ServiceInfo> = {
   "advanced-analytics": premium("advanced-analytics", "Item analysis and question difficulty", "PLUS", "v1"),
   "custom-branding": premium("custom-branding", "Workspace logo, accent colour and sender name", "PLUS", "v1"),
   "calendar-sync": premium("calendar-sync", "Calendar feed", "PLUS", "v1"),
+  "session-booking": premium("session-booking", "Session booking with prepaid lesson packs", "PLUS", "v1"),
   "secure-tests": premium("secure-tests", "Secure tests", "PRO", "v1"),
   "ai-marking": premium("ai-marking", "AI-suggested marks", "PRO", "v1", "AI_MARKS"),
   "at-risk-alerts": premium("at-risk-alerts", "At-risk alerts shared with parents and students", "PRO", "v1"),
