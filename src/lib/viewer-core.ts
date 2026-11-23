@@ -257,6 +257,27 @@ export function scopedCourseWhere(scope: { membershipId: string; branchIds?: str
   return { OR: own };
 }
 
+/**
+ * The courses an actor below WORKSPACE scope may act on (#243): null for the
+ * whole workspace. For callers that hold a role actor rather than a viewer
+ * (workspaces/roles.ts).
+ */
+export function actorCourseWhere(actor: { scope: RoleScope; membershipId: string; branchIds: string[] }): Prisma.CourseWhereInput | null {
+  if (actor.scope === "WORKSPACE") return null;
+  return scopedCourseWhere({ membershipId: actor.membershipId, branchIds: actor.scope === "BRANCHES" ? actor.branchIds : [] });
+}
+
+/** The courses whose calendar a staff viewer sees (#243): their role scope for `content.view`; null for the whole workspace. */
+export function calendarCourseWhere(viewer: Viewer): Prisma.CourseWhereInput | null {
+  const scope = courseScopeOf(viewer, "content.view");
+  return scope ? scopedCourseWhere(scope) : null;
+}
+
+/** True when the viewer sees the whole organisation's payout recoveries; otherwise only their own payout account's (#243). */
+export function seesAllPayoutRecoveries(viewer: Viewer): boolean {
+  return !needsScope(viewer, "fees.manage");
+}
+
 /** The scope a viewer's course lists use for `permission`: null for the whole workspace. */
 export function courseScopeOf(viewer: Viewer, permission: Permission): { membershipId: string; branchIds: string[] } | null {
   if (!needsScope(viewer, permission) || !viewer.membership) return null;
