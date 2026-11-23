@@ -21,6 +21,8 @@ import { enqueueEmail } from "@/lib/email/queue";
 
 import { assertCanAddLearners } from "@/features/billing/caps";
 
+import { markReferralJoined, recordReferral } from "./referrals";
+
 export const JOIN = {
   /** Open requests one person may have at once. */
   maxPending: 5,
@@ -136,7 +138,7 @@ export async function listListedCourses(input: { q?: string; workspaceId?: strin
  * student is already on it, a request is already open, or the requester
  * is over the limits in JOIN.
  */
-export async function requestToJoinFor(requesterUserId: string, input: { courseId: string; studentUserId?: string | null; message?: string | null }, now: Date = new Date()) {
+export async function requestToJoinFor(requesterUserId: string, input: { courseId: string; studentUserId?: string | null; message?: string | null; referralCode?: string | null }, now: Date = new Date()) {
   const requester = await prisma.user.findUniqueOrThrow({ where: { id: requesterUserId }, select: { role: true, roleUnconfirmed: true, deletionRequestedAt: true } });
   if (requester.roleUnconfirmed || requester.deletionRequestedAt) throw new JoinRequestError("Finish setting up your account first.");
   const studentUserId = input.studentUserId && input.studentUserId !== requesterUserId ? input.studentUserId : requesterUserId;
@@ -185,6 +187,8 @@ export async function requestToJoinFor(requesterUserId: string, input: { courseI
           data: { studentName: r.student.name, courseName: r.course.name, byParent: forChild },
         });
       }
+      // Came through someone's referral link (#216): credit them.
+      await recordReferral(tx, { code: input.referralCode, workspaceId, requesterUserId, studentUserId, joinRequestId: r.id });
       return { id: r.id, status: "PENDING" as const };
     }, { timeout: 30_000 });
   } catch (e) {
@@ -304,6 +308,7 @@ export async function approveJoinRequestFor(actorUserId: string, workspaceId: st
       await assertCanAddLearners(tx, workspaceId, [learner.id]);
       await tx.enrollment.create({ data: { workspaceId, courseId: req.courseId, learnerId: learner.id, status: "ACTIVE", startedAt: now } });
     }
+    await markReferralJoined(tx, { workspaceId, studentUserId: req.studentUserId }, now);
     await tx.auditLog.create({ data: { workspaceId, actorUserId, action: "join.approve", targetType: "JoinRequest", targetId: requestId, data: { courseId: req.courseId, learnerId: learner.id, isMinor: input.isMinor, byParent } } });
     if (!req.requester.emailIsPlaceholder) {
       await enqueueEmail(tx, {

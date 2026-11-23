@@ -151,7 +151,7 @@ export async function attendanceSheetFor(eventId: string, occurrenceStart: strin
 
 type Mark = { learnerId: string; status: "PRESENT" | "LATE" | "ABSENT" | "EXCUSED"; note?: string | null };
 
-export async function markAttendanceFor(actorUserId: string, input: { eventId: string; occurrenceStart: string; marks: Mark[] }) {
+export async function markAttendanceFor(actorUserId: string, input: { eventId: string; occurrenceStart: string; marks: Mark[] }, opts: { emailAbsences?: boolean } = {}) {
   const sheet = await attendanceSheetFor(input.eventId, input.occurrenceStart);
   const allowed = new Set(sheet.learners.map((l) => l.learnerId));
   const occ = new Date(input.occurrenceStart);
@@ -164,7 +164,8 @@ export async function markAttendanceFor(actorUserId: string, input: { eventId: s
       update: { status: m.status, note: m.note ?? null, markedByUserId: actorUserId, markedAt: new Date(), method: "TUTOR" },
       select: { id: true, guardianNotifiedAt: true },
     });
-    if (m.status === "ABSENT" && !row.guardianNotifiedAt) absences += await notifyGuardiansOfAbsence(row.id, sheet.title, occ);
+    // Absence emails are part of Plus (live-sessions); the register is Core.
+    if (m.status === "ABSENT" && !row.guardianNotifiedAt && opts.emailAbsences !== false) absences += await notifyGuardiansOfAbsence(row.id, sheet.title, occ);
   }
   return { marked: input.marks.length, guardiansEmailed: absences };
 }

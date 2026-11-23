@@ -82,6 +82,9 @@ model User {
   emailChanges      EmailChangeRequest[]
   joinRequestsMade  JoinRequest[]        @relation("JoinRequestRequester")
   joinRequestsFor   JoinRequest[]        @relation("JoinRequestStudent")
+  referralCodes     ReferralCode[]
+  referralsMade     Referral[]           @relation("ReferralReferrer")
+  referralsReceived Referral[]           @relation("ReferralReferred")
 }
 
 enum PlatformRole {

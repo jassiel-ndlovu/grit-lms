@@ -11,6 +11,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 
+import { hasService } from "@/features/billing/services";
 import { prisma } from "@/lib/db";
 import { viewerActionClient, writableViewerActionClient } from "@/lib/safe-action";
 import { canIn, requireViewer, ViewerError, type Viewer } from "@/lib/viewer";
@@ -37,9 +38,10 @@ async function visibleCourseIds(viewer: Viewer): Promise<string[]> {
   return [...ids];
 }
 
-async function staffOfEvent(viewer: Viewer, eventId: string) {
+async function staffOfEvent(viewer: Viewer, eventId: string): Promise<string> {
   const e = await prisma.courseEvent.findUnique({ where: { id: eventId }, select: { courseId: true } });
   if (!e || !(await canIn(viewer, "courses.edit", { courseId: e.courseId }))) throw new ViewerError("FORBIDDEN");
+  return e.courseId;
 }
 
 /** Occurrences between two dates (at most 120 days), with "this one only" changes and cancellations applied. */
@@ -91,8 +93,9 @@ export const markAttendance = writableViewerActionClient
   }))
   .action(async ({ parsedInput }) => {
     const viewer = await requireViewer();
-    await staffOfEvent(viewer, parsedInput.eventId);
-    return markAttendanceFor(viewer.user.id, parsedInput);
+    const courseId = await staffOfEvent(viewer, parsedInput.eventId);
+    // The register is Core; emailing parents about absences is Plus (live-sessions).
+    return markAttendanceFor(viewer.user.id, parsedInput, { emailAbsences: await hasService(viewer, courseId, "live-sessions") });
   });
 
 /** Opens or rotates a check-in code (shown once) for 1 to 120 minutes, default 15. */
@@ -100,7 +103,8 @@ export const openCheckIn = writableViewerActionClient
   .schema(z.object({ eventId: z.string().min(1), occurrenceStart: iso, minutes: z.number().int().min(1).max(120).optional() }))
   .action(async ({ parsedInput }) => {
     const viewer = await requireViewer();
-    await staffOfEvent(viewer, parsedInput.eventId);
+    const courseId = await staffOfEvent(viewer, parsedInput.eventId);
+    if (!(await hasService(viewer, courseId, "live-sessions"))) throw new UserError("Check-in codes are part of the Plus plan for this course.");
     return openCheckInFor(viewer.user.id, parsedInput);
   });
 

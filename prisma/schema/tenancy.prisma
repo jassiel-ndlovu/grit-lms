@@ -93,6 +93,8 @@ model Workspace {
   enrollments    Enrollment[]
   courseListings CourseListing[]
   importJobs     ImportJob[]
+  referralCodes  ReferralCode[]
+  referrals      Referral[]
   managedUsers   User[]          @relation("ManagedUsers")
   joinRequests   JoinRequest[]
 
@@ -391,4 +393,50 @@ model ImportJob {
 
   @@index([workspaceId, createdAt])
   @@index([status, leaseUntil])
+}
+
+enum ReferralStatus {
+  /// The referred family asked to join a course.
+  REQUESTED
+  /// Staff approved, so the referred student is in the workspace.
+  JOINED
+}
+
+/// A parent's or student's personal link into a workspace (Core, owner decision 22 Nov; #216). One per person per workspace.
+model ReferralCode {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  /// Short and unguessable; the link is /api/referrals/<code>.
+  code        String   @unique
+  createdAt   DateTime @default(now())
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referrals Referral[]
+
+  @@unique([workspaceId, userId])
+}
+
+/// A family that came through someone's link and asked to join. Rewards aren't decided yet; this records who referred whom.
+model Referral {
+  id             String         @id @default(cuid())
+  workspaceId    String
+  codeId         String
+  referrerUserId String
+  /// The student who asked to join (or whose parent asked).
+  referredUserId String
+  joinRequestId  String?        @unique
+  status         ReferralStatus @default(REQUESTED)
+  createdAt      DateTime       @default(now())
+  joinedAt       DateTime?
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code      ReferralCode @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  referrer  User         @relation("ReferralReferrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referred  User         @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  /// A student is credited to one referrer per workspace: the first.
+  @@unique([workspaceId, referredUserId])
+  @@index([referrerUserId])
 }

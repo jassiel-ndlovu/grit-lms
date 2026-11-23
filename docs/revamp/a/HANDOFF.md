@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-23 Phase 1: attendance in Core, weekly parent summary, referrals, `revamp/a-core-parents`
+
+Viewer contract Draft 1.16; services contract updated.
+
+Done:
+- **Migration `29_referrals`** (additive): `ReferralCode`, `Referral` and `ReferralStatus`.
+- **Attendance register in Core:** a new basic service `attendance`; `live-sessions` (Plus) now means check-in codes and absence emails. `openCheckIn` is gated on it, and `markAttendance` sends absence emails only with it. `check-billing` counts 13 basic keys.
+- **Weekly parent summary** (`notifications/weekly-summary.ts`, template `parent:weekly`): queued on Mondays by the daily housekeeping job.
+  - Per child: last week's marks, this week's due tests and assignments (done or not), and attendance.
+  - Skipped for quiet weeks, email off, and unverified or placeholder addresses. One per parent per week.
+- **Referrals** (`workspaces/referrals.ts`; `getReferralLink`, `listReferrals`; `GET /api/referrals/<code>` sets a 30-day cookie):
+  - credited on a join request and marked joined on approval, keyed by workspace and student, so cancelling and asking again keeps the credit;
+  - your own link, your own child, and students already in the workspace don't count; the first referrer wins;
+  - in the POPIA export as `referralLinks`.
+  - Rewards are the owner's call.
+
+Tested:
+- 19 checks against Preview: the register without absence emails, the summary's content, duplicates, email off and quiet families, and the full referral flow including the cancel-and-ask-again path, which found and fixed a bug.
+- Types and lint.
+
 ## 2026-11-23 B's findings (#223, #228) and calendar import, `revamp/a-calendar-import`
 
 No migration. Viewer contract Draft 1.15; imports contract Draft 1.1.
