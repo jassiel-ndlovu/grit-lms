@@ -17,6 +17,7 @@ import { UserError } from "@/lib/user-error";
 
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { emitWebhook } from "@/features/api/webhooks";
 import { scopedCourseWhere } from "@/lib/viewer-core";
 import { enqueueEmail } from "@/lib/email/queue";
 
@@ -308,6 +309,7 @@ export async function approveJoinRequestFor(actorUserId: string, workspaceId: st
     if (!open) {
       await assertCanAddLearners(tx, workspaceId, [learner.id]);
       await tx.enrollment.create({ data: { workspaceId, courseId: req.courseId, learnerId: learner.id, status: "ACTIVE", startedAt: now } });
+      await emitWebhook(tx, workspaceId, "enrolment.created", { courseId: req.courseId, learnerId: learner.id, studentUserId: req.studentUserId, source: "join-request", startedAt: now.toISOString() });
     }
     await markReferralJoined(tx, { workspaceId, studentUserId: req.studentUserId }, now);
     await tx.auditLog.create({ data: { workspaceId, actorUserId, action: "join.approve", targetType: "JoinRequest", targetId: requestId, data: { courseId: req.courseId, learnerId: learner.id, isMinor: input.isMinor, byParent } } });

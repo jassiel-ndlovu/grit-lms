@@ -133,6 +133,8 @@ model Workspace {
   /// And at most this many days ahead.
   bookingHorizonDays  Int                   @default(28)
   aiAssistRuns        AiAssistRun[]
+  apiKeys             ApiKey[]
+  webhookEndpoints    WebhookEndpoint[]
 }
 
 /// Organisations only. A solo practice has no teams.
@@ -603,4 +605,84 @@ model Booking {
   @@index([membershipId, startsAt])
   @@index([courseId, startsAt])
   @@index([status, startsAt])
+}
+
+// API keys and webhooks (#216 phase 3, Pro; A). docs/revamp/contracts/api.md.
+
+/// A workspace's key for the read-only REST API (/api/v1). Only a sha256 of the key is kept; it is shown once.
+model ApiKey {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  name            String    @db.VarChar(80)
+  /// The first characters, to tell keys apart ("nexa_live_AbC1").
+  prefix          String    @db.VarChar(20)
+  hash            String    @unique @db.VarChar(64)
+  /// e.g. courses.read, learners.read, grades.read, attendance.read, invoices.read, bookings.read
+  scopes          String[]
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  /// Rate limit: requests in the current minute.
+  minuteStart     DateTime?
+  minuteCount     Int       @default(0)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+/// Where a workspace's events are POSTed, signed with the endpoint's secret.
+model WebhookEndpoint {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  url             String    @db.VarChar(500)
+  description     String?   @db.VarChar(120)
+  /// Event names, e.g. invoice.paid, booking.created. Empty means none.
+  events          String[]
+  /// AES-GCM sealed signing secret (key derived from NEXTAUTH_SECRET).
+  secretSealed    String
+  secretPrefix    String    @db.VarChar(20)
+  active          Boolean   @default(true)
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  lastSuccessAt   DateTime?
+  /// Set at the first failure in a run of failures; cleared by a success. Three days of failures switch the endpoint off.
+  failingSince    DateTime?
+  disabledReason  String?   @db.VarChar(200)
+
+  workspace  Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([workspaceId])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+}
+
+/// One event for one endpoint. Kept 30 days.
+model WebhookDelivery {
+  id            String                @id @default(cuid())
+  endpointId    String
+  event         String                @db.VarChar(60)
+  /// The full JSON body sent (id, type, created, workspace, data).
+  payload       Json
+  status        WebhookDeliveryStatus @default(PENDING)
+  attempts      Int                   @default(0)
+  nextAttemptAt DateTime              @default(now())
+  lockedUntil   DateTime?
+  lastStatus    Int?
+  lastError     String?               @db.VarChar(300)
+  createdAt     DateTime              @default(now())
+  deliveredAt   DateTime?
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([endpointId, createdAt])
 }

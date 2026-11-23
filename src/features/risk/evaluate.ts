@@ -14,6 +14,7 @@ import { isBillingEnabled } from "@/features/billing/errors";
 import { emitNotification } from "@/features/notifications/server";
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { emitWebhook } from "@/features/api/webhooks";
 
 import { assessRisk, nextStep, RISK_RULES, riskSummary, type RiskInput, type RiskLevel } from "./rules";
 
@@ -116,7 +117,11 @@ export async function runRiskAlerts(now: Date = new Date(), opts: { onlyCourseId
         const created = await prisma.riskAlert
           .create({ data: { ...data, workspaceId: course.workspaceId!, courseId: course.id, studentUserId: student.userId, openKey: `${course.id}:${student.userId}`, firstSeenAt: now } })
           .catch(() => null);
-        if (created) { out.opened++; news.push(student.name); }
+        if (created) {
+          out.opened++;
+          news.push(student.name);
+          await emitWebhook(prisma, course.workspaceId!, "risk_alert.opened", { alertId: created.id, courseId: course.id, studentUserId: student.userId, level: result!.level, reasons: result!.reasons });
+        }
       } else {
         await prisma.riskAlert.update({ where: { id: open!.id }, data: { ...data, level: step === "escalate" ? "AT_RISK" : open!.level === "AT_RISK" ? "AT_RISK" : data.level } });
         if (step === "escalate") { out.escalated++; news.push(student.name); } else out.updated++;

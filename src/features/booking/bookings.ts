@@ -13,6 +13,7 @@ import { emitNotification } from "@/features/notifications/server";
 import { getPreferencesForUsers } from "@/features/users/preferences";
 import type { BookingStatus } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { emitWebhook } from "@/features/api/webhooks";
 import type { BookingEmailData, BookingTemplate } from "@/lib/email/booking-templates";
 import { enqueueEmail, sendQueuedNow } from "@/lib/email/queue";
 import { UserError } from "@/lib/user-error";
@@ -300,6 +301,7 @@ export async function bookSession(
     }
     return b;
   });
+  await emitWebhook(prisma, ctx.course.workspaceId, "booking.created", { bookingId: created.id, courseId: input.courseId, learnerId: ctx.learnerId, tutorMembershipId: tutor.id, startsAt: slot.start.toISOString(), endsAt: slot.end.toISOString(), usedCredit: needsCredit });
   await tell(created.id, "confirmed", {}, viewer.user.id).catch((e) => console.error("[booking] confirm email failed:", e));
   if (ctx.actor !== "staff") {
     await emitNotification(
@@ -347,6 +349,7 @@ export async function cancelBooking(viewer: Viewer, input: { bookingId: string; 
       await tx.lessonCredit.create({ data: { workspaceId: b.workspaceId, learnerId: b.learnerId, courseId: b.courseId, kind: "CANCEL_RETURN", lessons: 1, bookingId: b.id, byUserId: viewer.user.id } });
     }
   });
+  await emitWebhook(prisma, b.workspaceId, "booking.cancelled", { bookingId: b.id, courseId: b.courseId, learnerId: b.learnerId, startsAt: b.startsAt.toISOString(), cancelledBy: as, creditReturned: giveBack, reason });
   await tell(b.id, "cancelled", { cancelledBy: viewer.user.name, reason, creditReturned: b.usedCredit ? giveBack : undefined }, viewer.user.id).catch((e) => console.error("[booking] cancel email failed:", e));
   return { ok: true as const, creditReturned: giveBack };
 }

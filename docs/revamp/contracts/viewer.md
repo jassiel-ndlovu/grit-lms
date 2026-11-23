@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | (No change here.) API keys, the REST API and webhooks have their own contract: `contracts/api.md` |
 | 2026-11-24 | Draft 1.23. Pro AI drafts: lessons, tests and assignments from documents; feedback; report comments; curriculum gaps |
 | 2026-11-23 | Draft 1.22. AI help for tutors (Plus limited, Pro more): question drafts, outlines, tidy text |
 | 2026-11-23 | Draft 1.21. Session booking with prepaid lesson packs (Plus): availability, slots, bookings, credits |
