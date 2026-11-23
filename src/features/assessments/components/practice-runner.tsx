@@ -129,7 +129,7 @@ export function PracticeRunner({ setId, items, backHref }: { setId: string; item
     const total = Object.keys(firstTry).length;
     const right = Object.values(firstTry).filter(Boolean).length;
     return (
-      <Card className="mx-auto w-full max-w-2xl space-y-4 p-6 text-center">
+      <Card className="mx-auto w-full max-w-2xl gap-4 p-6 text-center">
         <CheckCircle2 aria-hidden className="text-success mx-auto size-10" />
         <h2 ref={heading} tabIndex={-1} className="text-foreground text-lg font-semibold outline-none">
           Session done
@@ -179,7 +179,7 @@ export function PracticeRunner({ setId, items, backHref }: { setId: string; item
         <div className="bg-primary h-full transition-[width] motion-reduce:transition-none" style={{ width: `${(pos / queue.length) * 100}%` }} />
       </div>
 
-      <Card className="space-y-6 p-4 sm:p-6">
+      <Card className="gap-6 p-4 sm:p-6">
         {item.nodes.map((node) => {
           const right = result?.parts[node.id];
           const key = keys.get(node.id);
@@ -200,7 +200,13 @@ export function PracticeRunner({ setId, items, backHref }: { setId: string; item
                   shuffleSeed={`${item.id}:${seen}`}
                 />
               ) : null}
-              {result && key ? (
+              {result && key && !isAnswered(answers[node.id]) ? (
+                <div className="bg-muted/40 text-foreground space-y-1 rounded-md p-3">
+                  <p className="text-sm font-medium">{answered ? "Not answered" : "The answer"}</p>
+                  {answered ? <p className="text-muted-foreground text-xs">Answer</p> : null}
+                  <AnswerKey answer={key} />
+                </div>
+              ) : result && key ? (
                 <div className="bg-muted/40 space-y-1 rounded-md p-3">
                   <p
                     className={cn(
