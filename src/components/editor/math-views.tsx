@@ -184,7 +184,7 @@ function BlockMathView(props: ReactNodeViewProps) {
   const { latex, open, box } = useTexEditing(props);
   return (
     <NodeViewWrapper className={cn("my-2 rounded-md px-2 py-1", selected && "bg-accent")} data-drag-handle>
-      <div contentEditable={false} className="overflow-x-auto text-center">
+      <div contentEditable={false} className="relative overflow-x-auto text-center">
         {latex ? (
           <MathJax dynamic>{`\\[${latex}\\]`}</MathJax>
         ) : (

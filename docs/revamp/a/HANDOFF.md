@@ -3,6 +3,23 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Test pass before the switch to the new look, `revamp/a-test-pass-fixes`
+
+Main at d226489 (#267), built for production and run locally against the Preview database with `REVAMP_UI=1` and `BILLING=1`.
+
+Results:
+- **Checks:** types, lint and all 90 check scripts pass (85 static, and the 5 database ones against Preview).
+- **Crawl:** 12 seeded roles x 55 pages, 660 page loads. No 5xx responses, no error screens. Every 404 and redirect matches the role's permissions.
+- **Walkthrough:** 69 page loads in real Chrome, desktop (1366px) and phone (390px).
+
+Fixed here:
+- **Phone tables scrolled the whole page sideways** (Tests, Billing, and every table in an `overflow-x-auto` box). An `sr-only` label in the last column is absolutely positioned and escaped the scroll box. Each scroll box is now `relative`, as `components/ui/table.tsx` already was.
+- **Hydration error on the student's Grades page.** The chart's SVG `<title>`s were built from several text pieces. React 19 wants one string, so each is now one template string (`features/grades/components/charts.tsx`).
+- **Staff opening `/dashboard/courses`** saw "No student profile found". Staff with no student profile now go to Manage courses; staff who are also students still see their courses.
+
+Not faults:
+- Headless Chromium's cut-down locale data formats en-ZA as en (R2,150). Real Chrome and Edge match Node (R2 150), so prices don't change on load.
+
 ## 2026-11-24 Owner decisions: credit top-ups and a student-paid study assistant, `revamp/a-credit-topups`
 
 **Owner decisions** (brief: https://claude.ai/artifact/5yD1pSuxqSh2mCGDY3BcN6):

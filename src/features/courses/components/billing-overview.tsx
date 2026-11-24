@@ -145,7 +145,7 @@ export function BillingOverview({
         {tiers.length === 0 ? (
           <p className="text-muted-foreground text-sm">No courses yet. Nothing to pay until a student joins a course.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[32rem] text-sm">
               <thead className="text-muted-foreground border-border border-b text-left text-xs">
                 <tr>

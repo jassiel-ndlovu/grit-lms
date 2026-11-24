@@ -111,7 +111,7 @@ export default async function PayoutsPage() {
           {tutors.length === 0 ? (
             <p className="text-muted-foreground text-sm">No tutor has connected an account yet. Each tutor does it on this page.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full min-w-[32rem] text-sm">
                 <thead className="text-muted-foreground border-border border-b text-left text-xs">
                   <tr>

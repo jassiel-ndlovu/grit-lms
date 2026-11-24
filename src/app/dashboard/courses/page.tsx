@@ -34,12 +34,13 @@ export default async function StudentCoursesPage() {
   if (!session?.user) redirect("/");
   // Parents have no student pages; send them to their child (F7).
   if (session.user.role === "PARENT") redirect(parentLanding((await getViewer())?.children ?? []));
-
   const student = await prisma.student.findUnique({
     where: { email: session.user.email },
     select: { id: true },
   });
 
+  // Staff who aren't also students manage courses rather than take them (old links and bookmarks land here).
+  if (!student && session.user.role !== "STUDENT") redirect("/dashboard/manage-courses");
   if (!student) {
     return <PageMessage breadcrumb={[{ label: "My courses" }]}>No student profile found for this account.</PageMessage>;
   }

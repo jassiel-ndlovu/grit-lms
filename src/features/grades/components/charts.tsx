@@ -164,10 +164,7 @@ export function LineChart({
                   r={3}
                   fill={color}
                 >
-                  <title>
-                    {s.name}
-                    {p.label ? ` — ${p.label}` : ""}: {Math.round(p.y)}%
-                  </title>
+                  <title>{`${s.name}${p.label ? ` — ${p.label}` : ""}: ${Math.round(p.y)}%`}</title>
                 </circle>
               ))}
             </g>
@@ -289,10 +286,7 @@ export function BarChart({
                 rx={4}
                 opacity={0.9}
               >
-                <title>
-                  {d.label}: {Math.round(d.value)}%
-                  {d.meta ? ` — ${d.meta}` : ""}
-                </title>
+                <title>{`${d.label}: ${Math.round(d.value)}%${d.meta ? ` — ${d.meta}` : ""}`}</title>
               </rect>
               <text
                 x={x + barWidth / 2}
@@ -394,9 +388,7 @@ export function DonutChart({
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {paths.map((p, i) => (
           <path key={i} d={p.d} fill={p.color}>
-            <title>
-              {p.label}: {Math.round((p.value / total) * 100)}%
-            </title>
+            <title>{`${p.label}: ${Math.round((p.value / total) * 100)}%`}</title>
           </path>
         ))}
         {(centerLabel || centerValue) && (
@@ -529,9 +521,7 @@ export function Histogram({
                 rx={3}
                 opacity={0.85}
               >
-                <title>
-                  {binStart}-{binEnd}%: {c} {c === 1 ? "student" : "students"}
-                </title>
+                <title>{`${binStart}-${binEnd}%: ${c} ${c === 1 ? "student" : "students"}`}</title>
               </rect>
               {c > 0 && (
                 <text
