@@ -1,37 +1,45 @@
+/**
+ * /support: public help (owner 24 Nov; support.md). Short answers for people
+ * who aren't signed in, and a form that reaches Nexa support. Signed-in
+ * people are sent to the full help centre.
+ */
+
 import Link from "next/link";
-import Footer from "../dashboard/models/footer";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Support", description: "Get help with Nexa LMS.", alternates: { canonical: "/support" } };
+import { HelpArticles } from "@/features/support/components/help-articles";
+import { PublicHelpFrame } from "@/features/support/components/public-frame";
+import { PublicQueryForm } from "@/features/support/components/public-query-form";
+import { articlesFor } from "@/features/support/help-articles";
+import { getViewer } from "@/lib/viewer";
 
-export default function SupportPage() {
+export const metadata = {
+  title: "Help and support",
+  description: "Answers to common questions about Nexa LMS, and a form to reach our support team.",
+  alternates: { canonical: "/support" },
+};
+
+export default async function SupportPage() {
+  if (await getViewer()) redirect("/dashboard/help");
   return (
-    <div className="h-screen flex flex-col">
-      <main className="h-full flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md p-6 bg-white border border-gray-200">
-          <h1 className="text-2xl font-bold mb-6 text-center">Support</h1>
-          <p className="text-gray-700 text-sm mb-4">
-            If you need assistance, please contact our support team at{" "}
-            <Link
-              href="mailto:nkosijassiel@gmail.com"
-              className="text-blue-600 hover:underline"
-            >
-              nkosijassiel@gmail.com
-            </Link>
-            . We are here to help you with any issues or questions you may have.
-          </p>
-          <p className="text-gray-700 text-sm">
-            You can call us at{" "}
-            <Link
-              href="tel:+27683983265"
-              className="text-blue-600 hover:underline"
-            >
-              +27 68 398 3265
-            </Link>
-            {" "}for immediate assistance. Our support team is available Monday to Friday from 8 AM to 6 PM.
+    <PublicHelpFrame
+      title="Help and support"
+      lead="Find a quick answer, or send us a message. We usually answer within one working day."
+    >
+      <section className="flex flex-col gap-3" aria-labelledby="answers">
+        <h2 id="answers" className="text-foreground text-base font-semibold">Common questions</h2>
+        <HelpArticles articles={articlesFor("public")} askBase="#contact" />
+      </section>
+
+      <section id="contact" className="flex scroll-mt-6 flex-col gap-3" aria-labelledby="contact-heading">
+        <div>
+          <h2 id="contact-heading" className="text-foreground text-base font-semibold">Contact us</h2>
+          <p className="text-muted-foreground text-sm">
+            Students and parents: questions about your classes, marks or fees are answered fastest by your tutor or school. <Link href="/auth?callbackUrl=/dashboard/help" className="text-primary underline underline-offset-2">Sign in</Link> and use Help to send them a message.
           </p>
         </div>
-      </main>
-      <Footer />
-    </div>
+        <PublicQueryForm />
+      </section>
+    </PublicHelpFrame>
   );
 }

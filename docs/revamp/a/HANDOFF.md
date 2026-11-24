@@ -3,6 +3,35 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Help and contact centre (owner's request), `revamp/a-help-centre`
+
+Contract: `docs/revamp/contracts/support.md` (Draft 1.0). Migration `44_support_queries` (additive: SupportQuery, SupportMessage, four enums; references start at Q-1001).
+
+**What it is:** one place for students, parents, tutors and organisations to ask a question, report a problem or give feedback, and get an answer in a tracked thread.
+
+**Routing:**
+- Students and parents: questions about classes, tests and fees go to their organisation (the tutors of the chosen course, plus staff with "Handle enquiries" in scope). Everything else goes to Nexa. They can change the suggestion.
+- Staff and the public always reach Nexa.
+- A Nexa admin can hand a query to the organisation, or take it back.
+
+**Pages:**
+- `/dashboard/help`: rebuilt. Help articles for the viewer's role (searchable, plain words), Contact us, and their queries.
+- `/dashboard/help/new` and `/dashboard/help/[id]`: the form and the thread.
+- Inboxes: `/dashboard/support` (organisation, "Queries" under People) and `/dashboard/admin/support` (Nexa, "Support" under Platform).
+- `/support`: the public page, rebuilt in the new look. It no longer shows a personal email address or phone number. Its form sends a confirmation email with a private link (`/support/q/<token>`).
+
+**Also:**
+- Screenshots: a new upload kind, `support-attachment` (images only, 5 MB, the uploader's own folder only).
+- Emails: `support:staff` (to SUPPORT_TO, else ENQUIRY_TO, else the contact address) and `support:requester` (public requesters only; signed-in people get notifications).
+- Housekeeping deletes queries closed for 2 years. Account deletion removes the person's own queries and takes their name off messages they wrote.
+
+**Tested:**
+- `scripts/check-support.ts` (in CI): routing, statuses, attachments, input, and the help text (it never names a provider).
+- 37 checks against the Preview DB: who sees what across two organisations, tutors and families, internal notes, reopening, the public form with honeypot, the private link, the hand-over, and deletion. Cleaned up afterwards.
+- Real Chrome, 22 checks: student sends from Grades, owner answers and adds a note, student sees the reply but not the note and rates it, the public form, and phone width (390 px, no sideways scroll). No console errors.
+
+For B: restyle freely. The help articles are data in `features/support/help-articles.ts`, so keep them current when screens change.
+
 ## 2026-11-24 Test pass before the switch to the new look, `revamp/a-test-pass-fixes`
 
 Main at d226489 (#267), built for production and run locally against the Preview database with `REVAMP_UI=1` and `BILLING=1`.

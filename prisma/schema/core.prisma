@@ -67,10 +67,12 @@ model User {
   // Tenancy (tenancy.prisma)
   memberships        Membership[]
   learners           Learner[]
-  guardianOf         Guardianship[] @relation("GuardianshipGuardian")
-  guardedBy          Guardianship[] @relation("GuardianshipStudent")
-  auditActions       AuditLog[]     @relation("AuditActor")
-  auditImpersonating AuditLog[]     @relation("AuditImpersonator")
+  guardianOf         Guardianship[]   @relation("GuardianshipGuardian")
+  guardedBy          Guardianship[]   @relation("GuardianshipStudent")
+  auditActions       AuditLog[]       @relation("AuditActor")
+  auditImpersonating AuditLog[]       @relation("AuditImpersonator")
+  supportQueries     SupportQuery[]   @relation("SupportRequester")
+  supportMessages    SupportMessage[] @relation("SupportAuthor")
   tutorProfile       Tutor?
   studentProfile     Student?
 
