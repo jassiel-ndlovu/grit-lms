@@ -150,6 +150,7 @@ model Workspace {
   hideNexaBranding    Boolean               @default(false)
   /// Where families' questions go instead of Nexa support, when white-labelled.
   supportEmail        String?               @db.VarChar(254)
+  studyChats          StudyChat[]
 }
 
 /// Organisations only. A solo practice has no teams.

@@ -196,3 +196,44 @@ model RiskAlert {
   @@index([courseId, status])
   @@index([studentUserId, status])
 }
+
+// The course study assistant (#216 phase 3, Pro; A). Chats are visible to the course's tutors.
+
+/// One student's conversation with a course's study assistant.
+model StudyChat {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  courseId      String
+  studentUserId String
+  title         String    @db.VarChar(120)
+  /// Set when a message raised a wellbeing or safety concern; tutors see it first.
+  flaggedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  course    Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  messages  StudyMessage[]
+
+  @@index([courseId, updatedAt])
+  @@index([studentUserId, updatedAt])
+}
+
+model StudyMessage {
+  id         String   @id @default(cuid())
+  chatId     String
+  /// USER or ASSISTANT
+  role       String   @db.VarChar(10)
+  content    String   @db.VarChar(8000)
+  /// [{ ref, lessonId, title }] for an answer.
+  citations  Json?
+  outOfScope Boolean  @default(false)
+  /// none, wellbeing, safety, integrity
+  concern    String   @default("none") @db.VarChar(12)
+  credits    Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  chat StudyChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
+}
