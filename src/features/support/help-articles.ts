@@ -271,7 +271,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     body: [
       "Open Billing to see your plan for each course, what your next payment will be, and past invoices.",
       "You pay for each active student on a course, every 30 days. A student who joins partway through is added to the next payment for the days they were there.",
-      "If a payment fails, we try again and tell you. If it stays unpaid, your organisation becomes read-only: students can still see their work, but you can't make changes until it's paid.",
+      "If a payment fails, we try again and tell you. If it stays unpaid, your organisation is locked: students can still see their work, but you can't make changes until it's paid.",
     ],
   },
   {

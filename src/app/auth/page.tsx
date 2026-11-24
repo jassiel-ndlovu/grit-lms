@@ -83,7 +83,7 @@ function SignInCard() {
       setError(r.error);
       setPhase("form");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("We couldn't sign you in just now. Check your connection and try again.");
       setPhase("form");
     }
   }
@@ -97,7 +97,7 @@ function SignInCard() {
       if (!r.error) return done();
       setError(r.error.status === 429 ? "Too many attempts. Wait a minute and try again." : "That code didn't work. Check your app and try again.");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("We couldn't sign you in just now. Check your connection and try again.");
     }
     setCode("");
     setPhase("code");
@@ -115,7 +115,7 @@ function SignInCard() {
         {phase === "signing-in" || phase === "redirecting" ? (
           <Busy
             message={phase === "signing-in" ? "Signing you in…" : "Taking you to your dashboard…"}
-            sub={phase === "signing-in" ? "Checking your details." : "One moment, loading your workspace."}
+            sub={phase === "signing-in" ? "Checking your details." : "One moment, opening your dashboard."}
           />
         ) : phase === "code" ? (
           <form onSubmit={onCode} className="space-y-4">

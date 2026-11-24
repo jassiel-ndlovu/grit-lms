@@ -3,6 +3,27 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Wording pass, part 1: payments, billing, settings and messages, `revamp/a-wording`
+
+Owner's request (24 Nov): text must be useful, unambiguous, relevant and specific; no supplier names; don't assume people know the app.
+
+**New:**
+- **`docs/revamp/copy.md`**, the wording guide for both agents: five rules, headings and buttons, a glossary.
+- **`scripts/check-copy.ts`** (CI): fails if text people read names a supplier (Paystack, Resend, Vercel, Anthropic and so on) or shows an error code. Nexa-admin screens, provider code and the developer API are exempt.
+
+**Changed (A's side, plus shared shell and sign-up text):**
+- **No supplier names on any screen people see.** Payment screens say "a secure payment page" and "your bank confirms the payment", and tell people not to pay twice while a payment is confirming.
+- **Payment-service errors** no longer reach people word for word. `safe-action` logs the detail and returns "We couldn't reach the payment service. Nothing was charged. Try again in a minute." Payout errors used to show the raw message.
+- **"Workspace" becomes "organisation"** everywhere people read it: sign-up, the account menu, billing, banners, errors and billing emails. Nexa-admin screens keep "workspace".
+- **"Read-only" becomes "locked"**, with what it means: everyone can still see their work, but nothing can be changed until it's paid for. One sentence for it in `safe-action`, the API guard, billing and `READ_ONLY_REASON`.
+- **"Off-site" becomes "paid in cash or by transfer".** "Payout account" becomes "the bank account your fees are paid into". The refund-recovery emails explain payouts in those words too.
+- **"Something went wrong" is replaced** with what failed and what to do (sign-in, sign-up, password, invitations, services, imports, fees and billing fallbacks). Technical fee and discount errors ("percentBps from 1 to 10000", "No open invoice with that id") are reworded.
+- **Short descriptions under headings that needed them:** Fees (staff, and families), and each billing tab (Billing, Usage, Payments, AI credits).
+
+Check scripts updated for the new wording. Not changed: Nexa-admin screens (admins need the supplier's name to find payments) and the API's English, which is for developers.
+
+**For B, part 2:** the learning pages (tests, assignments, grades, courses, calendar) with copy.md. For example, "release marks" becomes "share marks"; also check headings and empty states. `check-copy.ts` will flag supplier names and codes as you go.
+
 ## 2026-11-24 Help and contact centre (owner's request), `revamp/a-help-centre`
 
 Contract: `docs/revamp/contracts/support.md` (Draft 1.0). Migration `44_support_queries` (additive: SupportQuery, SupportMessage, four enums; references start at Q-1001).

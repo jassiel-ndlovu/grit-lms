@@ -80,7 +80,7 @@ export function PayoutConnect({
     const res = await connectPayoutAccount(i);
     setBusy(null);
     if (!res?.data) return setError(res?.validationErrors ? "Check the details and try again." : payoutErrorMessage(res?.serverError));
-    toast.success("Payout account connected.");
+    toast.success("Bank account added. Card payments for your fees are paid into it.");
     setEditing(false);
     setHolder(null);
     setAccountNumber("");

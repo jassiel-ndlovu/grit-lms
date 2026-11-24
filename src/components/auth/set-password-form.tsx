@@ -40,7 +40,7 @@ export function SetPasswordForm() {
     const res = await setOwnPassword({ newPassword: password });
     if (!res?.data?.ok) {
       setBusy(false);
-      return setError(res?.serverError ?? "Something went wrong. Try again.");
+      return setError(res?.serverError ?? "We couldn't save your password just now. Try again.");
     }
     router.replace("/dashboard");
     router.refresh();

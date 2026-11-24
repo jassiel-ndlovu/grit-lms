@@ -37,7 +37,7 @@ export function AcceptInvite({ token, workspaceName, signedInAs, emailMasked }: 
     }
     setBusy(false);
     if (r?.reason === "WRONG_ACCOUNT") return setWrongAccount(r.emailMasked ?? emailMasked);
-    setError((r?.reason && REASON[r.reason]) || res?.serverError || "Something went wrong. Try again.");
+    setError((r?.reason && REASON[r.reason]) || res?.serverError || "We couldn't accept the invitation just now. Try again in a minute.");
   }
 
   if (wrongAccount) {

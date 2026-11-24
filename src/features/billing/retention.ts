@@ -150,7 +150,7 @@ async function assertDue(workspaceId: string, now: Date) {
  * enrolments and billing settings with it. Then learners, memberships, usage
  * rows and the logo. Files go after each commit, only from our Blob store.
  *
- * Kept: the Workspace row (renamed to its legal name or "Deleted workspace"),
+ * Kept: the Workspace row (renamed to its legal name or "Deleted organisation"),
  * Subscription, invoices and their lines, seat charges, payments, refunds,
  * off-site payments and AuditLog, for tax law. User accounts are kept: a
  * person may belong to other workspaces, and account deletion is separate.
@@ -220,7 +220,7 @@ export async function deleteWorkspaceData(
     await tx.bankQuestion.deleteMany({ where: { workspaceId } });
     await tx.workspace.update({
       where: { id: workspaceId },
-      data: { name: ws.subscription?.legalName || "Deleted workspace", logoUrl: null, accentColor: null },
+      data: { name: ws.subscription?.legalName || "Deleted organisation", logoUrl: null, accentColor: null },
     });
     // No longer due: the retention date is cleared once the data is gone.
     await tx.subscription.update({ where: { workspaceId }, data: { deleteAfter: null } });

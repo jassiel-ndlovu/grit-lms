@@ -39,7 +39,7 @@ export function cleanCode(input: string): string | null {
 
 /** A's checkout errors ("CODE: detail") in words for the payer. */
 export function checkoutErrorMessage(serverError: string | null | undefined): string {
-  if (!serverError) return "Something went wrong. Try again.";
+  if (!serverError) return "That didn't work. Check your connection and try again.";
   const m = /^([A-Z_]+):\s*(.+)$/.exec(serverError.trim());
   if (!m) return serverError;
   const [, code, detail] = m;
@@ -51,7 +51,7 @@ export function checkoutErrorMessage(serverError: string | null | undefined): st
     case "BILLING_DISABLED":
       return "Online payments aren't switched on yet.";
     case "PROVIDER_ERROR":
-      return "Paystack didn't answer. Nothing was charged; try again in a minute.";
+      return "We couldn't reach the payment service. Nothing was charged. Try again in a minute.";
     case "NOT_FOUND":
       return "Some of these fees have changed. Refresh the page and try again.";
     default:

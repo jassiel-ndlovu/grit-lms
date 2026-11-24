@@ -17,7 +17,7 @@ export default function DashboardNotFound() {
   return (
     <ErrorScreen
       kind="404"
-      description="It may have been moved or deleted, or it belongs to a workspace or course you're not part of. Check the address, or pick a page from the menu."
+      description="It may have been moved or deleted, or it belongs to an organisation or course you're not part of. Check the address, or pick a page from the menu."
       detail={<MissingPath />}
       actions={
         <>

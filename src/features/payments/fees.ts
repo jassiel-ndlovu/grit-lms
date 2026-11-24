@@ -163,7 +163,7 @@ export async function upsertFeeSchedule(actor: Actor, workspaceId: string, input
     if (course?.workspaceId !== workspaceId) throw new BillingError("NOT_FOUND", "Course not found");
     if (input.learnerId) {
       const l = await tx.learner.findUnique({ where: { id: input.learnerId }, select: { workspaceId: true } });
-      if (l?.workspaceId !== workspaceId) throw new BillingError("NOT_FOUND", "Learner not found");
+      if (l?.workspaceId !== workspaceId) throw new BillingError("NOT_FOUND", "That student isn't in this organisation any more. Refresh the page.");
     }
     const data = {
       courseId: input.courseId, learnerId: input.learnerId ?? null, kind: input.kind, amountCents: input.amountCents,
@@ -203,13 +203,13 @@ export type IssueLine = { courseId?: string | null; description: string; quantit
 export async function issueInvoice(actor: Actor | null, workspaceId: string, input: { learnerId: string; lines: IssueLine[]; dueAt: string; periodStart?: Date; periodEnd?: Date }) {
   if (input.lines.length === 0) throw new BillingError("FORBIDDEN", "An invoice needs at least one line");
   for (const l of input.lines) {
-    if (!Number.isSafeInteger(l.quantity) || l.quantity <= 0) throw new BillingError("FORBIDDEN", "Quantities are whole numbers above zero");
-    if (!Number.isSafeInteger(l.unitAmountCents) || l.unitAmountCents <= 0) throw new BillingError("FORBIDDEN", "Amounts are whole cents above zero");
+    if (!Number.isSafeInteger(l.quantity) || l.quantity <= 0) throw new BillingError("FORBIDDEN", "Each quantity must be a whole number, 1 or more.");
+    if (!Number.isSafeInteger(l.unitAmountCents) || l.unitAmountCents <= 0) throw new BillingError("FORBIDDEN", "Each amount must be more than R0.");
   }
   const dueAt = new Date(input.dueAt);
-  if (Number.isNaN(dueAt.getTime())) throw new BillingError("FORBIDDEN", "Invalid due date");
+  if (Number.isNaN(dueAt.getTime())) throw new BillingError("FORBIDDEN", "Check the due date: choose a day from the calendar.");
   const learner = await prisma.learner.findUnique({ where: { id: input.learnerId }, select: { workspaceId: true, userId: true } });
-  if (learner?.workspaceId !== workspaceId) throw new BillingError("NOT_FOUND", "Learner not found");
+  if (learner?.workspaceId !== workspaceId) throw new BillingError("NOT_FOUND", "That student isn't in this organisation any more. Refresh the page.");
 
   const payees = new Map<string, string>();
   for (const l of input.lines) {
@@ -218,7 +218,7 @@ export async function issueInvoice(actor: Actor | null, workspaceId: string, inp
       if (c?.workspaceId !== workspaceId) throw new BillingError("NOT_FOUND", "Course not found");
     }
     const payee = await resolvePayee(prisma, l.courseId ?? null, workspaceId);
-    if (!payee) throw new BillingError("FORBIDDEN", "Connect a payout account before issuing invoices");
+    if (!payee) throw new BillingError("FORBIDDEN", "Add the bank account your fees are paid into before you send fees.");
     payees.set(payee.id, payee.status);
   }
   if (payees.size > 1) throw new BillingError("FORBIDDEN", "These courses are paid to different tutors; issue one invoice per tutor");
@@ -304,7 +304,7 @@ export async function markInvoicePaidOffsite(
 export async function voidOffsitePayment(actor: Actor, workspaceId: string, input: { offsitePaymentId: string; reason: string }) {
   return prisma.$transaction(async (tx) => {
     const off = await tx.offsitePayment.findUnique({ where: { id: input.offsitePaymentId }, select: { workspaceId: true, invoiceId: true, voidedAt: true } });
-    if (off?.workspaceId !== workspaceId || !off.invoiceId) throw new BillingError("NOT_FOUND", "Off-site payment not found");
+    if (off?.workspaceId !== workspaceId || !off.invoiceId) throw new BillingError("NOT_FOUND", "That cash or bank transfer payment wasn't found. Refresh the page and try again.");
     if (off.voidedAt) throw new BillingError("FORBIDDEN", "Already voided");
     await tx.offsitePayment.update({ where: { id: input.offsitePaymentId }, data: { voidedAt: new Date() } });
     await tx.invoice.update({ where: { id: off.invoiceId }, data: { status: "OPEN", paidAt: null, paidVia: null } });

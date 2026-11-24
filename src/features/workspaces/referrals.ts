@@ -43,7 +43,7 @@ async function belongsAsFamily(userId: string, workspaceId: string): Promise<boo
 
 /** The person's link for a workspace (made on first ask), and how it has done. */
 export async function referralLinkFor(userId: string, workspaceId: string) {
-  if (!(await belongsAsFamily(userId, workspaceId))) throw new UserError("Only students and parents in this workspace have a referral link.");
+  if (!(await belongsAsFamily(userId, workspaceId))) throw new UserError("Only students and parents in this organisation have a referral link.");
   let code = await prisma.referralCode.findUnique({ where: { workspaceId_userId: { workspaceId, userId } }, select: { id: true, code: true } });
   if (!code) {
     for (let i = 0; i < 3 && !code; i++) {

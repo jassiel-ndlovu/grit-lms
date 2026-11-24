@@ -26,7 +26,7 @@ const MAX_BYTES = 1_000_000;
 /** What each import does, in a sentence. Unknown kinds show only their title. */
 const BLURB: Record<string, string> = {
   students: "New students get a username and a sign-in code; parents are linked by email or get a code too.",
-  staff: "Each row gets the usual invitation by email. People already in the workspace are skipped.",
+  staff: "Each row gets the usual invitation by email. People already in your organisation are skipped.",
 };
 
 export function ImportStart({ types, initialKind }: { types: ImportType[]; initialKind?: string | null }) {

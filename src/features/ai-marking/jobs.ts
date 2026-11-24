@@ -122,7 +122,7 @@ export async function runAiMarking(opts: { limit?: number; marker?: Marker; now?
     });
     try {
       if (await aiCapReached(s.workspaceId, now)) {
-        await prisma.aiMarkSuggestion.update({ where: { id }, data: { status: "SKIPPED", error: "The workspace's AI mark limit for this period is reached" } });
+        await prisma.aiMarkSuggestion.update({ where: { id }, data: { status: "SKIPPED", error: "Your organisation has used all its AI marking for this billing period. Mark this answer yourself, or wait for the next period." } });
         r.capped++;
         continue;
       }

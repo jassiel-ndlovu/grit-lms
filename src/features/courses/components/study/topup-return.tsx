@@ -68,7 +68,7 @@ export function TopupReturn({ reference, staff }: { reference: string | null; st
     return (
       <div role="status" className={`${BOX} border-border`}>
         <p className="inline-flex items-center gap-2">
-          <Loader2 aria-hidden className="size-4 animate-spin" /> Checking your payment with Paystack…
+          <Loader2 aria-hidden className="size-4 animate-spin" /> Checking your payment…
         </p>
       </div>
     );
@@ -95,14 +95,14 @@ export function TopupReturn({ reference, staff }: { reference: string | null; st
     return (
       <div role="status" className={`${BOX} border-border`}>
         <p className="text-foreground font-medium">We&apos;re still confirming your payment.</p>
-        <p>You can leave this page. The credits are added once Paystack confirms it. {back}</p>
+        <p>You can leave this page. The credits are added as soon as your bank confirms the payment, usually within a minute. {back}</p>
       </div>
     );
   }
   return (
     <div role="status" className={`${BOX} border-border`}>
       <p className="text-foreground font-medium">We couldn&apos;t check this payment.</p>
-      <p>If money left your account, the credits are added once Paystack confirms it. {back}</p>
+      <p>If money left your account, the credits will be added within an hour. Please don&apos;t pay again in the meantime. {back}</p>
     </div>
   );
 }

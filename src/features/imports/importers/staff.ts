@@ -122,7 +122,7 @@ export const staffImporter: Importer<StaffRow> = {
       resolveTeams(teamsByName, r.teams ?? "", issues);
       if (email && members.has(email)) {
         action = "skip";
-        issues.push({ field: "email", level: "warning", message: "Already a member of this workspace." });
+        issues.push({ field: "email", level: "warning", message: "Already a member of this organisation." });
       }
       return { action, issues };
     });

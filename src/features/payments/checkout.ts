@@ -75,7 +75,7 @@ async function prepareCheckout(payer: Payer, input: { invoiceIds: string[]; disc
     if (!allowed.has(i.studentUserId)) throw new BillingError("FORBIDDEN", "You can't pay one of these invoices");
     if (i.status !== "OPEN") throw new BillingError("FORBIDDEN", "One of these invoices is no longer open");
     if (i.lockedUntil && i.lockedUntil > now) throw new BillingError("FORBIDDEN", "One of these invoices is already being paid; try again in 30 minutes");
-    if (i.payoutAccount.status !== "ACTIVE") throw new BillingError("FORBIDDEN", "A tutor's payout account isn't ready yet");
+    if (i.payoutAccount.status !== "ACTIVE") throw new BillingError("FORBIDDEN", "This tutor can't take card payments yet. Pay them another way for now, or try again later.");
   }
   const discount = input.discountCode?.trim()
     ? await resolveCheckoutDiscount(prisma, { code: input.discountCode, payerUserId: payer.userId, invoices, now })

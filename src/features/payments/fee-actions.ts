@@ -173,7 +173,7 @@ export const voidOffsitePayment = viewerActionClient
   .action(async ({ parsedInput }) => {
     const { viewer, workspaceId } = await staff();
     const off = await prisma.offsitePayment.findUnique({ where: { id: parsedInput.offsitePaymentId }, select: { invoiceId: true } });
-    if (!off?.invoiceId) throw new BillingError("NOT_FOUND", "Off-site payment not found");
+    if (!off?.invoiceId) throw new BillingError("NOT_FOUND", "That cash or bank transfer payment wasn't found. Refresh the page and try again.");
     await assertFeeScope(viewer, await invoiceCourses(off.invoiceId), "fees.markOffsite");
     return done(await fees.voidOffsitePayment(actorOf(viewer), workspaceId, parsedInput));
   });

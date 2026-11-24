@@ -82,7 +82,7 @@ export function CreditPacks({
           {error}
         </p>
       ) : null}
-      <p className="text-muted-foreground text-xs">Paid to Nexa by card, on Paystack&apos;s page.</p>
+      <p className="text-muted-foreground text-xs">Paid to Nexa by card, on a secure payment page.</p>
     </div>
   );
 }

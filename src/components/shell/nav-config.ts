@@ -112,7 +112,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       ],
     },
     {
-      label: "Workspace",
+      label: "Organisation",
       items: [
         // Shown without Plus too; the page says what opens it (billing.md Draft 1.17).
         { label: "Business", href: "/dashboard/business", icon: "analytics", keywords: ["reports", "income", "collected", "overdue", "students", "dashboard"], requires: "reports.view" },

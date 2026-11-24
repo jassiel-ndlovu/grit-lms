@@ -35,8 +35,8 @@ export default async function BillingPaymentsPage({ searchParams }: PageProps) {
       overview.state === "TRIAL" && overview.trialEndsAt
         ? `Your first payment is due when your trial ends on ${formatDate(new Date(overview.trialEndsAt), ctx)}.`
         : overview.state === "COMPED"
-          ? "Your workspace is complimentary, so there is nothing to pay."
-          : "Payments show here once Nexa bills your workspace.";
+          ? "Your organisation is free of charge, so there's nothing to pay."
+          : "Your payments to Nexa show here after your first bill.";
     return (
       <BillingFrame page={[{ label: "Payments" }]} title="Payments">
         <PaymentsList

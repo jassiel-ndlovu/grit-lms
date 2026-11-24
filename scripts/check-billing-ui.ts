@@ -38,8 +38,8 @@ check("delta down", formatDelta(-48000), "−R480");
 check("delta none", formatDelta(0), "R0");
 
 check("error code mapped", billingErrorMessage("PAST_DUE: Pay the overdue bill"), "Pay the overdue bill before moving a course to a higher plan.");
-check("unknown code", billingErrorMessage("WAT: x"), "Something went wrong. Try again.");
-check("no error text", billingErrorMessage(undefined), "Something went wrong. Try again.");
+check("unknown code", billingErrorMessage("WAT: x"), "That didn't work, and it isn't something you did. Try again in a minute. If it keeps happening, report it from Help.");
+check("no error text", billingErrorMessage(undefined), "That didn't work. Check your connection and try again.");
 
 const s = (over: Partial<ServiceRow>): ServiceRow => ({
   key: "k", name: "K", kind: "premium", tierKey: "PLUS", status: "v1", enabled: false, availableNow: true, ...over,

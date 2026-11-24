@@ -26,7 +26,7 @@ export function VerifyEmailButton({ token }: { token: string }) {
         email: res.data.status === "verified" ? res.data.email : undefined,
       });
     } else {
-      setState({ phase: "error", message: res?.serverError ?? "Something went wrong." });
+      setState({ phase: "error", message: res?.serverError ?? "We couldn't confirm your email address just now. Try again in a minute." });
     }
   }
 

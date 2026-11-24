@@ -32,7 +32,7 @@ const ROLES: { role: Role; title: string; body: string; icon: typeof Users }[] =
   {
     role: "TUTOR",
     title: "I teach",
-    body: "Run your own classes or your school's. Next, you'll set up a workspace with a free trial.",
+    body: "Run your own classes or your school's. Next, you'll set up your organisation, with a free trial.",
     icon: Presentation,
   },
   {
@@ -245,7 +245,7 @@ function PreferencesStep({ role, next }: { role: Role; next: string }) {
         </Button>
         <Button type="button" onClick={() => void save()} disabled={busy}>
           {busy ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
-          {role === "TUTOR" ? "Save and set up workspace" : "Save and continue"}
+          {role === "TUTOR" ? "Save and set up my organisation" : "Save and continue"}
         </Button>
       </div>
     </div>

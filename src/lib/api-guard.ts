@@ -75,7 +75,7 @@ export async function requireApiStaffWrite(...roles: Role[]): Promise<GuardResul
   if (!guard.ok) return guard;
   const viewer = await getViewer();
   if (viewer?.persona === "staff" && viewer.workspace?.readOnly) {
-    return { ok: false, response: NextResponse.json({ error: "READ_ONLY: Your workspace is read-only. Pay to unlock it." }, { status: 423 }) };
+    return { ok: false, response: NextResponse.json({ error: "READ_ONLY: Your organisation is locked until it's paid for. Everyone can still see their work, but nothing can be changed. Pay from Billing to unlock it." }, { status: 423 }) };
   }
   return guard;
 }

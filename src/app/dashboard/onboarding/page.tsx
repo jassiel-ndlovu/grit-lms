@@ -24,7 +24,7 @@ export default async function OnboardingPage() {
 
   return (
     <OnboardingFrame step={null} trialDays={null}>
-      <StepHeading title="How will you use Nexa?" lead="This sets up your workspace. Only you can see it until you add people." />
+      <StepHeading title="How will you use Nexa?" lead="This sets up your organisation on Nexa: its name and how you teach. Only you can see it until you add people." />
       {viewer.user.emailVerified ? (
         <KindChooser />
       ) : (

@@ -77,7 +77,7 @@ const KINDS = [
     icon: User,
     title: "Solo practice",
     lead: "I teach my own students.",
-    body: "You own the workspace and teach in it.",
+    body: "You own the organisation and teach in it.",
   },
   {
     kind: "ORGANISATION" as const,

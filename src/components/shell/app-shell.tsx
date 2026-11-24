@@ -67,7 +67,7 @@ export interface ShellUser {
   workspaces?: ShellWorkspace[];
   /** The active one (viewer.workspace.id); null for guardians and admins. */
   workspaceId?: string | null;
-  /** Offer "Create a workspace" (billing on, verified email, not a learner or guardian). */
+  /** Offer "Set up an organisation" (billing on, verified email, not a learner or guardian). */
   canCreateWorkspace?: boolean;
   /**
    * Organisation or tutor mode (viewer.mode, #192). Set only for an owner
@@ -145,7 +145,7 @@ function useWorkspaceSwitch() {
     start(async () => {
       const res = await switchWorkspace({ workspaceId });
       if (res?.data) router.refresh();
-      else toast.error("Could not switch workspace. Try again.");
+      else toast.error("We couldn't switch organisation. Try again.");
     });
   return { pending, switchTo };
 }
@@ -184,7 +184,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
         {workspaces.length > 1 ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">Workspace</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">Organisation</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={user.workspaceId ?? ""}
               onValueChange={(id) => id !== user.workspaceId && switchTo(id)}
@@ -200,7 +200,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
         ) : null}
         {user.canCreateWorkspace ? (
           <DropdownMenuItem asChild>
-            <Link href="/dashboard/onboarding"><Plus /> Create a workspace</Link>
+            <Link href="/dashboard/onboarding"><Plus /> Set up an organisation</Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />

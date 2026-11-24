@@ -101,7 +101,7 @@ export default async function SettingsPage() {
         >
           <span>
             <span className="text-foreground block font-semibold">Billing</span>
-            <span className="text-muted-foreground">Plans, the next payment and limits for this workspace.</span>
+            <span className="text-muted-foreground">Plans, the next payment and limits for this organisation.</span>
           </span>
           <span aria-hidden className="text-muted-foreground">→</span>
         </Link>

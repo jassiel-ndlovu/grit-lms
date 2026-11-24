@@ -28,15 +28,16 @@ export function cleanAccountNumber(input: string): string | null {
 
 /**
  * A payouts or fees action's `serverError` in words. The bank not knowing
- * the account gets the sentence from ux/04 §7; other messages from A and
- * Paystack are shown as they are, without the code.
+ * the account gets the sentence from ux/04 §7; other messages from A are
+ * shown as they are, without the code (the server words payment-service
+ * errors itself).
  */
 export function payoutErrorMessage(serverError: string | null | undefined): string {
-  if (!serverError) return "Something went wrong. Try again.";
+  if (!serverError) return "That didn't work. Check your connection and try again.";
   const m = /^([A-Z_]+):\s*(.+)$/.exec(serverError.trim());
   if (!m) return serverError;
   const [, code, detail] = m;
-  if (code === "NOT_FOUND" && /account/i.test(detail)) return "Paystack couldn't find that account. Check the bank and number.";
+  if (code === "NOT_FOUND" && /account/i.test(detail)) return "The bank couldn't find that account. Check the bank and the account number.";
   if (code === "BILLING_DISABLED") return "Payments aren't switched on yet.";
   return detail;
 }
@@ -59,7 +60,7 @@ export function feeChip(status: FeeStatus, paidVia: "ONLINE" | "OFFSITE" | null,
     case "OPEN":
       return dueDay < today ? { label: "Overdue", tone: "danger" } : { label: "Open", tone: "warning" };
     case "PAID":
-      return { label: paidVia === "OFFSITE" ? "Paid off-site" : paidVia === "ONLINE" ? "Paid online" : "Paid", tone: "success" };
+      return { label: paidVia === "OFFSITE" ? "Paid in cash or by transfer" : paidVia === "ONLINE" ? "Paid online" : "Paid", tone: "success" };
     case "VOID":
       return { label: "Cancelled", tone: "neutral" };
     case "REFUNDED":

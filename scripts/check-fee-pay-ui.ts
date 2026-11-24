@@ -56,9 +56,9 @@ check(
     "That code has expired.",
     "That code doesn't apply to these invoices.",
     "One of these invoices is already being paid; try again in 30 minutes.",
-    "Paystack didn't answer. Nothing was charged; try again in a minute.",
+    "We couldn't reach the payment service. Nothing was charged. Try again in a minute.",
     "Some of these fees have changed. Refresh the page and try again.",
-    "Something went wrong. Try again.",
+    "That didn't work. Check your connection and try again.",
     "Not authenticated",
   ],
 );
