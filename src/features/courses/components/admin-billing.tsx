@@ -179,7 +179,7 @@ export function WorkspaceTable({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[48rem] text-sm">
           <thead className="text-muted-foreground border-border border-b text-left text-xs">
             <tr>

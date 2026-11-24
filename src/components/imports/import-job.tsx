@@ -198,7 +198,7 @@ function Preview({ view, headers, busy, run }: { view: ImportView; headers: stri
             {onlyProblems ? "No problems. Every row is ready." : "No rows left."}
           </p>
         ) : (
-          <div className="border-border overflow-x-auto rounded-lg border">
+          <div className="relative border-border overflow-x-auto rounded-lg border">
             <table className="w-full min-w-max text-sm">
               <thead className="bg-muted/50 text-muted-foreground text-left text-xs">
                 <tr>

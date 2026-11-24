@@ -29,12 +29,13 @@ check("trailing segment boundary", activeHref("/dashboard/testsuite", hrefs), nu
 // viewer, plus Find courses (learners, guardians), Calendar for guardians
 // (#149), Join requests (staff
 // with learners.invite) from #206, referrals (learners and guardians), and
-// At risk (staff with grades.view).
+// At risk (staff with grades.view), and Bookings after Calendar (staff with
+// content.view).
 const BEFORE: Record<LegacyRole, string[]> = {
-  STUDENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses", "/dashboard/courses/browse", "/dashboard/calendar", "/dashboard/tests", "/dashboard/assignments", "/dashboard/grades", "/dashboard/referrals"],
-  TUTOR: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-courses", "/dashboard/calendar", "/dashboard/tutor-tests", "/dashboard/assignments", "/dashboard/gradebook", "/dashboard/analytics", "/dashboard/students", "/dashboard/at-risk", "/dashboard/join-requests"],
+  STUDENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses", "/dashboard/courses/browse", "/dashboard/calendar", "/dashboard/bookings", "/dashboard/tests", "/dashboard/assignments", "/dashboard/grades", "/dashboard/referrals"],
+  TUTOR: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-courses", "/dashboard/calendar", "/dashboard/bookings", "/dashboard/tutor-tests", "/dashboard/assignments", "/dashboard/gradebook", "/dashboard/analytics", "/dashboard/students", "/dashboard/at-risk", "/dashboard/join-requests"],
   ADMIN: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-users"],
-  PARENT: ["/dashboard", "/dashboard/notifications", "/dashboard/calendar", "/dashboard/courses/browse", "/dashboard/referrals"],
+  PARENT: ["/dashboard", "/dashboard/notifications", "/dashboard/calendar", "/dashboard/bookings", "/dashboard/courses/browse", "/dashboard/referrals"],
 };
 for (const role of Object.keys(BEFORE) as LegacyRole[]) {
   check(`${role}: expected links`, hrefsOf(navSectionsFor(viewerFor(role))), BEFORE[role]);

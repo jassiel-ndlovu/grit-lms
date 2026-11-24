@@ -87,7 +87,7 @@ export function WorkspaceDetail({ ws, ctx, canOverride }: { ws: AdminWorkspace; 
         {ws.courses.length === 0 ? (
           <p className="text-muted-foreground text-sm">No courses yet.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[40rem] text-sm">
               <thead className="text-muted-foreground border-border border-b text-left text-xs">
                 <tr>
@@ -137,7 +137,7 @@ export function WorkspaceDetail({ ws, ctx, canOverride }: { ws: AdminWorkspace; 
         {ws.invoices.items.length === 0 ? (
           <p className="text-muted-foreground text-sm">No invoices yet.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[36rem] text-sm">
               <thead className="text-muted-foreground border-border border-b text-left text-xs">
                 <tr>
@@ -274,7 +274,7 @@ export function DiscountCodeTable({
   }
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[46rem] text-sm">
           <thead className="text-muted-foreground border-border border-b text-left text-xs">
             <tr>
@@ -365,7 +365,7 @@ export function RetentionTable({ preview, ctx }: { preview: RetentionPreview; ct
       {preview.items.length === 0 ? (
         <EmptyState compact title="Nothing past its retention date" description="Workspaces show here once their data is due for deletion." />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
             <thead className="text-muted-foreground border-border border-b text-left text-xs">
               <tr>

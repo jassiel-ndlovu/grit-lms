@@ -47,6 +47,55 @@ Not done:
 - Parents don't get the topic map or the class page.
 - The final logo: swap the drawing in `hubFigure` when it arrives.
 
+## 2026-11-24 Study assistant and AI credits screens (#216, phase 3), `revamp/b-study-assistant`
+
+No migration, no env vars. All in B's paths, over A's `features/study` and
+`features/ai-credits` (viewer.md Drafts 1.27 and 1.29, billing.md Draft 1.18).
+
+Done:
+- `/dashboard/courses/[id]/assistant`: a student's chats, with maths, links to
+  the lessons an answer used, questions and credits left, and a line saying
+  tutors can read the chats. The tab shows only with billing on.
+- `/dashboard/manage-courses/[id]/study-chats`: for staff with
+  `content.view`, flagged chats first, concerns beside messages, Clear flag.
+  A's notification link redirects there.
+- `/dashboard/credits` (student, or parent per child) and
+  `/dashboard/settings/billing/credits` (organisation): what's left, when it
+  expires, packs to buy. `/dashboard/credits/return` after Paystack.
+- Samples on `/design-system/study`, `check-study-ui.ts`.
+
+Not built: a parent's view of the chats. A pupil may use the assistant to say
+something about home, so the owner should decide first (the contract marks it
+optional). Parents buy credits only.
+
+For A:
+- `askStudy` doesn't touch `StudyChat.updatedAt` for an existing chat, so the
+  lists stay in the order chats were started, and a chat still in use is
+  deleted a year after its first question.
+- `getStudyChat` and `askStudy` let a parent read and ask in a child's chats.
+  See above: until it's decided, refuse it or tell the student.
+
+## 2026-11-24 Session booking screens (#216, phase 2), `revamp/b-booking`
+
+No migration, no env vars. All in B's paths, over A's `features/booking`
+(viewer.md Draft 1.21).
+
+Done:
+- `/dashboard/bookings`: families see upcoming and past lessons and the
+  lessons left on their packs; staff see a week of their own, a course's
+  (`courses.edit`) or another tutor's (`cover.manage`), with cancel, done,
+  no-show and the online link.
+- `/dashboard/bookings/book`: free times for a week, for a student, a parent
+  (per child) or staff (per student). Courses without Plus or without hours
+  aren't offered.
+- `/dashboard/bookings/hours`: weekly hours, time off, and the booking rules
+  (`workspace.settings`).
+- Student page: a Lessons tab with the pack balances and a correction
+  (`fees.manage`).
+- Buy shows only while billing is on; it goes to Fees for the checkout.
+- Bookings in the sidebar, booked lessons on the calendar, a link on the
+  child page. Samples on `/design-system/booking`, `check-booking-ui.ts`.
+
 ## 2026-11-24 Unused reads retired, `revamp/b-retire-reads`
 
 In A's files, with the owner's OK:

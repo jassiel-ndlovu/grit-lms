@@ -60,7 +60,7 @@ export function CalendarView({ view, days, anchor, today, entries, empty, child,
         title={e.title}
         className={cn(
           "focus-visible:ring-ring flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-left text-xs outline-none focus-visible:ring-2",
-          e.kind === "event" ? "bg-primary/10 text-foreground hover:bg-primary/15" : "bg-muted text-muted-foreground hover:bg-muted/70",
+          e.kind === "event" || e.kind === "booking" ? "bg-primary/10 text-foreground hover:bg-primary/15" : "bg-muted text-muted-foreground hover:bg-muted/70",
           e.cancelled && "line-through opacity-60",
         )}
       >
@@ -120,7 +120,7 @@ export function CalendarView({ view, days, anchor, today, entries, empty, child,
                 {list.length > 0 && (
                   <Link href={dayHref(d)} tabIndex={-1} aria-hidden className="flex gap-0.5 pl-1 sm:hidden">
                     {list.slice(0, 3).map((e) => (
-                      <span key={e.id} className={cn("size-1.5 rounded-full", e.kind === "event" ? "bg-foreground" : "bg-muted-foreground/50", e.cancelled && "opacity-30")} />
+                      <span key={e.id} className={cn("size-1.5 rounded-full", e.kind === "event" || e.kind === "booking" ? "bg-foreground" : "bg-muted-foreground/50", e.cancelled && "opacity-30")} />
                     ))}
                   </Link>
                 )}

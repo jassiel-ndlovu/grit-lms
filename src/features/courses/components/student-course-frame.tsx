@@ -1,6 +1,6 @@
 /**
  * The frame of a learner's course pages (#205): a record PageFrame with
- * My courses › course in the header and Overview / Lessons / Topics / Practice in the ribbon,
+ * My courses › course in the header and Overview / Lessons / Topics / Practice / Assistant in the ribbon,
  * like CourseFrame on the tutor's side. The lesson reader passes
  * `type="editor"` for its full width (tree beside the lesson).
  *
@@ -15,6 +15,8 @@ import type { PageType } from "@/lib/ui-layout";
 
 import { courseHasTopics } from "../topic-map";
 import { studentCourseRoutes } from "../lib/student-routes";
+import { studyRoutes } from "../lib/study-ui";
+import { hasStudyAssistant } from "../study";
 
 export { studentCourseRoutes };
 
@@ -44,7 +46,9 @@ export async function StudentCourseFrame({
   ];
   if (parent) crumbs.push(parent);
   if (page) crumbs.push({ label: page });
-  const [practice, topics] = await Promise.all([studentHasPractice(course.id), courseHasTopics(course.id)]);
+  const [practice, topics, assistant] = await Promise.all([
+    studentHasPractice(course.id), courseHasTopics(course.id), hasStudyAssistant(course.id),
+  ]);
   return (
     <PageFrame
       type={type}
@@ -59,6 +63,7 @@ export async function StudentCourseFrame({
             { label: "Lessons", href: studentCourseRoutes.lessons(course.id) },
             ...(topics ? [{ label: "Topics", href: studentCourseRoutes.topics(course.id) }] : []),
             ...(practice ? [{ label: "Practice", href: studentCourseRoutes.practice(course.id) }] : []),
+            ...(assistant ? [{ label: "Assistant", href: studyRoutes.assistant(course.id) }] : []),
           ]}
         />
       }

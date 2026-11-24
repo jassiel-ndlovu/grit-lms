@@ -82,7 +82,7 @@ export default async function PracticeSetPage({ params }: { params: Promise<{ id
         }
       >
         {students.length ? (
-          <div className="border-border overflow-x-auto rounded-lg border">
+          <div className="relative border-border overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-muted-foreground text-left text-xs">
                 <tr>

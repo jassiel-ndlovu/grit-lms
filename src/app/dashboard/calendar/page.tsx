@@ -9,8 +9,8 @@
  * Sessions come from A's `listCalendarOccurrences` for exactly the days on
  * screen (at most 42, under its 120-day limit), which already scopes them
  * by role: taught courses (owners and admins: the workspace), enrolled
- * courses, and children's courses. Tests and assignments due are added for
- * students and tutors, as before. Every time shows in the viewer's zone.
+ * courses, and children's courses. Booked lessons (bookings.ts) are added for
+ * everyone, and tests and assignments due for students and tutors. Every time shows in the viewer's zone.
  */
 
 import Link from "next/link";
@@ -23,6 +23,7 @@ import { childRoutes } from "@/features/activity/lib/child-overview";
 import { hasService } from "@/features/billing/services";
 import { getCourseScope } from "@/features/courses/course-access";
 import { listCoursesByTutorId } from "@/features/courses/queries";
+import { bookingEntries } from "@/features/events/bookings";
 import { childCourseIds, dueForCourses, dueForStudent } from "@/features/events/calendar-feed";
 import { CalendarRibbon } from "@/features/events/components/calendar-ribbon";
 import { CheckInButton, SubscribeButton } from "@/features/events/components/calendar-tools";
@@ -64,10 +65,11 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
   const tutorCourses = tutor ? (await listCoursesByTutorId(await getCourseScope(session.user.id))).map((c) => ({ id: c.id, name: c.name })) : [];
 
-  const [occ, due, onlyCourses] = await Promise.all([
+  const [occ, due, onlyCourses, booked] = await Promise.all([
     listCalendarOccurrences({ from: range.from, to: range.to }),
     tutor ? dueForCourses(tutorCourses, range) : learner ? dueForStudent(session.user.email, range) : Promise.resolve([]),
     child ? childCourseIds(child.userId) : Promise.resolve(null),
+    bookingEntries(viewer, range, child?.userId),
   ]);
 
   let entries: CalendarEntry[] = (occ?.data ?? []).map((o) => ({
@@ -76,7 +78,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
     recurring: o.recurring, courseId: o.courseId, courseName: o.courseName, href: null,
   }));
   if (onlyCourses) entries = entries.filter((e) => onlyCourses.has(e.courseId));
-  entries = [...entries, ...due];
+  entries = [...entries, ...booked, ...due];
 
   // Check-in codes come with live-sessions (Plus), course by course.
   const checkInCourseIds: string[] = [];

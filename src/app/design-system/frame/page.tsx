@@ -170,7 +170,7 @@ export default async function FramePreviewPage({
             {switcher}
             <PageTitle icon={<BookOpen />} title="Courses" description="Every course in Riverside Maths Academy." />
             <PageSection>
-              <div className="overflow-x-auto">
+              <div className="relative overflow-x-auto">
                 <table className="w-full min-w-[32rem] text-sm">
                   <thead className="text-muted-foreground border-border border-b text-left text-xs">
                     <tr><th className="py-2 pr-3 font-medium">Course</th><th className="py-2 pr-3 font-medium">Tutor</th><th className="py-2 pr-3 font-medium">Students</th><th className="py-2 font-medium">State</th></tr>

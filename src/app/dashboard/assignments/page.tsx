@@ -202,7 +202,7 @@ export default async function SubmissionsIndexPage() {
               </span>
             </div>
             <Separator />
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/40 text-muted-foreground text-xs">
                   <tr>

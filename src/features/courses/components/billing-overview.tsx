@@ -18,6 +18,7 @@ import { STATE_CHIP, TIER_LABEL, capLabel, capTone, formatRand } from "../lib/bi
 import { CardButton, PayButton, PaymentReturn } from "./billing-pay";
 import { RestartPanel } from "./billing-restart";
 import { courseRoutes } from "./course-frame";
+import { studyRoutes } from "../lib/study-ui";
 import { TonePanel } from "@/components/ui/nexus";
 
 export type BillingOverviewData = Awaited<ReturnType<typeof getBillingOverview>>;
@@ -145,7 +146,7 @@ export function BillingOverview({
         {tiers.length === 0 ? (
           <p className="text-muted-foreground text-sm">No courses yet. Nothing to pay until a student joins a course.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[32rem] text-sm">
               <thead className="text-muted-foreground border-border border-b text-left text-xs">
                 <tr>
@@ -261,7 +262,7 @@ export function CapBar({ cap, label }: { cap: BillingOverviewData["caps"][number
 
 /**
  * The billing pages' PageFrame (#205, a Settings page at Reading width):
- * Settings › Billing [› page], the Overview / Usage / Payments ribbon, and
+ * Settings › Billing [› page], the Overview / Usage / Payments / AI credits ribbon, and
  * the page's title (default "Billing").
  */
 export function BillingFrame({
@@ -296,6 +297,7 @@ export function BillingFrame({
             { label: "Overview", href: billingRoutes.overview },
             { label: "Usage", href: billingRoutes.usage },
             { label: "Payments", href: billingRoutes.payments },
+            { label: "AI credits", href: studyRoutes.workspaceCredits },
           ]}
         />
       }

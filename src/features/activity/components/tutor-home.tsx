@@ -155,7 +155,7 @@ export function TutorHome({
                 description="Hand-ins to mark, work due this week and drafts show up here."
               />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="relative overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-border text-muted-foreground border-b text-left text-xs">

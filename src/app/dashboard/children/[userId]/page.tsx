@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { BookOpen, CalendarDays, GraduationCap, Hourglass, Pencil, Receipt, Target, TrendingUp } from "lucide-react";
+import { BookOpen, CalendarCheck, CalendarDays, GraduationCap, Hourglass, Pencil, Receipt, Sparkles, Target, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
@@ -26,6 +26,9 @@ import { getChildOverview } from "@/features/activity/child-overview";
 import { FamilyNotes } from "@/features/activity/components/at-risk/views";
 import { getAttendanceHistory } from "@/features/calendar/actions";
 import { AttendanceHistory, type HistoryRow } from "@/features/events/components/attendance-history";
+import { studyRoutes } from "@/features/courses/lib/study-ui";
+import { childHasAssistant } from "@/features/courses/study";
+import { bookingRoutes } from "@/features/events/lib/booking-ui";
 import { calendarRoutes } from "@/features/events/lib/calendar-ui";
 import { FamilyReports } from "@/features/grades/components/term-reports/views";
 import { releasedReportsFor } from "@/features/grades/term-reports";
@@ -49,12 +52,13 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
   const shortDate = (d: Date) => formatDate(d, dateCtx, { weekday: "short", month: "short", day: "numeric" });
 
   const now = new Date();
-  const [overview, attendance, practice, reports, notes] = await Promise.all([
+  const [overview, attendance, practice, reports, notes, assistant] = await Promise.all([
     getChildOverview(child, now),
     getAttendanceHistory({ childUserId: userId }),
     practiceForChild(userId, now),
     releasedReportsFor(viewer, userId),
     notesFromTutors(viewer, userId),
+    childHasAssistant(viewer, userId),
   ]);
   const courseCount = overview.workspaces.reduce((s, w) => s + w.courses.length, 0);
   const latest = overview.marks[0] ?? null;
@@ -258,10 +262,20 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
       </section>
 
       <Card className="divide-border divide-y p-0">
+        <Link href={bookingRoutes.home} className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 text-sm transition-colors">
+          <CalendarCheck className="text-brand-terracotta size-4" />
+          Extra lessons for {child.name.split(" ")[0]}
+        </Link>
         <Link href="/dashboard/fees" className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 text-sm transition-colors">
           <Receipt className="text-brand-terracotta size-4" />
           Fees for {child.name.split(" ")[0]}
         </Link>
+        {assistant ? (
+          <Link href={studyRoutes.childCredits(userId)} className="hover:bg-muted/40 flex items-center gap-3 px-5 py-3 text-sm transition-colors">
+            <Sparkles className="text-brand-terracotta size-4" />
+            Study credits for {child.name.split(" ")[0]}
+          </Link>
+        ) : null}
       </Card>
     </PageFrame>
   );
