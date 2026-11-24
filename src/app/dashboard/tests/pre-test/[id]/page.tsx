@@ -199,13 +199,10 @@ export default async function PreTestPage({ params }: PageProps) {
       {closed ? null : (
       <Card className="space-y-4 p-6">
         <p className="text-muted-foreground text-sm">
-          The clock starts as soon as you start the test
           {limitText
-            ? ` and you have ${ifStartedNow.cutShort ? `${minutesIfStartedNow} min` : limitText}${extraApplies ? ", including your extra time" : ""}.`
-            : extraApplies
-              ? ". You have no time limit on this test, but it still closes at its due time."
-              : "."}{" "}
-          Your answers save every few seconds. If you leave the page you can come back and carry on, but the clock keeps running.
+            ? `The clock starts as soon as you start the test and you have ${ifStartedNow.cutShort ? `${minutesIfStartedNow} min` : limitText}${extraApplies ? ", including your extra time" : ""}.`
+            : "There is no time limit, but the test closes at its due time."}{" "}
+          Your answers save every few seconds. If you leave the page you can come back and carry on{limitText ? ", but the clock keeps running" : ""}.
         </p>
         <div className="flex justify-end">
           <BeginTestButton

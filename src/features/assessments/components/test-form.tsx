@@ -587,7 +587,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
               Questions
             </h2>
             <p className="text-muted-foreground text-xs">
-              {questions.length} {questions.length === 1 ? "question" : "questions"} · {computedPoints} marks
+              {questions.length} {questions.length === 1 ? "question" : "questions"} · {computedPoints} {computedPoints === 1 ? "mark" : "marks"}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -685,7 +685,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
           <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">
               {questions.length} question{questions.length === 1 ? "" : "s"} · {" "}
-              {computedPoints} marks
+              {computedPoints} {computedPoints === 1 ? "mark" : "marks"}
             </div>
             <DraftStatus draft={draft} />
           </div>

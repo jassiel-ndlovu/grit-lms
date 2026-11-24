@@ -125,12 +125,12 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
               </span>
               <span className="inline-flex items-center gap-1">
                 <Hourglass className="size-4" />
-                {submission.totalPoints} marks
+                {submission.totalPoints} {submission.totalPoints === 1 ? "mark" : "marks"}
               </span>
               {submission.maxAttempts && (
                 <span className="inline-flex items-center gap-1">
                   <Users className="size-4" />
-                  {submission.maxAttempts} attempts allowed
+                  {submission.maxAttempts} {submission.maxAttempts === 1 ? "attempt" : "attempts"} allowed
                 </span>
               )}
             </div>
@@ -383,7 +383,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
               </span>
               <span className="inline-flex items-center gap-1">
                 <Hourglass className="size-4" />
-                {submission.totalPoints} marks
+                {submission.totalPoints} {submission.totalPoints === 1 ? "mark" : "marks"}
               </span>
             </div>
           }

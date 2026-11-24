@@ -820,7 +820,7 @@ const QuestionCard = React.memo(function QuestionCard({
                 value={feedback}
                 onChange={(e) => onFeedback(row.q.id, e.target.value)}
                 placeholder="Optional. Maths between $ signs shows as maths."
-                previewTitle={`Feedback for ${row.path}`}
+                previewTitle={`Comment on question ${row.path}`}
               />
               {comments.length > 0 ? (
                 <ul aria-label={`Comments used before on question ${path}`} className="flex flex-wrap gap-1.5">

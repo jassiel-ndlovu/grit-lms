@@ -11,7 +11,7 @@ import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { aiHelpFor } from "@/features/courses/ai-help";
 import { AiComments } from "@/features/grades/components/term-reports/ai-comments";
 import { CourseComments } from "@/features/grades/components/term-reports/views";
-import { commentsText, reportRoutes, termWindow } from "@/features/grades/lib/term-report";
+import { commentsText, percentText, reportRoutes, termWindow } from "@/features/grades/lib/term-report";
 import { courseReports, getTerm, reportStaff } from "@/features/grades/term-reports";
 import { getViewer } from "@/lib/viewer";
 
@@ -44,7 +44,10 @@ export default async function TermCoursePage({ params }: { params: Promise<{ ter
           <AiComments
             help={ai}
             term={{ id: term.id, title: term.title, from: termTimes.from.toISOString(), to: termTimes.before.toISOString() }}
-            students={reports.map((r) => ({ learnerId: r.learnerId, name: r.name, hasComment: r.courses.some((c) => c.courseId === courseId && c.comment) }))}
+            students={reports.map((r) => {
+              const mine = r.courses.find((c) => c.courseId === courseId);
+              return { learnerId: r.learnerId, name: r.name, hasComment: Boolean(mine?.comment), mark: percentText(mine?.percent ?? null) };
+            })}
           />
         ) : undefined
       }

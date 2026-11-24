@@ -13,7 +13,7 @@ import {
   assignmentBrief, draftToQuestion, feedbackText, isTypableKey, lessonGroup, numericKey, outlineGroups, testImport, type DraftQuestion,
 } from "../src/features/assessments/lib/ai-drafts";
 import { leftText } from "../src/features/courses/lib/ai-help";
-import { draftMarkdown, plainMaths, texParens } from "../src/features/courses/lib/ai-text";
+import { draftMarkdown, editableMaths, plainMaths, texParens } from "../src/features/courses/lib/ai-text";
 import { blockedBlock, tidyProblem } from "../src/features/lessons/lib/ai-tidy";
 import { CreateLessonsFromDraftSchema } from "../src/features/lessons/schemas";
 import { numericMatches } from "../src/features/assessments/lib/numeric";
@@ -82,6 +82,8 @@ pass(a.totalPoints === 5 && a.description.includes("- Answer: 1 mark") && !a.des
 pass(assignmentBrief({ title: "A", brief: "x", rubric: [], modelAnswer: "" }).totalPoints === 1, "no rubric: 1 mark, as the form's default");
 
 pass(feedbackText({ feedback: " Good. ", nextSteps: ["Check", " "] }) === "Good.\n\nNext steps:\n- Check", "a comment ends with its next steps");
+pass(feedbackText({ feedback: "\\(x^2 + 8x\\), not \\(x^2\\); \\(2 \\times 6 = 12\\).", nextSteps: ["Try \\(3\\)"] }) === "x² + 8x, not x²; 2 × 6 = 12.\n\nNext steps:\n- Try 3", "a comment's simple maths reads as typed");
+pass(editableMaths("\\(\\frac{1}{2}\\), \\(x^{ab}\\) and \\(\\sqrt{2}\\)") === "$\\frac{1}{2}$, $x^{ab}$ and $\\sqrt{2}$", "maths that needs layout keeps its dollars");
 pass(feedbackText({ feedback: "Good.", nextSteps: [] }) === "Good.", "no empty next steps");
 
 // Tidying

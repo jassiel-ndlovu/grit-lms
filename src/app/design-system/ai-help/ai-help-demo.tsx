@@ -53,9 +53,9 @@ const QUESTIONS: DraftQuestion[] = [
 
 const SAVER: DraftSaver = { lessons: () => wait(undefined), test: () => wait(undefined), assignment: () => wait(undefined) };
 const CLASS = [
-  { learnerId: "a", name: "Thandi Mokoena", hasComment: false },
-  { learnerId: "b", name: "Nkosinathi Johannes van der Westhuizen-Mokoena", hasComment: false },
-  { learnerId: "c", name: "Zanele Mthembu", hasComment: true },
+  { learnerId: "a", name: "Thandi Mokoena", hasComment: false, mark: "72.2%" },
+  { learnerId: "b", name: "Nkosinathi Johannes van der Westhuizen-Mokoena", hasComment: false, mark: "Not marked yet" },
+  { learnerId: "c", name: "Zanele Mthembu", hasComment: true, mark: "100%" },
 ];
 
 export function AiHelpDemo() {

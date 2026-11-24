@@ -29,7 +29,8 @@ import { cn } from "@/lib/utils";
 import { COMMENT_MAX } from "../../lib/term-report";
 import { announceComment, sendComment, type CommentTarget } from "./comment-box";
 
-export type CommentStudent = { learnerId: string; name: string; hasComment: boolean };
+/** `mark` is the report's own mark in words, to check a draft against. */
+export type CommentStudent = { learnerId: string; name: string; hasComment: boolean; mark?: string };
 type Drafts = Awaited<ReturnType<typeof reportCommentDrafts>>;
 type RunInput = {
   courseId: string;
@@ -130,9 +131,10 @@ export function AiComments({ help, term, students, runWith = draftComments, save
   }
 
   const result = ai.result;
-  const written = result ? result.comments.filter((c) => texts[c.learnerId] !== undefined) : [];
+  // In the page's order, whatever order they came back in.
+  const written = result ? students.filter((s) => texts[s.learnerId] !== undefined) : [];
   // Asked for but not drafted: no longer enrolled, or the AI skipped them.
-  const without = result ? students.filter((s) => chosen.has(s.learnerId) && !written.some((c) => c.learnerId === s.learnerId)) : [];
+  const without = result ? students.filter((s) => chosen.has(s.learnerId) && texts[s.learnerId] === undefined) : [];
   const tooLong = [...kept].some((l) => (texts[l] ?? "").trim().length > COMMENT_MAX);
   const empty = [...kept].some((l) => !(texts[l] ?? "").trim());
 
@@ -146,7 +148,7 @@ export function AiComments({ help, term, students, runWith = draftComments, save
           <DialogTitle>{result ? "Check each comment" : "Draft comments with AI"}</DialogTitle>
           <DialogDescription>
             {result
-              ? "Edit anything you'd say differently. The ones you tick are saved to the report."
+              ? "Check the marks they mention against the report, and edit anything you'd say differently. The ones you tick are saved."
               : "Drafts come from each student's shared marks, attendance and missed work this term. Students' names aren't sent to the AI."}
           </DialogDescription>
         </DialogHeader>
@@ -167,7 +169,8 @@ export function AiComments({ help, term, students, runWith = draftComments, save
                     <li key={c.learnerId} className={cn("border-border space-y-2 rounded-lg border p-4", !kept.has(c.learnerId) && "opacity-70")}>
                       <label className="flex items-center gap-3 text-sm font-medium">
                         <Checkbox disabled={saving} checked={kept.has(c.learnerId)} onCheckedChange={(v) => flip(setKept, c.learnerId, v === true)} />
-                        {c.name}
+                        <span className="min-w-0 flex-1">{c.name}</span>
+                        {c.mark ? <span className="text-muted-foreground text-xs font-normal tabular-nums">On the report: {c.mark}</span> : null}
                       </label>
                       <Textarea
                         aria-label={`Comment for ${c.name}`}
