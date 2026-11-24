@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: course study assistant (Pro), `revamp/a-study-assistant`
+
+Migration `41_study_assistant`: StudyChat and StudyMessage, plus the `study-assistant` Service row, backfilled where `ai-marking` is on. Viewer Draft 1.27, services Draft 1.8.
+
+Done:
+- **`study/study-rules.ts`** (pure): material picking (all lessons when they fit, so they cache; otherwise the most relevant), concern handling, citation checks.
+- **`study/study-model.ts`**: a cached system prompt and course material, structured answers (answer, citations, outOfScope, concern), refusal fallback, Opus 5.5.
+- **`study/study.ts` and `actions.ts`**:
+  - students and parents ask; 25 a day;
+  - credits spent;
+  - wellbeing and safety concerns flag the chat and alert the tutors;
+  - tutors list and read chats; the flag is hidden from students.
+  - Chats are pruned after a year, included in the user export, and deleted on anonymisation.
+
+Tested:
+- `scripts/check-study.ts` (in CI).
+- Live against the Preview DB (4 questions): a grounded answer with citations, off-topic marked out of scope, an assignment request refused (integrity), and a distress message (wellbeing: flag and tutor alert).
+- Access: the tutor list puts flagged chats first, and another student is refused.
+- Cleaned up afterwards.
+
 ## 2026-11-24 #216 phase 3: branding, white-label and bulk onboarding, `revamp/a-whitelabel-onboarding`
 
 Migration `40_whitelabel_onboarding`:

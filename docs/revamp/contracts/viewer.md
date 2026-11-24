@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.26, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.27, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.27. Course study assistant for students (Pro) |
 | 2026-11-24 | Draft 1.26. Branding (Plus), white-label (Pro; custom domains on hold) and bulk onboarding |
 | 2026-11-24 | Draft 1.25. Enquiry pipeline (with a public form), tutor outcomes and staff reviews |
 | 2026-11-24 | Draft 1.24. Timesheets, pay rates, payroll export and cover for absent tutors |
@@ -819,3 +820,33 @@ Bringing a whole organisation on, branch by branch. **The order:**
 **For B:**
 - An "Onboarding" page for organisation owners: the checklist with links to each import, and a row per branch with a progress bar, the rollout stage and "Start pilot" / "Go live".
 - On the admin console, a table of organisations.
+
+### Study assistant (Draft 1.27)
+
+#216 phase 3, **Pro** (service `study-assistant`; switched on for courses already on Pro). A student asks questions about a course, and answers come only from its lessons, with citations. **The course's tutors can read every chat**, and the student is told so. Actions are in `@/features/study/actions`.
+
+| Action | Who | Input | Returns |
+| --- | --- | --- | --- |
+| `getStudyStatus` | student; parent with `studentUserId` | `{ courseId, studentUserId? }` | `{ available, perDay: 25, leftToday, visibleToTutors: true }` |
+| `askStudyAction` | student; parent | `{ courseId, question (up to 1500 characters), chatId?, studentUserId? }` | `{ chatId, message: { id, content, citations: [{ ref, lessonId, title }], outOfScope, createdAt }, leftToday }`. Without `chatId` it starts a new chat |
+| `listMyStudyChats` | student; parent | `{ courseId, studentUserId? }` | `[{ id, title, createdAt, updatedAt }]` |
+| `getStudyChatAction` | that student, their parent, or the course's staff | `{ chatId }` | The chat and its messages. Staff also see `flaggedAt` and each message's `concern` |
+| `listCourseStudyChats` | course staff | `{ courseId, flaggedOnly?, limit? }` | `[{ id, studentUserId, studentName, title, flaggedAt, updatedAt, messages }]`, flagged first |
+| `clearStudyFlagAction` | course staff | `{ chatId }` | Once they've followed up |
+
+**Behaviour:**
+- **Grounding:** it answers only from the course's lessons. If the course is small, all its text is sent, and cached across questions; otherwise the most relevant lessons up to about 15,000 tokens.
+- **Off-topic:** answered briefly, with `outOfScope: true` and a suggestion to ask the tutor.
+- **Graded work:** for tests and assignments due recently or upcoming, it explains with a different example and won't write the work.
+- **Wellbeing or safety:** a supportive reply with helplines (SADAG 0800 456 789, Childline 116). The chat is flagged, and the course's tutors get a high-priority note (in-app, plus email by their settings) linking to `/dashboard/courses/<courseId>/study-chats/<chatId>`.
+- **Limits:**
+  - 25 questions per student per course per day;
+  - each answer spends the organisation's AI credits (with billing on);
+  - when credits run out, the student sees "The study assistant isn't available right now. Ask your tutor."
+- **Model:** Claude Opus 5.5 (`AI_STUDY_MODEL` overrides).
+- **Privacy:** chats are kept a year. They're in the student's data export and deleted with the account. No names are sent to the model.
+
+**For B:**
+- A "Study assistant" panel on the course page for students: chat with citations linking to lessons, the "left today" count, and a clear line that their tutor can read these chats.
+- A "Study chats" tab for tutors, flagged first.
+- A parent view per child (optional).
