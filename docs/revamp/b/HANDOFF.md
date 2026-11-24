@@ -3,6 +3,29 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 "Application error" after signing in, `revamp/b-signin-error`
+
+No migration, no env vars.
+
+- **Fault:** after every sign-in, and on opening any page that redirects
+  (`/dashboard/start`, `/dashboard/home`, a tutor on `/dashboard/timesheets`,
+  another role's list), people saw "Application error" for about a second,
+  then the right page. React error #310, from Next's router.
+- **Cause:** with `loading.tsx` (#269) a page's redirect can reach the browser
+  before the page is ready. The notification bell's server action then starts
+  in the same instant as the redirect, and Next 15.5's router crashes. Either
+  alone is fine. Reproduced in a local production build.
+- **Fix:** the shell mounts the bell one step later (`BellSlot`). And
+  `src/app/dashboard/loading.tsx` is gone, so `/dashboard/start`, `/home` and
+  `/timesheets` send real HTTP redirects again; the sidebar's lists have a
+  `loading.tsx` of their own (`check-nexus.ts`).
+- **For A:** a server action that runs on mount in a layout can do this again.
+  A GET route would be better for the bell.
+
+Also: migration `45_study_assistant_block` was applied to production on 24 Nov
+at 19:42 UTC, after backup `backup-study-switch-20261124` and a diff showing
+only it.
+
 ## 2026-11-24 The study assistant's switch for one student (#216, phase 3), `revamp/b-study-switch`
 
 Migration `45_study_assistant_block` (one new table, B's schema). No env vars.
