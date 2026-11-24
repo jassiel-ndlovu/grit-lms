@@ -32,6 +32,8 @@ const DAY = 86_400_000;
 export const STUDY_SERVICE = "study-assistant";
 export const STUDY_UPSELL = "The study assistant is part of the Pro plan for this course.";
 export const STUDY_NO_CREDITS = "You need study credits to ask the assistant. A parent (or you, if you pay your own fees) can buy them.";
+export const STUDY_OFF = "Your tutor has switched the study assistant off for you on this course.";
+export const STUDY_OFF_CHILD = "Their tutor has switched the study assistant off for them on this course.";
 /** Credits an answer needs before it is asked (a typical answer costs less). */
 const ANSWER_ESTIMATE = 40;
 
@@ -61,6 +63,11 @@ async function courseRow(courseId: string) {
   return { ...c, workspaceId: c.workspaceId };
 }
 
+/** A tutor switched the assistant off for this student on this course (features/courses/study-switch.ts). */
+async function isBlocked(courseId: string, studentUserId: string): Promise<boolean> {
+  return (await prisma.studyAssistantBlock.count({ where: { courseId, studentUserId } })) > 0;
+}
+
 async function lessonsOf(courseId: string): Promise<LessonText[]> {
   const rows = await prisma.lesson.findMany({ where: { courseId }, orderBy: { order: "asc" }, take: 300, select: { id: true, title: true, description: true, order: true } });
   return rows.map((l, i) => ({ ref: `L${i + 1}`, id: l.id, title: l.title, text: plainText(l.description), order: l.order }));
@@ -73,8 +80,9 @@ export async function studyStatus(viewer: Viewer, input: { courseId: string; stu
   const course = await courseRow(input.courseId);
   const credits = isBillingEnabled() ? Math.max(0, await studentCredits(course.workspaceId, student)) : 0;
   const used = await prisma.studyMessage.count({ where: { role: "USER", createdAt: { gte: new Date(now.getTime() - DAY) }, chat: { courseId: input.courseId, studentUserId: student } } });
+  const blocked = onPlan && (await isBlocked(input.courseId, student));
   // Not before billing is on: students pay for their own answers.
-  const reason = !onPlan ? "NOT_ON_PLAN" : !isBillingEnabled() ? "COMING_SOON" : credits < ANSWER_ESTIMATE ? "NO_CREDITS" : null;
+  const reason = !onPlan ? "NOT_ON_PLAN" : blocked ? "OFF_FOR_STUDENT" : !isBillingEnabled() ? "COMING_SOON" : credits < ANSWER_ESTIMATE ? "NO_CREDITS" : null;
   return { available: reason === null, reason, credits, perDay: STUDY_LIMITS.perStudentDay, leftToday: Math.max(0, STUDY_LIMITS.perStudentDay - used), visibleToTutors: true };
 }
 
@@ -92,6 +100,7 @@ export async function askStudy(viewer: Viewer, input: { courseId: string; questi
   const student = await studentFor(viewer, input.courseId, input.studentUserId);
   if (!studyAssistantConfigured()) throw new UserError("The study assistant isn't switched on yet.");
   if (!(await hasService(viewer, input.courseId, STUDY_SERVICE))) throw new UserError(STUDY_UPSELL);
+  if (await isBlocked(input.courseId, student)) throw new UserError(viewer.persona === "guardian" ? STUDY_OFF_CHILD : STUDY_OFF);
   const course = await courseRow(input.courseId);
   const used = await prisma.studyMessage.count({ where: { role: "USER", createdAt: { gte: new Date(now.getTime() - DAY) }, chat: { courseId: course.id, studentUserId: student } } });
   if (used >= STUDY_LIMITS.perStudentDay) throw new UserError(`That's ${STUDY_LIMITS.perStudentDay} questions in a day for this course. Try again tomorrow, or ask your tutor.`);

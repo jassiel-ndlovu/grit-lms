@@ -51,6 +51,8 @@ export interface StudyAccount {
   workspace: { id: string; name: string };
   /** The courses these credits work on. */
   courses: Array<{ id: string; name: string }>;
+  /** Their courses where a tutor switched the assistant off for them. */
+  off: string[];
   balance: number;
   purchases: Array<{ credits: number; boughtAt: Date; expiresAt: Date | null; expired: boolean }>;
   offer: { validityDays: number; packs: Array<{ priceCents: number; credits: number }> };
@@ -67,6 +69,12 @@ async function assistantCourses(studentUserId: string, workspaceId: string) {
   });
   const on = await Promise.all(rows.map((c) => hasStudyAssistant(c.id)));
   return rows.filter((_, i) => on[i]);
+}
+
+/** Courses where a tutor switched the assistant off for this student. */
+async function blockedCourseIds(studentUserId: string): Promise<Set<string>> {
+  const rows = await prisma.studyAssistantBlock.findMany({ where: { studentUserId }, select: { courseId: true } });
+  return new Set(rows.map((r) => r.courseId));
 }
 
 /** The viewer's own study credits, or each child's, per organisation. */
@@ -88,16 +96,19 @@ export async function studyAccounts(viewer: Viewer, onlyChild?: string | null): 
         : [];
   const rows = await Promise.all(
     who.map(async (w): Promise<StudyAccount | null> => {
-      const [courses, credits] = await Promise.all([
+      const [all, blocked, credits] = await Promise.all([
         assistantCourses(w.userId, w.workspace.id),
+        blockedCourseIds(w.userId),
         myStudyCredits(viewer, { studentUserId: w.userId, workspaceId: w.workspace.id }).catch((e) => {
           // A child who has left that organisation has no credits there.
           if (e instanceof UserError || e instanceof ViewerError) return null;
           throw e;
         }),
       ]);
-      if (!credits || (courses.length === 0 && credits.purchases.length === 0 && credits.balance === 0)) return null;
-      return { studentUserId: w.userId, name: w.name, workspace: w.workspace, courses, payer: w.payer, ...credits };
+      const courses = all.filter((c) => !blocked.has(c.id));
+      const off = all.filter((c) => blocked.has(c.id)).map((c) => c.name);
+      if (!credits || (all.length === 0 && credits.purchases.length === 0 && credits.balance === 0)) return null;
+      return { studentUserId: w.userId, name: w.name, workspace: w.workspace, courses, off, payer: w.payer, ...credits };
     }),
   );
   return rows.filter((r) => r !== null);
@@ -127,6 +138,17 @@ export async function childStudyChats(viewer: Viewer, childUserId: string) {
     }),
   );
   return lists.flat().sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+}
+
+/** A child's courses where the assistant is on, but off for them. */
+export async function childAssistantOff(viewer: Viewer, childUserId: string): Promise<string[]> {
+  if (!isBillingEnabled()) return [];
+  const child = viewer.children.find((c) => c.userId === childUserId);
+  const [blocked, lists] = await Promise.all([
+    blockedCourseIds(childUserId),
+    Promise.all((child?.workspaces ?? []).map((w) => assistantCourses(childUserId, w.id))),
+  ]);
+  return lists.flat().filter((c) => blocked.has(c.id)).map((c) => c.name);
 }
 
 /** Whether a child has a course with the assistant, for the link on their page. */

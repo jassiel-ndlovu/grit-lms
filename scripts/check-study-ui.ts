@@ -4,7 +4,7 @@
  */
 import { safeReturnPath } from "../src/features/payments/settlement-rules";
 import {
-  answersLabel, citationsOf, closedNote, concernChip, leftLabel, messageView, nextExpiry, number, reasonOf, studyRoutes, validityLabel,
+  answersLabel, citationsOf, closedNote, concernChip, leftLabel, matchName, messageView, nameList, nextExpiry, number, reasonOf, studyRoutes, switchSummary, validityLabel,
 } from "../src/features/courses/lib/study-ui";
 
 let failures = 0;
@@ -39,10 +39,15 @@ check("next expiry: the soonest that hasn't gone", nextExpiry([{ expiresAt: d("2
 check("next expiry: none", [nextExpiry([]), nextExpiry([{ expiresAt: d("2026-10-01"), expired: true }])], [null, null]);
 
 // When the box is open
-check("reasons", [reasonOf(null), reasonOf("NO_CREDITS"), reasonOf("SOMETHING_NEW")], [null, "NO_CREDITS", "NOT_ON_PLAN"]);
+check("reasons", [reasonOf(null), reasonOf("NO_CREDITS"), reasonOf("OFF_FOR_STUDENT"), reasonOf("SOMETHING_NEW")], [null, "NO_CREDITS", "OFF_FOR_STUDENT", "NOT_ON_PLAN"]);
+check("a student switched off: the note wins over no questions left", closedNote({ reason: "OFF_FOR_STUDENT", leftToday: 0, perDay: 25 })?.title, "The study assistant is off for you on this course");
+check("switches", [switchSummary(0, 5), switchSummary(2, 24), switchSummary(1, 1), switchSummary(3, 3)], ["On for every student.", "Off for 2 of 24 students.", "Off for every student.", "Off for every student."]);
+check("names in a sentence", [nameList([]), nameList(["A"]), nameList(["A", "B"]), nameList(["A", "B", "C"])], ["", "A", "A and B", "A, B and C"]);
+check("finding a student", ["", "  ", "lwa", "dube lw", "x"].map((q) => matchName("Lwazi Dube", q)), [true, true, true, true, false]);
+check("students' switches", studyRoutes.students("c1"), "/dashboard/manage-courses/c1/study-chats/students");
 const note = (reason: Parameters<typeof closedNote>[0]["reason"], leftToday = 5) => closedNote({ reason, leftToday, perDay: 25 });
 check("open", note(null), null);
-check("closed for each reason", [note("NOT_ON_PLAN"), note("COMING_SOON"), note("NO_CREDITS"), note(null, 0)].every((n) => n && n.title && n.text), true);
+check("closed for each reason", [note("NOT_ON_PLAN"), note("OFF_FOR_STUDENT"), note("COMING_SOON"), note("NO_CREDITS"), note(null, 0)].every((n) => n && n.title && n.text), true);
 check("credits come before the daily limit", note("NO_CREDITS", 0)?.title, note("NO_CREDITS")?.title);
 
 console.log(failures ? `\n${failures} failed` : "\nAll passed");

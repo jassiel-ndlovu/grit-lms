@@ -10,6 +10,7 @@ import { MathProvider } from "@/app/components/math-provider";
 import { PageFrame, PageSection, PageTitle } from "@/components/shell/page-frame";
 import { StudyChat } from "@/features/courses/components/study/chat";
 import { StudyAccountSection } from "@/features/courses/components/study/credits-views";
+import { StudentSwitchButton, StudentSwitches } from "@/features/courses/components/study/student-switches";
 import { FlaggedNote, StudyChatList, StudyTranscript } from "@/features/courses/components/study/tutor-views";
 import { WorkspaceCredits } from "@/features/courses/components/study/workspace-credits";
 import type { StudyMessageView } from "@/features/courses/lib/study-ui";
@@ -57,12 +58,15 @@ const ROWS = [
   { id: "c3", studentName: "", title: "Why does the chain rule work", flaggedAt: null, updatedAt: new Date("2026-11-20T10:00:00Z"), messages: 2 },
 ];
 
+const SWITCHES = ["Ayabonga Mkhize", "Karabo Molefe", "Lwazi Dube", "Nkosinathi Johannes van der Westhuizen-Mokoena", "Thandi Mokoena", "Zinhle Sithole", "Aisha Patel", "Johan Botha", "Lerato Nkosi", "Mpho Dlamini", "Sipho Khumalo", "Zodwa Zulu"].map((name, i) => ({ studentUserId: `s${i}`, name, on: i % 5 !== 2 }));
+
 const OFFER = { validityDays: 30, packs: [{ priceCents: 15_000, credits: 13_392 }, { priceCents: 30_000, credits: 26_785 }, { priceCents: 60_000, credits: 53_571 }] };
 const ORG_OFFER = { validityDays: 30, packs: [{ priceCents: 50_000, credits: 44_642 }, { priceCents: 100_000, credits: 89_285 }, { priceCents: 250_000, credits: 223_214 }] };
 const ACCOUNT = {
   studentUserId: "u1",
   name: "Thandi Mokoena",
   workspace: { id: "w1", name: "Mokoena Tutors" },
+  off: [] as string[],
   courses: [{ id: "maths", name: "Mathematics Grade 10" }, { id: "sci", name: "Physical Sciences Grade 11" }],
   balance: 12_740,
   purchases: [
@@ -101,6 +105,16 @@ export default function StudyPreviewPage() {
           <StudyChatList courseId="maths" rows={ROWS} ctx={CTX} />
           <FlaggedNote chatId="c1" flaggedAt={new Date("2026-11-24T10:00:00Z")} ctx={CTX} />
           <StudyTranscript messages={MESSAGES} studentName="Lwazi Dube" lessonHref={null} />
+        </PageFrame>
+        <PageFrame type="record" breadcrumb={[{ label: "Study chats" }, { label: "Students" }]}>
+          <PageTitle title="Study assistant for each student" description="A tutor's switches, and the button on one student's chat." actions={<StudentSwitchButton courseId="maths" student={SWITCHES[0]} on />} />
+          <StudentSwitches courseId="maths" rows={SWITCHES} />
+          <PageSection title="The student it's off for">
+            <StudyChat courseId="maths" chatId="c7" messages={[]} status={{ ...OPEN, reason: "OFF_FOR_STUDENT" }} buy={PARENT_NOTE} />
+          </PageSection>
+          <PageSection title="Their credits">
+            <StudyAccountSection account={{ ...ACCOUNT, studentUserId: "u3", courses: [], off: ["Mathematics Grade 10", "Physical Sciences Grade 11"] }} ctx={CTX} title={null} />
+          </PageSection>
         </PageFrame>
         <PageFrame type="record" breadcrumb={[{ label: "Study credits" }]}>
           <PageTitle title="Study credits" description="A parent, then a school pupil with no credits." />

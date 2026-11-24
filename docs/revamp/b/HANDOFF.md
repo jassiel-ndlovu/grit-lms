@@ -3,6 +3,25 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 The study assistant's switch for one student (#216, phase 3), `revamp/b-study-switch`
+
+Migration `45_study_assistant_block` (one new table, B's schema). No env vars.
+Preview backup `backup-preview-study-switch-20261124` taken before the push.
+
+Done (owner, 24 Nov):
+- `/dashboard/manage-courses/[id]/study-chats/students`: a switch for each
+  student on the course, for staff with `courses.edit`. The same switch is a
+  button on one student's chat. Each change is in the audit log
+  (`study.student_off`, `study.student_on`).
+- A switched-off student can't ask anything new on that course, and neither
+  can a parent for them. They keep their earlier chats.
+- The student's assistant, their credits page and their parent's Study chats
+  say it's off. Credits aren't sold for a student whose courses are all off.
+
+A's file, edited with the owner's OK: `features/study/study.ts`.
+`studyStatus` can now return `reason: "OFF_FOR_STUDENT"`, and `askStudy`
+refuses. For A: please add the reason to viewer.md (Draft 1.29).
+
 ## 2026-11-24 Timesheets, cover and parents' study chats (#216, phase 3), `revamp/b-timesheets`
 
 No migration, no env vars. All in B's paths, over A's `features/staff`

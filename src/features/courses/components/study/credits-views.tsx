@@ -9,7 +9,7 @@ import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { roughAnswers } from "@/features/ai-credits/topup-math";
 import { formatDate, type DateContext } from "@/lib/datetime";
 
-import { nextExpiry, number } from "../../lib/study-ui";
+import { nameList, nextExpiry, number } from "../../lib/study-ui";
 import type { StudyAccount } from "../../study";
 import { CreditPacks } from "./credit-packs";
 
@@ -52,7 +52,10 @@ export function StudyAccountSection({
       <p className="text-muted-foreground text-sm">
         {a.courses.length
           ? `For the study assistant in ${a.courses.map((c) => c.name).join(", ")}.`
-          : "No course has the study assistant on at the moment."}
+          : a.off.length
+            ? "No course can use them at the moment."
+            : "No course has the study assistant on at the moment."}
+        {a.off.length ? ` A tutor switched the assistant off in ${nameList(a.off)}.` : null}
       </p>
       <StatTiles>
         <StatTile label="Credits left" value={number(a.balance)} />
