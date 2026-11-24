@@ -9,9 +9,11 @@ import * as React from "react";
 import { History, Save } from "lucide-react";
 import { toast } from "sonner";
 
+import { useDateContext } from "@/components/preferences-provider";
 import { Button } from "@/components/ui/button";
 import { TonePanel } from "@/components/ui/nexus";
 import { SaveState } from "@/components/ui/save-state";
+import { formatDateTime } from "@/lib/datetime";
 import type { LocalDraft } from "@/lib/use-local-draft";
 
 export function DraftStatus({
@@ -57,6 +59,7 @@ export function RestoreDraftBanner<T>({
   onRestore: (data: T) => void;
   what?: string;
 }) {
+  const ctx = useDateContext();
   if (!draft.pending) return null;
   const at = draft.pending.savedAt;
   return (
@@ -67,7 +70,7 @@ export function RestoreDraftBanner<T>({
           <p className="text-foreground font-medium">Unsaved progress found</p>
           <p className="text-muted-foreground text-xs">
             You have work on {what} saved on this device from{" "}
-            {at.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}{" "}
+            {formatDateTime(at, ctx)}{" "}
             that was never submitted.
           </p>
         </div>

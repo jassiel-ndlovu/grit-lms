@@ -4,7 +4,9 @@ import * as React from "react";
 import { Check, CloudOff, HardDriveDownload, TriangleAlert } from "lucide-react";
 
 import { useOnline } from "@/components/offline/use-online";
+import { useDateContext } from "@/components/preferences-provider";
 import { NexusLoader } from "@/components/ui/nexus";
+import { formatDate } from "@/lib/datetime";
 import { saveText, type SaveKind, type SaveWhere } from "@/lib/save-state";
 import { cn } from "@/lib/utils";
 
@@ -29,10 +31,11 @@ export function SaveState({ kind, at, where = "nexa", error, quiet = false, comp
   className?: string;
 }) {
   const online = useOnline();
+  const ctx = useDateContext();
   const offline = !online && kind !== "failed";
   const text = saveText(kind, {
     where, offline, error,
-    time: at ? at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null,
+    time: at ? formatDate(at, ctx, { hour: "2-digit", minute: "2-digit" }) : null,
   });
   const hide = quiet && kind === "idle" && !offline;
   return (

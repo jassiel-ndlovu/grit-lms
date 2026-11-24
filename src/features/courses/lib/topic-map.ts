@@ -1,7 +1,7 @@
 /**
  * The topic map (owner, 24 Nov): each curriculum topic is a nexus, a centre
  * with three points that light up as it is taught, questioned and passed.
- * Pure: scripts/check-topic-map.ts covers it.
+ * Pure: scripts/check-nexus.ts covers it.
  */
 
 import { seeded, type Point } from "@/lib/nexus";

@@ -26,7 +26,7 @@ export function ProgressBar({ value, max = 100, label, valueText, tone, classNam
       aria-valuenow={pct === null ? undefined : Math.round(pct)}
       aria-valuetext={valueText}
       data-slot="progress-bar"
-      className={cn("bg-muted h-1.5 w-full overflow-hidden rounded-full", className)}
+      className={cn("bg-foreground/10 h-1.5 w-full overflow-hidden rounded-full", className)}
     >
       <div
         className={cn("h-full rounded-full", fill, pct === null ? "w-1/3 animate-pulse" : "transition-[width] duration-300 motion-reduce:transition-none")}

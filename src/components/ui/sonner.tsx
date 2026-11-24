@@ -33,7 +33,7 @@ const ICONS: ToasterProps["icons"] = {
 };
 
 function Toaster(props: ToasterProps) {
-  return <Sonner theme="system" className="toaster group" icons={ICONS} {...props} />;
+  return <Sonner theme="light" className="toaster group" icons={ICONS} {...props} />;
 }
 
 export { Toaster };

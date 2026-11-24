@@ -37,6 +37,7 @@ export function PeekProvider<T>({ items, load, render, children }: {
   const [id, setId] = React.useState<string | null>(null);
   const [loaded, setLoaded] = React.useState<Record<string, Loaded>>({});
   const asked = React.useRef(new Set<string>());
+  const last = React.useRef<string | null>(null);
 
   const fetchOne = React.useCallback(
     async (key: string) => {
@@ -52,6 +53,7 @@ export function PeekProvider<T>({ items, load, render, children }: {
   const open = React.useCallback(
     (key: string) => {
       setId(key);
+      last.current = key;
       void fetchOne(key);
     },
     [fetchOne],
@@ -83,6 +85,11 @@ export function PeekProvider<T>({ items, load, render, children }: {
             data-slot="peek-panel"
             aria-describedby={undefined}
             onKeyDown={onKeyDown}
+            onCloseAutoFocus={(e) => {
+              // Opened without a Radix trigger, so focus goes back by hand: to the row last looked at.
+              e.preventDefault();
+              document.querySelector<HTMLElement>(`[data-peek="${CSS.escape(last.current ?? "")}"]`)?.focus();
+            }}
             className={cn(
               "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col overflow-hidden shadow-lg outline-none motion-reduce:animate-none",
               "border-border inset-x-0 bottom-0 max-h-[85dvh] rounded-t-xl border-t",
@@ -148,6 +155,7 @@ export function PeekButton({ id, name, className }: { id: string; name: string; 
       title="Peek"
       aria-label={`Peek at ${name}`}
       aria-haspopup="dialog"
+      data-peek={id}
       aria-expanded={ctx.current === id}
       onClick={() => ctx.open(id)}
       className={cn("text-muted-foreground hover:text-foreground size-9 shrink-0", className)}

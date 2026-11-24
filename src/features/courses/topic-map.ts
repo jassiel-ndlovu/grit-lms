@@ -26,7 +26,7 @@ export async function courseHasTopics(courseId: string): Promise<boolean> {
 async function taggedWork(courseId: string) {
   const [lessons, questions] = await Promise.all([
     prisma.lesson.findMany({ where: { courseId, type: "CONTENT" }, select: { id: true, topics: true }, orderBy: [{ order: "asc" }, { createdAt: "asc" }] }),
-    prisma.testQuestion.findMany({ where: { test: { courseId, isActive: true }, type: { not: "NONE" } }, select: { id: true, topics: true } }),
+    prisma.testQuestion.findMany({ where: { test: { courseId }, type: { not: "NONE" } }, select: { id: true, topics: true } }),
   ]);
   return { lessons, questions };
 }

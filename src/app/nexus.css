@@ -58,7 +58,16 @@
   [data-ui="revamp"] [data-slot="nexus"] { display: none; }
 }
 
-/* Toasts: a light tint and a coloured border, with the state in a circle. */
+/* Toasts: a light tint and a coloured border, with the state in a circle.
+   The tokens set every colour, so a toast follows the app's theme, not the computer's. */
+html [data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--popover);
+  --normal-bg-hover: var(--muted);
+  --normal-text: var(--popover-foreground);
+  --normal-border: var(--border);
+  --normal-border-hover: var(--border);
+  font-family: inherit;
+}
 [data-sonner-toaster] [data-sonner-toast][data-styled="true"] {
   --tone: var(--muted-foreground);
   background: color-mix(in oklab, var(--tone) 7%, var(--popover));

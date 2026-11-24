@@ -568,7 +568,7 @@ export function GradingForm({
       {/* Save bar: sticks to the bottom of the content column (not the
           window), so it never covers the sidebar. */}
       <div className="bg-background/95 border-border sticky bottom-0 z-10 -mx-4 border-t px-4 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 sm:py-3">
           <div className="flex items-center gap-4">
             <div>
               <p className="text-muted-foreground text-xs">Overall</p>
@@ -580,7 +580,7 @@ export function GradingForm({
                   onChange={(e) => setOverrideOverall(e.target.value)}
                   min={0}
                 />
-                <span className="text-muted-foreground text-sm tabular-nums">
+                <span className="text-muted-foreground text-sm whitespace-nowrap tabular-nums">
                   / {outOfTotal}
                 </span>
                 {outOfTotal > 0 && (
@@ -605,15 +605,18 @@ export function GradingForm({
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <EmailStudentCheckbox
               checked={emailStudent}
               onCheckedChange={setEmailStudent}
               studentName={studentName.split(" ")[0]}
               disabled={pending}
             />
-            <DraftStatus draft={draft} />
-            <SaveProgressButton draft={draft} />
+            <DraftStatus draft={draft} className="max-sm:w-full" />
+            {/* It saves by itself, so a phone does without the button. */}
+            <span className="max-sm:hidden">
+              <SaveProgressButton draft={draft} />
+            </span>
             <WriteGuard label={existingGrade ? "Update grade" : "Save grade"} variant={next ? "outline" : "brand"} size="default">
               <Button id={next ? undefined : "save-grade"} type="button" variant={next ? "outline" : "brand"} onClick={() => onSubmit()} disabled={pending}>
                 {pending && !next ? <NexusLoader size={16} label={null} className="text-current" /> : null}
