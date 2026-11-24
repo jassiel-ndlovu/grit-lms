@@ -3,6 +3,13 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Unused reads retired, `revamp/b-retire-reads`
+
+In A's files, with the owner's OK:
+- `GET /api/courses` and `GET /api/submissions` answer 410; no page used them.
+- The four unused files in `src/context` are gone.
+- `check-retired-reads.ts` keeps the retired reads off.
+
 ## 2026-11-24 Meeting app icons (owner's request), `revamp/b-meeting-logos`
 
 No migration, no env vars.
