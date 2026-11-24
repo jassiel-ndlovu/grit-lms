@@ -10,7 +10,7 @@
  */
 
 import {
-  addDays, addMonths, attendanceRate, calendarRoutes, dayKeyOf, daysFor, googleSubscribeUrl, groupByDay, joinOpen, meetingProvider, parseDayKey,
+  addDays, addMonths, attendanceRate, calendarRoutes, dayKeyOf, daysFor, googleSubscribeUrl, groupByDay, joinOpen, meetingProvider, meetingProviderOf, parseDayKey,
   parseView, rangeFor, rangeLabel, splitInZone, startOfWeek, stepAnchor, takesAttendance, tidyCode, wallToInstant, type CalendarEntry,
 } from "../src/features/events/lib/calendar-ui";
 
@@ -90,6 +90,9 @@ check("provider: Zoom subdomain", meetingProvider("https://us02web.zoom.us/j/123
 check("provider: Teams", meetingProvider("https://teams.microsoft.com/l/meetup-join/x"), "Teams");
 check("provider: a look-alike isn't Zoom", meetingProvider("https://zoom.us.evil.example/j/1"), null);
 check("provider: junk", meetingProvider("not a url"), null);
+check("provider id: Meet", meetingProviderOf("https://meet.google.com/abc-defg-hij"), "GOOGLE_MEET");
+check("provider id: Teams for home", meetingProviderOf("https://teams.live.com/meet/1"), "TEAMS");
+check("provider id: another app", meetingProviderOf("https://whereby.com/room"), null);
 check("attendance: live sessions take it", takesAttendance(base), true);
 check("attendance: reminders don't", takesAttendance({ ...base, type: "REMINDER" }), false);
 check("attendance: not on a cancelled session", takesAttendance({ ...base, cancelled: true }), false);
