@@ -91,7 +91,7 @@ export function TimesheetBody({ view: v, ctx, now, courses }: {
           id="suggestions"
           title={`${taught.length} to add`}
           description="Taught this month and not on the timesheet yet."
-          actions={<AddSuggestions timesheetId={v.sheet.id} keys={taught.map((s) => s.key)} label={taught.length === 1 ? "Add it" : "Add all"} what="classes taught" />}
+          actions={taught.length > 1 ? <AddSuggestions timesheetId={v.sheet.id} keys={taught.map((s) => s.key)} label="Add all" what="classes taught" /> : null}
         >
           <ul className={LIST}>{taught.map(suggestion)}</ul>
         </PageSection>
