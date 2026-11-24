@@ -24,7 +24,12 @@ Done:
 Tested:
 - `scripts/check-ai-topups.ts` (in CI).
 - 14 checks against the Preview DB (BILLING=1, provider stubbed): no credits refused; purchase and repeat settle; the return-page status and its ownership; the organisation's pool untouched; a failed payment; spend, then expiry with the newer pack kept; run once. Cleaned up afterwards.
-- Not tested: a real Paystack checkout (no test keys locally). Run one in Paystack test mode on Preview before billing goes live.
+- **Real Paystack test mode, run 24 Nov after the merge.** `PAYSTACK_TEST_SECRET_KEY` from `.env.local` was passed in as `PAYSTACK_SECRET_KEY` for the test only, against the Preview DB, with BILLING=1:
+  - `startTopup` got a real checkout link, and an unpaid checkout settled to nothing;
+  - a purchase paid with Paystack's published test card under Nexa's own reference was verified and settled by Nexa's code: the student got exactly the pack's credits, and a repeat settle added nothing.
+  - Paystack's fee on R150 was R6.16 (about 4.1%), which leaves about 8% at the 12% markup.
+  - The hosted checkout page itself wasn't driven (Paystack's own UI).
+  - Cleaned up afterwards.
 
 ## 2026-11-24 #216 phase 3: AI marks on photo answers, session notes, diagrams, `revamp/a-ai-media`
 
