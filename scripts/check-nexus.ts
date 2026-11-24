@@ -12,7 +12,7 @@ import { latestPerStudent } from "../src/features/assessments/lib/item-analysis"
 import { markingProgress, markKey, namesSomeone, nextToMark, reusableComments, withComment } from "../src/features/assessments/lib/marking-flow";
 import { classTopics, learnerTopics, topicCounts, topicLine, topicTrail } from "../src/features/courses/lib/topic-map";
 import { classPercent, classPhase, lessonsToShow, phaseLabel, spanLabel } from "../src/features/events/lib/class-mode";
-import { cornerFigure, dueTone, hubFigure, markTone, type Figure } from "../src/lib/nexus";
+import { cornerFigure, dueTone, dueWord, hubFigure, markTone, type Figure } from "../src/lib/nexus";
 import { saveText } from "../src/lib/save-state";
 
 let failures = 0;
@@ -47,6 +47,7 @@ const now = new Date("2026-11-24T10:00:00Z");
 const inHours = (h: number) => new Date(now.getTime() + h * 3_600_000);
 check("due tones", [dueTone(inHours(-1), now), dueTone(inHours(47), now), dueTone(inHours(49), now)], ["danger", "warning", "neutral"]);
 check("marking tones", [markTone(inHours(1), now), markTone(inHours(-1), now), markTone(inHours(-24 * 8), now)], ["neutral", "warning", "danger"]);
+check("a tone is said in words", (["danger", "warning", "neutral"] as const).map(dueWord), ["Overdue", "Due soon", null]);
 
 /* Saving */
 check("saved, with the time", saveText("saved", { time: "14:32" }), "Saved 14:32");

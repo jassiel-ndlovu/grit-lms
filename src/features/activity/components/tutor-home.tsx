@@ -179,6 +179,7 @@ export function TutorHome({
                           </Link>
                           <p className="text-muted-foreground text-xs">
                             {rowDetail(r)}
+                            {r.bucket === "mark" && markTone(r.dueDate, now) === "danger" ? " · Waiting over a week" : null}
                             <span className="sm:hidden"> · {r.course}</span>
                           </p>
                         </td>

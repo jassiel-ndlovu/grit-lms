@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { NexusLoader, TonePanel } from "@/components/ui/nexus";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { formatDate } from "@/lib/datetime";
-import { dueTone } from "@/lib/nexus";
+import { dueTone, dueWord } from "@/lib/nexus";
 import { cn } from "@/lib/utils";
 
 import { joinOpen, meetingProvider, meetingProviderOf } from "../lib/calendar-ui";
@@ -171,7 +171,9 @@ export function ClassMode({ session: s, now: serverNow, staff, learner, lessons,
                   <Link href={d.href} className="hover:bg-muted/50 flex items-center justify-between gap-3 px-4 py-2">
                     <span className="min-w-0">
                       <span className="text-foreground block truncate">{d.title}</span>
-                      <span className="text-muted-foreground block text-xs">{d.kind}</span>
+                      <span className="text-muted-foreground block text-xs">
+                        {[d.kind, dueWord(dueTone(new Date(d.at), new Date(now)))].filter(Boolean).join(" · ")}
+                      </span>
                     </span>
                     <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
                       {formatDate(new Date(d.at), ctx, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}

@@ -67,7 +67,7 @@ import { SetupChecklist } from "@/features/courses/components/setup-checklist";
 import { setupChecklistFor } from "@/features/courses/setup-checklist";
 import { getViewer } from "@/lib/viewer";
 import { getCourseScope } from "@/features/courses/course-access";
-import { dueTone } from "@/lib/nexus";
+import { dueTone, dueWord } from "@/lib/nexus";
 import { ProgressBar } from "@/components/ui/progress-bar";
 
 export const metadata = { title: "Dashboard" };
@@ -313,8 +313,10 @@ export default async function DashboardLanding({
               <ul className="divide-border divide-y">
                 {upNext.map((item) => {
                   const Icon = item.kind === "test" ? Pencil : item.kind === "assignment" ? Hourglass : CalendarDays;
+                  const tone = item.kind === "event" ? "neutral" : dueTone(item.date, now);
+                  const word = dueWord(tone);
                   return (
-                    <li key={`${item.kind}-${item.id}`} data-slot="tone-row" data-tone={item.kind === "event" ? "neutral" : dueTone(item.date, now)}>
+                    <li key={`${item.kind}-${item.id}`} data-slot="tone-row" data-tone={tone}>
                       <Link href={item.href} className="hover:bg-muted/40 flex items-center gap-3 px-4 py-3 sm:px-5 transition-colors">
                         <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
                           <Icon className="size-4" />
@@ -322,6 +324,7 @@ export default async function DashboardLanding({
                         <div className="min-w-0 flex-1 space-y-0.5">
                           <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
                           <p className="text-muted-foreground truncate text-xs">
+                            {word ? <span className="text-foreground font-medium">{word} · </span> : null}
                             {item.course} - {item.kind === "test" ? "Test" : item.kind === "assignment" ? "Assignment" : "Event"}
                           </p>
                         </div>

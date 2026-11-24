@@ -89,6 +89,11 @@ export function dueTone(due: Date, now: Date): Tone {
   return hours < 0 ? "danger" : hours <= 48 ? "warning" : "neutral";
 }
 
+/** The tone in words, for a row with a due time; null when there is nothing to say. */
+export function dueWord(tone: Tone): string | null {
+  return tone === "danger" ? "Overdue" : tone === "warning" ? "Due soon" : null;
+}
+
 /** Work waiting to be marked: a warning once it is in, danger after a week. */
 export function markTone(due: Date, now: Date): Tone {
   const days = (now.getTime() - due.getTime()) / 86_400_000;
