@@ -4,10 +4,13 @@
  * gate as /design-system.
  */
 
+import type * as React from "react";
 import { notFound } from "next/navigation";
 
 import { MathProvider } from "@/app/components/math-provider";
 import { PageFrame, PageSection, PageTitle } from "@/components/shell/page-frame";
+import { RibbonNav } from "@/components/shell/ribbon";
+import { AssistantTop } from "@/features/courses/components/study/assistant-scene";
 import { StudyChat } from "@/features/courses/components/study/chat";
 import { StudyAccountSection } from "@/features/courses/components/study/credits-views";
 import { StudentSwitchButton, StudentSwitches } from "@/features/courses/components/study/student-switches";
@@ -15,6 +18,7 @@ import { FlaggedNote, StudyChatList, StudyTranscript } from "@/features/courses/
 import { WorkspaceCredits } from "@/features/courses/components/study/workspace-credits";
 import type { StudyMessageView } from "@/features/courses/lib/study-ui";
 import { canPreviewDesignSystem, mathJaxVersion } from "@/lib/ui-flags";
+import { COLOR_THEMES, THEME_INFO, themeAttr } from "@/lib/ui-themes";
 
 export const metadata = { title: "Study assistant · Design system", robots: { index: false } };
 
@@ -51,6 +55,31 @@ const MESSAGES: StudyMessageView[] = [
   },
 ];
 const PLAIN = MESSAGES.slice(0, 2);
+const LONG: StudyMessageView[] = [
+  ...PLAIN,
+  { id: "l3", role: "USER", content: "Why is the derivative of a quadratic a straight line?", citations: [], concern: null },
+  {
+    id: "l4",
+    role: "ASSISTANT",
+    content: [
+      "Each term drops one power of $x$, so a square becomes a straight line:",
+      "",
+      String.raw`$$\frac{d}{dx}\left(ax^2 + bx + c\right) = 2ax + b, \qquad \int_{0}^{3} (2x - 4)\,dx = \Big[x^2 - 4x\Big]_{0}^{3} = -3$$`,
+      "",
+      "| $x$ | $y$ | gradient |",
+      "| --- | --- | --- |",
+      "| 0 | 0 | -4 |",
+      "| 2 | -4 | 0 |",
+      "| 3 | -3 | 2 |",
+      "",
+      "> The gradient is 0 where the parabola turns.",
+      "",
+      "Read more in [the lesson notes](https://example.com), and check with `dy/dx`.",
+    ].join("\n"),
+    citations: [{ lessonId: "l3", title: "Turning points" }],
+    concern: null,
+  },
+];
 
 const ROWS = [
   { id: "c1", studentName: "Lwazi Dube", title: "How do I find the gradient at a point on $y = x^2 - 4x$?", flaggedAt: new Date("2026-11-24T10:00:00Z"), updatedAt: new Date("2026-11-24T10:00:00Z"), messages: 6 },
@@ -79,26 +108,60 @@ const ACCOUNT = {
 const OPEN = { reason: null, credits: 12_740, perDay: 25, leftToday: 23 };
 const PARENT_NOTE = { note: "Ask your parent to buy them. They can do it from their own Nexa account." };
 
-export default function StudyPreviewPage() {
+const HERE = "/design-system/study";
+const CLOSED = { chatId: null, messages: [] };
+/** Every state of the student's page; `?state=` picks one. */
+const STATES = [
+  { id: "new", label: "New chat", chatId: null, chat: { messages: [], status: { ...OPEN, leftToday: 25 } } },
+  { id: "chat", label: "Chat", chatId: "c1", chat: { messages: LONG, status: OPEN } },
+  { id: "waiting", label: "Waiting", chatId: "c2", chat: { messages: PLAIN, status: OPEN, sampleAsking: "And at $x = 2$, where it turns?" } },
+  { id: "credits", label: "No credits", chatId: null, chat: { ...CLOSED, status: { ...OPEN, reason: "NO_CREDITS", credits: 0 } } },
+  { id: "pupil", label: "No credits (pupil)", chatId: null, chat: { ...CLOSED, status: { ...OPEN, reason: "NO_CREDITS", credits: 0 }, buy: PARENT_NOTE } },
+  { id: "day", label: "Day's questions used", chatId: "c1", chat: { messages: PLAIN, status: { ...OPEN, leftToday: 0 } } },
+  { id: "soon", label: "Coming soon", chatId: null, chat: { ...CLOSED, status: { ...OPEN, reason: "COMING_SOON" }, creditsHref: null } },
+  { id: "mine-off", label: "Off for the student", chatId: null, chat: { ...CLOSED, status: { ...OPEN, reason: "OFF_FOR_STUDENT" } } },
+  { id: "off", label: "Off for the course", chatId: "c1", chat: { messages: PLAIN, status: { ...OPEN, reason: "NOT_ON_PLAN" }, creditsHref: null } },
+] satisfies Array<{ id: string; label: string; chatId: string | null; chat: Partial<React.ComponentProps<typeof StudyChat>> & Pick<React.ComponentProps<typeof StudyChat>, "messages" | "status"> }>;
+const href = (state: string) => `${HERE}?state=${state}`;
+const CHATS = [
+  { id: "c1", title: "How do I find the gradient at a point on $y = x^2 - 4x$?", href: href("chat") },
+  { id: "c2", title: "What is a limit", href: href("waiting") },
+];
+const top = (as: "h1" | "h3", current: string | null) => <AssistantTop as={as} chats={CHATS} current={current} newHref={href("new")} />;
+
+export default async function StudyPreviewPage({ searchParams }: { searchParams: Promise<{ state?: string | string[] }> }) {
   if (!canPreviewDesignSystem()) notFound();
+  const wanted = (await searchParams).state;
+  const state = STATES.find((v) => v.id === wanted) ?? STATES[0];
   return (
     <div data-ui="revamp" data-shell="focus" className="bg-background text-foreground min-h-screen font-sans">
       <MathProvider version={mathJaxVersion()}>
-        <PageFrame type="record" breadcrumb={[{ label: "Design system", href: "/design-system" }, { label: "Study assistant" }]}>
-          <PageTitle title="Study assistant" description="What a student sees." />
-          <StudyChat courseId="maths" chatId="c1" messages={PLAIN} status={OPEN} buy={{ href: "/design-system/study" }} />
-          <PageSection title="A new chat">
-            <StudyChat courseId="maths" chatId={null} messages={[]} status={{ ...OPEN, credits: 60, leftToday: 25 }} buy={{ href: "/design-system/study" }} />
-          </PageSection>
-          <PageSection title="Out of credits (adult, then school pupil)">
-            <StudyChat courseId="maths" chatId="c2" messages={[]} status={{ ...OPEN, reason: "NO_CREDITS", credits: 0 }} buy={{ href: "/design-system/study" }} />
-            <StudyChat courseId="maths" chatId="c3" messages={[]} status={{ ...OPEN, reason: "NO_CREDITS", credits: 0 }} buy={PARENT_NOTE} />
-          </PageSection>
-          <PageSection title="Today's questions used, not open yet, off for the course">
-            <StudyChat courseId="maths" chatId="c4" messages={[]} status={{ ...OPEN, leftToday: 0 }} buy={PARENT_NOTE} />
-            <StudyChat courseId="maths" chatId="c5" messages={[]} status={{ ...OPEN, reason: "COMING_SOON" }} buy={PARENT_NOTE} />
-            <StudyChat courseId="maths" chatId="c6" messages={[]} status={{ ...OPEN, reason: "NOT_ON_PLAN" }} buy={PARENT_NOTE} />
-          </PageSection>
+        <PageFrame
+          type="editor"
+          breadcrumb={[{ label: "Design system", href: "/design-system" }, { label: "Study assistant" }]}
+          secondary={<RibbonNav label="Sample" links={STATES.map((v) => ({ label: v.label, href: href(v.id) }))} current={href(state.id)} />}
+        >
+          <StudyChat key={state.id} courseId="maths" buy={{ href: HERE }} creditsHref={HERE} top={top("h1", state.chatId)} {...state.chat} chatId={state.chatId} />
+        </PageFrame>
+        <PageFrame type="record" breadcrumb={[{ label: "Every theme" }]}>
+          <PageTitle title="Every theme, light and dark" description="The assistant takes the theme from Settings." />
+          {COLOR_THEMES.map((theme) => (
+            <PageSection key={theme} title={THEME_INFO[theme].label}>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {["", "dark"].map((mode) => (
+                  <div
+                    key={mode}
+                    data-ui="revamp"
+                    data-theme={themeAttr(theme)}
+                    className={`bg-background text-foreground min-w-0 rounded-[1.25rem] ${mode}`}
+                    style={{ "--as-min": "44rem" } as React.CSSProperties}
+                  >
+                    <StudyChat courseId="maths" chatId="c1" messages={PLAIN} status={OPEN} buy={{ href: HERE }} top={top("h3", "c1")} bleed={false} />
+                  </div>
+                ))}
+              </div>
+            </PageSection>
+          ))}
         </PageFrame>
         <PageFrame type="record" breadcrumb={[{ label: "Study chats" }]}>
           <PageTitle title="Study chats" description="What a tutor sees." />
@@ -109,9 +172,6 @@ export default function StudyPreviewPage() {
         <PageFrame type="record" breadcrumb={[{ label: "Study chats" }, { label: "Students" }]}>
           <PageTitle title="Study assistant for each student" description="A tutor's switches, and the button on one student's chat." actions={<StudentSwitchButton courseId="maths" student={SWITCHES[0]} on />} />
           <StudentSwitches courseId="maths" rows={SWITCHES} />
-          <PageSection title="The student it's off for">
-            <StudyChat courseId="maths" chatId="c7" messages={[]} status={{ ...OPEN, reason: "OFF_FOR_STUDENT" }} buy={PARENT_NOTE} />
-          </PageSection>
           <PageSection title="Their credits">
             <StudyAccountSection account={{ ...ACCOUNT, studentUserId: "u3", courses: [], off: ["Mathematics Grade 10", "Physical Sciences Grade 11"] }} ctx={CTX} title={null} />
           </PageSection>
