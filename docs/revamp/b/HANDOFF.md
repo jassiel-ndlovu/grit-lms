@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 "Application error" after signing in, `revamp/b-signin-error`
+
+No migration, no env vars.
+
+- **Fault:** after every sign-in, and on opening any page that redirects
+  (`/dashboard/start`, `/dashboard/home`, a tutor on `/dashboard/timesheets`,
+  another role's list), people saw "Application error" for about a second,
+  then the right page. React error #310, from Next's router.
+- **Cause:** `src/app/dashboard/loading.tsx` (#269). Its Suspense boundary
+  sits right under the dashboard's layout, so the layout streams first and the
+  redirect arrives in the browser while the page is still hydrating.
+- **Fix:** that file is gone, so those redirects are real HTTP ones again. The
+  lists in the sidebar have a `loading.tsx` of their own instead. Don't add
+  one at `/dashboard`, or where a page's job is to redirect
+  (`check-nexus.ts`).
+
+Also: migration `45_study_assistant_block` was applied to production on 24 Nov
+at 19:42 UTC, after backup `backup-study-switch-20261124` and a diff showing
+only it.
+
 ## 2026-11-24 The study assistant's switch for one student (#216, phase 3), `revamp/b-study-switch`
 
 Migration `45_study_assistant_block` (one new table, B's schema). No env vars.

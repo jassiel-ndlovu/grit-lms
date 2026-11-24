@@ -8,6 +8,8 @@
  * Pure: no database, no network. Exits 1 on any failure.
  */
 
+import { existsSync } from "node:fs";
+
 import { latestPerStudent } from "../src/features/assessments/lib/item-analysis";
 import { markingProgress, markKey, namesSomeone, nextToMark, reusableComments, withComment } from "../src/features/assessments/lib/marking-flow";
 import { classTopics, learnerTopics, topicCounts, topicLine, topicTrail } from "../src/features/courses/lib/topic-map";
@@ -106,6 +108,11 @@ check("a class in words", topicLine(cls[0]), "2 lessons · 1 question · class a
 check("a class with no marks isn't passing", classTopics(topics, lessons, [{ topics: ["b"] }], [])[1].state, "started");
 const trail = topicTrail(Array.from({ length: 17 }, (_, i) => `t${i}`));
 check("the trail fits", trail.hubs.every((h) => h.x - 25 >= 0 && h.x + 25 <= trail.width && h.y - 25 >= 0 && h.y + 25 <= trail.height), true);
+
+// A redirect that streams in past a loading screen: at the dashboard's root it
+// crashes the app for a second (React #310), and elsewhere it waits a second.
+const REDIRECTS = ["", "start/", "home/", "timesheets/", "submissions/", "browse-courses/"];
+check("no loading screen where a page's job is to redirect", REDIRECTS.filter((d) => existsSync(`src/app/dashboard/${d}loading.tsx`)), []);
 
 console.log(failures ? `\n${failures} failed` : "\nAll passed");
 process.exit(failures ? 1 : 0);
