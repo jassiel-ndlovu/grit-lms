@@ -42,8 +42,8 @@ export function renderEnquiryEmail(d: EnquiryEmailData): Rendered & { replyTo: s
     heading: `${label} from ${d.name}`,
     bodyHtml: `<table style="border-collapse:collapse;font-size:14px;margin:0 0 16px;">${table}</table>
 <div style="padding:12px 14px;border-left:3px solid #e5dccb;background:#faf7f2;font-size:14px;line-height:1.5;">${message}</div>
-${button(absoluteUrl("/dashboard/admin"), "Open enquiries")}`,
-    footer: "Reply to this email to answer them directly. Sent from the form on the Nexa landing page.",
+${button(absoluteUrl("/dashboard/admin/enquiries"), "Open enquiries")}`,
+    footer: "Reply to this email to answer them directly. Sent from the contact form on the Nexa website.",
   });
   const text = [
     `${label} from ${d.name}`,
@@ -52,7 +52,7 @@ ${button(absoluteUrl("/dashboard/admin"), "Open enquiries")}`,
     "",
     d.message,
     "",
-    `Open enquiries: ${absoluteUrl("/dashboard/admin")}`,
+    `Open enquiries: ${absoluteUrl("/dashboard/admin/enquiries")}`,
   ].join("\n");
   return { subject: `${label}: ${d.name}${d.organisation ? ` (${d.organisation})` : ""}`, html, text, replyTo: d.email };
 }

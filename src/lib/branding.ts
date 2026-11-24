@@ -16,11 +16,17 @@ export const APP_DESCRIPTION =
 /** Used in legal copy, email signatures, and metadata. */
 export const APP_LEGAL_NAME = "Nexa LMS" as const;
 
-/** Contact information surfaced in the footer and support pages. */
+/**
+ * How people reach Nexa: the help centre and the contact form, never a
+ * personal address or number (owner, 24 Nov). Where Nexa's own team gets
+ * mail is server-only: NEXA_INBOX in lib/email/config.ts.
+ */
 export const APP_CONTACT = {
-  email: "nkosijassiel@gmail.com",
-  phone: "+27 68 698 3265",
-  location: "Johannesburg, South Africa",
+  /** Help, questions and problem reports. */
+  supportPath: "/support",
+  /** Accounts and organisations (the enquiry form). */
+  contactPath: "/contact",
+  location: "South Africa",
 } as const;
 
 /** Used by metadata and OG tags once a domain is wired up. */

@@ -25,9 +25,9 @@ const ENDED: Record<string, { title: string; lead: string }> = {
   REVOKED: { title: "This invite was cancelled", lead: "Ask the person who invited you if you think that's a mistake." },
 };
 
-const card = "rounded-lg border border-slate-200 bg-white p-6 shadow-sm";
-const primary = "block w-full rounded-md bg-slate-900 py-2.5 text-center text-sm font-medium text-white hover:bg-slate-800";
-const secondary = "block w-full rounded-md border border-slate-300 py-2.5 text-center text-sm font-medium text-slate-800 hover:bg-slate-50";
+const card = "rounded-lg border border-border bg-card p-6 shadow-sm";
+const primary = "block w-full rounded-md bg-primary py-2.5 text-center text-sm font-medium text-primary-foreground hover:bg-primary/90";
+const secondary = "block w-full rounded-md border border-input py-2.5 text-center text-sm font-medium text-foreground hover:bg-muted";
 
 export default async function InvitePage({ params }: PageProps) {
   const { token } = await params;
@@ -62,8 +62,8 @@ export default async function InvitePage({ params }: PageProps) {
   return (
     <AuthFrame title={`Join ${invite.workspaceName}`} lead={`${invite.invitedBy} invited you to join as ${role}.`}>
       <div className={`${card} space-y-4`}>
-        <p className="text-sm text-slate-600">
-          The invite is for <span className="font-medium text-slate-900">{invite.emailMasked}</span> and works until{" "}
+        <p className="text-sm text-muted-foreground">
+          The invite is for <span className="font-medium text-foreground">{invite.emailMasked}</span> and works until{" "}
           {formatDate(String(invite.expiresAt))}.
         </p>
         {viewer ? (
@@ -78,7 +78,7 @@ export default async function InvitePage({ params }: PageProps) {
                 <Link href={`/auth/sign-up?callbackUrl=${encodeURIComponent(back)}`} className={secondary}>
                   Create an account
                 </Link>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   New to Nexa? Create an account with the invited email. The link in the verification email brings you back here to accept.
                 </p>
               </>

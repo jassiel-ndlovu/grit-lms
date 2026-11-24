@@ -45,15 +45,15 @@ export function keepCallback(path: "/auth" | "/auth/sign-up", raw: string | null
 export function AuthFrame({ title, lead, children }: { title: string; lead: string; children: React.ReactNode }) {
   const joining = usePathname() !== "/auth";
   return (
-    <div className="grid min-h-screen bg-white lg:grid-cols-[1.1fr_1fr]">
-      <div className="flex min-w-0 flex-col bg-gradient-to-b from-orange-50/30 via-white to-white">
-        <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
+    <div className="grid min-h-screen bg-card lg:grid-cols-[1.1fr_1fr]">
+      <div className="flex min-w-0 flex-col bg-gradient-to-b from-brand-terracotta/5 via-background to-background">
+        <header className="border-b border-border bg-background/80 backdrop-blur">
           <div className="flex items-center justify-between gap-4 px-6 py-4">
             <Link href="/" className="flex items-center gap-2">
               <BrandMark className="dark:ring-0" />
-              <span className="text-lg font-semibold tracking-tight text-slate-900">{APP_NAME}</span>
+              <span className="text-lg font-semibold tracking-tight text-foreground">{APP_NAME}</span>
             </Link>
-            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-slate-600 transition-colors hover:text-slate-900">
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
               <ArrowLeft aria-hidden className="size-4" />
               Back to home
             </Link>
@@ -62,17 +62,17 @@ export function AuthFrame({ title, lead, children }: { title: string; lead: stri
         <main className="flex flex-1 items-center justify-center px-4 py-12">
           <div className="w-full max-w-md">
             <div className="mb-6 text-center">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-              <p className="mt-1 text-sm text-slate-600">{lead}</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{lead}</p>
             </div>
             {children}
           </div>
         </main>
-        <footer className="px-6 py-6 text-center text-xs text-slate-500">
+        <footer className="px-6 py-6 text-center text-xs text-muted-foreground">
           © {new Date().getFullYear()} {APP_NAME}
         </footer>
       </div>
-      <div className="sticky top-0 hidden h-screen bg-slate-200 lg:block">
+      <div className="sticky top-0 hidden h-screen bg-muted lg:block">
         <StockPhoto name={joining ? "join" : "sign-in"} alt="" sizes="(max-width: 1023px) 1px, 48vw" />
       </div>
     </div>
@@ -80,7 +80,7 @@ export function AuthFrame({ title, lead, children }: { title: string; lead: stri
 }
 
 export const INPUT =
-  "w-full rounded-md border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200";
+  "w-full rounded-md border border-input bg-card py-2.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/40";
 
 export function Field({
   id,
@@ -97,15 +97,15 @@ export function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-slate-700">
+      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-foreground">
         {label}
       </label>
       <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">{icon}</div>
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">{icon}</div>
         {children}
       </div>
       {hint ? (
-        <p id={`${id}-hint`} className="mt-1 text-xs text-slate-500">
+        <p id={`${id}-hint`} className="mt-1 text-xs text-muted-foreground">
           {hint}
         </p>
       ) : null}
@@ -115,10 +115,10 @@ export function Field({
 
 export function OrDivider() {
   return (
-    <div className="flex items-center gap-3 text-xs text-slate-500" role="separator" aria-label="or">
-      <span className="h-px flex-1 bg-slate-200" />
+    <div className="flex items-center gap-3 text-xs text-muted-foreground" role="separator" aria-label="or">
+      <span className="h-px flex-1 bg-muted" />
       or
-      <span className="h-px flex-1 bg-slate-200" />
+      <span className="h-px flex-1 bg-muted" />
     </div>
   );
 }
@@ -154,13 +154,13 @@ export function GoogleButton({ callbackUrl }: { callbackUrl?: string }) {
             setBusy(false);
           }
         }}
-        className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-300 bg-white py-2.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-md border border-input bg-card py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
       >
         {busy ? <Loader2 aria-hidden className="size-4 animate-spin" /> : <GoogleMark />}
         Continue with Google
       </button>
       {error ? (
-        <p role="alert" className="text-center text-xs text-red-700">
+        <p role="alert" className="text-center text-xs text-destructive">
           {error}
         </p>
       ) : null}
@@ -171,12 +171,12 @@ export function GoogleButton({ callbackUrl }: { callbackUrl?: string }) {
 export function Busy({ message, sub }: { message: string; sub: string }) {
   return (
     <div role="status" aria-live="polite" className="flex min-h-[340px] flex-col items-center justify-center gap-4 text-center">
-      <div className="flex size-14 items-center justify-center rounded-full bg-orange-100 text-orange-700">
+      <div className="flex size-14 items-center justify-center rounded-full bg-brand-terracotta/15 text-brand-terracotta">
         <Loader2 aria-hidden className="size-6 animate-spin" />
       </div>
       <div>
-        <p className="text-base font-medium text-slate-900">{message}</p>
-        <p className="mt-1 text-sm text-slate-500">{sub}</p>
+        <p className="text-base font-medium text-foreground">{message}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{sub}</p>
       </div>
     </div>
   );

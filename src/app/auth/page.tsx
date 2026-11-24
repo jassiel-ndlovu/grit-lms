@@ -20,30 +20,15 @@ import { ArrowRight, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck } from "luci
 import { authClient, googleSignInAvailable, signInWithPassword } from "@/lib/auth-client";
 import { AuthFrame, Busy, Field, GoogleButton, INPUT, keepCallback, OrDivider, safeCallback, signUpOpen } from "@/components/auth/auth-parts";
 
-const SIGNUP_EMAIL = "nkosijassiel@gmail.com";
-const SIGNUP_SUBJECT = "Nexa LMS access request";
-const SIGNUP_BODY = [
-  "Hi,",
-  "",
-  "I would like an account on Nexa LMS.",
-  "",
-  "  Name:  ",
-  "  Role:  (Student / Tutor)",
-  "  Course / class (optional):  ",
-  "",
-  "Please let me know the next steps.",
-  "",
-  "Thanks!",
-].join("\n");
-
-const mailtoHref = `mailto:${SIGNUP_EMAIL}?subject=${encodeURIComponent(SIGNUP_SUBJECT)}&body=${encodeURIComponent(SIGNUP_BODY)}`;
+/** With sign-up closed: the enquiry form, opened on "I want an account". */
+const requestHref = "/contact?kind=ACCESS&from=sign-in";
 
 type Phase = "form" | "code" | "signing-in" | "redirecting";
 
 export default function LoginPage() {
   return (
     <AuthFrame title="Sign in to Nexa LMS" lead="Continue where you left off.">
-      <React.Suspense fallback={<div className="min-h-[380px] rounded-xl border border-slate-200 bg-white shadow-sm" />}>
+      <React.Suspense fallback={<div className="min-h-[380px] rounded-xl border border-border bg-card shadow-sm" />}>
         <SignInCard />
       </React.Suspense>
     </AuthFrame>
@@ -104,14 +89,14 @@ function SignInCard() {
   }
 
   const errorBox = error ? (
-    <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+    <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
       {error}
     </div>
   ) : null;
 
   return (
     <>
-      <div className="min-h-[380px] rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="min-h-[380px] rounded-xl border border-border bg-card p-6 shadow-sm">
         {phase === "signing-in" || phase === "redirecting" ? (
           <Busy
             message={phase === "signing-in" ? "Signing you in…" : "Taking you to your dashboard…"}
@@ -120,8 +105,8 @@ function SignInCard() {
         ) : phase === "code" ? (
           <form onSubmit={onCode} className="space-y-4">
             <div>
-              <h2 className="text-base font-medium text-slate-900">Two-step verification</h2>
-              <p className="mt-1 text-sm text-slate-600">Enter the 6-digit code from your authenticator app.</p>
+              <h2 className="text-base font-medium text-foreground">Two-step verification</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
             </div>
             <Field id="code" label="Code" icon={<KeyRound className="size-4" />}>
               <input
@@ -138,14 +123,14 @@ function SignInCard() {
                 placeholder="123 456"
               />
             </Field>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)} className="size-4 rounded border-slate-300" />
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)} className="size-4 rounded border-input" />
               Trust this device for 30 days
             </label>
             {errorBox}
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Verify
               <ArrowRight aria-hidden className="size-4" />
@@ -157,7 +142,7 @@ function SignInCard() {
                 setError(null);
                 setCode("");
               }}
-              className="w-full text-center text-xs text-slate-500 hover:text-slate-800"
+              className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
             >
               Back to sign in
             </button>
@@ -203,7 +188,7 @@ function SignInCard() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 transition-colors hover:text-slate-600"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground transition-colors hover:text-foreground"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -212,7 +197,7 @@ function SignInCard() {
               </Field>
 
               <div className="text-right">
-                <Link href="/forgot-password" className="text-xs text-slate-500 hover:text-slate-800">
+                <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
                   Forgot password?
                 </Link>
               </div>
@@ -221,13 +206,13 @@ function SignInCard() {
 
               <button
                 type="submit"
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Sign in
                 <ArrowRight aria-hidden className="size-4" />
               </button>
 
-              <div className="flex items-center gap-2 pt-1 text-xs text-slate-500">
+              <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
                 <ShieldCheck aria-hidden className="size-3" />
                 Secure sign-in over HTTPS.
               </div>
@@ -237,25 +222,25 @@ function SignInCard() {
       </div>
 
       {phase === "form" ? (
-        <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4 text-center text-sm">
-          <p className="text-slate-700">Don&apos;t have an account yet?</p>
+        <div className="mt-6 rounded-lg border border-border bg-card p-4 text-center text-sm">
+          <p className="text-foreground">Don&apos;t have an account yet?</p>
           {signUpOpen ? (
             <Link
               href={keepCallback("/auth/sign-up", params.get("callbackUrl"))}
-              className="mt-2 inline-flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
+              className="mt-2 inline-flex items-center gap-2 rounded-md bg-brand-terracotta px-4 py-2 text-sm font-medium text-brand-terracotta-foreground transition-colors hover:bg-brand-terracotta/90"
             >
               Create an account
             </Link>
           ) : (
             <>
               <a
-                href={mailtoHref}
-                className="mt-2 inline-flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
+                href={requestHref}
+                className="mt-2 inline-flex items-center gap-2 rounded-md bg-brand-terracotta px-4 py-2 text-sm font-medium text-brand-terracotta-foreground transition-colors hover:bg-brand-terracotta/90"
               >
                 <Mail aria-hidden className="size-4" />
-                Email us to request access
+                Ask for an account
               </a>
-              <p className="mt-2 text-xs text-slate-500">Opens your email app with a short message pre-filled.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Tell us who you are, and we&apos;ll reply within one working day.</p>
             </>
           )}
         </div>

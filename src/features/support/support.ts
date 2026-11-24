@@ -16,8 +16,8 @@ import { emitNotification } from "@/features/notifications/server";
 import { hashIp } from "@/features/marketing/enquiries";
 import { looksLikeSpam, screenEnquiry } from "@/features/marketing/enquiry-rules";
 import type { Prisma } from "@/generated/prisma";
-import { APP_CONTACT } from "@/lib/branding";
 import { prisma } from "@/lib/db";
+import { NEXA_INBOX } from "@/lib/email/config";
 import { enqueueEmail, sendQueuedNow } from "@/lib/email/queue";
 import { effectiveRole } from "@/lib/roles";
 import { UserError } from "@/lib/user-error";
@@ -46,7 +46,7 @@ const PERM = "enquiries.manage" as const;
 const DAY = 86_400_000;
 
 function inbox(): string {
-  return process.env.SUPPORT_TO || process.env.ENQUIRY_TO || APP_CONTACT.email;
+  return NEXA_INBOX;
 }
 
 function personaOf(viewer: Viewer): SupportPersona {

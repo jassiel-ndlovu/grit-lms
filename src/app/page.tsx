@@ -49,32 +49,9 @@ export const metadata = { title: { absolute: APP_NAME }, description: APP_TAGLIN
 /** The same switch as the sign-in page's (components/auth/auth-parts.tsx). */
 const signUpOpen = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "better-auth";
 
-const mailto = (subject: string, lines: string[]) =>
-  `mailto:${APP_CONTACT.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
-
-const accessHref = mailto(`${APP_NAME} access request`, [
-  "Hi,",
-  "",
-  `I would like an account on ${APP_NAME}.`,
-  "",
-  "  Name:  ",
-  "  Role:  (Tutor / Student / Parent)",
-  "  Course or class (optional):  ",
-  "",
-  "Thanks!",
-]);
-
-const teamHref = mailto(`${APP_NAME} for our organisation`, [
-  "Hi,",
-  "",
-  `We'd like to know more about ${APP_NAME}.`,
-  "",
-  "  Organisation:  ",
-  "  Number of tutors:  ",
-  "  Number of students:  ",
-  "",
-  "Thanks!",
-]);
+/** The enquiry form, opened on the right choice. */
+const accessHref = "/contact?kind=ACCESS&from=landing";
+const teamHref = "/contact?kind=TEAM&from=landing";
 
 function StartButton({ size = "lg" }: { size?: "sm" | "lg" }) {
   return (
@@ -540,9 +517,9 @@ function Footer() {
                 </Link>
               </li>
               <li>
-                <a href={`mailto:${APP_CONTACT.email}`} className={link}>
-                  Email us
-                </a>
+                <Link href={APP_CONTACT.contactPath} className={link}>
+                  Contact us
+                </Link>
               </li>
             </ul>
           </nav>

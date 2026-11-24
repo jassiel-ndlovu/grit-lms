@@ -186,6 +186,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">Organisation</DropdownMenuLabel>
             <DropdownMenuRadioGroup
+              className="max-h-64 overflow-y-auto overscroll-contain"
               value={user.workspaceId ?? ""}
               onValueChange={(id) => id !== user.workspaceId && switchTo(id)}
             >
@@ -321,12 +322,15 @@ function ShellSidebar({
         <span className="flex-1 text-left">Search</span>
         <Kbd>Ctrl K</Kbd>
       </button>
-      {sections.map((s, i) => (
-        <SidebarSection key={s.label ?? i} label={s.label}>
-          {s.items.map(item)}
-        </SidebarSection>
-      ))}
-      <SidebarSection className="mt-auto">{FOOTER_LINKS.map(item)}</SidebarSection>
+      {/* The sections scroll when they don't fit; Settings and Help stay at the bottom. */}
+      <div data-slot="sidebar-scroll" className="-mx-2 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-2 [scrollbar-width:thin]">
+        {sections.map((s, i) => (
+          <SidebarSection key={s.label ?? i} label={s.label}>
+            {s.items.map(item)}
+          </SidebarSection>
+        ))}
+      </div>
+      <SidebarSection className="border-sidebar-border -mx-2 shrink-0 border-t px-2 pt-2">{FOOTER_LINKS.map(item)}</SidebarSection>
     </Sidebar>
   );
 }
