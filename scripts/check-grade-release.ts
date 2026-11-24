@@ -6,6 +6,8 @@
  *   npx tsx scripts/check-grade-release.ts
  */
 
+import { readFileSync } from "node:fs";
+
 import { entryMarkReleased, isReleased, RELEASED_GRADE, testMarksReleased, type GradeRelease } from "../src/features/grades/lib/release";
 
 let failures = 0;
@@ -50,6 +52,12 @@ const all: GradeRelease[] = [
   { testSubmission: null, submissionEntry: null },
 ];
 check("the database filter says the same", all.filter((g) => matches(RELEASED_GRADE, row(g)) !== isReleased(g)), []);
+
+// Anything sent to families must use the filter in every Grade query.
+for (const file of ["src/features/risk/evaluate.ts", "src/features/notifications/weekly-summary.ts"]) {
+  const queries = readFileSync(file, "utf8").split(/\r?\n/).filter((l) => /prisma[.]grade[.]/.test(l));
+  check(`${file} reads released marks only`, [queries.length > 0, queries.filter((l) => !l.includes("...RELEASED_GRADE"))], [true, []]);
+}
 
 if (failures) {
   console.error(`\n${failures} check(s) failed.`);

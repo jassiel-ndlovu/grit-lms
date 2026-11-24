@@ -19,6 +19,10 @@ Done:
   and a child's page.
 - In A's file: `parents/components/parent-dashboard.tsx` takes an optional
   `notes` slot.
+- In A's file: `risk/evaluate.ts` counts released marks only
+  (`RELEASED_GRADE`), since staff can share the summary with the family.
+  `check-grade-release.ts` checks this and the weekly email. An alert now
+  reacts to a mark once it is released.
 - Samples: `/design-system/at-risk`. Check: `check-at-risk.ts`.
 
 ## 2026-11-23 Roles, branches and teams (#216, phase 1), `revamp/b-roles`
