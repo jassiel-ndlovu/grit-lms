@@ -30,8 +30,10 @@ import {
   tutorActionClient,
   tutorReadActionClient,
 } from "@/lib/safe-action";
+import { UserError } from "@/lib/user-error";
 import { emitNotification, notifyHandIn } from "@/features/notifications/server";
 import { getExtraTime } from "./accommodations";
+import { closedToStart } from "./lib/attempt-deadline";
 import { autoGradeSubmission } from "./lib/auto-grade";
 import { checkMaths } from "./lib/maths-check";
 import { criterionMarksToStore, readRubric, rubricToStore, rubricTotal } from "./lib/rubric";
@@ -482,6 +484,7 @@ export const startTestSubmission = studentActionClient
       select: {
         id: true,
         isActive: true,
+        dueDate: true,
         courseId: true,
         course: { select: { enrollments: enrollmentFor(student.id) } },
       },
@@ -496,6 +499,12 @@ export const startTestSubmission = studentActionClient
       where: { studentId: student.id, testId: test.id, status: "IN_PROGRESS" },
       select: { id: true },
     });
+
+    // An attempt already begun is returned above all else: the runner submits
+    // it with its answers. A new one would be submitted empty at once.
+    if (!existing && closedToStart(test.dueDate, Date.now())) {
+      throw new UserError("This test has closed, so it can't be started any more");
+    }
 
     // The student's extra time on this course goes onto the attempt, so the
     // clock and the auto-submit job read one row (lib/attempt-deadline.ts).

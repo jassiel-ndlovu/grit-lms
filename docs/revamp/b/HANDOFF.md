@@ -30,6 +30,14 @@ Done:
 - **Topic map**: `/dashboard/courses/[id]/topics` for a learner (released marks
   only) and above the tutor's coverage table.
 
+Closed tests (owner's OK, same branch):
+- After its due time a test can't be begun: the pre-test page says when it
+  closed and has no Begin button, and `startTestSubmission` refuses. Before, the
+  server made an attempt that was submitted empty at once. Both ask
+  `closedToStart` (`lib/attempt-deadline.ts`); an attempt already begun carries on.
+- Closed tests that were never begun leave the learner's "Up next"; they stay
+  under Tests, Missed.
+
 Good to know:
 - With `loading.tsx`, a page's redirect or 404 now arrives while it streams.
 - Toasts and tones also show in production's Inkwell; the geometry doesn't.

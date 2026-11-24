@@ -5,7 +5,9 @@
  * attemptDeadline(); this pins the rule: an attempt ends at the EARLIER of
  * startedAt + timeLimit and the due date.
  */
-import { attemptDeadline } from "../src/features/assessments/lib/attempt-deadline";
+import { readFileSync } from "node:fs";
+
+import { attemptDeadline, closedToStart } from "../src/features/assessments/lib/attempt-deadline";
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -36,6 +38,17 @@ check("no limit and no due date never ends", none.at === null && none.reason ===
 
 const noDue = attemptDeadline({ startedAt: t0, timeLimit: 30, dueDate: undefined });
 check("timed test with no due date ends at the limit", noDue.at === t0 + 30 * min);
+
+check("open until the due date", !closedToStart(t0 + 1, t0));
+check("closed at the due date and after", closedToStart(t0, t0) && closedToStart(new Date(t0), new Date(t0 + min)));
+check("no due date never closes", !closedToStart(null, t0));
+
+// The page and the action ask the same question, and the action lets an
+// attempt that already began carry on.
+const action = readFileSync("src/features/assessments/actions.ts", "utf8");
+const page = readFileSync("src/app/dashboard/tests/pre-test/[id]/page.tsx", "utf8");
+check("the server refuses a closed test, but not one already begun", action.includes("if (!existing && closedToStart(test.dueDate, Date.now()))"));
+check("the pre-test page asks too", page.includes("closedToStart(test.dueDate, now)"));
 
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
 process.exit(failed === 0 ? 0 : 1);

@@ -67,6 +67,7 @@ import { SetupChecklist } from "@/features/courses/components/setup-checklist";
 import { setupChecklistFor } from "@/features/courses/setup-checklist";
 import { getViewer } from "@/lib/viewer";
 import { getCourseScope } from "@/features/courses/course-access";
+import { closedToStart } from "@/features/assessments/lib/attempt-deadline";
 import { dueTone, dueWord } from "@/lib/nexus";
 import { ProgressBar } from "@/components/ui/progress-bar";
 
@@ -194,9 +195,11 @@ export default async function DashboardLanding({
   const testStatuses = await Promise.all(
     tests.map((t) => getTestSubmissionByStudentAndTest(student.id, t.id)),
   );
+  const now = new Date();
+  // A closed test that was never begun can't be acted on: it is under Tests, Missed.
   const pendingTests = tests
     .map((t, i) => ({ test: t, sub: testStatuses[i] }))
-    .filter(({ sub }) => !sub || sub.status === "IN_PROGRESS")
+    .filter(({ test, sub }) => (sub ? sub.status === "IN_PROGRESS" : !closedToStart(test.dueDate, now)))
     .map(({ test }) => ({
       kind: "test" as const,
       id: test.id,
@@ -239,7 +242,6 @@ export default async function DashboardLanding({
 
   const recentGrades = grades.slice(0, 4);
   const firstName = student.fullName.split(" ")[0];
-  const now = new Date();
   const greeting = greetingFor(now, dateCtx.timeZone);
 
   return (

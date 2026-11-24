@@ -30,7 +30,7 @@ import {
 import { BeginTestButton } from "@/features/assessments/components/begin-test-button";
 import LessonMarkdown from "@/app/components/markdown";
 import { getExtraTime } from "@/features/assessments/accommodations";
-import { attemptDeadline, effectiveTimeLimit } from "@/features/assessments/lib/attempt-deadline";
+import { attemptDeadline, closedToStart, effectiveTimeLimit } from "@/features/assessments/lib/attempt-deadline";
 import { hasExtraTime, minutesLabel } from "@/features/assessments/lib/extra-time";
 import { schoolDateFormat } from "@/lib/datetime";
 import { TonePanel } from "@/components/ui/nexus";
@@ -46,6 +46,16 @@ const dateFmt = schoolDateFormat({
   month: "short",
   day: "numeric",
   year: "numeric",
+});
+
+/** When it closes, to the minute. */
+const closeFmt = schoolDateFormat({
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
 });
 
 export default async function PreTestPage({ params }: PageProps) {
@@ -102,6 +112,7 @@ export default async function PreTestPage({ params }: PageProps) {
   const extraApplies = test.timeLimit != null && hasExtraTime(extra);
   const limitText = ownLimit != null ? minutesLabel(ownLimit) : null;
   const now = Date.now();
+  const closed = closedToStart(test.dueDate, now);
   const ifStartedNow = attemptDeadline({
     startedAt: now,
     timeLimit: test.timeLimit,
@@ -130,7 +141,7 @@ export default async function PreTestPage({ params }: PageProps) {
       <Card className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-3">
         <Stat
           icon={<CalendarDays className="size-4" />}
-          label="Due"
+          label={closed ? "Closed" : "Due"}
           value={dateFmt.format(test.dueDate)}
         />
         <Stat
@@ -153,11 +164,23 @@ export default async function PreTestPage({ params }: PageProps) {
         />
       </Card>
 
-      {ifStartedNow.cutShort && minutesIfStartedNow != null && (
+      {closed ? (
+        <TonePanel tone="warning" role="note" className="flex items-start gap-3">
+          <AlertTriangle aria-hidden className="text-warning mt-0.5 size-4 shrink-0" />
+          <div className="space-y-1 text-sm">
+            <p className="text-foreground font-medium">This test closed on {closeFmt.format(test.dueDate)}.</p>
+            <p className="text-muted-foreground">
+              It can&apos;t be started any more. If you missed it, ask your tutor: they can move the due date.
+            </p>
+          </div>
+        </TonePanel>
+      ) : null}
+
+      {!closed && ifStartedNow.cutShort && minutesIfStartedNow != null && (
         <TonePanel tone="danger" role="note" className="flex items-start gap-3">
           <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
           <p className="text-foreground text-sm">
-            This test closes at its due time ({dateFmt.format(test.dueDate)}). If you
+            This test closes at its due time ({closeFmt.format(test.dueDate)}). If you
             start now you&apos;ll have <strong>{minutesIfStartedNow} minutes</strong>, not
             the full {limitText}. Your answers are submitted automatically when it
             closes.
@@ -165,7 +188,7 @@ export default async function PreTestPage({ params }: PageProps) {
         </TonePanel>
       )}
 
-      {test.preTestInstructions && (
+      {!closed && test.preTestInstructions && (
         <Card className="space-y-3 p-6">
           <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
             <ScrollText className="text-brand-terracotta size-4" />
@@ -175,6 +198,7 @@ export default async function PreTestPage({ params }: PageProps) {
         </Card>
       )}
 
+      {closed ? null : (
       <Card className="space-y-4 p-6">
         <p className="text-muted-foreground text-sm">
           Once you begin the timer starts immediately
@@ -193,6 +217,7 @@ export default async function PreTestPage({ params }: PageProps) {
           />
         </div>
       </Card>
+      )}
     </PageFrame>
   );
 }
