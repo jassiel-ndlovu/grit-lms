@@ -29,13 +29,15 @@ export function maskEmail(email: string): string {
 export async function createStaffInvitesFor(
   actor: { userId: string; name: string },
   workspaceId: string,
-  input: { emails: string[]; role: "ADMIN" | "TUTOR"; courseIds?: string[] },
+  input: { emails: string[]; role: "ADMIN" | "TUTOR"; courseIds?: string[]; teamIds?: string[] },
   now: Date = new Date(),
 ) {
   const emails = [...new Set(input.emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
   if (emails.length === 0 || emails.length > 50) throw new UserError("Invite between 1 and 50 people at a time");
   const courseIds = input.courseIds ?? [];
   if (courseIds.length && (await prisma.course.count({ where: { id: { in: courseIds }, workspaceId } })) !== courseIds.length) throw new UserError("One of the courses isn't in this workspace");
+  const teamIds = input.teamIds ?? [];
+  if (teamIds.length && (await prisma.team.count({ where: { id: { in: teamIds }, workspaceId } })) !== teamIds.length) throw new UserError("One of the teams isn't in this workspace");
   const ws = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { name: true, timezone: true } });
   const out: Array<{ email: string; status: "INVITED" | "ALREADY_MEMBER" | "RESENT" }> = [];
   const keys: string[] = [];
@@ -49,8 +51,8 @@ export async function createStaffInvitesFor(
     const expiresAt = new Date(now.getTime() + 7 * DAY);
     const pending = await prisma.invite.findFirst({ where: { workspaceId, email, kind: "STAFF", acceptedAt: null, revokedAt: null }, select: { id: true } });
     const invite = pending
-      ? await prisma.invite.update({ where: { id: pending.id }, data: { tokenHash: sha(token), expiresAt, role: input.role, ...(input.courseIds ? { courseIds } : {}), invitedById: actor.userId }, select: { id: true } })
-      : await prisma.invite.create({ data: { workspaceId, kind: "STAFF", email, tokenHash: sha(token), role: input.role, courseIds, displayName: email, invitedById: actor.userId, expiresAt }, select: { id: true } });
+      ? await prisma.invite.update({ where: { id: pending.id }, data: { tokenHash: sha(token), expiresAt, role: input.role, ...(input.courseIds ? { courseIds } : {}), ...(input.teamIds ? { teamIds } : {}), invitedById: actor.userId }, select: { id: true } })
+      : await prisma.invite.create({ data: { workspaceId, kind: "STAFF", email, tokenHash: sha(token), role: input.role, courseIds, teamIds, displayName: email, invitedById: actor.userId, expiresAt }, select: { id: true } });
     const key = `auth:invite:${invite.id}:${expiresAt.getTime()}`;
     await enqueueEmail(prisma, {
       key, template: "auth:invite", to: email, userId: null, workspaceId, category: "ACCOUNT", priority: "AUTH",
@@ -102,6 +104,11 @@ export async function acceptInviteFor(user: { id: string; email: string }, token
     const teachIds = (await mayTeach(tx, m.id)) ? i.courseIds : [];
     for (const courseId of teachIds) {
       await tx.courseStaff.upsert({ where: { courseId_membershipId: { courseId, membershipId: m.id } }, create: { courseId, membershipId: m.id, role: "ASSISTANT" }, update: {} });
+    }
+    // Bulk onboarding (#216): join the teams the invitation names (teams deleted since are skipped).
+    for (const teamId of i.teamIds) {
+      const team = await tx.team.findFirst({ where: { id: teamId, workspaceId: i.workspaceId }, select: { id: true } });
+      if (team) await tx.teamMember.upsert({ where: { teamId_membershipId: { teamId, membershipId: m.id } }, create: { teamId, membershipId: m.id }, update: {} });
     }
     // An invited tutor is staff: settle the role choice a fresh sign-up would otherwise see.
     await tx.user.updateMany({ where: { id: user.id, roleUnconfirmed: true }, data: { roleUnconfirmed: false, role: "TUTOR" } });

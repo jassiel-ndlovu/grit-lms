@@ -1,6 +1,6 @@
 # Contract: imports and exports
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.1, 2026-11-23** (#216, phase 1). B asks for changes in an issue labelled `needs-a`.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.2, 2026-11-24** (#216, phase 1). B asks for changes in an issue labelled `needs-a`.
 
 **Answer first.** One engine runs every import:
 1. upload a CSV;
@@ -85,9 +85,21 @@ All take and return plain objects through next-safe-action. Errors arrive in `se
 
 ## Staff import
 
+**Draft 1.2:** an optional `Teams` column, using a team's name or `Branch / Team`, separated by `;`. The invitation remembers the teams, and the person joins them when they accept. A team name used in two branches needs the `Branch / Team` form.
+
+
 - **Columns:** Email (required), Full name, Role (tutor or admin; empty means tutor), Courses.
 - **Each row** sends the usual 7-day invitation. Current members are skipped.
 - **Undo** revokes invitations not yet accepted.
+
+## Branches and teams import (Draft 1.2)
+
+Kind `branches`, needing `teams.manage` with whole-organisation scope (branch roles can't run it). This is the first step of bulk onboarding.
+
+- **Columns:** `Branch` (required), `Team`, `Team lead email`. One row per team; a row with no team just makes the branch.
+- **Matching:** existing branches and teams are found by name, ignoring case, and reused. Rows already set up show as skip.
+- **Team lead:** must already be in the organisation; otherwise there's a warning and the team is made without a lead.
+- **Undo:** removes a team it made, if the team has no members or courses yet, and a branch it made, if no teams are left.
 
 ## Calendar import
 
@@ -143,5 +155,6 @@ Rules for importers:
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.2. Branches and teams import; Teams column on the staff import |
 | 2026-11-23 | Draft 1.1: calendar importer (.ics); `startImport` takes `defaults`; `readText` for non-CSV importers |
 | 2026-11-22 | Draft 1: engine, students and staff importers, sign-in cards, students export |

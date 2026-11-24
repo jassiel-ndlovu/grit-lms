@@ -3,6 +3,38 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: branding, white-label and bulk onboarding, `revamp/a-whitelabel-onboarding`
+
+Migration `40_whitelabel_onboarding`:
+- Workspace `senderName`, `welcomeText`, `hideNexaBranding` and `supportEmail`;
+- Branch `rollout` (BranchRollout) and `rolloutAt`;
+- Invite `teamIds`.
+
+Viewer contract Draft 1.26, imports Draft 1.2. **Custom domains are on hold (owner).**
+
+Done:
+- **`billing/workspace-plan.ts`**: a workspace's plan from its courses' services (Pro while billing is off, or when comped).
+- **`workspaces/brand-rules.ts`** (pure):
+  - which templates are branded;
+  - the sender name and From header;
+  - `applyBrand`: the header logo and name, the accent colour, and with white-label the Nexa name swapped outside tags, with "through Nexa LMS" dropped.
+- **`workspaces/branding.ts`**:
+  - get and set branding (Plus), white-label (Pro, needs a support email);
+  - the public brand for `/w/<slug>`;
+  - `emailBrandFor`, cached for 5 minutes.
+- **The email queue** applies the brand to workspace emails; `sendEmail` takes `fromName`.
+- **Bulk onboarding:**
+  - the `branches` importer (`teams.manage`, whole-organisation scope);
+  - the staff importer's Teams column, with `Invite.teamIds` joined on accept;
+  - `workspaces/rollout.ts` and `onboarding-rules.ts`: the checklist, branch progress, rollout (LIVE needs staff and a course), and the admin overview.
+- **Two mistakes caught before commit:** I overwrote two existing files (`workspaces/onboarding.ts` and `scripts/check-branding.ts`) with new code and restored both from git; the new code is in `rollout.ts` and `check-whitelabel.ts`.
+
+Tested:
+- `scripts/check-whitelabel.ts` (in CI).
+- A real booking email rebranded: no Nexa left in the visible text.
+- 16 checks against the Preview DB: plan, logo and colour rules, the sender name, white-label and support email, the public brand, the branches import and re-check, the staff Teams column and invite teams, onboarding progress, and rollout rules. Restored and cleaned up.
+- Not tested: accepting an invitation end to end (joining its teams).
+
 ## 2026-11-24 #216 phase 3: enquiry pipeline, tutor outcomes and reviews, `revamp/a-enquiries-reviews`
 
 Migration `39_enquiries_reviews`: WorkspaceEnquiry, EnquiryNote, StaffReview and their enums, plus `Workspace.enquiryFormOn`. Viewer contract Draft 1.25.
