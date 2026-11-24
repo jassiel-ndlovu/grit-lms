@@ -3,6 +3,34 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Study assistant and AI credits screens (#216, phase 3), `revamp/b-study-assistant`
+
+No migration, no env vars. All in B's paths, over A's `features/study` and
+`features/ai-credits` (viewer.md Drafts 1.27 and 1.29, billing.md Draft 1.18).
+
+Done:
+- `/dashboard/courses/[id]/assistant`: a student's chats, with maths, links to
+  the lessons an answer used, questions and credits left, and a line saying
+  tutors can read the chats. The tab shows only with billing on.
+- `/dashboard/manage-courses/[id]/study-chats`: for staff with
+  `content.view`, flagged chats first, concerns beside messages, Clear flag.
+  A's notification link redirects there.
+- `/dashboard/credits` (student, or parent per child) and
+  `/dashboard/settings/billing/credits` (organisation): what's left, when it
+  expires, packs to buy. `/dashboard/credits/return` after Paystack.
+- Samples on `/design-system/study`, `check-study-ui.ts`.
+
+Not built: a parent's view of the chats. A pupil may use the assistant to say
+something about home, so the owner should decide first (the contract marks it
+optional). Parents buy credits only.
+
+For A:
+- `askStudy` doesn't touch `StudyChat.updatedAt` for an existing chat, so the
+  lists stay in the order chats were started, and a chat still in use is
+  deleted a year after its first question.
+- `getStudyChat` and `askStudy` let a parent read and ask in a child's chats.
+  See above: until it's decided, refuse it or tell the student.
+
 ## 2026-11-24 Session booking screens (#216, phase 2), `revamp/b-booking`
 
 No migration, no env vars. All in B's paths, over A's `features/booking`

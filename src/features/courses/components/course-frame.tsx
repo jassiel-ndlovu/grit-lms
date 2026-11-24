@@ -1,7 +1,7 @@
 /**
  * The frame of a tutor's course pages (UI draft "Course page"): a record
  * PageFrame (#205) with the course's views in the ribbon. Overview,
- * Lessons, Coverage, Practice (Plus), Services (billing on) and Settings are separate routes, so each
+ * Lessons, Coverage, Practice (Plus), Study chats (Pro), Services (billing on) and Settings are separate routes, so each
  * view has its own URL. The lesson editor passes `type="editor"`, the
  * settings views `type="settings"`.
  *
@@ -14,6 +14,9 @@ import { RibbonNav } from "@/components/shell/ribbon";
 import { hasPractice } from "@/features/assessments/practice-queries";
 import { isBillingEnabled } from "@/features/billing/errors";
 import type { PageType } from "@/lib/ui-layout";
+
+import { studyRoutes } from "../lib/study-ui";
+import { hasStudyAssistant } from "../study";
 
 export const courseRoutes = {
   list: "/dashboard/manage-courses",
@@ -52,7 +55,7 @@ export async function CourseFrame({
   ];
   if (parent) crumbs.push(parent);
   if (page) crumbs.push({ label: page });
-  const practice = await hasPractice(course.id);
+  const [practice, assistant] = await Promise.all([hasPractice(course.id), hasStudyAssistant(course.id)]);
 
   return (
     <PageFrame
@@ -68,6 +71,7 @@ export async function CourseFrame({
             { label: "Lessons", href: courseRoutes.lessons(course.id) },
             { label: "Coverage", href: courseRoutes.coverage(course.id) },
             ...(practice ? [{ label: "Practice", href: courseRoutes.practice(course.id) }] : []),
+            ...(assistant ? [{ label: "Study chats", href: studyRoutes.chats(course.id) }] : []),
             // Premium services exist only with billing on (BILLING=1).
             ...(isBillingEnabled() ? [{ label: "Services", href: courseRoutes.services(course.id) }] : []),
             { label: "Settings", href: courseRoutes.settings(course.id) },
