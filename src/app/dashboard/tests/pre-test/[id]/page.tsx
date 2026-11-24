@@ -39,7 +39,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export const metadata = { title: "Begin test" };
+export const metadata = { title: "Start test" };
 
 const dateFmt = schoolDateFormat({
   weekday: "short",
@@ -72,7 +72,7 @@ export default async function PreTestPage({ params }: PageProps) {
   if (!student) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Test" }]}>
-        No student profile found for this account.
+        This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
       </PageMessage>
     );
   }
@@ -81,7 +81,7 @@ export default async function PreTestPage({ params }: PageProps) {
   if (!canAccess) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Test" }]}>
-        This test isn&apos;t available right now.
+        You can&apos;t open this test. It may not be published yet, or you may not be on its course. Ask your tutor.
       </PageMessage>
     );
   }
@@ -154,7 +154,7 @@ export default async function PreTestPage({ params }: PageProps) {
           label="Time limit"
           value={
             test.timeLimit == null
-              ? "Untimed"
+              ? "No time limit"
               : extraApplies
                 ? limitText
                   ? `${limitText}, with your extra time`
@@ -180,10 +180,8 @@ export default async function PreTestPage({ params }: PageProps) {
         <TonePanel tone="danger" role="note" className="flex items-start gap-3">
           <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
           <p className="text-foreground text-sm">
-            This test closes at its due time ({closeFmt.format(test.dueDate)}). If you
-            start now you&apos;ll have <strong>{minutesIfStartedNow} minutes</strong>, not
-            the full {limitText}. Your answers are submitted automatically when it
-            closes.
+            This test closes at its due time ({closeFmt.format(test.dueDate)}). If you start now you&apos;ll have <strong>{minutesIfStartedNow} minutes</strong>, not
+            the full {limitText}. Your answers are handed in for you when it closes.
           </p>
         </TonePanel>
       )}
@@ -192,7 +190,7 @@ export default async function PreTestPage({ params }: PageProps) {
         <Card className="space-y-3 p-6">
           <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
             <ScrollText className="text-brand-terracotta size-4" />
-            Before you begin
+            Before you start
           </h2>
           <LessonMarkdown content={test.preTestInstructions ?? ""} />
         </Card>
@@ -201,14 +199,13 @@ export default async function PreTestPage({ params }: PageProps) {
       {closed ? null : (
       <Card className="space-y-4 p-6">
         <p className="text-muted-foreground text-sm">
-          Once you begin the timer starts immediately
+          The clock starts as soon as you start the test
           {limitText
             ? ` and you have ${ifStartedNow.cutShort ? `${minutesIfStartedNow} min` : limitText}${extraApplies ? ", including your extra time" : ""}.`
             : extraApplies
               ? ". You have no time limit on this test, but it still closes at its due time."
               : "."}{" "}
-          Drafts auto-save every few seconds, so you can refresh or
-          navigate away and resume.
+          Your answers save every few seconds. If you leave the page you can come back and carry on, but the clock keeps running.
         </p>
         <div className="flex justify-end">
           <BeginTestButton

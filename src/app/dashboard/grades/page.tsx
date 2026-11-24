@@ -63,7 +63,7 @@ export default async function StudentGradesPage() {
   if (!student) {
     return (
       <PageMessage breadcrumb={[{ label: "Grades" }]}>
-        No student profile found for this account.
+        This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
       </PageMessage>
     );
   }
@@ -107,7 +107,7 @@ export default async function StudentGradesPage() {
       return {
         label: group.name,
         value: pct(s, o) ?? 0,
-        meta: `${group.rows.length} ${group.rows.length === 1 ? "grade" : "grades"}`,
+        meta: `${group.rows.length} ${group.rows.length === 1 ? "mark" : "marks"}`,
       };
     },
   );
@@ -122,9 +122,9 @@ export default async function StudentGradesPage() {
   return (
     <PageFrame type="list" breadcrumb={[{ label: "Grades" }]}>
       <PageTitle
-        eyebrow={`${student.fullName.split(" ")[0]}'s transcript`}
-        title="Grades & performance"
-        description="Track your progress across every course. Click any row to see per-question feedback from your tutor."
+        eyebrow={`${student.fullName.split(" ")[0]}'s marks`}
+        title="Grades"
+        description="Your marks on every course. Open one to see your answers and your tutor's comments."
         illustration={<HeaderGrades />}
         properties={
           overall != null ? (
@@ -142,11 +142,10 @@ export default async function StudentGradesPage() {
           </div>
           <div>
             <h3 className="font-display text-xl leading-tight text-foreground">
-              No grades yet
+              No marks yet
             </h3>
             <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-sm">
-              Once your tutors grade your tests and assignments, results show
-              up here alongside your charts.
+              When a tutor marks one of your tests or assignments, the mark shows here and you get a notification.
             </p>
           </div>
         </Card>
@@ -156,10 +155,10 @@ export default async function StudentGradesPage() {
             <Card className="p-5 lg:col-span-2">
               <div className="mb-3">
                 <h2 className="font-display text-lg leading-tight">
-                  Score over time
+                  Marks over time
                 </h2>
                 <p className="text-muted-foreground text-xs">
-                  Each dot is a graded item. Hover for details.
+                  Each dot is one test or assignment. Point at it to see which.
                 </p>
               </div>
               <LineChart series={lineSeries} height={220} />
@@ -168,10 +167,10 @@ export default async function StudentGradesPage() {
             <Card className="p-5">
               <div className="mb-3">
                 <h2 className="font-display text-lg leading-tight">
-                  Points split
+                  Tests and assignments
                 </h2>
                 <p className="text-muted-foreground text-xs">
-                  Where your points come from.
+                  How much of your total marks came from each.
                 </p>
               </div>
               <DonutChart
@@ -180,7 +179,7 @@ export default async function StudentGradesPage() {
                   { label: "Assignments", value: assignmentPoints },
                 ]}
                 size={160}
-                centerLabel="graded"
+                centerLabel="marked"
                 centerValue={String(grades.length)}
               />
             </Card>
@@ -193,7 +192,7 @@ export default async function StudentGradesPage() {
                   Average by course
                 </h2>
                 <p className="text-muted-foreground text-xs">
-                  Weighted by points on each graded item.
+                  Tests and assignments with more marks count for more.
                 </p>
               </div>
               <BarChart data={barData} height={240} />
@@ -202,7 +201,7 @@ export default async function StudentGradesPage() {
 
           <section className="space-y-6">
             <h2 className="font-display text-2xl leading-tight tracking-tight text-foreground">
-              Transcript
+              All your marks
             </h2>
             {Array.from(byCourse.entries()).map(([courseId, group]) => {
               const courseScore = group.rows.reduce((s, g) => s + g.score, 0);
@@ -217,13 +216,13 @@ export default async function StudentGradesPage() {
                       </h3>
                       <p className="text-muted-foreground text-xs">
                         {group.rows.length}{" "}
-                        {group.rows.length === 1 ? "grade" : "grades"}
+                        {group.rows.length === 1 ? "mark" : "marks"}
                       </p>
                     </div>
                     {coursePct != null && (
                       <div className="text-right">
                         <p className="text-muted-foreground text-xs">
-                          Course avg
+                          Course average
                         </p>
                         <p className="font-display text-xl tabular-nums text-foreground">
                           {coursePct}%
@@ -253,7 +252,7 @@ export default async function StudentGradesPage() {
                                 </p>
                                 <p className="text-muted-foreground text-xs">
                                   {g.type === "TEST" ? "Test" : "Assignment"} ·
-                                  graded {dateFmt.format(g.updatedAt)}
+                                  marked {dateFmt.format(g.updatedAt)}
                                 </p>
                               </div>
                               <div className="flex items-center gap-3 shrink-0">

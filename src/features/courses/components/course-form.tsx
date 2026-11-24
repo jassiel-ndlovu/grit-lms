@@ -149,7 +149,7 @@ export function CourseForm({
       if (redirectTo) router.push(redirectTo);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't save the course. Check your connection and try again.");
     } finally {
       setPending(false);
     }
@@ -188,7 +188,7 @@ export function CourseForm({
             <FormItem>
               <FormLabel>Course name</FormLabel>
               <FormControl>
-                <Input placeholder="Introduction to algebra" {...field} />
+                <Input placeholder="Grade 10 Mathematics" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -233,7 +233,7 @@ export function CourseForm({
             name="studentIds"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Enrolled students</FormLabel>
+                <FormLabel>Students on this course</FormLabel>
                 <FormControl>
                   <StudentPicker
                     students={students}

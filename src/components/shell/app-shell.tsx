@@ -245,7 +245,7 @@ export function ModeSwitch({ mode }: { mode: "organisation" | "tutor" }) {
         toast.success(next === "tutor" ? "Tutor mode: only the courses you teach." : "Organisation mode: the whole organisation.");
       } else {
         setShown(mode);
-        toast.error("Could not switch mode. Try again.");
+        toast.error("We couldn't switch mode. Try again.");
       }
     });
   };

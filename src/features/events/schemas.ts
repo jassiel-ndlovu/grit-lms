@@ -50,7 +50,7 @@ export const CreateCourseEventSchema = CourseEventSchema.omit({
   .refine(
     (v) => !(v.repeatUntil != null && v.repeatCount != null),
     {
-      message: "Choose either an end date or a number of occurrences, not both",
+      message: "Choose either an end date or a number of sessions, not both.",
       path: ["repeatUntil"],
     },
   )
@@ -60,13 +60,13 @@ export const CreateCourseEventSchema = CourseEventSchema.omit({
       v.repeatFrequency !== "NONE" ||
       (v.repeatUntil == null && v.repeatCount == null),
     {
-      message: "Set a repeat frequency before adding an end condition",
+      message: "Choose how often it repeats first.",
       path: ["repeatFrequency"],
     },
   )
   .refine(
     (v) => v.repeatUntil == null || v.repeatUntil.getTime() >= v.date.getTime(),
-    { message: "The series must end on or after it starts", path: ["repeatUntil"] },
+    { message: "The last session must be on or after the first.", path: ["repeatUntil"] },
   );
 export type CreateCourseEventInput = z.infer<typeof CreateCourseEventSchema>;
 
@@ -81,7 +81,7 @@ export const UpdateCourseEventSchema = CourseEventSchema.omit({
   .refine(
     (v) => !(v.repeatUntil != null && v.repeatCount != null),
     {
-      message: "Choose either an end date or a number of occurrences, not both",
+      message: "Choose either an end date or a number of sessions, not both.",
       path: ["repeatUntil"],
     },
   );

@@ -197,7 +197,7 @@ function useSearch(pages: ReadonlyArray<SearchPage>) {
         setError(null);
       } else {
         setServerGroups([]);
-        setError(res?.serverError ?? "Search failed. Please try again.");
+        setError(res?.serverError ?? "The search didn't work. Check your connection and try again.");
       }
     }, DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
@@ -323,7 +323,7 @@ function SearchResults({
   if (groups.length === 0) {
     return (
       <p className="text-muted-foreground px-4 py-4 text-sm">
-        {loading ? "Searching…" : "No matches."}
+        {loading ? "Searching…" : "Nothing matches. Check the spelling or try a shorter word."}
       </p>
     );
   }

@@ -25,7 +25,7 @@ import { CourseActions } from "@/features/courses/components/course-actions";
 import { CreateCourseButton } from "@/features/courses/components/create-course-button";
 import { getCourseScope } from "@/features/courses/course-access";
 
-export const metadata = { title: "Manage courses" };
+export const metadata = { title: "Courses" };
 
 export default async function ManageCoursesPage() {
   const session = await auth();
@@ -46,7 +46,7 @@ export default async function ManageCoursesPage() {
       breadcrumb={[{ label: "Courses" }]}
       actions={creates ? <CreateCourseButton students={students} /> : null}
     >
-      <PageTitle title="Manage courses" description={creates ? "Create courses, manage enrolment, and edit content." : "Edit the content of your courses."} />
+      <PageTitle title="Courses" description={creates ? "Create courses, add students to them, and write their lessons." : "The courses you teach or manage. Open one to write lessons and set work."} />
 
       <CourseGrid
         view={(await getUserPreferences(session.user.id)).preferredView}
@@ -58,8 +58,8 @@ export default async function ManageCoursesPage() {
             title="No courses yet"
             description={
               creates
-                ? "Create your first course to start adding lessons and assessments, and enrolling students."
-                : "Courses you're added to appear here."
+                ? "Choose New course to create one. Then add lessons, tests and students."
+                : "When someone adds you to a course, it shows here."
             }
           />
         }

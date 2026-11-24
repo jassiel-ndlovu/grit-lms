@@ -63,7 +63,7 @@ export function TutorSubmissionActions({
       setConfirmOpen(false);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't delete the assignment. Try again.");
     } finally {
       setPending(false);
     }
@@ -112,9 +112,7 @@ export function TutorSubmissionActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &quot;{submissionTitle}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the assignment and every student entry
-              against it. Already-released grades disappear too. This action
-              cannot be undone.
+              The assignment, everything students handed in and their marks are all deleted, including marks students have already seen. This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

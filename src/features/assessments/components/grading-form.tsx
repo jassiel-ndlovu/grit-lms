@@ -136,7 +136,7 @@ async function loadSuggestions(testSubmissionId: string): Promise<AiSuggestion[]
 /** Returns the server's message when it refused. */
 async function recordAction(input: { suggestionId: string; action: AiTutorAction; score: number | null }): Promise<string | null> {
   const r = await recordAiSuggestionAction(input);
-  return r?.serverError ?? (r?.validationErrors ? "The mark was rejected." : null);
+  return r?.serverError ?? (r?.validationErrors ? "That mark couldn't be saved." : null);
 }
 
 /* ─── Flattening + helpers ─────────────────────────────────────────────── */
@@ -425,7 +425,7 @@ export function GradingForm({
 
   async function onSubmit(thenNext = false) {
     if (outOfTotal <= 0) {
-      toast.error("This test has no gradable questions.");
+      toast.error("This test has no questions to mark.");
       return;
     }
     setPending(true);
@@ -456,24 +456,24 @@ export function GradingForm({
         notifyByEmail: emailStudent,
       });
       if (result?.serverError) throw new Error(result.serverError);
-      if (result?.validationErrors) throw new Error("Some scores were rejected — check each question.");
+      if (result?.validationErrors) throw new Error("Some marks couldn't be saved. Check the mark on each question.");
       // The audit trail for each AI suggestion (A's recordAiSuggestionAction).
       if (ai && suggestions.length > 0) {
         const record = ai.record ?? recordAction;
         const actions = finalActions(suggestions, decided, (qid) => perQ[qid]?.score ?? "");
         const refused = (
-          await Promise.all(actions.map((a) => record(a).catch((e: unknown) => (e instanceof Error ? e.message : "Failed"))))
+          await Promise.all(actions.map((a) => record(a).catch((e: unknown) => (e instanceof Error ? e.message : "We couldn't save the mark. Try again."))))
         ).filter(Boolean);
         if (refused.length > 0) {
-          toast.error(`The grade is saved, but ${refused.length} AI decision${refused.length === 1 ? " wasn't" : "s weren't"} recorded: ${refused[0]}`);
+          toast.error(`The mark is saved, but ${refused.length} AI decision${refused.length === 1 ? " wasn't" : "s weren't"} recorded: ${refused[0]}`);
         }
       }
       draft.clear();
-      toast.success(`Saved grade for ${studentName}`);
+      toast.success(`Saved. ${studentName} can see the mark now.`);
       router.push(thenNext && next ? next.href : `/dashboard/tutor-tests/${testId}/submissions`);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't save the mark. Check your connection and try again.");
       setPending(false);
     }
   }
@@ -550,17 +550,17 @@ export function GradingForm({
       <section aria-labelledby="overall-feedback" className="space-y-3">
         <div>
           <h2 id="overall-feedback" className="text-foreground text-sm font-semibold">
-            Overall feedback
+            Comment on the whole test
           </h2>
           <p className="text-muted-foreground text-sm">
-            Optional. Rendered with markdown + MathJax on the student review.
+            Optional. The student sees it above their answers. Maths between $ signs shows as maths.
           </p>
         </div>
         <MarkdownTextarea
           rows={6}
           value={overallFeedback}
           onChange={(e) => setOverallFeedback(e.target.value)}
-          placeholder="Nice work overall. A few notes..."
+          placeholder="Good work overall. Two things to work on…"
           previewTitle="Overall feedback preview"
         />
       </section>
@@ -571,7 +571,7 @@ export function GradingForm({
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 sm:py-3">
           <div className="flex items-center gap-4">
             <div>
-              <p className="text-muted-foreground text-xs">Overall</p>
+              <p className="text-muted-foreground text-xs">Total</p>
               <div className="flex items-baseline gap-2">
                 <Input
                   type="number"
@@ -596,12 +596,12 @@ export function GradingForm({
                 onClick={() => setOverrideOverall(null)}
                 className="text-muted-foreground"
               >
-                Use sum ({scoreSum})
+                Use the total of the questions ({scoreSum})
               </Button>
             )}
             {!allGraded && (
               <span className="text-muted-foreground text-xs">
-                Some questions still ungraded — score defaults to 0 for those.
+                Questions you haven&apos;t marked count as 0.
               </span>
             )}
           </div>
@@ -617,10 +617,10 @@ export function GradingForm({
             <span className="max-sm:hidden">
               <SaveProgressButton draft={draft} />
             </span>
-            <WriteGuard label={existingGrade ? "Update grade" : "Save grade"} variant={next ? "outline" : "brand"} size="default">
+            <WriteGuard label={existingGrade ? "Update mark" : "Save and share mark"} variant={next ? "outline" : "brand"} size="default">
               <Button id={next ? undefined : "save-grade"} type="button" variant={next ? "outline" : "brand"} onClick={() => onSubmit()} disabled={pending}>
                 {pending && !next ? <NexusLoader size={16} label={null} className="text-current" /> : null}
-                {existingGrade ? "Update grade" : "Save grade"}
+                {existingGrade ? "Update mark" : "Save and share mark"}
                 <Save className="size-4" />
               </Button>
             </WriteGuard>
@@ -700,7 +700,7 @@ const QuestionCard = React.memo(function QuestionCard({
   return (
     <section
       id={`q-${q.id}`}
-      aria-label={isContext ? `Context ${path}` : `Question ${path}`}
+      aria-label={isContext ? `Information ${path}` : `Question ${path}`}
       className={cn("space-y-4 py-6", depth > 0 && "border-brand-terracotta/30 ml-2 border-l-2 pl-4 sm:ml-4")}
     >
       <div className="space-y-2">
@@ -711,8 +711,8 @@ const QuestionCard = React.memo(function QuestionCard({
           )}
         >
           {isContext
-            ? `Context ${path}`
-            : `Question ${path} · ${q.points} ${q.points === 1 ? "point" : "points"}`}
+            ? `Information ${path}`
+            : `Question ${path} · ${q.points} ${q.points === 1 ? "mark" : "marks"}`}
         </p>
         <LessonMarkdown content={q.question} dynamic={false} />
       </div>
@@ -773,7 +773,7 @@ const QuestionCard = React.memo(function QuestionCard({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr]">
             <div className="space-y-1.5">
               <label htmlFor={`score-${q.id}`} className="text-foreground text-xs font-medium">
-                Score
+                Mark
               </label>
               <div className="flex items-center gap-2">
                 <Input
@@ -805,14 +805,14 @@ const QuestionCard = React.memo(function QuestionCard({
             </div>
             <div className="space-y-1.5">
               <label htmlFor={`feedback-${q.id}`} className="text-foreground text-xs font-medium">
-                Feedback
+                Comment
               </label>
               <MarkdownTextarea
                 id={`feedback-${q.id}`}
                 rows={3}
                 value={feedback}
                 onChange={(e) => onFeedback(row.q.id, e.target.value)}
-                placeholder="Optional — markdown + LaTeX supported."
+                placeholder="Optional. Maths between $ signs shows as maths."
                 previewTitle={`Feedback for ${row.path}`}
               />
               {comments.length > 0 ? (
@@ -851,7 +851,7 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
     (Array.isArray(value) && value.length === 0);
   if (empty) {
     return (
-      <p className="text-muted-foreground italic text-xs">No answer recorded.</p>
+      <p className="text-muted-foreground italic text-xs">The student didn&apos;t answer this question.</p>
     );
   }
   const wrap = (body: React.ReactNode) => (
@@ -960,7 +960,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
   switch (q.type) {
     case "MATH_EXPRESSION": {
       const key = typeof q.correctAnswer === "string" ? q.correctAnswer : "";
-      if (!key.trim()) return <p className="text-muted-foreground italic text-xs">No key set — grade manually.</p>;
+      if (!key.trim()) return <p className="text-muted-foreground italic text-xs">No answer key, so mark this one yourself.</p>;
       return (
         <div className="text-foreground space-y-1 text-sm">
           <MathsAnswerText tex={key} />
@@ -976,7 +976,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
       if (val == null || (typeof val === "string" && val.trim() === "")) {
         return (
           <p className="text-muted-foreground italic text-xs">
-            No key set — grade manually.
+            No answer key, so mark this one yourself.
           </p>
         );
       }
@@ -989,7 +989,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
     case "MULTI_SELECT": {
       const arr = Array.isArray(q.correctAnswer) ? (q.correctAnswer as string[]) : [];
       if (arr.length === 0) {
-        return <p className="text-muted-foreground italic text-xs">No key set.</p>;
+        return <p className="text-muted-foreground italic text-xs">No answer key.</p>;
       }
       return (
         <ul className="text-foreground text-sm list-disc pl-5 space-y-0.5">
@@ -1004,7 +1004,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
     case "FILL_IN_THE_BLANK": {
       const arr = Array.isArray(q.correctAnswer) ? (q.correctAnswer as string[]) : [];
       if (arr.length === 0) {
-        return <p className="text-muted-foreground italic text-xs">No key set.</p>;
+        return <p className="text-muted-foreground italic text-xs">No answer key.</p>;
       }
       return (
         <ol className="text-foreground text-sm list-decimal pl-5 space-y-0.5">
@@ -1017,7 +1017,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
     case "REORDER": {
       const arr = q.reorderItems ?? [];
       if (arr.length === 0) {
-        return <p className="text-muted-foreground italic text-xs">No key set.</p>;
+        return <p className="text-muted-foreground italic text-xs">No answer key.</p>;
       }
       return (
         <ol className="text-foreground text-sm list-decimal pl-5 space-y-0.5">
@@ -1032,7 +1032,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
     case "MATCHING": {
       const pairs = (q.matchPairs ?? []) as Array<{ left: string; right: string }>;
       if (pairs.length === 0) {
-        return <p className="text-muted-foreground italic text-xs">No pairs set.</p>;
+        return <p className="text-muted-foreground italic text-xs">No pairs added.</p>;
       }
       return (
         <ul className="text-foreground text-sm space-y-1">
@@ -1058,7 +1058,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
       if (typeof q.correctAnswer !== "string" || q.correctAnswer.trim() === "") {
         return (
           <p className="text-muted-foreground italic text-xs">
-            Subjective — no model answer recorded. Grade using your own criteria.
+            No model answer. Mark it as you see fit.
           </p>
         );
       }
@@ -1086,7 +1086,7 @@ function CorrectAnswerView({ q }: { q: GradingQuestion }) {
       if (memo.length === 0) {
         return (
           <p className="text-muted-foreground italic text-xs">
-            Subjective — no model answer recorded. Grade using your own criteria.
+            No model answer. Mark it as you see fit.
           </p>
         );
       }
@@ -1173,14 +1173,14 @@ function CriterionMarks({
       </ul>
       {disagrees ? (
         <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-          These add up to {total}, not the Score, so they won&apos;t be saved.
+          These add up to {total}, not the Mark, so they won&apos;t be saved.
           <button
             type="button"
             disabled={disabled}
             onClick={() => onChange({ ...marks })}
             className="text-foreground font-medium underline underline-offset-2 disabled:opacity-60"
           >
-            Use {total} as the Score
+            Use {total} as the Mark
           </button>
         </p>
       ) : null}

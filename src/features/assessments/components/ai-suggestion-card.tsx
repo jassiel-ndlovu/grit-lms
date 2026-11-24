@@ -83,7 +83,7 @@ export function AiSuggestionCard({
           </span>
         </span>
         {s.confidence ? <StatusChip tone={CONFIDENCE[s.confidence].tone}>{CONFIDENCE[s.confidence].label}</StatusChip> : null}
-        {s.escalated ? <StatusChip tone="info">Re-marked by the larger model</StatusChip> : null}
+        {s.escalated ? <StatusChip tone="info">Marked again by a stronger AI</StatusChip> : null}
         {s.flags.map((f) => (
           <StatusChip key={f} tone="warning" title={flagLabel(f).hint}>
             {flagLabel(f).label}
@@ -129,7 +129,7 @@ export function AiSuggestionCard({
             <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
             {canUndo ? (
               <>
-                <span className="text-muted-foreground text-xs">Saved with the grade.</span>
+                <span className="text-muted-foreground text-xs">The student sees this when you save the mark.</span>
                 <Button type="button" size="sm" variant="ghost" onClick={() => onUndo(s)} disabled={disabled}>
                   Undo
                 </Button>

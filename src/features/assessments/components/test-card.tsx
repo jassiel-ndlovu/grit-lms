@@ -48,18 +48,18 @@ export interface TestCardProps {
 function statusFor(submission: TestCardSubmission, dueDate: Date) {
   if (!submission) {
     return dueDate.getTime() < Date.now()
-      ? { label: "Past due", tone: "muted" as const }
+      ? { label: "Closed", tone: "muted" as const }
       : { label: "Not started", tone: "muted" as const };
   }
   switch (submission.status) {
     case "GRADED":
-      return { label: "Graded", tone: "brand" as const };
+      return { label: "Marked", tone: "brand" as const };
     case "SUBMITTED":
-      return { label: "Awaiting grade", tone: "soft" as const };
+      return { label: "Waiting to be marked", tone: "soft" as const };
     case "IN_PROGRESS":
       return { label: "In progress", tone: "secondary" as const };
     case "LATE":
-      return { label: "Late", tone: "destructive" as const };
+      return { label: "Handed in late", tone: "destructive" as const };
     default:
       return { label: "Not started", tone: "muted" as const };
   }
@@ -142,7 +142,7 @@ export function TestCard({
 
         {score != null && outOf > 0 && (
           <div className="border-border flex items-center justify-between border-t pt-3">
-            <span className="text-muted-foreground text-xs">Score</span>
+            <span className="text-muted-foreground text-xs">Mark</span>
             <span className="font-display tabular-nums text-foreground">
               {score}
               <span className="text-muted-foreground"> / {outOf}</span>

@@ -66,7 +66,7 @@ const dateFmt = schoolDateFormat({
   minute: "2-digit",
 });
 
-export const metadata = { title: "Grade submission" };
+export const metadata = { title: "Mark submission" };
 
 /**
  * Build the tree the grading form expects. Prisma's `include:
@@ -124,7 +124,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
   if (!owns) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: testRoutes.list }, { label: "Submission" }]}>
-        You don&apos;t own this test.
+        Only staff who teach or manage this test&apos;s course can open this page.
       </PageMessage>
     );
   }
@@ -152,8 +152,8 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
         <EmptyState
           compact
           illustration={<Scene name="nothing-to-grade" />}
-          title="No submission"
-          description={`${student.fullName} hasn't started this test yet.`}
+          title="Not started"
+          description={`${student.fullName} hasn't started this test yet. Their answers show here once they do.`}
         />
       </TestFrame>
     );
@@ -187,7 +187,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
 
   const chip =
     submission.status === "GRADED"
-      ? { tone: "success" as const, label: "Graded" }
+      ? { tone: "success" as const, label: "Marked" }
       : submission.status === "SUBMITTED"
         ? { tone: "info" as const, label: "To mark" }
         : { tone: "neutral" as const, label: "In progress" };
@@ -247,11 +247,11 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
           properties={
             <PropertyList>
               <PropertyRow label="Email">{student.email}</PropertyRow>
-              <PropertyRow label={submission.submittedAt ? "Submitted" : "Started"}>
+              <PropertyRow label={submission.submittedAt ? "Handed in" : "Started"}>
                 <span className="tabular-nums">{dateFmt.format(submission.submittedAt ?? submission.startedAt)}</span>
               </PropertyRow>
               {existingGrade ? (
-                <PropertyRow label="Saved grade">
+                <PropertyRow label="Saved mark">
                   <span className="tabular-nums">
                     {existingGrade.score} / {existingGrade.outOf}
                   </span>

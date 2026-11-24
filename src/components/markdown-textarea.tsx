@@ -63,7 +63,7 @@ export function PreviewRenderButton({
           <DialogHeader>
             <DialogTitle className="font-display">{title}</DialogTitle>
             <DialogDescription>
-              Rendered with Markdown and MathJax, exactly as students will see it.
+              This is how students see it.
             </DialogDescription>
           </DialogHeader>
           <div className="border-border bg-card max-h-[65vh] overflow-y-auto rounded-md border p-5">

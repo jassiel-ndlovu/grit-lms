@@ -75,7 +75,7 @@ export default async function TimesheetsPage({ searchParams }: { searchParams: P
         />
         {rows.length === 0 ? (
           <Card className="p-0">
-            <EmptyState compact illustration={<Scene name="nothing-to-grade" />} title="None here" description="No timesheets match for this month." />
+            <EmptyState compact illustration={<Scene name="nothing-to-grade" />} title="No timesheets here" description="Nobody's timesheet has this status this month. Choose another status or month." />
           </Card>
         ) : (
           <StaffSheets rows={rows} month={month} />

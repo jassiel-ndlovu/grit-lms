@@ -48,11 +48,11 @@ export function MarkCompleteButton({
         if (result?.serverError) {
           throw new Error(result.serverError);
         }
-        toast.success(next ? "Lesson marked complete" : "Marked incomplete");
+        toast.success(next ? "Lesson marked as done." : "Lesson marked as not done.");
         router.refresh();
       } catch (e) {
         setCompleted(!next); // rollback
-        toast.error(e instanceof Error ? e.message : "Could not update");
+        toast.error(e instanceof Error ? e.message : "We couldn't save that. Check your connection and try again.");
       }
     });
   }
@@ -72,7 +72,7 @@ export function MarkCompleteButton({
       ) : (
         <Circle className="size-4" />
       )}
-      {completed ? "Completed" : "Mark complete"}
+      {completed ? "Done" : "Mark as done"}
     </Button>
   );
 }

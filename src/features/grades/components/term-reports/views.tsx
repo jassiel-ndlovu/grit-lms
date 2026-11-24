@@ -28,7 +28,7 @@ export const PHASE_LABEL: Record<TermPhase, string> = { upcoming: "Not started",
 
 /** "Released", or where the term is. */
 export function TermStatus({ released, phase }: { released: boolean; phase: TermPhase }) {
-  return <Badge variant={released ? "soft" : "secondary"}>{released ? "Released" : PHASE_LABEL[phase]}</Badge>;
+  return <Badge variant={released ? "soft" : "secondary"}>{released ? "Shared" : PHASE_LABEL[phase]}</Badge>;
 }
 
 export interface TermListItem {
@@ -169,7 +169,7 @@ function CourseBlock({ course }: { course: ReportCourse }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-4 sm:pl-5">Assessment</TableHead>
+                <TableHead className="pl-4 sm:pl-5">Test or assignment</TableHead>
                 <TableHead className="text-right">Mark</TableHead>
                 <TableHead className="pr-4 text-right sm:pr-5">%</TableHead>
               </TableRow>

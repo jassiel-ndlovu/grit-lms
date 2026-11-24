@@ -163,8 +163,8 @@ export const createLesson = tutorActionClient
     if (!isGroup) {
       await emitNotification(
         {
-          title: "New Lesson Published",
-          message: `Lesson "${created.title}" has been published.`,
+          title: "New lesson",
+          message: `"${created.title}" was added to your lessons.`,
           link: `/dashboard/courses/lessons/${created.courseId}`,
           type: "LESSON_CREATED",
           priority: "NORMAL",
@@ -267,8 +267,8 @@ export const updateLesson = tutorActionClient
     if (contentChanged && updated.type !== "NONE") {
       await emitNotification(
         {
-          title: "Lesson Updated",
-          message: `Lesson "${updated.title}" has been updated.`,
+          title: "Lesson changed",
+          message: `Your tutor changed "${updated.title}".`,
           link: `/dashboard/courses/lessons/${updated.courseId}`,
           type: "LESSON_UPDATED",
           courseId: updated.courseId,
@@ -344,8 +344,8 @@ export const deleteLesson = tutorActionClient
     if (existing.type !== "NONE") {
       await emitNotification(
         {
-          title: "Lesson Removed",
-          message: `Lesson "${existing.title}" has been removed.`,
+          title: "Lesson removed",
+          message: `"${existing.title}" was removed from your lessons.`,
           link: `/dashboard/courses/lessons/${courseId}`,
           type: "LESSON_DELETED",
           courseId,

@@ -18,7 +18,7 @@ import { childRoutes } from "@/features/activity/lib/child-overview";
 import type { Viewer } from "@/lib/viewer-core";
 
 const COMING_SOON = [
-  { icon: MessageSquare, title: "Tutor messages", body: "Questions and updates between you and your learners' tutors." },
+  { icon: MessageSquare, title: "Tutor messages", body: "Questions and updates between you and your children's tutors." },
 ];
 
 type Learner = Viewer["children"][number] & { summary: ChildSummary };
@@ -28,13 +28,13 @@ export function ParentDashboard({ firstName, learners, notes }: { firstName: str
     <PageFrame type="home" breadcrumb={[{ label: "Home" }]}>
       <PageTitle
         eyebrow={`Welcome, ${firstName}`}
-        title="Follow your learners' progress"
-        description="Marks, deadlines and course updates for the students you look after, in one place."
+        title="Your children's progress"
+        description="Marks, due dates and news from every course your children are on."
       />
 
       <section className="space-y-4">
         <h2 className="text-foreground text-base font-semibold">
-          Your learners
+          Your children
         </h2>
         {learners.length === 0 ? (
           <Card className="flex min-h-[200px] flex-col items-center justify-center gap-4 p-10 text-center">
@@ -43,11 +43,10 @@ export function ParentDashboard({ firstName, learners, notes }: { firstName: str
             </div>
             <div>
               <h3 className="font-display text-xl leading-tight text-foreground">
-                No learners linked yet
+                No children linked yet
               </h3>
               <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
-                Once your account is linked to your child&apos;s, their courses and results
-                will show here. Ask your school to link your accounts.
+                Ask your child&apos;s tutor or school to link your account to theirs. Their courses and marks then show here.
               </p>
             </div>
             <Button asChild variant="outline" size="sm">

@@ -59,10 +59,9 @@ export function CreateLessonButton({
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Create a new lesson</DialogTitle>
+          <DialogTitle>New lesson</DialogTitle>
           <DialogDescription>
-            Add a title, description, and optionally videos and attachments
-            — or make it a group that holds other lessons.
+            Give it a title and write the lesson. You can add videos and files, or make it a group that holds other lessons.
           </DialogDescription>
         </DialogHeader>
         <LessonForm

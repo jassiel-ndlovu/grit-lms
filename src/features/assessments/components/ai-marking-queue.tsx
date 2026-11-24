@@ -75,7 +75,7 @@ export function AiMarkingQueue({
       setOpen(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't start AI marking");
+      setError(e instanceof Error ? e.message : "We couldn't start AI marking. Try again.");
     } finally {
       setPending(false);
     }

@@ -47,7 +47,7 @@ export default async function TestRunnerPage({ params }: PageProps) {
   if (!student) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Test" }]}>
-        No student profile found for this account.
+        This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
       </PageMessage>
     );
   }
@@ -56,7 +56,7 @@ export default async function TestRunnerPage({ params }: PageProps) {
   if (!canAccess) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Test" }]}>
-        This test isn&apos;t available right now.
+        You can&apos;t open this test. It may not be published yet, or you may not be on its course. Ask your tutor.
       </PageMessage>
     );
   }

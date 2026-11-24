@@ -322,7 +322,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
       if (result?.validationErrors) throw new Error("This question can't be saved yet. Check its answer fields.");
       toast.success("Saved to your question bank");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't save to the bank");
+      toast.error(e instanceof Error ? e.message : "We couldn't save it to your question bank. Try again.");
     }
   }
   function updateQuestion(i: number, next: EditorQuestion) {
@@ -356,15 +356,15 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
   async function save(mode: "draft" | "publish" | "preview") {
     const publish = mode === "publish";
     if (!title.trim()) {
-      toast.error("Title is required");
+      toast.error("Give the test a title.");
       return;
     }
     if (!courseId) {
-      toast.error("Pick a course");
+      toast.error("Choose a course");
       return;
     }
     if (!dateStr || !timeStr) {
-      toast.error("Due date and time are required");
+      toast.error("Choose a due date and time.");
       return;
     }
     const unnamed = unnamedCriterion(questions, (path) => path.map((n) => n + 1).join("."));
@@ -422,7 +422,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
       }
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't save the test. Check your connection and try again.");
       setPending(null);
     }
   }
@@ -450,7 +450,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Unit 3 quiz"
+            placeholder="Trigonometry test"
           />
         </div>
 
@@ -462,7 +462,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Short blurb the students see on their tests list."
+            placeholder="What the test covers. Students see it in their list of tests."
             previewTitle="Description preview"
           />
         </div>
@@ -472,7 +472,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
             <label className="text-foreground text-xs font-medium">Course</label>
             <Select value={courseId} onValueChange={setCourseId} disabled={courses.length <= 1}>
               <SelectTrigger>
-                <SelectValue placeholder="Pick a course" />
+                <SelectValue placeholder="Choose a course" />
               </SelectTrigger>
               <SelectContent>
                 {courses.map((c) => (
@@ -490,7 +490,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
             <Input
               type="number"
               min={1}
-              placeholder="Leave empty for untimed"
+              placeholder="Leave empty for no limit"
               value={timeLimit}
               onChange={(e) => setTimeLimit(e.target.value)}
             />
@@ -518,13 +518,13 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
 
         <div className="space-y-1.5">
           <label className="text-foreground text-xs font-medium">
-            Pre-test instructions
+            Instructions before the test
           </label>
           <MarkdownTextarea
             rows={4}
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
-            placeholder="Rules, materials allowed, tone, etc. Rendered above the timer on the pre-test page."
+            placeholder="What students may use, and any rules. They read this before the clock starts."
             previewTitle="Pre-test instructions preview"
           />
         </div>
@@ -543,13 +543,10 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
           />
           <span className="space-y-0.5 text-sm">
             <span className="text-foreground block font-medium">
-              Release auto-marks to students at submit time
+              Show automatic marks as soon as a student hands in
             </span>
             <span className="text-muted-foreground block text-xs">
-              Objective questions (multiple choice, matching, numeric, etc.)
-              are graded automatically from your answer keys. Subjective
-              questions still wait for you. Uncheck to keep all grades
-              hidden until you release them manually.
+              Questions with a set answer, such as multiple choice, are marked from your answer key. Written ones wait for you. When this is off, students see no marks until you&apos;ve saved theirs.
             </span>
           </span>
         </label>
@@ -561,9 +558,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
             Memo <span className="text-muted-foreground">(optional)</span>
           </label>
           <p className="text-muted-foreground text-xs">
-            The full worked solutions for this test, if you have them as a
-            document. Students can open it from their review page once their
-            attempt has been graded.
+            The worked solutions as a document, if you have one. A student can open it once you&apos;ve marked their test.
           </p>
           <TestMemoFiles
             testId={defaultValues?.id ?? "draft"}
@@ -581,7 +576,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
               Questions
             </h2>
             <p className="text-muted-foreground text-xs">
-              {questions.length} top-level · {computedPoints} points total
+              {questions.length} {questions.length === 1 ? "question" : "questions"} · {computedPoints} marks
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -646,7 +641,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
         {questions.length === 0 ? (
           <Card className="p-10 text-center">
             <p className="text-muted-foreground text-sm">
-              No questions yet. Add one to get started.
+              No questions yet. Choose Add question to write the first one.
             </p>
           </Card>
         ) : (
@@ -678,7 +673,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
           <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">
               {questions.length} question{questions.length === 1 ? "" : "s"} · {" "}
-              {computedPoints} points
+              {computedPoints} marks
             </div>
             <DraftStatus draft={draft} />
           </div>

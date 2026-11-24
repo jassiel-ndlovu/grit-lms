@@ -59,7 +59,7 @@ export async function LessonReader({ courseId, lessonId = null }: { courseId: st
     select: { id: true },
   });
   if (!student) {
-    return <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: "Lessons" }]}>No student profile found for this account.</PageMessage>;
+    return <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: "Lessons" }]}>This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.</PageMessage>;
   }
 
   const [course, lessons, completions] = await Promise.all([
@@ -75,7 +75,7 @@ export async function LessonReader({ courseId, lessonId = null }: { courseId: st
   if (!isEnrolled) {
     return (
       <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: course.name }]}>
-        You aren&apos;t enrolled in this course.
+        You&apos;re not on this course. Ask your tutor to add you.
       </PageMessage>
     );
   }
@@ -210,7 +210,7 @@ export async function LessonReader({ courseId, lessonId = null }: { courseId: st
                 <EmptyState
                   illustration={<Scene name="empty-lessons" />}
                   title="No lessons yet"
-                  description="Your tutor hasn't published any lessons for this course yet. Check back soon."
+                  description="Your tutor hasn't added lessons to this course yet. They show here when they do."
                 />
               </Card>
             </>

@@ -51,7 +51,7 @@ export default async function StudentTestsPage() {
   if (!student) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests" }]}>
-        No student profile found for this account.
+        This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
       </PageMessage>
     );
   }
@@ -83,16 +83,26 @@ export default async function StudentTestsPage() {
             illustration={<Scene name="empty-tests" />}
             title={
               b === "upcoming"
-                ? "No upcoming tests"
+                ? "No tests to take right now"
                 : b === "missed"
-                  ? "No missed tests"
+                  ? "You haven't missed any tests"
                   : b === "submitted"
-                    ? "Nothing waiting for a grade"
+                    ? "Nothing waiting to be marked"
                     : b === "graded"
-                      ? "No graded tests yet"
-                      : "No active tests"
+                      ? "No marked tests yet"
+                      : "No tests yet"
             }
-            description={b === "upcoming" || b === "missed" ? "You're caught up." : undefined}
+            description={
+              b === "upcoming"
+                ? "When a tutor sets a test on one of your courses, it shows here with its due date."
+                : b === "submitted"
+                  ? "Tests you hand in show here until your tutor marks them."
+                  : b === "graded"
+                    ? "Your marks and your tutor's comments show here after a test is marked."
+                    : b === "all"
+                      ? "Tests your tutors set show here."
+                      : undefined
+            }
           />
         }
       >
@@ -131,8 +141,8 @@ export default async function StudentTestsPage() {
     <PageFrame type="list" breadcrumb={[{ label: "Tests" }]}>
       <PageTitle
         eyebrow="Assessments"
-        title="Tests & quizzes"
-        description="Active assessments across your courses, sorted by what needs your attention first."
+        title="Tests"
+        description="Tests and quizzes your tutors have set, with the ones you need to do first at the top."
         illustration={<HeaderTests />}
       />
 

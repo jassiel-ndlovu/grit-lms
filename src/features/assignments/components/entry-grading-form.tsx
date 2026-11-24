@@ -155,7 +155,7 @@ export function EntryGradingForm({
     const nextOutOf = sections.reduce((a, s) => a + (s.outOf || 0), 0);
     setScore(nextScore);
     setOutOf(nextOutOf || 1);
-    toast.success(`Summed: ${nextScore}/${nextOutOf || 0}.`);
+    toast.success(`Sections add up to ${nextScore}/${nextOutOf || 0}.`);
   }
 
   function markUploading(i: number, on: boolean) {
@@ -180,7 +180,7 @@ export function EntryGradingForm({
       updateSection(i, { memoFileUrl: url });
       toast.success(`Uploaded ${file.name}.`, { id: uploadingToast });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed", {
+      toast.error(err instanceof Error ? err.message : "The upload failed. Check your connection and try again.", {
         id: uploadingToast,
       });
     } finally {
@@ -200,15 +200,15 @@ export function EntryGradingForm({
 
   async function onSave() {
     if (outOf <= 0) {
-      toast.error("Out-of must be greater than zero.");
+      toast.error("The total marks must be more than 0.");
       return;
     }
     if (score > outOf) {
-      toast.error("Score can't exceed the out-of.");
+      toast.error("The mark can't be more than the total marks.");
       return;
     }
     if (uploadingIdx.size > 0) {
-      toast.error("A memo is still uploading - wait for it to finish.");
+      toast.error("A memo is still uploading. Wait for it to finish.");
       return;
     }
 
@@ -222,7 +222,7 @@ export function EntryGradingForm({
     // tutor gets a pointed message rather than a generic rejection.
     const badIdx = kept.findIndex((s) => s.outOf <= 0);
     if (badIdx !== -1) {
-      toast.error(`Section ${badIdx + 1} needs an out-of greater than zero.`);
+      toast.error(`Section ${badIdx + 1} needs total marks of more than 0.`);
       return;
     }
 
@@ -254,19 +254,19 @@ export function EntryGradingForm({
       if (res?.validationErrors) {
         console.warn("[EntryGradingForm] rejected:", res.validationErrors);
         toast.error(
-          "Some fields were rejected - check each section's score and out-of.",
+          "Some marks couldn't be saved. Check each section's mark and total.",
         );
         return;
       }
       if (!res?.data) {
-        toast.error("Save did not complete. Please try again.");
+        toast.error("We couldn't save the mark. Try again.");
         return;
       }
       draft.clear();
-      toast.success("Grade saved.");
+      toast.success("Saved. The student can see the mark now.");
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed");
+      toast.error(err instanceof Error ? err.message : "We couldn't save the mark. Check your connection and try again.");
     } finally {
       setPending(false);
     }
@@ -280,10 +280,9 @@ export function EntryGradingForm({
       <Card className="p-6">
         <div className="flex items-baseline justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg leading-tight">Grade</h2>
+            <h2 className="font-display text-lg leading-tight">Mark</h2>
             <p className="text-muted-foreground text-sm">
-              Enter a total score, or break it into sections below for a
-              richer breakdown the student can see.
+              Enter one mark, or split it into sections below. The student sees each section&apos;s mark and comment.
             </p>
           </div>
           <div className="text-right">
@@ -298,7 +297,7 @@ export function EntryGradingForm({
         <Separator className="my-4" />
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-24 space-y-1">
-            <span className="text-muted-foreground text-xs">Score</span>
+            <span className="text-muted-foreground text-xs">Mark</span>
             <Input
               type="number"
               step="0.5"
@@ -328,17 +327,17 @@ export function EntryGradingForm({
               onClick={autoSum}
               className="ml-auto"
             >
-              <Sigma className="mr-1 size-4" /> Sum from sections
+              <Sigma className="mr-1 size-4" /> Added up from the sections
             </Button>
           )}
         </div>
         <div className="mt-4 space-y-2">
-          <label className="text-sm font-medium">Overall feedback</label>
+          <label className="text-sm font-medium">Comment</label>
           <MarkdownTextarea
             rows={3}
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Optional — overall feedback for the student."
+            placeholder="Optional. The student sees it with their mark."
             previewTitle="Overall feedback preview"
           />
         </div>
@@ -348,17 +347,16 @@ export function EntryGradingForm({
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-lg leading-tight">
-              Break into sections
+              Mark in sections
             </h2>
             <p className="text-muted-foreground text-sm">
-              Optional. Give the student a per-section score, remarks, and
-              (optionally) a memo file per section.
+              Optional. Give each section its own mark and comment, and a memo if you like.
             </p>
           </div>
           <Switch
             checked={sectionsOn}
             onCheckedChange={setSectionsOn}
-            aria-label="Toggle section-by-section grading"
+            aria-label="Mark in sections"
           />
         </div>
 
@@ -387,7 +385,7 @@ export function EntryGradingForm({
                     <div className="flex items-end gap-2">
                       <label className="space-y-1">
                         <span className="text-muted-foreground text-xs">
-                          Score
+                          Mark
                         </span>
                         <Input
                           type="number"
@@ -433,7 +431,7 @@ export function EntryGradingForm({
                   </div>
                   <div className="space-y-1">
                     <label className="text-muted-foreground text-xs">
-                      Remarks / comments
+                      Comment
                     </label>
                     <MarkdownTextarea
                       rows={2}
@@ -442,7 +440,7 @@ export function EntryGradingForm({
                       onChange={(e) =>
                         updateSection(i, { remarks: e.target.value })
                       }
-                      placeholder="e.g. Working is correct but the units are missing."
+                      placeholder="Working is correct but the units are missing."
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
@@ -525,7 +523,7 @@ export function EntryGradingForm({
           ) : (
             <Save className="mr-2 size-4" />
           )}
-          Save grade
+          Save and share mark
         </Button>
       </div>
     </div>

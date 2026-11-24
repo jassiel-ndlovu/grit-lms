@@ -55,7 +55,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
                       <iframe
                         className="absolute inset-0 size-full"
                         src={`https://www.youtube.com/embed/${ytId}`}
-                        title={`${lesson.title} — video ${idx + 1}`}
+                        title={`${lesson.title}, video ${idx + 1}`}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                       />
@@ -88,7 +88,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
           <RichContent value={lesson.descriptionJson} markdown={lesson.description} />
         ) : (
           <p className="text-muted-foreground text-sm italic">
-            No description provided.
+            This lesson has no text.
           </p>
         )}
       </Card>
@@ -96,7 +96,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
       <Card className="space-y-4 p-6">
         <h3 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
           <FileText className="text-brand-terracotta size-4" />
-          Resources
+          Files and links
         </h3>
         {hasAttachments ? (
           <ul className="grid gap-3 sm:grid-cols-2">
@@ -116,7 +116,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
                       {a.title || "Download"}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      Click to open
+                      Opens in a new tab
                     </p>
                   </div>
                   <ExternalLink className="text-muted-foreground group-hover:text-foreground size-4 shrink-0" />
@@ -126,7 +126,7 @@ export function LessonContent({ lesson }: LessonContentProps) {
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm italic">
-            No additional resources for this lesson.
+            No files or links for this lesson.
           </p>
         )}
       </Card>

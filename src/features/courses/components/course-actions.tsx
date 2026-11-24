@@ -55,7 +55,7 @@ export function CourseActions({ courseId, courseName, canDelete = true }: Course
       setConfirmOpen(false);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't delete the course. Try again.");
     } finally {
       setPending(false);
     }
@@ -100,8 +100,7 @@ export function CourseActions({ courseId, courseName, canDelete = true }: Course
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &quot;{courseName}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the course and all of its lessons,
-              quizzes, tests, and submissions. This action cannot be undone.
+              Its lessons, tests, assignments, students&apos; work and marks are all deleted. This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

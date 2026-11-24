@@ -42,9 +42,9 @@ export function CreateCourseButton({
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl max-h-screen overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create a new course</DialogTitle>
+          <DialogTitle>New course</DialogTitle>
           <DialogDescription>
-            Add a cover, name, and description, then optionally enrol students.
+            Give it a name, a cover and a description. You can add students now or later.
           </DialogDescription>
         </DialogHeader>
         <CourseForm

@@ -64,7 +64,7 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
   if (!owns) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: testRoutes.list }, { label: "Test" }]}>
-        You don&apos;t own this test.
+        Only staff who teach or manage this test&apos;s course can open this page.
       </PageMessage>
     );
   }
@@ -86,7 +86,7 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
 
   const chip = (status: string) =>
     status === "GRADED"
-      ? { tone: "success" as const, label: "Graded" }
+      ? { tone: "success" as const, label: "Marked" }
       : status === "SUBMITTED"
         ? { tone: "info" as const, label: "To mark" }
         : { tone: "neutral" as const, label: "In progress" };
@@ -97,8 +97,8 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
         title={test.title}
         description={
           <>
-            Due {dateFmt.format(test.dueDate)} · {test.totalPoints} points · {submissions.length}{" "}
-            {submissions.length === 1 ? "submission" : "submissions"} ({graded} graded, {submitted} to mark,{" "}
+            Due {dateFmt.format(test.dueDate)} · {test.totalPoints} marks · {submissions.length}{" "}
+            {submissions.length === 1 ? "submission" : "submissions"} ({graded} marked, {submitted} to mark,{" "}
             {inProgress} in progress)
           </>
         }
@@ -135,7 +135,7 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
           compact
           illustration={<Scene name="nothing-to-grade" />}
           title="No one has started this test yet"
-          description="Attempts show up here as students start them."
+          description="Each student's attempt shows here as soon as they start."
         />
       ) : (
         <ScriptPeeks
@@ -156,7 +156,7 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
                     <p className="text-muted-foreground truncate text-xs">
                       {s.student.email}
                       {s.submittedAt
-                        ? ` · submitted ${dateFmt.format(s.submittedAt)}`
+                        ? ` · handed in ${dateFmt.format(s.submittedAt)}`
                         : ` · started ${dateFmt.format(s.startedAt)}`}
                     </p>
                   </div>

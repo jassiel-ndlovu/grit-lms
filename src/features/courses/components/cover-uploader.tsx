@@ -55,7 +55,7 @@ export function CoverUploader({
       onChange(url);
       toast.success("Cover uploaded");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't upload the cover. Check your connection and try again.");
     } finally {
       setProgress(null);
     }
@@ -100,7 +100,7 @@ export function CoverUploader({
           <div className="text-muted-foreground flex flex-col items-center gap-2 text-sm">
             <ImageIcon className="size-8" />
             <span>Drop an image, or click to browse</span>
-            <span className="text-xs">PNG, JPEG, or WebP — up to 10 MB</span>
+            <span className="text-xs">PNG, JPEG or WebP, up to 10 MB</span>
           </div>
         )}
 

@@ -231,7 +231,7 @@ export function ApproveRequestButton({
                 Add {studentName} to {courseName}?
               </DialogTitle>
               <DialogDescription>
-                They join your workspace as a student and are enrolled now. {byParent ? "Their parent asked, and will get an email." : "They'll get an email."}
+                They&apos;re added to your organisation as a student, and to this course, straight away. {byParent ? "Their parent asked, and will get an email." : "They'll get an email."}
               </DialogDescription>
             </DialogHeader>
             <fieldset className="space-y-2">

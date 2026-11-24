@@ -131,11 +131,11 @@ export function ReleaseTermButton({ termId, released, missing }: { termId: strin
       return;
     }
     setOpen(false);
-    toast.success(r.data.released ? "Reports released" : "Reports taken back");
+    toast.success(r.data.released ? "Reports shared" : "Reports taken back");
     router.refresh();
   }
 
-  const label = released ? "Take back" : "Release to families";
+  const label = released ? "Take back" : "Share with families";
   const Icon = released ? Undo2 : Send;
   return (
     <WriteGuard label={label} variant={released ? "outline" : "default"}>
@@ -146,10 +146,10 @@ export function ReleaseTermButton({ termId, released, missing }: { termId: strin
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{released ? "Take these reports back?" : "Release these reports?"}</AlertDialogTitle>
+            <AlertDialogTitle>{released ? "Take these reports back?" : "Share these reports?"}</AlertDialogTitle>
             <AlertDialogDescription>
               {released
-                ? "Families won't be able to download them until you release them again. Copies they already downloaded stay with them."
+                ? "Families won't be able to download them until you share them again. Copies they already downloaded stay with them."
                 : `Parents and adult students will be able to download them. Later changes to marks and comments show in new downloads.${
                     missing > 0 ? ` ${missing} ${missing === 1 ? "comment isn't" : "comments aren't"} written yet.` : ""
                   }`}
@@ -159,7 +159,7 @@ export function ReleaseTermButton({ termId, released, missing }: { termId: strin
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirm} disabled={pending}>
               {pending ? <Loader2 aria-hidden className="size-4 animate-spin" /> : <Icon aria-hidden className="size-4" />}
-              {released ? "Take back" : "Release"}
+              {released ? "Take back" : "Share"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

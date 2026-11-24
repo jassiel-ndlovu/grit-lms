@@ -20,7 +20,7 @@ async function load(id: string): Promise<ScriptPeek | null> {
 }
 
 const CHIP = {
-  GRADED: { tone: "success", label: "Graded" },
+  GRADED: { tone: "success", label: "Marked" },
   SUBMITTED: { tone: "info", label: "To mark" },
   IN_PROGRESS: { tone: "neutral", label: "In progress" },
 } as const;
@@ -48,9 +48,9 @@ export function ScriptPeekBody({ d }: { d: ScriptPeek }) {
       <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
       <PropertyList className="[&_[data-slot=property-row]]:grid-cols-[5.5rem_1fr]">
         <PropertyRow label="Email">{d.email}</PropertyRow>
-        <PropertyRow label={d.submittedAt ? "Submitted" : "Started"}>{when(d.submittedAt ?? d.startedAt)}</PropertyRow>
+        <PropertyRow label={d.submittedAt ? "Handed in" : "Started"}>{when(d.submittedAt ?? d.startedAt)}</PropertyRow>
         {d.grade ? (
-          <PropertyRow label="Grade">
+          <PropertyRow label="Mark">
             <span className="tabular-nums">
               {d.grade.score} / {d.grade.outOf}
             </span>

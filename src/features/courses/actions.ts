@@ -77,8 +77,8 @@ export const createCourse = tutorActionClient
     // schema validation, and student/courses revalidation in one place.
     await emitNotification(
       {
-        title: "New Course Available",
-        message: `A new course "${created.name}" is available.`,
+        title: "You're on a new course",
+        message: `You were added to "${created.name}". Open it to start.`,
         link: `/dashboard/courses/${created.id}`,
         type: "COURSE_UPDATE",
         priority: "NORMAL",

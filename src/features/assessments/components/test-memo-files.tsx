@@ -58,7 +58,7 @@ export function TestMemoFiles({
         added.push(url);
         toast.success(`Attached ${file.name}.`, { id: t });
       } catch (err) {
-        toast.error(`${file.name}: ${err instanceof Error ? err.message : "Upload failed"}`, {
+        toast.error(`${file.name}: ${err instanceof Error ? err.message : "the upload failed. Check your connection and try again."}`, {
           id: t,
         });
       }

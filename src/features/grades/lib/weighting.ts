@@ -126,9 +126,9 @@ export function buildWeightPlan(
   if (assessments.length === 0) {
     warning = null;
   } else if (explicitTotal > 100) {
-    warning = `Explicit weights add up to ${round2(explicitTotal)}%, which is over 100%. Unweighted assessments are getting nothing.`;
+    warning = `The weights you set add up to ${round2(explicitTotal)}%, which is over 100%. Tests and assignments without a weight count for nothing.`;
   } else if (Math.abs(allocated - 100) > 0.01) {
-    warning = `Weights add up to ${round2(allocated)}%, not 100%.`;
+    warning = `The weights add up to ${round2(allocated)}%, not 100%.`;
   }
 
   return {

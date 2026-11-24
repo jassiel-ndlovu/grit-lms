@@ -59,7 +59,7 @@ export default async function TutorTestsPage() {
       breadcrumb={[{ label: "Tests" }]}
       actions={
         <>
-          <WriteGuard label="Import JSON">
+          <WriteGuard label="Import a test file">
             <ImportTestDialog courses={courses.map((c) => ({ id: c.id, name: c.name }))} />
           </WriteGuard>
           <WriteGuard label="New test" variant="brand">
@@ -82,7 +82,7 @@ export default async function TutorTestsPage() {
           <EmptyState
             illustration={<Scene name="empty-tests" />}
             title="No tests yet"
-            description="Tests you create from New test will show up here."
+            description="Choose New test to set one. Students see it once you publish it."
           />
         </div>
       ) : (
@@ -95,7 +95,7 @@ export default async function TutorTestsPage() {
                 <Th>Due</Th>
                 <Th align="right">Questions</Th>
                 <Th align="right">Submissions</Th>
-                <Th align="right">Points</Th>
+                <Th align="right">Marks</Th>
                 <Th align="right">
                   <span className="sr-only">Actions</span>
                 </Th>

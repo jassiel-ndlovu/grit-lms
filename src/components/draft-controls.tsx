@@ -41,7 +41,7 @@ export function SaveProgressButton({
       size={size}
       onClick={() => {
         if (draft.saveNow()) toast.success("Progress saved on this device.");
-        else toast.error("Couldn't save progress — browser storage is unavailable.");
+        else toast.error("We couldn't save your progress, because this browser doesn't allow it. Save the page itself instead.");
       }}
     >
       <Save className="size-4" />
@@ -71,7 +71,7 @@ export function RestoreDraftBanner<T>({
           <p className="text-muted-foreground text-xs">
             You have work on {what} saved on this device from{" "}
             {formatDateTime(at, ctx)}{" "}
-            that was never submitted.
+            that you didn&apos;t finish saving.
           </p>
         </div>
       </div>

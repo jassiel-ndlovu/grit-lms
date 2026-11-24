@@ -78,7 +78,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
   if (!student) {
     return (
       <PageMessage breadcrumb={[{ label: "Gradebook", href: "/dashboard/gradebook" }, { label: book.course.name, href: `/dashboard/gradebook/${courseId}` }, { label: "Student" }]}>
-        That student isn&apos;t enrolled in this course.
+        That student isn&apos;t on this course.
       </PageMessage>
     );
   }
@@ -111,8 +111,8 @@ export default async function StudentGradebookPage({ params }: PageProps) {
         title={student.fullName}
         properties={
           <StatTiles>
-            <StatTile label="Mark to date" value={fmt(mark.markToDate)} />
-            <StatTile label="vs class" value={vsClass == null ? "—" : `${vsClass > 0 ? "+" : ""}${vsClass}`} />
+            <StatTile label="Mark so far" value={fmt(mark.markToDate)} />
+            <StatTile label="Against the class average" value={vsClass == null ? "—" : `${vsClass > 0 ? "+" : ""}${vsClass}`} />
           </StatTiles>
         }
       />
@@ -126,18 +126,18 @@ export default async function StudentGradebookPage({ params }: PageProps) {
             {fmt(mark.markOfCourse)}
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Counting ungraded assessments as zero.
+            Work that isn&apos;t marked yet counts as 0.
           </p>
         </Card>
         <Card className="p-5">
           <p className="text-muted-foreground text-xs uppercase tracking-wide">
-            Graded so far
+            Marked so far
           </p>
           <p className="font-display mt-1 text-2xl tabular-nums text-foreground">
             {fmt(mark.coverage)}
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Share of the course weight that has been marked.
+            How much of the course&apos;s final mark has been marked.
           </p>
         </Card>
         <Card className="p-5">
@@ -148,8 +148,8 @@ export default async function StudentGradebookPage({ params }: PageProps) {
             {fmt(stats.mean)}
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
-            Across {stats.gradedStudents} graded{" "}
-            {stats.gradedStudents === 1 ? "student" : "students"}.
+            Across {stats.gradedStudents}{" "}
+            {stats.gradedStudents === 1 ? "student with a mark" : "students with a mark"}.
           </p>
         </Card>
       </div>
@@ -157,18 +157,18 @@ export default async function StudentGradebookPage({ params }: PageProps) {
       <Card className="overflow-hidden p-0">
         <div className="flex items-baseline justify-between gap-3 px-5 py-4">
           <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-            Assessments
+            Tests and assignments
           </h2>
           <span className="text-muted-foreground text-xs">
             {mark.rows.filter((r) => r.percent != null).length} of{" "}
-            {mark.rows.length} graded
+            {mark.rows.length} marked
           </span>
         </div>
         <Separator />
 
         {mark.rows.length === 0 ? (
           <div className="text-muted-foreground p-8 sm:p-12 text-center text-sm">
-            This course has no assessments yet.
+            This course has no tests or assignments yet.
           </div>
         ) : (
           <ul className="divide-border divide-y">
@@ -197,7 +197,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
                       Worth {Math.round(row.assessment.effectiveWeight * 10) / 10}
-                      % {row.assessment.explicit ? "(set)" : "(by points)"}
+                      % {row.assessment.explicit ? "(set)" : "(from its marks)"}
                       {classAvg != null && ` · class ${fmt(classAvg)}`}
                     </p>
                   </div>
@@ -215,7 +215,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
                     </div>
                     <div className="w-16">
                       <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
-                        Percent
+                        Percentage
                       </p>
                       <p
                         className={`font-display tabular-nums text-base ${markTone(row.percent)}`}
@@ -225,12 +225,12 @@ export default async function StudentGradebookPage({ params }: PageProps) {
                     </div>
                     <div className="w-20">
                       <p className="text-muted-foreground text-[10px] uppercase tracking-wide">
-                        Contributes
+                        Adds
                       </p>
                       <p className="tabular-nums text-sm text-muted-foreground">
                         {row.percent == null
                           ? "—"
-                          : `${Math.round(row.contribution * 10) / 10} pts`}
+                          : `${Math.round(row.contribution * 10) / 10}%`}
                       </p>
                     </div>
                   </div>
@@ -245,8 +245,7 @@ export default async function StudentGradebookPage({ params }: PageProps) {
         <div className="flex items-center gap-2">
           <GraduationCap className="text-brand-terracotta size-4" />
           <p className="text-muted-foreground text-sm">
-            Weighted marks are visible to you only — students still see their
-            individual grades.
+            Only staff see this page. Students see the mark for each test and assignment, not the weighted total.
           </p>
         </div>
         <Button asChild variant="outline" size="sm">

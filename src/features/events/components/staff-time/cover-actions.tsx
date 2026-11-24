@@ -113,7 +113,7 @@ export function RequestCoverDialog({ open, onClose, eventId, occurrenceStart, wh
             </Button>
             <Button type="submit" disabled={pending}>
               {pending ? <Loader2 aria-hidden className="size-4 animate-spin" /> : <Check aria-hidden className="size-4" />}
-              {forOthers ? "Continue" : "Ask for cover"}
+              {forOthers ? "Choose who covers" : "Ask for cover"}
             </Button>
           </DialogFooter>
         </form>

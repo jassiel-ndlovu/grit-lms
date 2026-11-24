@@ -165,13 +165,13 @@ export function AssignmentForm({
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!formData.title.trim()) e.title = "Title is required";
-    if (!hasBrief(formData.descriptionJson, formData.description)) e.description = "Description is required";
-    if (!formData.courseId) e.courseId = "Course is required";
-    if (!formData.dueDate || Number.isNaN(formData.dueDate.getTime())) e.dueDate = "Due date is required";
-    if (!formData.totalPoints || formData.totalPoints < 1) e.totalPoints = "Total points must be at least 1";
+    if (!formData.title.trim()) e.title = "Give the assignment a title.";
+    if (!hasBrief(formData.descriptionJson, formData.description)) e.description = "Say what students must do.";
+    if (!formData.courseId) e.courseId = "Choose a course.";
+    if (!formData.dueDate || Number.isNaN(formData.dueDate.getTime())) e.dueDate = "Choose a due date.";
+    if (!formData.totalPoints || formData.totalPoints < 1) e.totalPoints = "Total marks must be 1 or more.";
     if (maxAttemptsOption === "Limited" && (!maxAttempts || maxAttempts < 1)) {
-      e.maxAttempts = "Max attempts must be at least 1";
+      e.maxAttempts = "Allow at least 1 attempt.";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -212,14 +212,14 @@ export function AssignmentForm({
       };
 
       const res = id !== null ? await updateSubmission({ id, ...values }) : await createSubmission(values);
-      if (!res?.data) throw new Error(res?.serverError ?? "Couldn't save the assignment.");
+      if (!res?.data) throw new Error(res?.serverError ?? "We couldn't save the assignment. Check your connection and try again.");
 
       draft.clear();
       toast.success(isEditing ? "Assignment updated" : "Assignment created");
       router.push(assignmentRoutes.detail(res.data.id));
       router.refresh();
     } catch (err) {
-      setErrors({ submit: err instanceof Error ? err.message : "Couldn't save the assignment. Please try again." });
+      setErrors({ submit: err instanceof Error ? err.message : "We couldn't save the assignment. Check your connection and try again." });
     } finally {
       setSaving(false);
     }
@@ -238,10 +238,10 @@ export function AssignmentForm({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <PageTitle
             title={isEditing ? "Edit assignment" : "New assignment"}
-            description={isEditing ? "Update the assignment details." : "Set up a new assignment for your students."}
+            description={isEditing ? "Change the assignment. If it's published, students get a notification when you save." : "Set work for a course's students. They hand it in as files, and you mark it here."}
           />
           <div className="border-border bg-card flex items-center gap-3 rounded-md border px-3 py-2">
-            <Badge variant={formData.isActive ? "soft" : "secondary"}>{formData.isActive ? "Active" : "Draft"}</Badge>
+            <Badge variant={formData.isActive ? "soft" : "secondary"}>{formData.isActive ? "Published" : "Draft"}</Badge>
             <span className="text-muted-foreground text-xs">Visible to students</span>
             <Switch
               checked={formData.isActive}
@@ -257,7 +257,7 @@ export function AssignmentForm({
           <TonePanel tone="accent" className="flex items-center gap-2 py-3">
             <EyeOff className="text-brand-terracotta size-4 shrink-0" />
             <p className="text-foreground text-sm">
-              This assignment is in draft mode and won&apos;t be visible to students.
+              Draft: students can&apos;t see it until you turn this on.
             </p>
           </TonePanel>
         )}
@@ -270,33 +270,33 @@ export function AssignmentForm({
               value={formData.title}
               onChange={(e) => set("title", e.target.value)}
               aria-invalid={Boolean(errors.title)}
-              placeholder="Enter assignment title..."
+              placeholder="Trigonometry worksheet"
             />
           </Field>
           <Field
             id="a-description"
-            label="Description"
+            label="What to do"
             required
             error={errors.description}
             hint="Headings, lists, tables, code and maths. Type / for the block menu, $ for maths."
           >
             <RichEditor
               key={editorKey}
-              label="Assignment description"
+              label="What students must do"
               value={formData.descriptionJson}
               fallbackMarkdown={formData.description}
               onChange={(v) => {
                 setBriefEdited(true);
                 set("descriptionJson", v);
               }}
-              placeholder="Write the brief. Type / for blocks, $ for maths"
+              placeholder="Explain the work. Type / for blocks, $ for maths"
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field id="a-course" label="Course" required error={errors.courseId}>
               <Select value={formData.courseId || undefined} onValueChange={(v) => set("courseId", v)}>
                 <SelectTrigger id="a-course" className="w-full" aria-invalid={Boolean(errors.courseId)}>
-                  <SelectValue placeholder="Select a course..." />
+                  <SelectValue placeholder="Choose a course" />
                 </SelectTrigger>
                 <SelectContent>
                   {courses.map((c) => (
@@ -307,7 +307,7 @@ export function AssignmentForm({
                 </SelectContent>
               </Select>
             </Field>
-            <Field id="a-points" label="Total points" required error={errors.totalPoints}>
+            <Field id="a-points" label="Total marks" required error={errors.totalPoints}>
               <Input
                 id="a-points"
                 type="number"
@@ -321,7 +321,7 @@ export function AssignmentForm({
         </Card>
 
         <Card className="space-y-4 p-6">
-          <SectionTitle title="Instruction files" optional />
+          <SectionTitle title="Files for students" optional />
           {formData.descriptionFiles.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-muted-foreground text-xs">Attached files</p>
@@ -409,7 +409,7 @@ export function AssignmentForm({
         </Card>
 
         <Card className="space-y-5 p-6">
-          <SectionTitle title="Submission rules" />
+          <SectionTitle title="How students hand in" />
           <Field id="a-filetype" label="Accepted file types">
             <Select value={formData.fileType} onValueChange={(v) => set("fileType", v)}>
               <SelectTrigger id="a-filetype" className="w-full">
@@ -424,15 +424,15 @@ export function AssignmentForm({
               </SelectContent>
             </Select>
           </Field>
-          <Field id="a-attempts" label="Max attempts" error={errors.maxAttempts}>
+          <Field id="a-attempts" label="How many times a student can hand in" error={errors.maxAttempts}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Select value={maxAttemptsOption} onValueChange={(v) => setMaxAttemptsOption(v as MaxAttemptOptions)}>
-                <SelectTrigger className="w-full" aria-label="Attempts limit" aria-invalid={Boolean(errors.maxAttempts)}>
+                <SelectTrigger className="w-full" aria-label="Limit how many times a student can hand in" aria-invalid={Boolean(errors.maxAttempts)}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Limited">Limited</SelectItem>
-                  <SelectItem value="Unlimited">Unlimited</SelectItem>
+                  <SelectItem value="Limited">Set a limit</SelectItem>
+                  <SelectItem value="Unlimited">No limit</SelectItem>
                 </SelectContent>
               </Select>
               <Input
@@ -443,7 +443,7 @@ export function AssignmentForm({
                 onChange={(e) => setMaxAttempts(Number(e.target.value))}
                 disabled={maxAttemptsOption === "Unlimited"}
                 aria-invalid={Boolean(errors.maxAttempts)}
-                placeholder="Number of attempts"
+                placeholder="Number of times"
               />
             </div>
           </Field>
@@ -463,9 +463,9 @@ export function AssignmentForm({
             </Field>
             <Field
               id="a-lastdue"
-              label="Extended due date"
+              label="Late hand-in until"
               optional
-              hint="If provided, students can still resubmit after the main due date until this deadline."
+              hint="Optional. Students can still hand in after the due date, until this date."
             >
               <Input
                 id="a-lastdue"
@@ -498,7 +498,7 @@ export function AssignmentForm({
                     ? "Updating..."
                     : "Creating..."
                   : isEditing
-                    ? "Update assignment"
+                    ? "Save changes"
                     : "Create assignment"}
               </Button>
             </div>

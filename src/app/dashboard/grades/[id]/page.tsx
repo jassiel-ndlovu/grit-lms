@@ -75,7 +75,7 @@ export default async function GradeDetailPage({ params }: PageProps) {
   if (!student) {
     return (
       <PageMessage breadcrumb={[{ label: "Grades", href: "/dashboard/grades" }, { label: "Grade" }]}>
-        No student profile found for this account.
+        This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
       </PageMessage>
     );
   }
@@ -96,7 +96,7 @@ export default async function GradeDetailPage({ params }: PageProps) {
       <PageTitle
         eyebrow={`${grade.course.name}${tutorOf(grade.course)?.fullName ? ` · with ${tutorOf(grade.course)?.fullName}` : ""}`}
         title={grade.title}
-        description={`Graded ${dateFmt.format(grade.updatedAt)}`}
+        description={`Marked ${dateFmt.format(grade.updatedAt)}`}
       />
 
       {/* ───── Score callout ───── */}
@@ -130,7 +130,7 @@ export default async function GradeDetailPage({ params }: PageProps) {
         <Card className="space-y-3 p-6">
           <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
             <MessageSquare className="text-brand-terracotta size-4" />
-            Tutor feedback
+            Your tutor&apos;s comment
           </h2>
           <LessonMarkdown content={grade.finalComments} />
         </Card>
@@ -192,7 +192,7 @@ function TestBreakdown({ grade }: { grade: GradeDetail }) {
     <Card className="overflow-hidden p-0">
       <div className="flex items-baseline justify-between gap-3 px-5 py-4">
         <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-          Question breakdown
+          Your answers
         </h2>
         <span className="text-muted-foreground text-xs tabular-nums">
           {top.length} {top.length === 1 ? "question" : "questions"}
@@ -268,8 +268,8 @@ function QuestionReview({
         <div className="min-w-0 flex-1">
           <p className={isContext ? "text-muted-foreground text-xs font-medium tabular-nums" : "text-brand-terracotta text-xs font-medium tabular-nums"}>
             {isContext
-              ? `Context ${path}`
-              : `Question ${path} - ${question.points} ${question.points === 1 ? "point" : "points"}`}
+              ? `Information ${path}`
+              : `Question ${path} - ${question.points} ${question.points === 1 ? "mark" : "marks"}`}
           </p>
           <div className="mt-1">
             <LessonMarkdown content={question.question} />
@@ -295,7 +295,7 @@ function QuestionReview({
       {qg?.feedback && (
         <div className="bg-muted/50 rounded-md p-3 text-sm">
           <p className="text-muted-foreground mb-1 text-xs font-medium uppercase tracking-wide">
-            Tutor feedback
+            Your tutor&apos;s comment
           </p>
           <LessonMarkdown content={qg.feedback} />
         </div>
@@ -347,7 +347,7 @@ function AnswerView({
 
   if (empty) {
     return (
-      <p className="text-muted-foreground italic text-xs">No answer recorded.</p>
+      <p className="text-muted-foreground italic text-xs">You didn&apos;t answer this question.</p>
     );
   }
 
@@ -476,7 +476,7 @@ function SubmissionBreakdown({ grade }: { grade: GradeDetail }) {
       <Card className="overflow-hidden p-0">
         <div className="flex items-baseline justify-between gap-3 px-5 py-4">
           <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-            Your submission
+            Your work
           </h2>
           <span className="text-muted-foreground text-xs tabular-nums">
             Attempt {entry.attemptNumber}
@@ -523,7 +523,7 @@ function SubmissionBreakdown({ grade }: { grade: GradeDetail }) {
         <Card className="space-y-3 p-6">
           <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
             <MessageSquare className="text-brand-terracotta size-4" />
-            Submission notes
+            Your notes
           </h2>
           <LessonMarkdown content={entry.feedback} />
         </Card>

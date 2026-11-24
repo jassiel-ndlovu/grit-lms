@@ -223,7 +223,7 @@ async function searchAsAdmin(q: string): Promise<SearchGroup[]> {
     group("users", "Users", users.map((u) => ({
       id: u.id,
       title: u.name || u.email,
-      subtitle: `${u.role.toLowerCase()} · ${u.email}`,
+      subtitle: `${u.role.charAt(0)}${u.role.slice(1).toLowerCase()} · ${u.email}`,
       href: "/dashboard/manage-users",
     }))),
   ]);

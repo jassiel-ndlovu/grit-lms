@@ -46,7 +46,7 @@ export default async function GradebookIndexPage() {
 
   return (
     <PageFrame type="list" breadcrumb={[{ label: "Gradebook" }]} actions={reports}>
-      <PageTitle title="Gradebook" description="Weighted marks per course, for the class and for each student." />
+      <PageTitle title="Gradebook" description="Every student's marks on each course, and what each test and assignment counts towards the final mark." />
 
       {courses.length === 0 ? (
         <Card className="p-8 sm:p-12 text-center">
@@ -55,8 +55,7 @@ export default async function GradebookIndexPage() {
             No courses yet
           </h2>
           <p className="text-muted-foreground mx-auto mt-1.5 max-w-sm text-sm">
-            Create a course and its assessments, and the gradebook fills in
-            as you grade.
+            Create a course, then add tests and assignments. Marks show here as you mark them.
           </p>
         </Card>
       ) : (
@@ -84,7 +83,7 @@ export default async function GradebookIndexPage() {
                         {c._count.enrollments}
                       </span>
                       <span className="tabular-nums">
-                        {c._count.tests + c._count.submissions} assessments
+                        {c._count.tests + c._count.submissions} tests and assignments
                       </span>
                     </p>
                   </div>

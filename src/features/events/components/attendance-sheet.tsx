@@ -59,7 +59,7 @@ export function AttendanceSheet({ eventId, occurrenceStart, learners: initial }:
     setSaveFailed(!res?.data);
     if (!res?.data) {
       setRows(before);
-      toast.error(res?.serverError ?? "Couldn't save. Try again.");
+      toast.error(res?.serverError ?? "We couldn't save that. Check your connection and try again.");
       return;
     }
     setSavedAt(new Date());
@@ -70,7 +70,7 @@ export function AttendanceSheet({ eventId, occurrenceStart, learners: initial }:
   const rate = attendanceRate(rows.filter((r) => r.status) as Array<{ status: string }>);
 
   if (rows.length === 0) {
-    return <p className="text-muted-foreground text-sm">Nobody was enrolled on this course at the time of the session.</p>;
+    return <p className="text-muted-foreground text-sm">Nobody was on this course when the session took place.</p>;
   }
 
   return (
@@ -209,7 +209,7 @@ export function CheckInPanel({ eventId, occurrenceStart, openUntil }: { eventId:
             ? "That code has closed."
             : openUntil
               ? "A code is open. It was shown once: make a new one to show it again."
-              : "Learners can mark themselves present with a code. After 10 minutes they're marked late. Your marks always win."}
+              : "Students can check themselves in with a code. After 10 minutes they're marked late. What you mark always replaces it."}
         </p>
       )}
       <div className="flex flex-wrap items-center gap-2">

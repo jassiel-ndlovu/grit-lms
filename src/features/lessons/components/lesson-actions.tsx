@@ -64,7 +64,7 @@ export function LessonActions({
         router.refresh();
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't delete the lesson. Try again.");
     } finally {
       setPending(false);
     }
@@ -105,8 +105,7 @@ export function LessonActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &quot;{lessonTitle}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the lesson, its attachments, and any
-              completion records. This action cannot be undone.
+              The lesson, its files and the record of who finished it are deleted. This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

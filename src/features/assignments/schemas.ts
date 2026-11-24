@@ -156,8 +156,8 @@ export type GradeSubmissionEntryInput = z.infer<
  *                   features/assignments/lib/sections.ts
  */
 export const SubmissionSectionSchema = z.object({
-  title: NonEmptyString.max(200, "Section title too long"),
-  remarks: z.string().max(5000, "Remarks too long").default(""),
+  title: NonEmptyString.max(200, "That section title is too long."),
+  remarks: z.string().max(5000, "That comment is too long.").default(""),
   score: z.number().nonnegative(),
   outOf: z.number().positive(),
   memoFileUrl: UrlSchema.nullable().default(null),

@@ -25,7 +25,7 @@ export interface ExportTestButtonProps {
 
 export function ExportTestButton({
   testId,
-  label = "Export JSON",
+  label = "Download test file",
   variant = "outline",
   size = "sm",
   className,
@@ -50,9 +50,9 @@ export function ExportTestButton({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("Test exported");
+      toast.success("Test file downloaded");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't download the test. Try again.");
     } finally {
       setPending(false);
     }

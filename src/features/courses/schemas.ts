@@ -20,8 +20,8 @@ import { CourseCoverSchema } from "./lib/stock-covers";
 
 export const CourseSchema = z.object({
   id: CuidSchema,
-  name: NonEmptyString.max(120, "Name too long"),
-  description: z.string().max(2000, "Description too long").nullable(),
+  name: NonEmptyString.max(120, "That name is too long."),
+  description: z.string().max(2000, "That description is too long.").nullable(),
   /** An upload URL, a stock path, or "" on rows saved before stock covers. */
   imageUrl: z.string(),
   tutorId: CuidSchema,
@@ -42,8 +42,8 @@ export const CourseCurriculumInputSchema = z.object({
 });
 
 export const CreateCourseSchema = z.object({
-  name: NonEmptyString.max(120, "Name too long"),
-  description: z.string().max(2000, "Description too long").nullable(),
+  name: NonEmptyString.max(120, "That name is too long."),
+  description: z.string().max(2000, "That description is too long.").nullable(),
   imageUrl: CourseCoverSchema,
   studentIds: z.array(CuidSchema).default([]).optional(),
   curriculum: CourseCurriculumInputSchema.optional(),
@@ -56,8 +56,8 @@ export type CreateCourseInput = z.infer<typeof CreateCourseSchema>;
  */
 export const UpdateCourseSchema = z.object({
   id: CuidSchema,
-  name: NonEmptyString.max(120, "Name too long").optional(),
-  description: z.string().max(2000, "Description too long").nullable().optional(),
+  name: NonEmptyString.max(120, "That name is too long.").optional(),
+  description: z.string().max(2000, "That description is too long.").nullable().optional(),
   imageUrl: CourseCoverSchema.optional(),
   studentIds: z.array(CuidSchema).optional(),
   curriculum: CourseCurriculumInputSchema.optional(),

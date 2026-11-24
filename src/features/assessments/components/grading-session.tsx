@@ -74,7 +74,7 @@ export function LiveScore({ initial }: { initial: { score: number; outOf: number
   const outOf = b?.outOf ?? initial?.outOf ?? 0;
   const pct = outOf > 0 ? Math.round((score / outOf) * 100) : null;
   return (
-    <span className="text-foreground text-sm font-medium whitespace-nowrap tabular-nums" aria-label={`Score ${score} out of ${outOf}`}>
+    <span className="text-foreground text-sm font-medium whitespace-nowrap tabular-nums" aria-label={`Mark ${score} out of ${outOf}`}>
       {score}
       <span className="text-muted-foreground"> / {outOf}</span>
       {pct != null ? <span className="text-muted-foreground hidden text-xs sm:inline"> ({pct}%)</span> : null}
@@ -165,7 +165,7 @@ function ShortcutsButton() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Mark with the keyboard</DialogTitle>
-            <DialogDescription>Start in a score box. Ctrl and Enter (⌘ and Enter on a Mac) work anywhere in the form.</DialogDescription>
+            <DialogDescription>Start in a mark box. Ctrl and Enter (⌘ and Enter on a Mac) work anywhere on the page.</DialogDescription>
           </DialogHeader>
           <dl className="divide-border divide-y text-sm">
             {MARK_SHORTCUTS.map((s) => (
@@ -267,7 +267,7 @@ function AiSuggestionsButton() {
                 ? b?.working
                   ? "The AI is still marking. Suggestions appear on each question as they arrive."
                   : "Nothing waiting: every suggestion on this submission has been accepted, edited or rejected."
-                : `${n} ${n === 1 ? "suggestion is" : "suggestions are"} waiting for you, riskiest first. None counts until you accept it and save the grade.`}
+                : `${n} ${n === 1 ? "suggestion is" : "suggestions are"} waiting for you, riskiest first. None counts until you accept it and save the mark.`}
             </DialogDescription>
           </DialogHeader>
           {n > 0 ? (
@@ -311,7 +311,7 @@ function AiSuggestionsButton() {
               >
                 {take.length === 1 ? "Accept 1 suggestion" : take.length === n ? "Accept all suggestions" : `Accept ${take.length} suggestions`}
               </Button>
-              <p className="text-muted-foreground text-xs">Accepted marks fill in the scores. Save the grade to confirm them.</p>
+              <p className="text-muted-foreground text-xs">Accepted marks fill in the scores. Save the mark to confirm them.</p>
             </DialogFooter>
           ) : null}
         </DialogContent>

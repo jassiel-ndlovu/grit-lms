@@ -27,18 +27,18 @@ export default async function CourseTopicsPage({ params }: { params: Promise<{ i
 
   const crumbs = [{ label: "My courses", href: studentCourseRoutes.list }, { label: "Topics" }];
   const student = await prisma.student.findUnique({ where: { email: session.user.email }, select: { id: true } });
-  if (!student) return <PageMessage breadcrumb={crumbs}>No student profile found for this account.</PageMessage>;
+  if (!student) return <PageMessage breadcrumb={crumbs}>This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.</PageMessage>;
   const course = await getCourseDetailById(courseId);
   if (!course) notFound();
   if (!course.students.some((s) => s.id === student.id)) {
-    return <PageMessage breadcrumb={crumbs}>You aren&apos;t enrolled in this course.</PageMessage>;
+    return <PageMessage breadcrumb={crumbs}>You&apos;re not on this course. Ask your tutor to add you.</PageMessage>;
   }
 
   const { nodes, nextLesson } = await learnerTopicMap(student.id, courseId);
   if (nodes.length === 0) {
     return (
       <StudentCourseFrame course={course} page="Topics">
-        <PageTitle title="Topics" description="Your tutor hasn't set this course's curriculum yet, so there are no topics to show." />
+        <PageTitle title="Topics" description="Your tutor hasn't chosen this course's curriculum yet, so there are no topics to show." />
       </StudentCourseFrame>
     );
   }

@@ -542,7 +542,7 @@ export function TreeReorderDialog({
               variant="ghost"
               size="sm"
               disabled={!dirty}
-              title="Rewind to the last saved arrangement"
+              title="Go back to the last saved order"
               onClick={() => {
                 setHistory((h) => [...h, tree]);
                 setTree(cloneTree(savedTree));

@@ -72,7 +72,7 @@ check("under-allocated plan is reported, not rescaled", short.allocated, 90);
 check(
   "under-allocated warning",
   short.warning,
-  "Weights add up to 90%, not 100%.",
+  "The weights add up to 90%, not 100%.",
 );
 
 const over = buildWeightPlan([a("x", 10, 70), a("y", 10, 60)]);

@@ -64,7 +64,7 @@ export function TutorTestActions({
       setConfirmOpen(false);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't delete the test. Try again.");
     } finally {
       setPending(false);
     }
@@ -114,7 +114,7 @@ export function TutorTestActions({
               variant="ghost"
               size="sm"
               className="w-full justify-start px-2 h-8"
-              label="Export JSON"
+              label="Download test file"
             />
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -135,9 +135,7 @@ export function TutorTestActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &quot;{testTitle}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the test, its questions, and every
-              student submission. Already-released grades disappear too.
-              This action cannot be undone.
+              The test, its questions, students&apos; answers and their marks are all deleted, including marks students have already seen. This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

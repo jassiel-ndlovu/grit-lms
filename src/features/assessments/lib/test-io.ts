@@ -167,7 +167,7 @@ export function parseTestJson(input: string | unknown): ParsedTestPayload {
       raw = JSON.parse(input);
     } catch (e) {
       throw new Error(
-        `Invalid JSON: ${e instanceof Error ? e.message : "parse failed"}`,
+        `This isn't a test file Nexa can read: ${e instanceof Error ? e.message : "it isn't valid JSON"}`,
       );
     }
   }
@@ -175,7 +175,7 @@ export function parseTestJson(input: string | unknown): ParsedTestPayload {
   if (!parsed.success) {
     const first = parsed.error.issues[0];
     throw new Error(
-      `Test JSON is invalid at ${first.path.join(".") || "(root)"}: ${first.message}`,
+      `This test file has a mistake at ${first.path.join(".") || "(root)"}: ${first.message}`,
     );
   }
   const data = parsed.data;

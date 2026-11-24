@@ -64,17 +64,17 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
       setCopiedGuide(true);
       setTimeout(() => setCopiedGuide(false), 2000);
     } catch {
-      toast.error("Couldn't reach the clipboard");
+      toast.error("We couldn't copy it. Select the text and copy it yourself.");
     }
   }
 
   async function onImport() {
     if (!courseId) {
-      toast.error("Pick a course to import into");
+      toast.error("Choose the course to add the test to.");
       return;
     }
     if (!raw.trim()) {
-      toast.error("Paste JSON or upload a file first");
+      toast.error("Upload a test file, or paste its contents first.");
       return;
     }
     setPending(true);
@@ -83,7 +83,7 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
       const result = await importTest(toCreateInput(parsed, courseId));
       if (result?.serverError) throw new Error(result.serverError);
       const id = result?.data?.id;
-      toast.success("Test imported");
+      toast.success("Test imported.");
       setOpen(false);
       if (id) {
         router.push(`/dashboard/tutor-tests/${id}/edit`);
@@ -91,7 +91,7 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
         router.refresh();
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Import failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't import that. Check that it's a Nexa test file.");
     } finally {
       setPending(false);
     }
@@ -102,16 +102,14 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
       <DialogTrigger asChild>
         <Button variant="outline">
           <FileUp className="size-4" />
-          Import JSON
+          Import a test file
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Import a test from JSON</DialogTitle>
+          <DialogTitle>Import a test file</DialogTitle>
           <DialogDescription>
-            Upload a JSON file or paste the JSON below. Use the &quot;Copy
-            LLM prompt&quot; button to give the schema to an LLM so it can
-            generate a test in the right shape.
+            Upload a test file downloaded from Nexa (.json), or paste its contents. To have an AI chat app write a test, copy the instructions below into it, then paste its answer here.
           </DialogDescription>
         </DialogHeader>
 
@@ -126,13 +124,12 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
               <>Copied</>
             ) : (
               <>
-                <Sparkles className="size-3.5" /> Copy LLM prompt
+                <Sparkles className="size-3.5" /> Copy AI instructions
               </>
             )}
           </Button>
           <span className="text-muted-foreground text-xs">
-            Paste this in ChatGPT / Claude / etc. to have it generate an
-            importable test.
+            Tells an AI chat app how to write a test Nexa can import.
           </span>
         </div>
 
@@ -143,7 +140,7 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
             </label>
             <Select value={courseId} onValueChange={setCourseId}>
               <SelectTrigger>
-                <SelectValue placeholder="Pick a course" />
+                <SelectValue placeholder="Choose a course" />
               </SelectTrigger>
               <SelectContent>
                 {courses.map((c) => (
@@ -171,7 +168,7 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-foreground text-sm font-medium">
-              JSON payload
+              Test file contents
             </label>
             <Button
               type="button"
@@ -179,7 +176,7 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
               size="sm"
               onClick={() => inputRef.current?.click()}
             >
-              <FileUp className="size-3.5" /> Upload .json
+              <FileUp className="size-3.5" /> Upload file
             </Button>
           </div>
           <Textarea
@@ -196,8 +193,7 @@ export function ImportTestDialog({ courses }: ImportTestDialogProps) {
 
         <div className="flex items-center justify-between gap-3">
           <p className="text-muted-foreground text-xs">
-            Imported tests are created as drafts (isActive = false) unless the
-            JSON says otherwise.
+            The test is added as a draft, unless the file says it&apos;s published. Check it before students see it.
           </p>
           <Button
             type="button"

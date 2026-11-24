@@ -303,8 +303,8 @@ export const createTest = tutorActionClient
     if (created.isActive) {
       await emitNotification(
         {
-          title: "New Test Created",
-          message: `A new test "${created.title}" has been published.`,
+          title: "New test",
+          message: `"${created.title}" is ready to take. Open it to see when it's due.`,
           link: `/dashboard/tests/${created.id}`,
           type: "TEST_CREATED",
           priority: "NORMAL",
@@ -400,8 +400,11 @@ export const updateTest = tutorActionClient
     if (updated.isActive && parsedInput.notifyStudents !== false) {
       await emitNotification(
         {
-          title: "Test Updated",
-          message: `The test "${updated.title}" has been updated.`,
+          // A draft students never saw is new to them.
+          title: existing.isActive ? "Test changed" : "New test",
+          message: existing.isActive
+            ? `Your tutor changed "${updated.title}". Open it to see what's new.`
+            : `"${updated.title}" is ready to take. Open it to see when it's due.`,
           link: `/dashboard/tests/${updated.id}`,
           type: "TEST_UPDATED",
           priority: "NORMAL",
@@ -443,8 +446,8 @@ export const deleteTest = tutorActionClient
 
     await emitNotification(
       {
-        title: "Test Deleted",
-        message: `The test "${title}" has been removed.`,
+        title: "Test removed",
+        message: `"${title}" was removed. You don't need to take it.`,
         type: "TEST_DELETED",
         priority: "NORMAL",
         courseId,
@@ -503,7 +506,7 @@ export const startTestSubmission = studentActionClient
     // An attempt already begun is returned above all else: the runner submits
     // it with its answers. A new one would be submitted empty at once.
     if (!existing && closedToStart(test.dueDate, Date.now())) {
-      throw new UserError("This test has closed, so it can't be started any more");
+      throw new UserError("This test has closed, so it can't be started any more. Ask your tutor if you missed it.");
     }
 
     // The student's extra time on this course goes onto the attempt, so the
@@ -648,7 +651,7 @@ export const submitTestAnswers = studentActionClient
               outOf: autoOutOf,
               finalComments:
                 pendingCount > 0
-                  ? `${pendingCount} question${pendingCount === 1 ? "" : "s"} still awaiting tutor review.`
+                  ? `${pendingCount} question${pendingCount === 1 ? "" : "s"} still to be marked by a tutor.`
                   : null,
               testSubmissionId: submission.id,
             },
@@ -798,8 +801,8 @@ export const gradeTestSubmission = tutorActionClient
 
     await emitNotification(
       {
-        title: "Grade Released",
-        message: `You received ${parsedInput.score}/${parsedInput.outOf} for "${submission.test.title}".`,
+        title: "Your mark is in",
+        message: `You got ${parsedInput.score} out of ${parsedInput.outOf} for "${submission.test.title}".`,
         link: `/dashboard/tests/review/${submission.test.id}`,
         type: "TEST_GRADED",
         priority: "NORMAL",
@@ -1089,7 +1092,7 @@ export const autoGradeSubmissionAction = tutorActionClient
             outOf: autoOutOf,
             finalComments:
               pendingCount > 0
-                ? `${pendingCount} question${pendingCount === 1 ? "" : "s"} still awaiting tutor review.`
+                ? `${pendingCount} question${pendingCount === 1 ? "" : "s"} still to be marked by a tutor.`
                 : null,
             testSubmissionId: submission.id,
           },
