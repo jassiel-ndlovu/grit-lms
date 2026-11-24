@@ -19,10 +19,12 @@ No migration, no env vars. Follows copy.md.
   or "New assignment", not "changed".
 - **AI marking's consent** says "an AI service outside South Africa", with no
   company name (copy.md rule 2). No page names the company now.
-- **Outside B's paths:** `features/support/help-articles.ts` (as A asked: it
-  said marks are shared separately, tests have an opening time, lessons are
-  published and answers can be typed; none is true) and
-  `features/parents/components/parent-dashboard.tsx` (wording).
+- **Outside B's paths:** `features/support/help-articles.ts`, for the changed
+  buttons (A's written OK on #216).
+- **For A to change** (text in the #216 comment): the parents' home page still
+  says "Your learners"; two help articles say tests have an opening time and
+  lessons are published; the email tick box says "graded"; hand-in
+  notifications say "submission".
 - **For A:** `check-copy.ts` misses JSX text that runs over several lines,
   which is how "Anthropic" got past it.
 - Not touched: the study assistant's chat page (its redesign is in another

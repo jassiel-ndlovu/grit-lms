@@ -222,7 +222,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     keywords: ["course", "lesson", "content", "publish"],
     body: [
       "1. Open Courses and choose New course.",
-      "2. Add lessons in the order students should take them. Students see a lesson as soon as you save it.",
+      "2. Add lessons in the order students should take them. Students see a lesson once it's published.",
       "3. Add students yourself, or list the course in Find courses (in the course's settings) so families can ask to join.",
     ],
   },
@@ -234,7 +234,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     keywords: ["quiz", "assessment", "marking", "grading", "answer key"],
     body: [
       "1. Open Tests and choose New test. Add questions and the correct answers: questions with set answers are marked for you.",
-      "2. Choose when it's due, then publish it. Students get a notification.",
+      "2. Choose when it opens and when it's due, then publish it. Students are told.",
       "3. When students hand in, open the test's submissions to mark written answers and add comments.",
       "4. Choose Save and share mark for each student. The student gets a notification, and they and their parents can see the mark.",
     ],

@@ -18,7 +18,7 @@ import { childRoutes } from "@/features/activity/lib/child-overview";
 import type { Viewer } from "@/lib/viewer-core";
 
 const COMING_SOON = [
-  { icon: MessageSquare, title: "Tutor messages", body: "Questions and updates between you and your children's tutors." },
+  { icon: MessageSquare, title: "Tutor messages", body: "Questions and updates between you and your learners' tutors." },
 ];
 
 type Learner = Viewer["children"][number] & { summary: ChildSummary };
@@ -28,13 +28,13 @@ export function ParentDashboard({ firstName, learners, notes }: { firstName: str
     <PageFrame type="home" breadcrumb={[{ label: "Home" }]}>
       <PageTitle
         eyebrow={`Welcome, ${firstName}`}
-        title="Your children's progress"
-        description="Marks, due dates and news from every course your children are on."
+        title="Follow your learners' progress"
+        description="Marks, deadlines and course updates for the students you look after, in one place."
       />
 
       <section className="space-y-4">
         <h2 className="text-foreground text-base font-semibold">
-          Your children
+          Your learners
         </h2>
         {learners.length === 0 ? (
           <Card className="flex min-h-[200px] flex-col items-center justify-center gap-4 p-10 text-center">
@@ -43,10 +43,11 @@ export function ParentDashboard({ firstName, learners, notes }: { firstName: str
             </div>
             <div>
               <h3 className="font-display text-xl leading-tight text-foreground">
-                No children linked yet
+                No learners linked yet
               </h3>
               <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
-                Ask your child&apos;s tutor or school to link your account to theirs. Their courses and marks then show here.
+                Once your account is linked to your child&apos;s, their courses and results
+                will show here. Ask your school to link your accounts.
               </p>
             </div>
             <Button asChild variant="outline" size="sm">
@@ -149,7 +150,7 @@ function ChildSummaryLine({ summary }: { summary: ChildSummary }) {
             Latest mark <span className="text-foreground font-medium tabular-nums">{latestMark.percent}%</span> in {latestMark.title}
           </>
         ) : (
-          "No marks yet"
+          "No marks released yet"
         )}
         {dueSoon > 0 ? ` · ${dueSoon} due soon` : ""}
       </p>
