@@ -3,6 +3,24 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Meeting app icons (owner's request), `revamp/b-meeting-logos`
+
+No migration, no env vars.
+
+Done:
+- The Google Meet, Zoom and Microsoft Teams icons, unchanged from each
+  company's own server, replace the neutral marks: Settings › Online classes,
+  the "New … meeting" button in the session form, and "Open … link" on a
+  session. The main Join button keeps the camera.
+- Files and sources in `public/images/meeting-apps/README.md`.
+- Samples on `/design-system/meeting-apps`.
+- `meetingProviderOf` returns which app a link opens; `check-calendar-ui.ts`
+  covers it.
+
+Owner's decision: use them now and check with the legal team. To take them
+out, set `SHOW_MEETING_LOGOS` to false in `meeting-app-mark.tsx` and delete
+the folder.
+
 ## 2026-11-24 Released marks in the export and AI comments, `revamp/b-released-reads`
 
 In A's files, with the owner's OK:
@@ -284,6 +302,7 @@ Questions for the owner:
 
 Next: the plans section once A's price data lands; a real enquiry form once
 A's backend does.
+
 ## 2026-11-23 Generate a test from the bank (#216, phase 2), `revamp/b-generate-test`
 
 Done:

@@ -208,8 +208,8 @@ export function joinOpen(e: Pick<CalendarEntry, "start" | "end" | "cancelled">, 
   return now.getTime() >= start - 15 * 60 * 1000 && now.getTime() <= end;
 }
 
-/** The provider a pasted meeting link points at, for the Join button's label. */
-export function meetingProvider(link: string | null | undefined): string | null {
+/** The provider a pasted meeting link points at, or null for any other link. */
+export function meetingProviderOf(link: string | null | undefined): Exclude<MeetingProvider, "OTHER"> | null {
   if (!link) return null;
   let host: string;
   try {
@@ -217,10 +217,16 @@ export function meetingProvider(link: string | null | undefined): string | null 
   } catch {
     return null;
   }
-  if (host === "meet.google.com") return "Google Meet";
-  if (host === "zoom.us" || host.endsWith(".zoom.us")) return "Zoom";
-  if (host === "teams.microsoft.com" || host === "teams.live.com") return "Teams";
+  if (host === "meet.google.com") return "GOOGLE_MEET";
+  if (host === "zoom.us" || host.endsWith(".zoom.us")) return "ZOOM";
+  if (host === "teams.microsoft.com" || host === "teams.live.com") return "TEAMS";
   return null;
+}
+
+/** That provider's short name, for the Join button's label. */
+export function meetingProvider(link: string | null | undefined): string | null {
+  const p = meetingProviderOf(link);
+  return p === null ? null : p === "TEAMS" ? "Teams" : MEETING_PROVIDER_INFO[p].label;
 }
 
 /** Where a tutor starts a new Google Meet (the default provider) to paste back. */

@@ -20,7 +20,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Repeat, Video } from "lucide-react";
+import { Loader2, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 
 import { createCourseEvent, updateCourseEvent } from "../actions";
 import { MEETING_PROVIDER_INFO, meetingProvider, splitInZone, wallToInstant } from "../lib/calendar-ui";
+import { MeetingAppMark } from "./meeting-app-mark";
 import { describeRecurrence, type RepeatFrequency } from "../lib/recurrence";
 
 const WEEKDAYS: Array<{ value: number; short: string; label: string }> = [
@@ -189,7 +190,8 @@ export function EventForm({ courseId, timeZone, initialDate, series, occurrence,
   const repeatCount = form.watch("repeatCount");
   const provider = meetingProvider(form.watch("link")?.trim());
   // The workspace's provider (#211) picks the "New … meeting" button.
-  const newMeeting = MEETING_PROVIDER_INFO[useMeetingProvider()];
+  const newProvider = useMeetingProvider();
+  const newMeeting = MEETING_PROVIDER_INFO[newProvider];
   const repeats = repeatFrequency !== "NONE";
 
   const summary = React.useMemo(
@@ -415,7 +417,7 @@ export function EventForm({ courseId, timeZone, initialDate, series, occurrence,
                 </FormControl>
                 {newMeeting.newUrl ? (
                   <Button type="button" variant="outline" className="shrink-0" onClick={() => window.open(newMeeting.newUrl!, "_blank", "noopener")}>
-                    <Video className="size-4" />
+                    <MeetingAppMark provider={newProvider} className="size-4" />
                     {newMeeting.newLabel}
                   </Button>
                 ) : null}

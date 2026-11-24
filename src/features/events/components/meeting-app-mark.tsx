@@ -1,36 +1,32 @@
 /**
- * A small mark for a meeting app, so the choice reads faster: the app's
- * initial on a neutral tile, or a link icon for "Something else".
+ * A meeting app's icon, so the choice reads faster. It sits beside the app's
+ * name, only where it says which app a link opens.
  *
- * These are not the brands' logos. Zoom's and Microsoft's guidelines don't
- * allow theirs without a written licence, and Google's only cover approved
- * uses (checked 2026-11-23, docs/revamp/b/HANDOFF.md). If the owner gets
- * permission, put the official files here and nothing else changes.
+ * The files are the apps' own icons, unchanged
+ * (public/images/meeting-apps/README.md). The owner chose to use them on
+ * 2026-11-24, pending the legal team: set SHOW_MEETING_LOGOS to false to go
+ * back to a neutral mark everywhere.
  */
 
-import { Link2 } from "lucide-react";
+import Image from "next/image";
+import { Link2, Video } from "lucide-react";
 
 import type { MeetingProvider } from "@/lib/viewer-core";
 import { cn } from "@/lib/utils";
 
-const INITIAL: Record<MeetingProvider, string | null> = {
-  GOOGLE_MEET: "M",
-  ZOOM: "Z",
-  TEAMS: "T",
+const SHOW_MEETING_LOGOS: boolean = true;
+
+const LOGO: Record<MeetingProvider, string | null> = {
+  GOOGLE_MEET: "/images/meeting-apps/google-meet.svg",
+  ZOOM: "/images/meeting-apps/zoom.png",
+  TEAMS: "/images/meeting-apps/microsoft-teams.svg",
   OTHER: null,
 };
 
-export function MeetingAppMark({ provider, className }: { provider: MeetingProvider; className?: string }) {
-  const initial = INITIAL[provider];
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "bg-muted text-foreground border-border grid size-6 shrink-0 place-items-center rounded-md border text-xs font-semibold",
-        className,
-      )}
-    >
-      {initial ?? <Link2 className="size-3.5" />}
-    </span>
-  );
+/** The icon on its own; a link icon for "Something else", a camera when the app isn't known. */
+export function MeetingAppMark({ provider, className }: { provider: MeetingProvider | null; className?: string }) {
+  const logo = provider && SHOW_MEETING_LOGOS ? LOGO[provider] : null;
+  if (logo) return <Image src={logo} alt="" width={24} height={24} unoptimized className={cn("size-5 shrink-0 object-contain", className)} />;
+  const Icon = provider === "OTHER" ? Link2 : Video;
+  return <Icon aria-hidden className={cn("text-muted-foreground size-5 shrink-0", className)} />;
 }

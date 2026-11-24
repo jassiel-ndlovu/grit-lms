@@ -34,10 +34,11 @@ import { WriteGuard } from "@/components/shell/workspace-access";
 import { editCourseEventOccurrence } from "@/features/calendar/actions";
 
 import { deleteCourseEvent, getCourseEventSeries } from "../actions";
-import { calendarRoutes, joinOpen, meetingProvider, takesAttendance, type CalendarEntry } from "../lib/calendar-ui";
+import { calendarRoutes, joinOpen, meetingProvider, meetingProviderOf, takesAttendance, type CalendarEntry } from "../lib/calendar-ui";
 import { iconFor, labelFor } from "./entry-meta";
 import { CheckInButton } from "./calendar-tools";
 import { EventForm, type EventSeries } from "./event-form";
+import { MeetingAppMark } from "./meeting-app-mark";
 
 export type EntryContext = {
   /** The viewer's zone: every time on the page is shown in it. */
@@ -157,7 +158,7 @@ export function EntryDialog({ entry, onClose, ctx }: { entry: CalendarEntry | nu
                 {e.link && !e.cancelled && (
                   <Button asChild variant={live ? "default" : "outline"} size="sm">
                     <a href={e.link} target="_blank" rel="noreferrer">
-                      <Video className="size-4" />
+                      {live ? <Video aria-hidden className="size-4" /> : <MeetingAppMark provider={meetingProviderOf(e.link)} className="size-4" />}
                       {live ? "Join" : `Open ${provider ?? "meeting"} link`}
                     </a>
                   </Button>
