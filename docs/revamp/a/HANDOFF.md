@@ -3,6 +3,44 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Branding and API screens (taken from B's backlog), cover fixes, `revamp/a-brand-api-screens`
+
+The owner asked A to take B's backlog items. No migration.
+
+**Settings › Branding** (`/dashboard/settings/branding`, `workspace.branding`):
+- Plus: logo upload (new Blob kind `workspace-logo`, PNG, JPEG or WebP under 1 MB; the token needs `workspace.branding` in that organisation), colour, sender name and welcome text.
+- A live preview of the email header and From line.
+- The sign-in link to share.
+- Pro: white-label on or off, with the support email it requires. Below Plus or Pro, it explains the plan with a link to Billing.
+
+**Branded sign-in page** `/w/<slug>`:
+- The organisation's logo, name, welcome text and colour over the shared sign-in form. The form moved to `components/auth/sign-in-card.tsx`; `AuthFrame` takes an optional `brand`.
+- With white-label on: no "Nexa" in the header or footer, no Back to home, and the support email is shown.
+- Without Plus branding, the page sends people to `/auth`.
+
+**Settings › API and webhooks** (`/dashboard/settings/developers`, `workspace.settings`, Pro):
+- **Keys:** create (name, what it can read, expiry), shown once with Copy; revoke.
+- **Webhooks:** add (https address, events), signing secret shown once; send a test; switch on or off; new secret; recent deliveries with Send again; delete.
+- Short notes for developers on the key header and checking signatures.
+
+**Cover (B's four points):**
+- managers with `cover.manage` for that course (whole organisation, or the course's branch) are told when cover is asked for;
+- the covering tutor is told when it's called off;
+- changing or calling off cover keeps the covering tutor's access while they cover another unfinished class of that course;
+- the absent tutor's note links to `/dashboard/cover`.
+
+**viewer.md Draft 1.30:** `getStudyStatus` reason `OFF_FOR_STUDENT`.
+
+**For B:** using the brand in the dashboard shell (logo and colour for that organisation's members) is still yours, as viewer.md says.
+
+**Tested:**
+- **Real Chrome, 30 checks:** logo upload, saving, white-label refused without a support email then saved, and the branded page (logo, welcome text, colour on both buttons, no Back to home, support email, an unknown slug goes to /auth).
+- **The API key against /api/v1:** 200 for its scope, 403 for another, 401 once revoked.
+- **Webhook:** created, test sent (a 405 is shown as a failure with its reason), switched off, deleted.
+- **Phone width.** No console errors.
+- **Cover:** 6 checks on Preview with a temporary class, cleaned up.
+- **Test data restored.** The test organisation's branding is back as it was, and the test logo was deleted from Blob.
+
 ## 2026-11-24 Sidebar scroll, personal details removed, legal pages, sign-in theming, contact form, `revamp/a-sidebar-legal`
 
 Owner's requests (24 Nov). No migration.

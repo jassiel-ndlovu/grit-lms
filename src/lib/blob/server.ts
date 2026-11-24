@@ -36,6 +36,7 @@ export const ClientPayloadSchema = z.object({
     BlobKind.TestAnswer,
     BlobKind.UserAvatar,
     BlobKind.SupportAttachment,
+    BlobKind.WorkspaceLogo,
   ]),
 });
 export type ClientPayload = z.infer<typeof ClientPayloadSchema>;

@@ -15,6 +15,7 @@ import { occurrencesFor } from "@/features/calendar/calendar";
 import { emitNotification } from "@/features/notifications/server";
 import { prisma } from "@/lib/db";
 import { enqueueEmail, sendQueuedNow } from "@/lib/email/queue";
+import { effectiveRole } from "@/lib/roles";
 import { UserError } from "@/lib/user-error";
 import { ViewerError, type Viewer } from "@/lib/viewer";
 import { can } from "@/lib/viewer-core";
@@ -29,6 +30,29 @@ function whenLabel(start: Date, end: Date, timeZone: string) {
   const d = new Intl.DateTimeFormat("en-ZA", { timeZone, weekday: "short", day: "numeric", month: "short" }).format(start);
   const t = (x: Date) => new Intl.DateTimeFormat("en-ZA", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(x);
   return `${d}, ${t(start)}–${t(end)}`;
+}
+
+/** Managers who can arrange cover for a course: whole-organisation ones, and branch ones for the course's branch. */
+async function coverManagers(workspaceId: string, courseId: string, exceptUserId: string): Promise<string[]> {
+  const [members, course] = await Promise.all([
+    prisma.membership.findMany({ where: { workspaceId, status: "ACTIVE" }, select: { userId: true, role: true, presetRole: true, branchIds: true, customRole: { select: { id: true, name: true, permissions: true, scope: true } } } }),
+    prisma.course.findUnique({ where: { id: courseId }, select: { team: { select: { branchId: true } } } }),
+  ]);
+  const branchId = course?.team?.branchId ?? null;
+  return members
+    .filter((m) => {
+      if (m.userId === exceptUserId) return false;
+      const r = effectiveRole({ role: m.role, presetRole: m.presetRole, customRole: m.customRole ?? null });
+      if (!r.permissions.includes(PERM)) return false;
+      return r.scope === "WORKSPACE" || (r.scope === "BRANCHES" && !!branchId && m.branchIds.includes(branchId));
+    })
+    .map((m) => m.userId);
+}
+
+/** Course access added for cover may go only if they aren't covering another unfinished class of that course. */
+async function mayEndCoverAccess(tx: { coverRequest: typeof prisma.coverRequest }, courseId: string, membershipId: string, exceptCoverId: string, now: Date): Promise<boolean> {
+  const more = await tx.coverRequest.count({ where: { id: { not: exceptCoverId }, courseId, coverMembershipId: membershipId, status: "ASSIGNED", endsAt: { gte: new Date(now.getTime() - DAY) } } });
+  return more === 0;
 }
 
 /** The occurrence, checked against the calendar. */
@@ -64,6 +88,15 @@ export async function requestCover(viewer: Viewer, input: { eventId: string; occ
       if (e.code === "P2002") throw new UserError("Cover has already been asked for this class.");
       throw e;
     });
+  const managers = await coverManagers(o.workspaceId, o.courseId, viewer.user.id);
+  if (managers.length) {
+    const tz = viewer.workspace.timezone ?? "Africa/Johannesburg";
+    const absentName = absent === viewer.membership?.id ? viewer.user.name : (await prisma.membership.findUnique({ where: { id: absent }, select: { user: { select: { name: true } } } }))?.user.name ?? "A tutor";
+    await emitNotification(
+      { title: `Cover needed: ${o.courseName}`.slice(0, 200), message: `${absentName} needs cover ${whenLabel(o.start, o.end, tz)}.${input.reason?.trim() ? ` ${input.reason.trim().slice(0, 120)}` : ""}`, type: "SYSTEM", userIds: managers, link: "/dashboard/cover" },
+      { revalidate: false, email: true },
+    ).catch(() => undefined);
+  }
   return row;
 }
 
@@ -115,7 +148,7 @@ export async function assignCover(viewer: Viewer, input: { coverId: string; cove
   const teaches = await prisma.courseStaff.findFirst({ where: { courseId: c.courseId, membershipId: input.coverMembershipId }, select: { courseId: true } });
   await prisma.$transaction(async (tx) => {
     // Changing cover: take away access the previous cover tutor got only for this.
-    if (c.coverMembershipId && c.addedCourseStaff && c.coverMembershipId !== input.coverMembershipId) {
+    if (c.coverMembershipId && c.addedCourseStaff && c.coverMembershipId !== input.coverMembershipId && (await mayEndCoverAccess(tx, c.courseId, c.coverMembershipId, c.id, now))) {
       await tx.courseStaff.deleteMany({ where: { courseId: c.courseId, membershipId: c.coverMembershipId, role: "ASSISTANT" } });
     }
     if (!teaches) await tx.courseStaff.create({ data: { courseId: c.courseId, membershipId: input.coverMembershipId, role: "ASSISTANT" } });
@@ -138,7 +171,7 @@ export async function assignCover(viewer: Viewer, input: { coverId: string; cove
     await sendQueuedNow([key]).catch(() => undefined);
   }
   await emitNotification({ title: `You're covering ${course.name}`.slice(0, 200), message: `${when}, for ${absent.user.name}.`, type: "SYSTEM", userIds: [cover.user.id], link: `/dashboard/courses/${c.courseId}` }, { revalidate: false, email: false }).catch(() => undefined);
-  await emitNotification({ title: `Cover arranged: ${course.name}`.slice(0, 200), message: `${cover.user.name} is covering ${when}.`, type: "SYSTEM", userIds: [absent.user.id] }, { revalidate: false, email: false }).catch(() => undefined);
+  await emitNotification({ title: `Cover arranged: ${course.name}`.slice(0, 200), message: `${cover.user.name} is covering ${when}.`, type: "SYSTEM", userIds: [absent.user.id], link: "/dashboard/cover" }, { revalidate: false, email: false }).catch(() => undefined);
   return { ok: true as const, addedToCourse: !teaches };
 }
 
@@ -149,10 +182,27 @@ export async function cancelCover(viewer: Viewer, input: { coverId: string }) {
   if (!c || c.workspaceId !== viewer.workspace.id) throw new UserError("That cover request no longer exists.");
   const own = c.absentMembershipId === viewer.membership?.id && c.status === "OPEN";
   if (!own) await loadCover(viewer, input.coverId);
+  const now = new Date();
   await prisma.$transaction(async (tx) => {
-    if (c.addedCourseStaff && c.coverMembershipId && !c.accessEndedAt) await tx.courseStaff.deleteMany({ where: { courseId: c.courseId, membershipId: c.coverMembershipId, role: "ASSISTANT" } });
-    await tx.coverRequest.update({ where: { id: c.id }, data: { status: "CANCELLED", liveKey: null, accessEndedAt: c.addedCourseStaff ? new Date() : null } });
+    if (c.addedCourseStaff && c.coverMembershipId && !c.accessEndedAt && (await mayEndCoverAccess(tx, c.courseId, c.coverMembershipId, c.id, now))) {
+      await tx.courseStaff.deleteMany({ where: { courseId: c.courseId, membershipId: c.coverMembershipId, role: "ASSISTANT" } });
+    }
+    await tx.coverRequest.update({ where: { id: c.id }, data: { status: "CANCELLED", liveKey: null, accessEndedAt: c.addedCourseStaff ? now : null } });
   });
+  // The tutor who was going to cover is told it's off.
+  if (c.status === "ASSIGNED" && c.coverMembershipId && c.endsAt > now) {
+    const [cover, course] = await Promise.all([
+      prisma.membership.findUnique({ where: { id: c.coverMembershipId }, select: { user: { select: { id: true } } } }),
+      prisma.course.findUnique({ where: { id: c.courseId }, select: { name: true } }),
+    ]);
+    if (cover) {
+      const tz = viewer.workspace.timezone ?? "Africa/Johannesburg";
+      await emitNotification(
+        { title: `Cover called off: ${course?.name ?? "a class"}`.slice(0, 200), message: `You no longer need to cover ${whenLabel(c.startsAt, c.endsAt, tz)}.`, type: "SYSTEM", userIds: [cover.user.id], link: "/dashboard/cover" },
+        { revalidate: false, email: true },
+      ).catch(() => undefined);
+    }
+  }
   return { ok: true as const };
 }
 
