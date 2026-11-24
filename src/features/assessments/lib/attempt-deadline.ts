@@ -50,6 +50,15 @@ export function attemptDeadline(input: {
 }
 
 /**
+ * Whether a test can still be begun. It closes at its due date for everyone
+ * (extra time never moves it); an attempt already begun is a separate matter.
+ * Asked by the pre-test page and by startTestSubmission, so they agree.
+ */
+export function closedToStart(dueDate: Date | number | null | undefined, now: Date | number): boolean {
+  return dueDate != null && Number(now) >= Number(dueDate);
+}
+
+/**
  * Grace the cron gives before force-submitting. The runner submits at zero
  * WITH the student's latest answers; the cron only flips the status on
  * whatever was last autosaved, so let the client win when it is online.

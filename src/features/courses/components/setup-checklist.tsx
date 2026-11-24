@@ -12,6 +12,8 @@ import Link from "next/link";
 import { Check, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { TonePanel } from "@/components/ui/nexus";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 import { stepHref, type OnboardingStep } from "../lib/onboarding-ui";
 
@@ -44,7 +46,7 @@ export function SetupChecklist({ workspaceId, items }: { workspaceId: string; it
   }
 
   return (
-    <section aria-labelledby="setup-heading" className="border-border space-y-3 rounded-xl border p-5">
+    <TonePanel as="section" tone="accent" aria-labelledby="setup-heading" className="space-y-3 p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="setup-heading" className="text-foreground text-sm font-semibold">
@@ -53,6 +55,7 @@ export function SetupChecklist({ workspaceId, items }: { workspaceId: string; it
           <p className="text-muted-foreground text-xs">
             {done} of {items.length} done
           </p>
+          <ProgressBar label="Setup" value={done} max={items.length} valueText={`${done} of ${items.length} done`} className="mt-2 w-40" />
         </div>
         <Button variant="ghost" size="icon" className="size-8" onClick={dismiss} aria-label="Hide the setup list">
           <X aria-hidden className="size-4" />
@@ -82,6 +85,6 @@ export function SetupChecklist({ workspaceId, items }: { workspaceId: string; it
           </li>
         ))}
       </ul>
-    </section>
+    </TonePanel>
   );
 }

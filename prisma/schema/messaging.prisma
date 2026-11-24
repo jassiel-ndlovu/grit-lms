@@ -237,3 +237,100 @@ model StudyMessage {
 
   @@index([chatId, createdAt])
 }
+
+// Help and contact centre (owner 24 Nov; A). Contract: docs/revamp/contracts/support.md.
+
+enum SupportKind {
+  QUESTION
+  PROBLEM
+  FEEDBACK
+}
+
+enum SupportTopic {
+  ACCOUNT
+  CLASSES
+  TESTS
+  PAYMENTS
+  SUBSCRIPTION
+  APP
+  OTHER
+}
+
+/// Who answers: Nexa's team, or the requester's organisation.
+enum SupportRoute {
+  NEXA
+  WORKSPACE
+}
+
+enum SupportStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+model SupportQuery {
+  id               String        @id @default(cuid())
+  /// Shown as Q-<number>.
+  number           Int           @unique @default(autoincrement())
+  kind             SupportKind
+  topic            SupportTopic
+  route            SupportRoute
+  /// Set when route is WORKSPACE (and kept for context otherwise, if known).
+  workspaceId      String?
+  /// The course it's about, if any (no foreign key: learning is B's schema).
+  courseId         String?
+  /// Signed-in requester; null for the public form (then name and email are given).
+  requesterUserId  String?
+  requesterName    String        @db.VarChar(120)
+  requesterEmail   String        @db.VarChar(254)
+  /// learner, guardian, staff, admin or public, when it was sent.
+  requesterPersona String        @db.VarChar(16)
+  subject          String        @db.VarChar(140)
+  status           SupportStatus @default(OPEN)
+  /// The page they came from (same-site path).
+  pagePath         String?       @db.VarChar(300)
+  userAgent        String?       @db.VarChar(300)
+  /// The requester's verdict on the answer.
+  helpful          Boolean?
+  /// Public form: a keyed hash of the IP for rate limits; a random token for the private link.
+  ipHash           String?       @db.VarChar(64)
+  accessToken      String?       @unique @db.VarChar(64)
+  /// The requester has read up to here; staff have read up to here.
+  requesterReadAt  DateTime?
+  staffReadAt      DateTime?
+  createdAt        DateTime      @default(now())
+  lastActivityAt   DateTime      @default(now())
+  closedAt         DateTime?
+
+  workspace Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  requester User?            @relation("SupportRequester", fields: [requesterUserId], references: [id], onDelete: SetNull)
+  messages  SupportMessage[]
+
+  @@index([requesterUserId, lastActivityAt])
+  @@index([route, status, lastActivityAt])
+  @@index([workspaceId, status, lastActivityAt])
+  @@index([courseId])
+  @@index([ipHash, createdAt])
+  @@index([requesterEmail, createdAt])
+}
+
+model SupportMessage {
+  id           String   @id @default(cuid())
+  queryId      String
+  /// Null for the public requester (and for a deleted account).
+  authorUserId String?
+  authorName   String   @db.VarChar(120)
+  /// True when written by whoever answers (organisation staff or Nexa).
+  fromStaff    Boolean
+  /// Staff-only note; never shown to the requester.
+  internal     Boolean  @default(false)
+  body         String   @db.VarChar(5000)
+  /// Blob URLs of up to 3 images.
+  attachments  String[] @default([])
+  createdAt    DateTime @default(now())
+
+  query  SupportQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  author User?        @relation("SupportAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([queryId, createdAt])
+}

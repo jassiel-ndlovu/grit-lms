@@ -151,7 +151,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         today={today}
         entries={entries}
         child={child?.userId}
-        ctx={{ timeZone, locale, editableCourseIds: tutorCourses.map((c) => c.id), checkInCourseIds, cover }}
+        ctx={{ timeZone, locale, editableCourseIds: tutorCourses.map((c) => c.id), checkInCourseIds, cover, classMode: tutor || learner }}
         empty={
           <EmptyState
             compact

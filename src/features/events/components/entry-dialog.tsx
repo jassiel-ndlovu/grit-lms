@@ -14,7 +14,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, CalendarPlus, ClipboardCheck, ExternalLink, Loader2, MapPin, Pencil, Repeat, RotateCcw, Trash2, Video } from "lucide-react";
+import { Ban, CalendarPlus, ClipboardCheck, ExternalLink, Loader2, MapPin, Pencil, Presentation, Repeat, RotateCcw, Trash2, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -52,6 +52,8 @@ export type EntryContext = {
   checkInCourseIds: string[];
   /** Cover for absent tutors (organisations' staff). */
   cover?: CalendarCover | null;
+  /** Staff and learners open class mode; parents don't. */
+  classMode?: boolean;
 };
 
 export function EntryDialog({ entry, onClose, ctx }: { entry: CalendarEntry | null; onClose: () => void; ctx: EntryContext }) {
@@ -165,6 +167,14 @@ export function EntryDialog({ entry, onClose, ctx }: { entry: CalendarEntry | nu
                       {live ? <Video aria-hidden className="size-4" /> : <MeetingAppMark provider={meetingProviderOf(e.link)} className="size-4" />}
                       {live ? "Join" : `Open ${provider ?? "meeting"} link`}
                     </a>
+                  </Button>
+                )}
+                {ctx.classMode && takesAttendance(e) && e.eventId && e.occurrenceStart && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={calendarRoutes.classMode(e.eventId, e.occurrenceStart)}>
+                      <Presentation aria-hidden className="size-4" />
+                      Class page
+                    </Link>
                   </Button>
                 )}
                 {live && takesAttendance(e) && ctx.checkInCourseIds.includes(e.courseId) && <CheckInButton size="sm" />}

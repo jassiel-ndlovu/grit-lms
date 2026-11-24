@@ -46,6 +46,8 @@ export function BeginTestButton({
         router.push(redirectTo);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Could not start test");
+        // It may have closed while this page was open: show that.
+        router.refresh();
       }
     });
   }

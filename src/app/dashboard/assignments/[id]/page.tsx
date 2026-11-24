@@ -46,6 +46,7 @@ import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { getCourseScope } from "@/features/courses/course-access";
 import { manageableBy } from "@/features/courses/lib/course-access";
 import { schoolDateFormat } from "@/lib/datetime";
+import { TonePanel } from "@/components/ui/nexus";
 
 function fileNameFromUrl(url: string): string {
   try {
@@ -196,7 +197,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
           </div>
 
           {graded && grade && (
-            <div className="bg-brand-terracotta/8 border-brand-terracotta/30 flex flex-wrap items-center justify-between gap-3 rounded-md border p-4">
+            <TonePanel tone="accent" className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="bg-brand-terracotta/15 text-brand-terracotta flex size-10 items-center justify-center rounded-md">
                   <GraduationCap className="size-5" />
@@ -224,7 +225,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                   <p className="text-foreground mt-1">{grade.finalComments}</p>
                 </div>
               )}
-            </div>
+            </TonePanel>
           )}
 
           <Separator />

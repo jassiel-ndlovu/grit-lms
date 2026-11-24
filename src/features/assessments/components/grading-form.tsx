@@ -14,7 +14,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, ExternalLink, FileText, Loader2, Save } from "lucide-react";
+import { CheckCircle2, ChevronRight, ExternalLink, FileText, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
   RestoreDraftBanner,
   SaveProgressButton,
 } from "@/components/draft-controls";
+import { NexusLoader } from "@/components/ui/nexus";
 import { useLocalDraft } from "@/lib/use-local-draft";
 import { formatLabel, normalizeScheme, type LabelScheme } from "@/lib/enum-labels";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ import { WriteGuard, useReadOnly } from "@/components/shell/workspace-access";
 import { getAiSuggestions, recordAiSuggestionAction } from "@/features/ai-marking/actions";
 
 import { gradeTestSubmission } from "../actions";
+import { markKey, withComment } from "../lib/marking-flow";
 import { toFileAnswers, toFileUploadMemo } from "../lib/file-answers";
 import {
   awaitingReview,
@@ -116,7 +118,13 @@ export interface GradingFormProps {
     load?: (testSubmissionId: string) => Promise<AiSuggestion[] | null>;
     record?: (input: { suggestionId: string; action: AiTutorAction; score: number | null }) => Promise<string | null>;
   } | null;
+  /** Comments used before on each question (marking-comments.ts). */
+  comments?: Record<string, string[]>;
+  /** The next script to mark, for "Save and next". */
+  next?: { href: string; name: string } | null;
 }
+
+const NO_COMMENTS: string[] = [];
 
 const AI_POLL_MS = 5000;
 
@@ -178,6 +186,8 @@ export function GradingForm({
   existingGrade,
   labelScheme,
   ai = null,
+  comments,
+  next = null,
 }: GradingFormProps) {
   const router = useRouter();
   const readOnly = useReadOnly();
@@ -413,7 +423,7 @@ export function GradingForm({
     acceptMany,
   });
 
-  async function onSubmit() {
+  async function onSubmit(thenNext = false) {
     if (outOfTotal <= 0) {
       toast.error("This test has no gradable questions.");
       return;
@@ -460,7 +470,7 @@ export function GradingForm({
       }
       draft.clear();
       toast.success(`Saved grade for ${studentName}`);
-      router.push(`/dashboard/tutor-tests/${testId}/submissions`);
+      router.push(thenNext && next ? next.href : `/dashboard/tutor-tests/${testId}/submissions`);
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
@@ -468,10 +478,48 @@ export function GradingForm({
     }
   }
 
+  /* ─── Keyboard (lib/marking-flow.ts) ─── */
+
+  function focusScore(qid: string) {
+    const el = document.getElementById(`score-${qid}`) as HTMLInputElement | null;
+    el?.focus();
+    el?.select();
+    el?.scrollIntoView({ block: "center" });
+  }
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.nativeEvent.isComposing) return;
+    const target = e.target as HTMLElement;
+    const scoreOf = target.id.startsWith("score-") ? target.id.slice("score-".length) : null;
+    const does = markKey(e, scoreOf !== null);
+    if (!does || pending || readOnly) return;
+    e.preventDefault();
+    if (does === "save-next") {
+      const missing = gradableRows.find((r) => (perQ[r.q.id]?.score ?? "").trim() === "");
+      if (missing) {
+        focusScore(missing.q.id);
+        toast.warning(`Question ${missing.path} has no mark yet.`);
+        return;
+      }
+      void onSubmit(true);
+      return;
+    }
+    const at = gradableRows.findIndex((r) => r.q.id === scoreOf);
+    const row = gradableRows[at];
+    if (!row) return;
+    if (does === "full") updateScore(row.q.id, String(row.q.points));
+    else if (does === "comment") document.getElementById(`feedback-${row.q.id}`)?.focus();
+    else {
+      const to = gradableRows[at + (does === "next" ? 1 : -1)];
+      if (to) focusScore(to.q.id);
+      else if (does === "next") document.getElementById("save-grade")?.focus();
+    }
+  }
+
   /* ─── Render ─── */
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onKeyDown={onKeyDown}>
       <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this grade" />
       <div className="divide-border border-border divide-y border-y">
       {rows.map((r) => (
@@ -494,6 +542,7 @@ export function GradingForm({
           onEdit={editSuggestion}
           onReject={rejectSuggestion}
           onUndo={undoSuggestion}
+          comments={comments?.[r.q.id] ?? NO_COMMENTS}
         />
       ))}
       </div>
@@ -519,7 +568,7 @@ export function GradingForm({
       {/* Save bar: sticks to the bottom of the content column (not the
           window), so it never covers the sidebar. */}
       <div className="bg-background/95 border-border sticky bottom-0 z-10 -mx-4 border-t px-4 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2 sm:py-3">
           <div className="flex items-center gap-4">
             <div>
               <p className="text-muted-foreground text-xs">Overall</p>
@@ -531,7 +580,7 @@ export function GradingForm({
                   onChange={(e) => setOverrideOverall(e.target.value)}
                   min={0}
                 />
-                <span className="text-muted-foreground text-sm tabular-nums">
+                <span className="text-muted-foreground text-sm whitespace-nowrap tabular-nums">
                   / {outOfTotal}
                 </span>
                 {outOfTotal > 0 && (
@@ -556,22 +605,34 @@ export function GradingForm({
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <EmailStudentCheckbox
               checked={emailStudent}
               onCheckedChange={setEmailStudent}
               studentName={studentName.split(" ")[0]}
               disabled={pending}
             />
-            <DraftStatus draft={draft} />
-            <SaveProgressButton draft={draft} />
-            <WriteGuard label={existingGrade ? "Update grade" : "Save grade"} variant="brand" size="default">
-              <Button type="button" variant="brand" onClick={onSubmit} disabled={pending}>
-                {pending && <Loader2 className="size-4 animate-spin" />}
+            <DraftStatus draft={draft} className="max-sm:w-full" />
+            {/* It saves by itself, so a phone does without the button. */}
+            <span className="max-sm:hidden">
+              <SaveProgressButton draft={draft} />
+            </span>
+            <WriteGuard label={existingGrade ? "Update grade" : "Save grade"} variant={next ? "outline" : "brand"} size="default">
+              <Button id={next ? undefined : "save-grade"} type="button" variant={next ? "outline" : "brand"} onClick={() => onSubmit()} disabled={pending}>
+                {pending && !next ? <NexusLoader size={16} label={null} className="text-current" /> : null}
                 {existingGrade ? "Update grade" : "Save grade"}
                 <Save className="size-4" />
               </Button>
             </WriteGuard>
+            {next ? (
+              <WriteGuard label="Save and next" variant="brand" size="default">
+                <Button id="save-grade" type="button" variant="brand" onClick={() => onSubmit(true)} disabled={pending} title={`Next: ${next.name}`}>
+                  {pending ? <NexusLoader size={16} label={null} className="text-current" /> : null}
+                  Save and next
+                  <ChevronRight className="size-4" />
+                </Button>
+              </WriteGuard>
+            ) : null}
           </div>
         </div>
       </div>
@@ -606,6 +667,7 @@ const QuestionCard = React.memo(function QuestionCard({
   onEdit,
   onReject,
   onUndo,
+  comments,
 }: {
   row: FlatRow;
   answer: unknown;
@@ -625,6 +687,8 @@ const QuestionCard = React.memo(function QuestionCard({
   onEdit: (s: AiSuggestion) => void;
   onReject: (s: AiSuggestion) => void;
   onUndo: (s: AiSuggestion) => void;
+  /** Used before on this question. */
+  comments: string[];
 }) {
   const { q, path, depth, gradable } = row;
   const isContext = !gradable;
@@ -720,6 +784,7 @@ const QuestionCard = React.memo(function QuestionCard({
                   onChange={(e) => onScore(row.q.id, e.target.value)}
                   min={0}
                   max={q.points}
+                  aria-describedby="marking-keys"
                   placeholder="0"
                 />
                 <span className="text-muted-foreground text-sm tabular-nums">
@@ -739,16 +804,34 @@ const QuestionCard = React.memo(function QuestionCard({
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-foreground text-xs font-medium">
+              <label htmlFor={`feedback-${q.id}`} className="text-foreground text-xs font-medium">
                 Feedback
               </label>
               <MarkdownTextarea
+                id={`feedback-${q.id}`}
                 rows={3}
                 value={feedback}
                 onChange={(e) => onFeedback(row.q.id, e.target.value)}
                 placeholder="Optional — markdown + LaTeX supported."
                 previewTitle={`Feedback for ${row.path}`}
               />
+              {comments.length > 0 ? (
+                <ul aria-label={`Comments used before on question ${path}`} className="flex flex-wrap gap-1.5">
+                  {comments.map((c) => (
+                    <li key={c} className="min-w-0">
+                      <button
+                        type="button"
+                        title={c}
+                        disabled={readOnly}
+                        onClick={() => onFeedback(q.id, withComment(feedback, c))}
+                        className="border-border text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring min-h-6 max-w-72 truncate rounded-full border px-2.5 text-left text-xs outline-none focus-visible:ring-2 disabled:opacity-50"
+                      >
+                        {c}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           </div>
         </>

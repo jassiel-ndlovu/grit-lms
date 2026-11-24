@@ -5,6 +5,7 @@
 @import "./themes.css";
 @import "./a11y.css";
 @import "./stock-photo.css";
+@import "./nexus.css";
 
 @custom-variant dark (&:is(.dark *));
 

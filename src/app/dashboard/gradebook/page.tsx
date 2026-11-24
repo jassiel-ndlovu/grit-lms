@@ -64,7 +64,7 @@ export default async function GradebookIndexPage() {
           {courses.map((c) => (
             <li key={c.id}>
               <Link href={`/dashboard/gradebook/${c.id}`} className="block">
-                <Card className="hover:border-brand-terracotta/40 flex items-center gap-4 p-5 transition-colors">
+                <Card className="hover:border-brand-terracotta/40 flex flex-row items-center gap-4 p-5 transition-colors">
                   <div className="bg-muted relative size-12 shrink-0 overflow-hidden rounded-md">
                     <SaverCover
                       src={courseCoverSrc(c)}

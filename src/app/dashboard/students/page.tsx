@@ -13,6 +13,9 @@ import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { importRoutes } from "@/components/imports/import-ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { TonePanel } from "@/components/ui/nexus";
+import { PeekButton } from "@/components/ui/peek-panel";
+import { StudentPeeks } from "@/features/activity/components/student-peek";
 import { AddStudentForm } from "@/features/courses/components/accounts/add-student-form";
 import { coursesForAdding, listRoster } from "@/features/courses/lib/roster";
 import { can, getViewer } from "@/lib/viewer";
@@ -57,12 +60,12 @@ export default async function StudentsPage() {
         }
       />
 
-      <section aria-labelledby="add-heading" className="border-border space-y-4 rounded-lg border p-5">
+      <TonePanel as="section" nexus="add-student" nexusSize={48} aria-labelledby="add-heading" className="space-y-4 p-5">
         <h2 id="add-heading" className="text-foreground text-sm font-semibold">
           Add a student
         </h2>
         <AddStudentForm courses={courses} workspaceName={viewer.workspace.name} coursesRequired={scope !== null} />
-      </section>
+      </TonePanel>
 
       <section aria-labelledby="list-heading" className="space-y-3">
         <h2 id="list-heading" className="text-foreground text-sm font-semibold">
@@ -71,12 +74,13 @@ export default async function StudentsPage() {
         {students.length === 0 ? (
           <p className="text-muted-foreground text-sm">No students yet.</p>
         ) : (
+          <StudentPeeks items={students.map((s) => ({ id: s.learnerId, title: s.name, href: `/dashboard/students/${s.learnerId}` }))}>
           <ul className="divide-border border-border divide-y rounded-lg border">
             {students.map((s) => (
-              <li key={s.learnerId}>
+              <li key={s.learnerId} className="hover:bg-muted/50 flex items-center pr-1">
                 <Link
                   href={`/dashboard/students/${s.learnerId}`}
-                  className="hover:bg-muted/50 flex flex-wrap items-center justify-between gap-3 p-3 text-sm"
+                  className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3 p-3 text-sm"
                 >
                   <span className="min-w-0">
                     <span className="text-foreground block font-medium">{s.name}</span>
@@ -91,9 +95,11 @@ export default async function StudentsPage() {
                     <Badge variant="outline">Hasn&apos;t signed in yet</Badge>
                   ) : null}
                 </Link>
+                <PeekButton id={s.learnerId} name={s.name} />
               </li>
             ))}
           </ul>
+          </StudentPeeks>
         )}
       </section>
     </PageFrame>

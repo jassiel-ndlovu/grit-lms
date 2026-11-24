@@ -41,6 +41,7 @@ import {
 } from "@/features/grades/queries";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { schoolDateFormat } from "@/lib/datetime";
+import { TonePanel } from "@/components/ui/nexus";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -99,7 +100,7 @@ export default async function GradeDetailPage({ params }: PageProps) {
       />
 
       {/* ───── Score callout ───── */}
-      <Card className="bg-brand-terracotta/8 border-brand-terracotta/30 flex flex-wrap items-center justify-between gap-4 p-6">
+      <TonePanel tone="accent" className="flex flex-wrap items-center justify-between gap-4 p-6">
         <div className="flex items-center gap-4">
           <div className="bg-brand-terracotta/15 text-brand-terracotta flex size-14 items-center justify-center rounded-md">
             <GraduationCap className="size-7" />
@@ -122,7 +123,7 @@ export default async function GradeDetailPage({ params }: PageProps) {
             {overallPct}%
           </Badge>
         )}
-      </Card>
+      </TonePanel>
 
       {/* ───── Final feedback ───── */}
       {grade.finalComments && (

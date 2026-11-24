@@ -67,6 +67,9 @@ import { SetupChecklist } from "@/features/courses/components/setup-checklist";
 import { setupChecklistFor } from "@/features/courses/setup-checklist";
 import { getViewer } from "@/lib/viewer";
 import { getCourseScope } from "@/features/courses/course-access";
+import { closedToStart } from "@/features/assessments/lib/attempt-deadline";
+import { dueTone, dueWord } from "@/lib/nexus";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 export const metadata = { title: "Dashboard" };
 
@@ -192,9 +195,11 @@ export default async function DashboardLanding({
   const testStatuses = await Promise.all(
     tests.map((t) => getTestSubmissionByStudentAndTest(student.id, t.id)),
   );
+  const now = new Date();
+  // A closed test that was never begun can't be acted on: it is under Tests, Missed.
   const pendingTests = tests
     .map((t, i) => ({ test: t, sub: testStatuses[i] }))
-    .filter(({ sub }) => !sub || sub.status === "IN_PROGRESS")
+    .filter(({ test, sub }) => (sub ? sub.status === "IN_PROGRESS" : !closedToStart(test.dueDate, now)))
     .map(({ test }) => ({
       kind: "test" as const,
       id: test.id,
@@ -237,7 +242,7 @@ export default async function DashboardLanding({
 
   const recentGrades = grades.slice(0, 4);
   const firstName = student.fullName.split(" ")[0];
-  const greeting = greetingFor(new Date(), dateCtx.timeZone);
+  const greeting = greetingFor(now, dateCtx.timeZone);
 
   return (
     <PageFrame type="home" breadcrumb={[{ label: "Home" }]}>
@@ -286,9 +291,7 @@ export default async function DashboardLanding({
                       <span className="text-muted-foreground">Progress</span>
                       <span className="font-medium tabular-nums">{done}/{total}</span>
                     </div>
-                    <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                      <div className="bg-brand-terracotta h-full transition-all" style={{ width: `${percent}%` }} />
-                    </div>
+                    <ProgressBar label="Lessons completed" value={percent} valueText={`${done} of ${total}`} />
                   </div>
                 </Link>
               </Card>
@@ -312,8 +315,10 @@ export default async function DashboardLanding({
               <ul className="divide-border divide-y">
                 {upNext.map((item) => {
                   const Icon = item.kind === "test" ? Pencil : item.kind === "assignment" ? Hourglass : CalendarDays;
+                  const tone = item.kind === "event" ? "neutral" : dueTone(item.date, now);
+                  const word = dueWord(tone);
                   return (
-                    <li key={`${item.kind}-${item.id}`}>
+                    <li key={`${item.kind}-${item.id}`} data-slot="tone-row" data-tone={tone}>
                       <Link href={item.href} className="hover:bg-muted/40 flex items-center gap-3 px-4 py-3 sm:px-5 transition-colors">
                         <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
                           <Icon className="size-4" />
@@ -321,6 +326,7 @@ export default async function DashboardLanding({
                         <div className="min-w-0 flex-1 space-y-0.5">
                           <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
                           <p className="text-muted-foreground truncate text-xs">
+                            {word ? <span className="text-foreground font-medium">{word} · </span> : null}
                             {item.course} - {item.kind === "test" ? "Test" : item.kind === "assignment" ? "Assignment" : "Event"}
                           </p>
                         </div>
