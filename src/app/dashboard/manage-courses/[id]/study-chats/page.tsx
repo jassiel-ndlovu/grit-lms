@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Power } from "lucide-react";
+import { Power, UserRoundCog } from "lucide-react";
 
 import { PageTitle } from "@/components/shell/page-frame";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { courseRoutes } from "@/features/courses/components/course-frame";
 import { editsCourse, StudyChatsFrame } from "@/features/courses/components/study/staff-frame";
 import { StudyChatList } from "@/features/courses/components/study/tutor-views";
 import { hasStudyAssistant, orNotFound, studyCourse } from "@/features/courses/study";
+import { studyRoutes } from "@/features/courses/lib/study-ui";
 import { courseStudyChats } from "@/features/study/study";
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, resolveLocale } from "@/lib/datetime";
@@ -33,7 +34,8 @@ export default async function StudyChatsPage({ params }: { params: Promise<{ id:
   if (!course) notFound();
   const rows = await orNotFound(() => courseStudyChats(viewer, { courseId: id, limit: LIMIT }));
   // The tab is hidden without the service; earlier chats stay readable.
-  if (rows.length === 0 && !(await hasStudyAssistant(id))) notFound();
+  const on = await hasStudyAssistant(id);
+  if (rows.length === 0 && !on) notFound();
   const [prefs, editor, services] = await Promise.all([
     getUserPreferences(viewer.user.id),
     editsCourse(viewer, id),
@@ -47,13 +49,25 @@ export default async function StudyChatsPage({ params }: { params: Promise<{ id:
       <PageTitle
         title="Study chats"
         actions={
-          editor && services && isBillingEnabled() ? (
-            <Button asChild size="sm" variant="outline">
-              <Link href={courseRoutes.services(id)}>
-                <Power aria-hidden className="size-4" />
-                Turn on or off
-              </Link>
-            </Button>
+          editor && isBillingEnabled() ? (
+            <>
+              {on ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={studyRoutes.students(id)}>
+                    <UserRoundCog aria-hidden className="size-4" />
+                    Students
+                  </Link>
+                </Button>
+              ) : null}
+              {services ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={courseRoutes.services(id)}>
+                    <Power aria-hidden className="size-4" />
+                    Turn on or off
+                  </Link>
+                </Button>
+              ) : null}
+            </>
           ) : undefined
         }
         description={`What students ask the study assistant. They're told that you and their parents can read these, and chats are kept for a year.${

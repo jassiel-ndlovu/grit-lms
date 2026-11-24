@@ -58,7 +58,8 @@ model Course {
 
   bookings Booking[]
 
-  studyChats StudyChat[]
+  studyChats           StudyChat[]
+  studyAssistantBlocks StudyAssistantBlock[]
 
   @@index([workspaceId])
 }
@@ -154,4 +155,18 @@ enum FileType {
   ZIP
   JPEG
   OTHER
+}
+
+/// A student the course's tutors switched the study assistant off for. The
+/// row is the switch: no row, no block. Read by features/study.
+model StudyAssistantBlock {
+  courseId      String
+  studentUserId String
+  blockedById   String
+  createdAt     DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, studentUserId])
+  @@index([studentUserId])
 }

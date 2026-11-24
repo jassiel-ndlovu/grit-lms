@@ -14,6 +14,8 @@ export const studyRoutes = {
   /** The tutor's side. */
   chats: (courseId: string, chatId?: string) =>
     `/dashboard/manage-courses/${courseId}/study-chats${chatId ? `/${chatId}` : ""}`,
+  /** The tutor's on and off switch for each student. */
+  students: (courseId: string) => `/dashboard/manage-courses/${courseId}/study-chats/students`,
   /** A parent reads their child's chats. */
   childChats: (childUserId: string, chatId?: string) =>
     `/dashboard/children/${encodeURIComponent(childUserId)}/study-chats${chatId ? `/${encodeURIComponent(chatId)}` : ""}`,
@@ -23,7 +25,7 @@ export const studyRoutes = {
   workspaceCredits: "/dashboard/settings/billing/credits",
 };
 
-const REASONS = ["NOT_ON_PLAN", "COMING_SOON", "NO_CREDITS"] as const;
+const REASONS = ["NOT_ON_PLAN", "OFF_FOR_STUDENT", "COMING_SOON", "NO_CREDITS"] as const;
 export type StudyReason = (typeof REASONS)[number] | null;
 
 /** A status's reason; one this build doesn't know closes the box rather than opening it. */
@@ -104,6 +106,22 @@ export function nextExpiry(purchases: Array<{ expiresAt: Date | null; expired: b
   return open.length ? new Date(Math.min(...open)) : null;
 }
 
+/** "Off for 2 of 24 students." */
+export function switchSummary(off: number, total: number): string {
+  if (off === 0) return "On for every student.";
+  return off === total ? "Off for every student." : `Off for ${number(off)} of ${count(total, "student")}.`;
+}
+
+/** "Maths", "Maths and Science", "Maths, Science and English". */
+export const nameList = (names: readonly string[]) =>
+  names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+
+/** Whether a name has every word typed. */
+export function matchName(name: string, query: string): boolean {
+  const n = name.toLowerCase();
+  return query.toLowerCase().split(/\s+/).every((w) => n.includes(w));
+}
+
 /** Why the question box is closed, or null when it's open. */
 export function closedNote(input: {
   reason: StudyReason;
@@ -113,6 +131,8 @@ export function closedNote(input: {
   switch (input.reason) {
     case "NOT_ON_PLAN":
       return { title: "The study assistant is off for this course", text: "You can still read your earlier chats." };
+    case "OFF_FOR_STUDENT":
+      return { title: "The study assistant is off for you on this course", text: "Your tutor switched it off. You can still read your earlier chats." };
     case "COMING_SOON":
       return { title: "The study assistant opens in January", text: "You'll be able to ask about this course's lessons." };
     case "NO_CREDITS":
