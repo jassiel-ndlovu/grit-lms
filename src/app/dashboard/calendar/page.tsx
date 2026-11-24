@@ -24,6 +24,7 @@ import { hasService } from "@/features/billing/services";
 import { getCourseScope } from "@/features/courses/course-access";
 import { listCoursesByTutorId } from "@/features/courses/queries";
 import { bookingEntries } from "@/features/events/bookings";
+import { calendarCover } from "@/features/events/staff-time";
 import { childCourseIds, dueForCourses, dueForStudent } from "@/features/events/calendar-feed";
 import { CalendarRibbon } from "@/features/events/components/calendar-ribbon";
 import { CheckInButton, SubscribeButton } from "@/features/events/components/calendar-tools";
@@ -79,6 +80,8 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   }));
   if (onlyCourses) entries = entries.filter((e) => onlyCourses.has(e.courseId));
   entries = [...entries, ...booked, ...due];
+
+  const cover = await calendarCover(viewer, entries, range, new Date());
 
   // Check-in codes come with live-sessions (Plus), course by course.
   const checkInCourseIds: string[] = [];
@@ -148,7 +151,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         today={today}
         entries={entries}
         child={child?.userId}
-        ctx={{ timeZone, locale, editableCourseIds: tutorCourses.map((c) => c.id), checkInCourseIds }}
+        ctx={{ timeZone, locale, editableCourseIds: tutorCourses.map((c) => c.id), checkInCourseIds, cover }}
         empty={
           <EmptyState
             compact

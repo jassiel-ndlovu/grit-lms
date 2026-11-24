@@ -74,7 +74,7 @@ export default async function StudyAssistantPage({ params, searchParams }: PageP
         properties={
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
             <Eye aria-hidden className="size-4 shrink-0" />
-            Your tutors can read these chats. They&apos;re kept for a year.
+            Your tutors and parents can read these chats. They&apos;re kept for a year.
             {here && status.reason !== "COMING_SOON" && status.reason !== "NOT_ON_PLAN" ? (
               <Link href={studyRoutes.credits} className="text-foreground underline underline-offset-2">
                 Study credits

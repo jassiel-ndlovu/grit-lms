@@ -30,10 +30,10 @@ check("trailing segment boundary", activeHref("/dashboard/testsuite", hrefs), nu
 // (#149), Join requests (staff
 // with learners.invite) from #206, referrals (learners and guardians), and
 // At risk (staff with grades.view), and Bookings after Calendar (staff with
-// content.view).
+// content.view), and Cover and Timesheets (an organisation's staff).
 const BEFORE: Record<LegacyRole, string[]> = {
   STUDENT: ["/dashboard", "/dashboard/notifications", "/dashboard/courses", "/dashboard/courses/browse", "/dashboard/calendar", "/dashboard/bookings", "/dashboard/tests", "/dashboard/assignments", "/dashboard/grades", "/dashboard/referrals"],
-  TUTOR: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-courses", "/dashboard/calendar", "/dashboard/bookings", "/dashboard/tutor-tests", "/dashboard/assignments", "/dashboard/gradebook", "/dashboard/analytics", "/dashboard/students", "/dashboard/at-risk", "/dashboard/join-requests"],
+  TUTOR: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-courses", "/dashboard/calendar", "/dashboard/bookings", "/dashboard/cover", "/dashboard/tutor-tests", "/dashboard/assignments", "/dashboard/gradebook", "/dashboard/analytics", "/dashboard/students", "/dashboard/at-risk", "/dashboard/join-requests", "/dashboard/timesheets"],
   ADMIN: ["/dashboard", "/dashboard/notifications", "/dashboard/manage-users"],
   PARENT: ["/dashboard", "/dashboard/notifications", "/dashboard/calendar", "/dashboard/bookings", "/dashboard/courses/browse", "/dashboard/referrals"],
 };
@@ -76,6 +76,11 @@ const feesTutor = { persona: "staff" as const, permissions: ["fees.manage" as co
 check("fees: billing off hides Fees", hrefsOf(navSectionsFor(feesTutor)).includes("/dashboard/fees"), false);
 check("fees: billing on, fees.manage shows Fees", hrefsOf(navSectionsFor(feesTutor, { billing: true })).includes("/dashboard/fees"), true);
 check("business: needs reports.view", [["reports.view" as const], ["grades.view" as const]].map((permissions) => hrefsOf(navSectionsFor({ persona: "staff", permissions })).includes("/dashboard/business")), [true, false]);
+const staffIn = (kind: "SOLO" | "ORGANISATION" | null, persona: "staff" | "learner" = "staff") =>
+  hrefsOf(navSectionsFor({ persona, permissions: [], workspace: kind ? { kind } : null })).filter((h) => h === "/dashboard/cover" || h === "/dashboard/timesheets");
+check("an organisation's staff get Cover and Timesheets", staffIn("ORGANISATION"), ["/dashboard/cover", "/dashboard/timesheets"]);
+check("a solo tutor doesn't", [staffIn("SOLO"), staffIn(null)], [[], []]);
+check("a student in an organisation doesn't", staffIn("ORGANISATION", "learner"), []);
 const nexaAdmin = { persona: "admin" as const, permissions: ["admin.console" as const] };
 check("admin, billing off: no billing admin link", hrefsOf(navSectionsFor(nexaAdmin)).includes("/dashboard/admin/billing"), false);
 check("admin, billing on: billing admin link", hrefsOf(navSectionsFor(nexaAdmin, { billing: true })).includes("/dashboard/admin/billing"), true);
