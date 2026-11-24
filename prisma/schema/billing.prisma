@@ -990,6 +990,8 @@ enum AiAssistFeature {
   FEEDBACK
   REPORT_COMMENTS
   GAPS
+  NOTES
+  DIAGRAM
 }
 
 enum AiAssistStatus {

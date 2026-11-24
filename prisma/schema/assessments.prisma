@@ -287,6 +287,9 @@ model AiMarkSuggestion {
   cacheReadTokens   Int            @default(0)
   /// Provider cost in millionths of a US dollar.
   costMicroUsd      Int            @default(0)
+  /// #216 phase 3 (A): marked from photos or a PDF of handwritten work, with the model's transcript.
+  fromPhotos        Boolean        @default(false)
+  transcript        String?        @db.VarChar(8000)
   error             String?
   tutorAction       AiTutorAction?
   tutorScore        Float?

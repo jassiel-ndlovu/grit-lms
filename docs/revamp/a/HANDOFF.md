@@ -3,6 +3,32 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: AI marks on photo answers, session notes, diagrams, `revamp/a-ai-media`
+
+Migration `42_ai_media`: AiMarkSuggestion `fromPhotos` and `transcript` (B's assessments file; additive), and the `NOTES` and `DIAGRAM` values on AiAssistFeature. Viewer contract Draft 1.28.
+
+Done:
+- **AI marking:**
+  - `FILE_UPLOAD` questions and uploads are included;
+  - `readableFiles`: only Blob-store images and PDFs, at most 5;
+  - the marker sends them as URL image or document blocks, with photo rules in the prompt and a `transcript` field;
+  - photo answers go to the escalation model, and evidence is checked against the transcript;
+  - evidence matching now ignores notation (², TeX, ×, spacing).
+- **`ai-assist/media-rules.ts`** (pure): `transcriptText` (VTT, SRT, plain), `speakersOf`, `cleanSvg`.
+- **`ai-assist/pro.ts`**:
+  - `sessionNotes` (transcript text or file; speakers and roster scrubbed);
+  - `diagram` (SVG cleaned, or refused);
+  - both Pro only, with caps 200 and 300.
+
+Tested:
+- `check-ai-marking` (new photo and notation checks) and `check-ai-media` (in CI).
+- **Live:**
+  - a synthetic handwriting image, uploaded to the Blob store and deleted straight after, was transcribed exactly and marked 3/3. That run found the ² versus ^2 evidence problem, now fixed.
+  - Session notes from a VTT had homework and follow-ups right, with no names left.
+  - A free-body diagram came back as a clean SVG.
+  - Run rows were cleaned up.
+- **Not done:** audio and video transcription (needs a provider decision).
+
 ## 2026-11-24 #216 phase 3: course study assistant (Pro), `revamp/a-study-assistant`
 
 Migration `41_study_assistant`: StudyChat and StudyMessage, plus the `study-assistant` Service row, backfilled where `ai-marking` is on. Viewer Draft 1.27, services Draft 1.8.

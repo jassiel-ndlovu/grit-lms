@@ -148,3 +148,56 @@ export async function draftGaps(runId: string, input: { context: CourseContext; 
     { type: "text", text: `<material>\nLessons in order (ref | title | topic codes):\n${input.lessons.map((l) => `${l.ref} | ${l.title} | ${l.topics.join(", ") || "-"}`).join("\n")}\n</material>\n\n<uncovered>\n${input.uncovered.map((t) => `${t.code}: ${t.title}`).join("\n") || "(none)"}\n</uncovered>` },
   ], GapsResult, "medium", 8000);
 }
+
+/* ------------------------------------------------------------------------- */
+/* Session notes from a transcript                                           */
+/* ------------------------------------------------------------------------- */
+
+export const NotesResult = z.object({
+  summary: z.string().describe("Three to five sentences on what the session covered"),
+  keyPoints: z.array(z.string()).describe("The ideas taught, in order; at most ten"),
+  questions: z.array(z.object({ question: z.string(), answer: z.string() })).describe("Questions students asked and how they were answered; at most eight"),
+  homework: z.array(z.string()).describe("Work set for after the session"),
+  followUps: z.array(z.string()).describe("Things the tutor said they'd do, or should check; for the tutor only"),
+  studentRecap: z.string().describe("A short recap written to the students, to share after the session"),
+});
+export type DraftNotes = z.infer<typeof NotesResult>;
+
+const NOTES_SYSTEM = `${COMMON}
+
+Task: write notes from a lesson's transcript.
+- Only what was said in the session; no new teaching. Fix transcription slips in maths (write it in TeX).
+- People are shown as [name] or Speaker labels: don't guess who anyone is, and never name students.
+- The recap for students is warm, short and useful for revision.`;
+
+export async function draftNotes(runId: string, input: { context: CourseContext; transcript: string; title: string | null }) {
+  return call(runId, NOTES_SYSTEM, [
+    { type: "text", text: contextBlock(input.context) },
+    { type: "text", text: `<material${input.title ? ` title="${input.title.replace(/"/g, "'")}"` : ""}>\n${input.transcript}\n</material>\n\nWrite the notes.` },
+  ], NotesResult, "medium", 16000);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Diagrams                                                                  */
+/* ------------------------------------------------------------------------- */
+
+export const DiagramResult = z.object({
+  title: z.string(),
+  altText: z.string().describe("One or two sentences describing the diagram for screen readers"),
+  svg: z.string().describe("A complete SVG: <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"...\">…</svg>. Shapes, lines, paths and text only"),
+});
+export type DraftDiagram = z.infer<typeof DiagramResult>;
+
+const DIAGRAM_SYSTEM = `${COMMON}
+
+Task: draw a clear teaching diagram as SVG.
+- Use only svg, g, defs, title, desc, path, rect, circle, ellipse, line, polyline, polygon, text, tspan, marker and gradients. No scripts, styles, images, links, foreignObject or animation. Use presentation attributes (fill, stroke, font-size), not style attributes.
+- Always set a viewBox; about 600 by 400 units. Text at least 14 units high, dark on light. Use at most four colours plus black.
+- Label everything a student needs; keep it uncluttered and correct for the stated level (axes and units where relevant, arrows for forces or flow).`;
+
+export async function draftDiagram(runId: string, input: { context: CourseContext; description: string; style: "simple" | "detailed" }) {
+  return call(runId, DIAGRAM_SYSTEM, [
+    { type: "text", text: contextBlock(input.context) },
+    { type: "text", text: `<material>\n${input.description}\n</material>\n\nStyle: ${input.style}.` },
+  ], DiagramResult, "medium", 16000);
+}

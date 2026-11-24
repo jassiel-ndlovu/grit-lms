@@ -15,7 +15,8 @@ import type { Viewer } from "@/lib/viewer";
 
 import { contextFor, failed, gate, newRunId, readUpload, record } from "./assist";
 import { AI_ASSIST_INPUT, uncoveredTopics, type Allowance } from "./limits";
-import { draftFeedback, draftGaps, draftLessons, draftReportComments, type DraftLessons, type ReportStudentData } from "./model-pro";
+import { cleanSvg, MEDIA_LIMITS, speakersOf, transcriptText } from "./media-rules";
+import { draftDiagram, draftFeedback, draftGaps, draftLessons, draftNotes, draftReportComments, type DraftLessons, type DraftNotes, type ReportStudentData } from "./model-pro";
 
 const after = (a: Allowance): Allowance => ({ ...a, used: a.used + 1, left: Math.max(0, a.left - 1) });
 
@@ -199,4 +200,62 @@ export async function curriculumGaps(viewer: Viewer, input: { courseId: string }
   // Any uncovered topic the model skipped still shows, without a suggestion.
   for (const t of uncovered) if (!missing.some((m) => m.code === t.code)) missing.push({ code: t.code, title: t.title, suggestion: "", lessonId: null, lessonTitle: null, newLessonTitle: null });
   return { runId, curriculum: true, covered: all.length - uncovered.length, total: all.length, missing, restructure: r.data.restructure.slice(0, 5), note: r.data.note, allowance: after(a) };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Session notes and diagrams                                                */
+/* ------------------------------------------------------------------------- */
+
+/** A transcript file uploaded to Nexa's Blob store: .vtt, .srt or .txt (Zoom, Teams and Meet export these). */
+async function readTranscriptFile(url: string): Promise<string> {
+  let u: URL;
+  try { u = new URL(url); } catch { throw new UserError("That file link isn't valid."); }
+  if (u.protocol !== "https:" || !u.hostname.endsWith(".public.blob.vercel-storage.com")) throw new UserError("Upload the transcript to Nexa first.");
+  if (!/\.(vtt|srt|txt)$/i.test(u.pathname)) throw new UserError("Use the meeting's transcript file (.vtt, .srt or .txt). Audio and video files can't be read yet.");
+  const res = await fetch(u, { redirect: "error" });
+  if (!res.ok) throw new UserError("Nexa couldn't open that file. Upload it again.");
+  const text = await res.text();
+  if (text.length > MEDIA_LIMITS.transcriptChars * 2) throw new UserError("That transcript is too long. Use one session at a time.");
+  return text;
+}
+
+export type NotesDraft = { runId: string; notes: DraftNotes; allowance: Allowance };
+
+/**
+ * Notes from a session's transcript (pasted, or a .vtt/.srt/.txt upload).
+ * Every speaker's name, and the class roster's, are scrubbed before sending.
+ * Audio and video need a speech-to-text provider: not yet (owner decision).
+ */
+export async function sessionNotes(viewer: Viewer, input: { courseId: string; transcript?: string; fileUrl?: string; title?: string }, now: Date = new Date()): Promise<NotesDraft> {
+  if (!input.transcript?.trim() && !input.fileUrl) throw new UserError("Paste the transcript or upload the transcript file.");
+  const { course, allowance: a } = await gate(viewer, input.courseId, "NOTES", now);
+  const raw = input.fileUrl ? await readTranscriptFile(input.fileUrl) : input.transcript!;
+  const text = transcriptText(raw);
+  if (text.length < 200) throw new UserError("That transcript is too short for notes.");
+  if (text.length > MEDIA_LIMITS.transcriptChars) throw new UserError("That transcript is too long. Use one session at a time.");
+  const roster = await prisma.enrollment.findMany({ where: { courseId: course.id }, select: { learner: { select: { user: { select: { name: true } } } } } });
+  const names = [viewer.user.name, ...speakersOf(text), ...roster.map((r) => r.learner.user.name)];
+  const runId = newRunId();
+  const r = await draftNotes(runId, { context: contextFor(course), transcript: scrubIdentifiers(text, names), title: input.title?.trim().slice(0, 120) || null });
+  await record(viewer, course, "NOTES", a.tier, runId, r, now);
+  if (!r.ok) failed(r);
+  const n = r.data;
+  return { runId, notes: { ...n, keyPoints: n.keyPoints.slice(0, 10), questions: n.questions.slice(0, 8) }, allowance: after(a) };
+}
+
+export type DiagramDraft = { runId: string; title: string; altText: string; svg: string; allowance: Allowance };
+
+/** A teaching diagram as a cleaned SVG. B uploads it (as an .svg file) when the tutor keeps it. */
+export async function diagram(viewer: Viewer, input: { courseId: string; description: string; style?: "simple" | "detailed" }, now: Date = new Date()): Promise<DiagramDraft> {
+  const description = input.description.trim();
+  if (description.length < 10) throw new UserError("Describe the diagram in a sentence or two.");
+  if (description.length > 2000) throw new UserError("Keep the description under 2000 characters.");
+  const { course, allowance: a } = await gate(viewer, input.courseId, "DIAGRAM", now);
+  const runId = newRunId();
+  const r = await draftDiagram(runId, { context: contextFor(course), description, style: input.style ?? "simple" });
+  await record(viewer, course, "DIAGRAM", a.tier, runId, r, now);
+  if (!r.ok) failed(r);
+  const svg = cleanSvg(r.data.svg);
+  if (!svg) throw new UserError("The diagram didn't come out right. Try describing it differently.");
+  return { runId, title: r.data.title.slice(0, 120), altText: r.data.altText.slice(0, 500), svg, allowance: after(a) };
 }
