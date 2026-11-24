@@ -343,11 +343,11 @@ export async function notifyHandIn(input: {
   await Promise.all([
     emitNotification(
       {
-        title: input.kind === "test" ? "Test Submitted" : "Assignment Submitted",
+        title: input.kind === "test" ? "Test handed in" : "Assignment handed in",
         message:
           input.kind === "test"
-            ? `Your test "${input.title}" has been submitted.`
-            : `Your submission for "${input.title}" has been received.`,
+            ? `We've got your answers to "${input.title}". You'll be told when it's marked.`
+            : `We've got your work for "${input.title}". You'll be told when it's marked.`,
         link: input.studentLink,
         type,
         studentId: input.studentId,
@@ -357,8 +357,8 @@ export async function notifyHandIn(input: {
     ),
     emitNotification(
       {
-        title: `New ${noun} submission`,
-        message: `${student?.fullName ?? "A student"} submitted the ${noun} "${input.title}".`,
+        title: `New ${noun} to mark`,
+        message: `${student?.fullName ?? "A student"} handed in "${input.title}".`,
         link: input.tutorLink,
         type,
         courseId: input.courseId,

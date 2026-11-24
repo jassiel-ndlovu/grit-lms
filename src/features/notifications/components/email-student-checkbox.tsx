@@ -41,7 +41,7 @@ export function EmailStudentCheckbox({
       />
       <label htmlFor={id} className="cursor-pointer select-none">
         <span className="block text-sm text-foreground">
-          Email {studentName || "the student"} that it&apos;s graded
+          Email {studentName || "the student"} that it&apos;s marked
         </span>
         <span className="text-muted-foreground block text-xs">
           They&apos;re always notified in the app.

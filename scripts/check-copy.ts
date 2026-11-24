@@ -77,6 +77,29 @@ for (const file of walk(ROOT)) {
   });
 }
 
+// JSX text that runs over several lines (B, 25 Nov): a second pass over each
+// whole .tsx file with comments blanked out, keeping line breaks for numbers.
+const supplierIn = (text: string) => SUPPLIERS.find((s) => new RegExp(s === "Resend" ? "(?<!^\\s*)\\bResend\\b" : `\\b${s}\\b`).test(text.trim()));
+for (const file of walk(ROOT)) {
+  if (!file.endsWith(".tsx") || SKIP.some((r) => r.test(file))) continue;
+  const raw = readFileSync(file, "utf8");
+  const blank = (s: string) => s.replace(/[^\n]/g, " ");
+  const clean = raw
+    .replace(/\/\*[\s\S]*?\*\//g, blank)
+    .replace(/(^|[^:"'`])\/\/[^\n]*/g, (m, p1: string) => p1 + blank(m.slice(p1.length)));
+  for (const m of clean.matchAll(/>([^<>{}]*\n[^<>{}]*)</g)) {
+    const text = m[1].replace(/\s+/g, " ");
+    if (text.trim().length < 6) continue;
+    const s = supplierIn(text);
+    if (s) {
+      const line = clean.slice(0, m.index).split("\n").length;
+      const rel = relative(join(ROOT, ".."), file);
+      const msg = `${rel}:${line}  names ${s}: "${text.trim().slice(0, 90)}"`;
+      if (!problems.some((x) => x.startsWith(`${rel}:${line} `))) problems.push(msg);
+    }
+  }
+}
+
 if (problems.length) {
   console.log(problems.join("\n"));
   console.log(`\n${problems.length} problem(s). See docs/revamp/copy.md.`);
