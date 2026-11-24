@@ -1,6 +1,6 @@
 # Contract: billing and payments
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.17, 2026-11-23.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.18, 2026-11-24.** B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** These are the queries and server actions B's billing, payments, parent portal and admin screens call, with their inputs and return shapes. Workspaces pay Nexa in **30-day periods anchored to the payment date** (no calendar months, no proration). Tiers are Core R99, Plus R139 and Pro R179 per active student per course. Parents and adult students pay tutors through one checkout that can cover several children and tutors. B never computes a price; every amount comes from these calls.
 
@@ -190,6 +190,41 @@ Owner decisions of 22 Nov. One credit budget per organisation (or solo tutor) pa
 - `requestAiMarking` refuses with the reason when the person has no credits: "You've used your AI allowance for this month…" or "Your organisation's AI credits have run out…".
 - A mark that runs out mid-batch is skipped with that message.
 
+## AI credit top-ups (Draft 1.18)
+
+Owner decisions, 24 Nov. Behind BILLING=1, so this opens in January. Actions are in `@/features/ai-credits/topup-actions`.
+
+**The rules:**
+- **Markup** is 8 to 15% on Nexa's AI cost, so about 5% is left after card fees and exchange-rate swings. The default is 12%; `AI_CREDIT_MARKUP_BPS` sets it and is kept inside 800–1500.
+- **Only healthy-sized packs**, no small top-ups:
+  - organisations: R500, R1,000 and R2,500;
+  - students: R150, R300 and R600.
+- **Bought credits last as long as the AI supplier's own credits.** While Nexa buys from Anthropic, `AI_CREDIT_VALIDITY_DAYS` is 30. On AWS or an equivalent, set it to 1095 (the CPA's 3 years). Show the expiry plainly before payment.
+- **Two kinds of buyer:**
+  - An **organisation** (`billing.manage`) buys for its shared bought pool, which staff spend in the usual order.
+  - A **student** who pays their own fees (`paymentVisible`), or a **parent for a child**, buys **study credits**. These are spent only by that student's study assistant, never by staff, and never from the organisation's budget.
+
+| Action | Input | Returns |
+| --- | --- | --- |
+| `getTopupOffer` | `{ forWhom: "WORKSPACE" \| "STUDENT" }` | `{ forWhom, validityDays, markupPercent, packs: [{ priceCents, credits, roughStudyAnswers }] }` |
+| `startTopupAction` | `{ forWhom, priceCents (one of the packs), studentUserId? (a parent's child), workspaceId?, returnPath? = "/dashboard/credits/return" }` | `{ authorizationUrl, reference, credits }`. Send the browser to `authorizationUrl` |
+| `getTopupStatus` | `{ reference }` | `{ status, credits, forWhom }` for the return page. Settles it if Paystack already has |
+| `getMyStudyCredits` | `{ studentUserId?, workspaceId? }` | `{ balance, purchases: [{ credits, boughtAt, expiresAt, expired }], offer }` |
+
+**Payment:** to Nexa through Paystack (purpose `AI_CREDITS`, no splits). A paid pack becomes credits exactly once.
+
+**Expiry:** a daily job takes back the unspent part of an expired pack. The oldest credits are spent first, so newer packs keep theirs.
+
+**Refunds** of credit packs aren't built: a Nexa admin adjusts them by hand if ever needed.
+
+**The study assistant** (viewer.md, "Study assistant") now needs the student's own study credits. `getStudyStatus` returns `reason`:
+- `NOT_ON_PLAN`;
+- `COMING_SOON` (billing off);
+- `NO_CREDITS` (show "Buy study credits");
+- or null when it can be used.
+
+Its answers no longer touch the organisation's AI credits.
+
 ## Business dashboard (Draft 1.17)
 
 Plus and Pro only (owner decision 22 Nov). **Who sees it:** anyone with `reports.view` (owners, admins, executives, finance, branch and project managers). A branch role sees only its branches.
@@ -217,6 +252,7 @@ Plus and Pro only (owner decision 22 Nov). **Who sees it:** anyone with `reports
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.18. AI credit top-ups (owner decisions 24 Nov): packs, 8–15% markup, supplier-based validity, organisation and student credits; the study assistant paid by students |
 | 2026-11-23 | Draft 1.17. The business dashboard (Plus and Pro): `getBusinessDashboardStatus`, `getBusinessDashboard` |
 | 2026-11-23 | Draft 1.16. AI credits (#216): pools, allowances, spending order, actions and the admin grant ("AI credits" section). AI marking spends credits when billing is on |
 | 2026-11-21 | Draft 1.15. `restartWorkspace()` (#191; owner decisions 2026-11-20 and 21) for a CANCELLED or READ_ONLY workspace. Returns the next step: `{ status: "PAY_OUTSTANDING", invoiceIds }` (pay those with `payPlatformInvoice`, then call again), `{ status: "PAY_FIRST_PERIOD", activeStudents }` (call `startFirstPayment`), `{ status: "CARD_REQUIRED" }` (no students and no saved card: `startCardReplacement`, then call again), or `{ status: "RESTARTED", renewsAt }`. With no students and a saved card the restart is free: the workspace is ACTIVE at once with a R0 first period, `cancelAtPeriodEnd` cleared and the deletion date moved to 2 months out; students added later are billed as catch-up at the renewal. Any other state: `FORBIDDEN` |

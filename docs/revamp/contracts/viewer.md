@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.28, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.29, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.29. Study assistant paid by students' own credits; opens with billing in January |
 | 2026-11-24 | Draft 1.28. AI marks on photo and PDF answers; session notes from transcripts; diagrams |
 | 2026-11-24 | Draft 1.27. Course study assistant for students (Pro) |
 | 2026-11-24 | Draft 1.26. Branding (Plus), white-label (Pro; custom domains on hold) and bulk onboarding |
@@ -877,3 +878,10 @@ Bringing a whole organisation on, branch by branch. **The order:**
 - **Notes privacy:** every speaker name and the class roster are scrubbed before sending, so notes never name students. `followUps` is for the tutor only; `studentRecap` is written to share.
 - **Recordings:** audio and video can't be read yet. Turning speech into text needs a provider, which is an owner decision. Until then, upload the meeting's transcript file.
 - **Diagrams:** the SVG is cleaned to safe drawing elements (no scripts, styles, images, links or event handlers) and always has a `viewBox`. To keep it, upload it as an `.svg` through your uploader and use `altText` for accessibility.
+
+#### Study assistant: paid by students (Draft 1.29)
+
+Owner, 24 Nov: the tutor- and organisation-funded study assistant is parked.
+- Students (adults who pay) or parents now buy **study credits** (billing.md, "AI credit top-ups"), and each answer spends them.
+- `getStudyStatus` adds `reason` (`NOT_ON_PLAN`, `COMING_SOON`, `NO_CREDITS` or null) and `credits`. When the reason is `NO_CREDITS`, show "Buy study credits", with the packs from `getTopupOffer({ forWhom: "STUDENT" })`.
+- With billing off, it says it opens in January.
