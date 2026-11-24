@@ -3,6 +3,15 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Released marks in the export and AI comments, `revamp/b-released-reads`
+
+In A's files, with the owner's OK:
+- `users/export.ts`: grades, test scores, feedback and AI suggestions the
+  tutor hasn't released are left out; the file says so.
+- `ai-assist/pro.ts`: report comment drafts use released marks, like the term
+  report.
+- `check-grade-release.ts` checks the Grade queries in both.
+
 ## 2026-11-24 At-risk alert screens (#216, phase 2), `revamp/b-at-risk`
 
 Viewer contract Draft 1.20, B's side. No migration.

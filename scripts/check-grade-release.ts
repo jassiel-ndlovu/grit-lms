@@ -54,7 +54,12 @@ const all: GradeRelease[] = [
 check("the database filter says the same", all.filter((g) => matches(RELEASED_GRADE, row(g)) !== isReleased(g)), []);
 
 // Anything sent to families must use the filter in every Grade query.
-for (const file of ["src/features/risk/evaluate.ts", "src/features/notifications/weekly-summary.ts"]) {
+for (const file of [
+  "src/features/risk/evaluate.ts",
+  "src/features/notifications/weekly-summary.ts",
+  "src/features/users/export.ts",
+  "src/features/ai-assist/pro.ts",
+]) {
   const queries = readFileSync(file, "utf8").split(/\r?\n/).filter((l) => /prisma[.]grade[.]/.test(l));
   check(`${file} reads released marks only`, [queries.length > 0, queries.filter((l) => !l.includes("...RELEASED_GRADE"))], [true, []]);
 }

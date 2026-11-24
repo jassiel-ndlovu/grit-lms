@@ -4,11 +4,13 @@
  * export a learner they teach (in v1 the tutor passes it to the parent).
  * Once per 24 hours per person exported. Built on request and streamed, so
  * nothing is stored. Never includes passwords, tokens or other people's
- * contact details. Server only.
+ * contact details. Marks, feedback and AI suggestions the tutor hasn't
+ * released are left out, as on the student's own pages. Server only.
  */
 
 import "server-only";
 
+import { entryMarkReleased, RELEASED_GRADE, testMarksReleased } from "@/features/grades/lib/release";
 import { prisma } from "@/lib/db";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -46,13 +48,13 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
   const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes, practice, riskAlerts, bookings, lessonCredits, reviews, studyChats] = await Promise.all([
     studentId ? prisma.testSubmission.findMany({
       where: { studentId },
-      select: { startedAt: true, submittedAt: true, status: true, score: true, feedback: true, answers: true, test: { select: { title: true, course: { select: { name: true } } } }, aiSuggestions: { select: { questionId: true, totalAwarded: true, outOf: true, feedbackToStudent: true, tutorAction: true, model: true } } },
+      select: { startedAt: true, submittedAt: true, status: true, score: true, feedback: true, answers: true, test: { select: { title: true, releaseAutoMarksToStudent: true, course: { select: { name: true } } } }, aiSuggestions: { select: { questionId: true, totalAwarded: true, outOf: true, feedbackToStudent: true, tutorAction: true, model: true } } },
     }) : [],
     studentId ? prisma.submissionEntry.findMany({
       where: { studentId },
       select: { submittedAt: true, attemptNumber: true, status: true, feedback: true, fileUrl: true, submission: { select: { title: true, course: { select: { name: true } } } } },
     }) : [],
-    studentId ? prisma.grade.findMany({ where: { studentId }, select: { type: true, title: true, score: true, outOf: true, createdAt: true, course: { select: { name: true } } } }) : [],
+    studentId ? prisma.grade.findMany({ where: { studentId, ...RELEASED_GRADE }, select: { type: true, title: true, score: true, outOf: true, createdAt: true, course: { select: { name: true } } } }) : [],
     prisma.invoice.findMany({
       where: { OR: [{ studentUserId: targetUserId }, { payerUserId: targetUserId }] },
       select: { number: true, status: true, issuedAt: true, dueAt: true, totalCents: true, discountCents: true, paidAt: true, paidVia: true, workspace: { select: { name: true } }, lines: { select: { description: true, amountCents: true } } },
@@ -77,7 +79,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
   await prisma.auditLog.create({ data: { workspaceId: actor.workspaceId, actorUserId: actor.userId, action: "user.export", targetType: "User", targetId: targetUserId, data: { self: actor.userId === targetUserId } } });
 
   return {
-    about: "Your data held by Nexa (nexa-lms.co.za), exported under POPIA. Amounts are in South African cents. Passwords and security keys are never included.",
+    about: "Your data held by Nexa (nexa-lms.co.za), exported under POPIA. Amounts are in South African cents. Passwords and security keys are never included. Marks a tutor hasn't released yet are left out.",
     exportedAt: now.toISOString(),
     account: {
       name: u.name, email: u.emailIsPlaceholder ? null : u.email, username: u.username, createdAt: u.createdAt, emailVerifiedAt: u.emailVerified,
@@ -96,11 +98,16 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     })),
     children: u.guardianOf.map((g) => ({ name: g.student.name, relationship: g.relationship, status: g.status, since: g.createdAt })),
     parents: u.guardedBy.map((g) => ({ name: g.guardian.name, relationship: g.relationship, status: g.status, since: g.createdAt })),
-    tests: tests.map((t) => ({
-      test: t.test.title, course: t.test.course.name, startedAt: t.startedAt, submittedAt: t.submittedAt, status: t.status, score: t.score, feedback: t.feedback, answers: t.answers,
-      aiSuggestedMarks: t.aiSuggestions.map((s) => ({ questionId: s.questionId, suggested: s.totalAwarded, outOf: s.outOf, feedback: s.feedbackToStudent, tutorDecision: s.tutorAction, model: s.model })),
-    })),
-    assignments: assignments.map((a) => ({ assignment: a.submission.title, course: a.submission.course.name, submittedAt: a.submittedAt, attempt: a.attemptNumber, status: a.status, feedback: a.feedback, files: a.fileUrl })),
+    tests: tests.map((t) => {
+      const released = testMarksReleased(t.status, t.test.releaseAutoMarksToStudent);
+      return {
+        test: t.test.title, course: t.test.course.name, startedAt: t.startedAt, submittedAt: t.submittedAt, status: t.status,
+        score: released ? t.score : null, feedback: released ? t.feedback : null, answers: t.answers,
+        // Auto-marks can show before the tutor is done; AI suggestions can't.
+        aiSuggestedMarks: t.status === "GRADED" ? t.aiSuggestions.map((s) => ({ questionId: s.questionId, suggested: s.totalAwarded, outOf: s.outOf, feedback: s.feedbackToStudent, tutorDecision: s.tutorAction, model: s.model })) : [],
+      };
+    }),
+    assignments: assignments.map((a) => ({ assignment: a.submission.title, course: a.submission.course.name, submittedAt: a.submittedAt, attempt: a.attemptNumber, status: a.status, feedback: entryMarkReleased(a.status) ? a.feedback : null, files: a.fileUrl })),
     grades: grades.map((g) => ({ course: g.course.name, type: g.type, title: g.title, score: g.score, outOf: g.outOf, at: g.createdAt })),
     feeInvoices: invoices.map((i) => ({ workspace: i.workspace.name, number: i.number, status: i.status, issuedAt: i.issuedAt, dueAt: i.dueAt, totalCents: i.totalCents, discountCents: i.discountCents, paidAt: i.paidAt, paidVia: i.paidVia, lines: i.lines })),
     paymentsMade: payments,
