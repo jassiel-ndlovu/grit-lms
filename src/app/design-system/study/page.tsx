@@ -13,7 +13,7 @@ import { StudyAccountSection } from "@/features/courses/components/study/credits
 import { FlaggedNote, StudyChatList, StudyTranscript } from "@/features/courses/components/study/tutor-views";
 import { WorkspaceCredits } from "@/features/courses/components/study/workspace-credits";
 import type { StudyMessageView } from "@/features/courses/lib/study-ui";
-import { canPreviewDesignSystem } from "@/lib/ui-flags";
+import { canPreviewDesignSystem, mathJaxVersion } from "@/lib/ui-flags";
 
 export const metadata = { title: "Study assistant · Design system", robots: { index: false } };
 
@@ -79,7 +79,7 @@ export default function StudyPreviewPage() {
   if (!canPreviewDesignSystem()) notFound();
   return (
     <div data-ui="revamp" data-shell="focus" className="bg-background text-foreground min-h-screen font-sans">
-      <MathProvider>
+      <MathProvider version={mathJaxVersion()}>
         <PageFrame type="record" breadcrumb={[{ label: "Design system", href: "/design-system" }, { label: "Study assistant" }]}>
           <PageTitle title="Study assistant" description="What a student sees." />
           <StudyChat courseId="maths" chatId="c1" messages={PLAIN} status={OPEN} buy={{ href: "/design-system/study" }} />
