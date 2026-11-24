@@ -16,6 +16,7 @@
  *   tests/<testId>/questions/<questionId>/<sanitized-filename>   (tutor)
  *   tests/<testId>/answers/<questionId>/<sanitized-filename>     (student)
  *   users/<userId>/avatar/<sanitized-filename>
+ *   support/<userId>/<sanitized-filename>                        (help-centre screenshots)
  *
  * Random suffixes are added by Vercel Blob (`addRandomSuffix: true`), so
  * paths here don't need to be unique on their own.
@@ -40,6 +41,8 @@ export const BlobKind = {
   /** A student's file answer to a FILE_UPLOAD test question. */
   TestAnswer: "test-answer",
   UserAvatar: "user-avatar",
+  /** A screenshot on a help-centre query (support.md). */
+  SupportAttachment: "support-attachment",
 } as const;
 
 export type BlobKind = (typeof BlobKind)[keyof typeof BlobKind];
@@ -104,6 +107,10 @@ export function userAvatarPath(userId: string, filename: string): string {
   return `users/${userId}/avatar/${sanitizeFilename(filename)}`;
 }
 
+export function supportAttachmentPath(userId: string, filename: string): string {
+  return `support/${userId}/${sanitizeFilename(filename)}`;
+}
+
 /**
  * Validate that a pathname matches the expected scheme for a given kind.
  * Used by the upload-token endpoint to refuse forged paths.
@@ -130,6 +137,8 @@ export function isValidPath(kind: BlobKind, pathname: string): boolean {
       return /^tests\/[^/]+\/answers\/[^/]+\/[^/]+$/.test(pathname);
     case BlobKind.UserAvatar:
       return /^users\/[^/]+\/avatar\/[^/]+$/.test(pathname);
+    case BlobKind.SupportAttachment:
+      return /^support\/[^/]+\/[^/]+$/.test(pathname);
     default:
       return false;
   }
@@ -190,6 +199,7 @@ export const ALLOWED_CONTENT_TYPES: Record<BlobKind, string[] | undefined> = {
   // policy as assignment submissions.
   [BlobKind.TestAnswer]: undefined,
   [BlobKind.UserAvatar]: ["image/png", "image/jpeg", "image/webp"],
+  [BlobKind.SupportAttachment]: ["image/png", "image/jpeg", "image/webp"],
 };
 
 /**
@@ -205,4 +215,5 @@ export const MAX_BYTES: Record<BlobKind, number> = {
   [BlobKind.TestQuestionImage]: 25 * 1024 * 1024, // 25 MB
   [BlobKind.TestAnswer]: 50 * 1024 * 1024, // 50 MB
   [BlobKind.UserAvatar]: 2 * 1024 * 1024, // 2 MB
+  [BlobKind.SupportAttachment]: 5 * 1024 * 1024, // 5 MB
 };

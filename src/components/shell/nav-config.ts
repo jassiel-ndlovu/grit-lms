@@ -105,6 +105,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         // Shown without Pro too; the page says what opens it (viewer.md Draft 1.20).
         { label: "At risk", href: "/dashboard/at-risk", icon: "users", keywords: ["alerts", "falling marks", "missed work", "absent", "support"], requires: "grades.view" },
         { label: "Join requests", href: "/dashboard/join-requests", icon: "inbox", keywords: ["enrol", "approve", "listed", "waiting"], requires: "learners.invite" },
+        { label: "Queries", href: "/dashboard/support", icon: "inbox", keywords: ["help", "questions", "support", "feedback", "problems"], requires: "enquiries.manage" },
         // listReferrals needs learners.invite for the whole workspace.
         { label: "Referrals", href: "/dashboard/referrals", icon: "users", keywords: ["referred", "families", "word of mouth"], requires: "learners.invite", wholeWorkspace: true },
         { label: "Members", href: "/dashboard/settings/members", icon: "users", keywords: ["tutors", "admins", "staff", "invite", "team"], requires: "members.invite" },
@@ -127,6 +128,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       items: [
         { label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["accounts"], requires: "admin.console" },
         { label: "Billing", href: "/dashboard/admin/billing", icon: "billing", keywords: ["workspaces", "trial", "comp", "discount", "paystack"], requires: "admin.console", billing: true },
+        { label: "Support", href: "/dashboard/admin/support", icon: "inbox", keywords: ["queries", "help", "feedback", "problems"], requires: "admin.console" },
       ],
     },
   ],

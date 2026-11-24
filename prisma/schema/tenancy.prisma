@@ -122,6 +122,7 @@ model Workspace {
   feeInvoices         Invoice[]
   offsitePayments     OffsitePayment[]
   riskAlerts          RiskAlert[]
+  supportQueries      SupportQuery[]
   bookingAvailability BookingAvailability[]
   bookingTimeOff      BookingTimeOff[]
   bookings            Booking[]

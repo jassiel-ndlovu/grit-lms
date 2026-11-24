@@ -63,6 +63,11 @@ export async function POST(request: Request): Promise<NextResponse> {
           }
         }
 
+        // Help-centre screenshots go in the requester's own folder.
+        if (payload.kind === BlobKind.SupportAttachment && !pathname.startsWith(`support/${session.user.id}/`)) {
+          throw new Error("Cannot upload to another user's folder");
+        }
+
         return {
           tokenPayload: JSON.stringify({
             kind: payload.kind,
@@ -105,7 +110,8 @@ function assertRoleAllowsKind(role: string, kind: ClientPayload["kind"]): void {
       }
       return;
     case BlobKind.UserAvatar:
-      // Any authenticated user.
+    case BlobKind.SupportAttachment:
+      // Any authenticated user (the path check above keeps it to their own folder).
       return;
     default:
       throw new Error("Unknown upload kind");

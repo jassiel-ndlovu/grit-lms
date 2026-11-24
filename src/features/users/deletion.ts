@@ -113,6 +113,9 @@ export async function anonymiseAccount(userId: string, now: Date = new Date()) {
     await tx.riskAlert.deleteMany({ where: { studentUserId: userId } });
     // Study assistant chats (#216).
     await tx.studyChat.deleteMany({ where: { studentUserId: userId } });
+    // Help centre: their own queries go; messages they wrote elsewhere lose the name.
+    await tx.supportQuery.deleteMany({ where: { requesterUserId: userId } });
+    await tx.supportMessage.updateMany({ where: { authorUserId: userId }, data: { authorName: "Former user", authorUserId: null } });
     // Session booking (#216): bookings stay as the tutor's record, without the free-text notes.
     await tx.booking.updateMany({ where: { learner: { userId } }, data: { note: null, cancelReason: null } });
     await tx.activityLog.deleteMany({ where: { userId } });
