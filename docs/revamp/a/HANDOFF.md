@@ -3,6 +3,31 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: timesheets, payroll export and cover, `revamp/a-timesheets-cover`
+
+Migration `38_timesheets_cover`: Timesheet, TimesheetEntry, PayRate and CoverRequest, with their enums. Viewer contract Draft 1.24.
+
+Done:
+- **`staff/timesheet-math.ts`** (pure): suggestions from classes, cover and bookings; pay; month ranges in the workspace zone; status moves; clashes.
+- **`staff/scope.ts`**: the staff a manager covers (whole workspace, branch teams, or self).
+- **`staff/timesheets.ts`**:
+  - the month view with suggestions;
+  - adding suggestions, manual entries, edits, submit;
+  - approve, reject or reopen, with the rate and pay recorded at approval;
+  - pay rates, the manager list, and the payroll CSV (`/api/exports/payroll`).
+- **`staff/cover.ts`**:
+  - request, free candidates, assign (temporary ASSISTANT access, plus an email and in-app notes), cancel, list;
+  - `endCoverAccess` runs in housekeeping.
+- **Bug found in testing and fixed:** a covered class now counts as cover, and courses reached only through cover don't add their other classes.
+
+Tested:
+- `scripts/check-timesheets.ts` (in CI).
+- Against the Preview DB:
+  - suggestions, adding without duplicates, month bounds, totals, rate permissions;
+  - submit, lock, reject-needs-a-note, approve with snapshot, the manager list, the payroll CSV (summary and detail);
+  - cover request, double request refused, candidates, assign, access, both tutors' suggestions, the email, the list, access ended after a day, cancel.
+  - Cleaned up afterwards.
+
 ## 2026-11-24 #216 phase 3: API keys, read-only REST API and webhooks (Pro), `revamp/a-api-webhooks`
 
 Migration `37_api_webhooks`: ApiKey, WebhookEndpoint, WebhookDelivery and WebhookDeliveryStatus. New contract `contracts/api.md` (Draft 1).
