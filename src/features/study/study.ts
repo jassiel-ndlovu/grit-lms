@@ -1,5 +1,8 @@
 /**
  * The course study assistant (#216 phase 3, Pro service `study-assistant`).
+ * Paid by the student, never the tutor (owner, 24 Nov): each answer spends
+ * the student's own STUDY credits, bought by them (an adult who pays) or a
+ * parent (ai-credits/topups.ts). Needs billing on, so it opens in January.
  * Students (and parents, for a child) ask questions about a course; answers
  * come only from its lessons, with citations. Tutors of the course can read
  * every chat; a wellbeing or safety concern flags the chat and alerts them.
@@ -8,7 +11,7 @@
 
 import "server-only";
 
-import { canSpend, spendCredits } from "@/features/ai-credits/credits";
+import { spendStudentCredits, studentCredits } from "@/features/ai-credits/topups";
 import { creditsForCost } from "@/features/ai-credits/credits-math";
 import { plainText } from "@/features/ai-assist/limits";
 import { costMicroUsd } from "@/features/ai-marking/rules";
@@ -28,6 +31,9 @@ const ZAR_PER_USD = Number(process.env.AI_USD_TO_ZAR ?? 18.5);
 const DAY = 86_400_000;
 export const STUDY_SERVICE = "study-assistant";
 export const STUDY_UPSELL = "The study assistant is part of the Pro plan for this course.";
+export const STUDY_NO_CREDITS = "You need study credits to ask the assistant. A parent (or you, if you pay your own fees) can buy them.";
+/** Credits an answer needs before it is asked (a typical answer costs less). */
+const ANSWER_ESTIMATE = 40;
 
 export function studyAssistantConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -63,9 +69,13 @@ async function lessonsOf(courseId: string): Promise<LessonText[]> {
 /** Whether the viewer can use the assistant on this course, and how many questions are left today. */
 export async function studyStatus(viewer: Viewer, input: { courseId: string; studentUserId?: string }, now: Date = new Date()) {
   const student = await studentFor(viewer, input.courseId, input.studentUserId);
-  const available = studyAssistantConfigured() && (await hasService(viewer, input.courseId, STUDY_SERVICE));
+  const onPlan = studyAssistantConfigured() && (await hasService(viewer, input.courseId, STUDY_SERVICE));
+  const course = await courseRow(input.courseId);
+  const credits = isBillingEnabled() ? Math.max(0, await studentCredits(course.workspaceId, student)) : 0;
   const used = await prisma.studyMessage.count({ where: { role: "USER", createdAt: { gte: new Date(now.getTime() - DAY) }, chat: { courseId: input.courseId, studentUserId: student } } });
-  return { available, perDay: STUDY_LIMITS.perStudentDay, leftToday: Math.max(0, STUDY_LIMITS.perStudentDay - used), visibleToTutors: true };
+  // Not before billing is on: students pay for their own answers.
+  const reason = !onPlan ? "NOT_ON_PLAN" : !isBillingEnabled() ? "COMING_SOON" : credits < ANSWER_ESTIMATE ? "NO_CREDITS" : null;
+  return { available: reason === null, reason, credits, perDay: STUDY_LIMITS.perStudentDay, leftToday: Math.max(0, STUDY_LIMITS.perStudentDay - used), visibleToTutors: true };
 }
 
 export type StudyReply = {
@@ -85,10 +95,8 @@ export async function askStudy(viewer: Viewer, input: { courseId: string; questi
   const course = await courseRow(input.courseId);
   const used = await prisma.studyMessage.count({ where: { role: "USER", createdAt: { gte: new Date(now.getTime() - DAY) }, chat: { courseId: course.id, studentUserId: student } } });
   if (used >= STUDY_LIMITS.perStudentDay) throw new UserError(`That's ${STUDY_LIMITS.perStudentDay} questions in a day for this course. Try again tomorrow, or ask your tutor.`);
-  if (isBillingEnabled()) {
-    const ok = await canSpend(course.workspaceId, student, 60, now);
-    if (!ok.ok) throw new UserError("The study assistant isn't available right now. Ask your tutor.");
-  }
+  if (!isBillingEnabled()) throw new UserError("The study assistant opens in January.");
+  if ((await studentCredits(course.workspaceId, student)) < ANSWER_ESTIMATE) throw new UserError(STUDY_NO_CREDITS);
 
   let chat = input.chatId ? await prisma.studyChat.findUnique({ where: { id: input.chatId }, select: { id: true, courseId: true, studentUserId: true } }) : null;
   if (input.chatId && (!chat || chat.courseId !== course.id || chat.studentUserId !== student)) throw new UserError("That chat no longer exists.");
@@ -113,8 +121,8 @@ export async function askStudy(viewer: Viewer, input: { courseId: string; questi
   });
   const micro = costMicroUsd(r.model, r.usage);
   const credits = micro > 0 ? creditsForCost(micro, ZAR_PER_USD) : 0;
-  if (isBillingEnabled() && credits > 0) {
-    await spendCredits({ workspaceId: course.workspaceId, userId: student, credits, feature: "study-assistant", ref: userMsg.id, force: true }, now).catch(() => undefined);
+  if (credits > 0) {
+    await spendStudentCredits({ workspaceId: course.workspaceId, studentUserId: student, credits, ref: userMsg.id }).catch((e) => console.error("[study] spend failed:", e));
   }
   if (!r.ok) {
     const content = r.refused ? "I can't help with that one. Try asking about the course, or ask your tutor." : "Sorry, I couldn't answer just now. Try again in a moment.";

@@ -16,6 +16,7 @@ import { getBillingConfig } from "@/features/billing/data";
 import { dayLabel, queueBillingEmail } from "@/features/billing/emails";
 import { periodFromPayment } from "@/features/billing/pricing";
 import { prisma } from "@/lib/db";
+import { applyTopupPayment } from "@/features/ai-credits/topups";
 
 import { applyCheckoutPayment } from "./checkout";
 import { closeRecovered, syncRecoveries } from "./recovery";
@@ -88,6 +89,10 @@ export async function settlePayment(
       }
       if (payment.purpose === "PARENT_CHECKOUT") {
         await applyCheckoutPayment(tx, { paymentId: payment.id, paidAt, feeCents: v.feeCents ?? null });
+        return { refundId: null };
+      }
+      if (payment.purpose === "AI_CREDITS") {
+        await applyTopupPayment(tx, { paymentId: payment.id, paidAt });
         return { refundId: null };
       }
       if (payment.purpose === "PAYOUT_RECOVERY") {

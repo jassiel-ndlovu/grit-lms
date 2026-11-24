@@ -13,8 +13,8 @@ export const AI_CREDITS = {
   centsPerCredit: 1,
   includedPerSeat: { CORE: 0, PLUS: 150, PRO: 500 } as Record<"CORE" | "PLUS" | "PRO", number>,
   trialCredits: 300,
-  /** Nexa's markup on bought credits, in basis points (5%, provisional). */
-  markupBps: 500,
+  /** Superseded by topup-math.ts (8–15%, default 12%; owner, 24 Nov). Kept for purchasePriceCents. */
+  markupBps: 1200,
   /** Warn the person and their managers at this share used (80%). */
   warnAtBps: 8000,
 } as const;

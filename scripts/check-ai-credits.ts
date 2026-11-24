@@ -19,7 +19,7 @@ check("1 credit = R0.01 of cost", AI_CREDITS.centsPerCredit, 1);
 check("a mark at $0.0035 and R18.50/$ costs 7 credits", creditsForCost(3500, 18.5), 7);
 check("never less than 1 credit", creditsForCost(1, 18.5), 1);
 check("included: Pro 500, Plus 150, Core 0 per seat", includedCreditsFor([{ tierKey: "PRO" }, { tierKey: "PRO" }, { tierKey: "PLUS" }, { tierKey: "CORE" }]), 1150);
-check("bought price: cost plus 5%", purchasePriceCents(1000), 1050);
+check("bought price: cost plus 12% (owner, 24 Nov: 8–15%)", purchasePriceCents(1000), 1120);
 check("warning at 80%", [pastWarning(799, 1000), pastWarning(800, 1000), pastWarning(5, 0)], [false, true, false]);
 
 const base: Balances = { included: 100, bought: 50, personal: 30, allowanceLeft: null, personalAllowed: false };

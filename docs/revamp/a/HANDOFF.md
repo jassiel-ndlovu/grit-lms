@@ -3,6 +3,29 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Owner decisions: credit top-ups and a student-paid study assistant, `revamp/a-credit-topups`
+
+**Owner decisions** (brief: https://claude.ai/artifact/5yD1pSuxqSh2mCGDY3BcN6):
+- **Parked:** WhatsApp and SMS reminders; the tutor-funded study assistant; audio and video transcription (after January, with a market check).
+- **The study assistant is paid by students** or their parents.
+- **Top-ups:** a markup of 8 to 15%; healthy packs only; validity follows the AI supplier (Anthropic now, the CPA's 3 years on AWS).
+
+Migration `43_ai_credit_topups`: PaymentPurpose `AI_CREDITS` and AiCreditPool `STUDENT`. Billing contract Draft 1.18, viewer Draft 1.29.
+
+Done:
+- **`ai-credits/topup-math.ts`** (pure): packs, markup bounds, validity, credits per pack, unspent at expiry.
+- **`ai-credits/topups.ts` and `topup-actions.ts`**:
+  - the offer, starting a top-up (organisation, adult paying student, parent for a child);
+  - `applyTopupPayment` (called from `settlePayment`), and the status for the return page;
+  - study credits, `expireCredits` (housekeeping).
+- **The study assistant** spends the student's STUDENT credits only. Its status gives a reason; with billing off it's closed.
+- `AI_CREDITS.markupBps` is now 12%; `check-ai-credits` was updated.
+
+Tested:
+- `scripts/check-ai-topups.ts` (in CI).
+- 14 checks against the Preview DB (BILLING=1, provider stubbed): no credits refused; purchase and repeat settle; the return-page status and its ownership; the organisation's pool untouched; a failed payment; spend, then expiry with the newer pack kept; run once. Cleaned up afterwards.
+- Not tested: a real Paystack checkout (no test keys locally). Run one in Paystack test mode on Preview before billing goes live.
+
 ## 2026-11-24 #216 phase 3: AI marks on photo answers, session notes, diagrams, `revamp/a-ai-media`
 
 Migration `42_ai_media`: AiMarkSuggestion `fromPhotos` and `transcript` (B's assessments file; additive), and the `NOTES` and `DIAGRAM` values on AiAssistFeature. Viewer contract Draft 1.28.

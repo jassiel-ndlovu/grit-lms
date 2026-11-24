@@ -181,6 +181,8 @@ enum PaymentPurpose {
   PARENT_CHECKOUT
   /// A tutor paying back a refund Nexa funded (owner decision 2026-11-20).
   PAYOUT_RECOVERY
+  /// An AI credit pack, paid to Nexa (#216, owner 24 Nov).
+  AI_CREDITS
 }
 
 enum PaymentStatus {
@@ -881,6 +883,8 @@ enum AiCreditPool {
   INCLUDED
   BOUGHT
   PERSONAL
+  /// A student's own credits (bought by them or a parent), spent only by their study assistant (#216, owner 24 Nov).
+  STUDENT
 }
 
 enum AiCreditKind {
