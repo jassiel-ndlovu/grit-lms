@@ -76,7 +76,7 @@ async function FamilyPage({ viewer, sp, ctx }: { viewer: Viewer; sp: Params; ctx
           label="Bookings"
           links={[
             { label: "Upcoming", href: bookingRoutes.list("upcoming") },
-            { label: "Past", href: bookingRoutes.list("past") },
+            { label: "Past and cancelled", href: bookingRoutes.list("past") },
           ]}
           current={bookingRoutes.list(view)}
         />
@@ -89,7 +89,7 @@ async function FamilyPage({ viewer, sp, ctx }: { viewer: Viewer; sp: Params; ctx
             <EmptyState
               compact
               illustration={<Scene name="calendar-empty" />}
-              title={view === "past" ? "No past lessons" : "No lessons booked"}
+              title={view === "past" ? "No past or cancelled lessons" : "No lessons booked"}
               description={
                 view === "past"
                   ? "Lessons from the last 90 days show here."

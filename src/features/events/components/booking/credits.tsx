@@ -87,7 +87,7 @@ export function StaffCredits({ learnerId, studentName, courses }: { learnerId: s
             <p className="text-foreground text-sm font-medium">{c.courseName}</p>
             <p className="text-muted-foreground text-xs tabular-nums">
               {lessonsLeft(c.balance)}
-              {c.needsCredits ? "" : " · no pack on sale, so bookings are free"}
+              {c.needsCredits ? "" : " · no pack on sale, so booking uses none"}
             </p>
           </div>
           <AdjustCreditsButton learnerId={learnerId} studentName={studentName} course={c} />
