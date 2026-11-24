@@ -87,7 +87,7 @@ export default async function BookingHoursPage({ searchParams }: PageProps) {
         />
       </PageSection>
       {can(viewer, "workspace.settings") ? (
-        <PageSection id="rules" title="Booking rules" description={`For everyone in ${viewer.workspace?.name ?? "your workspace"}.`}>
+        <PageSection id="rules" title="Booking rules" description={`For everyone in ${viewer.workspace?.name ?? "your organisation"}.`}>
           <PolicyForm policy={hours.policy} />
         </PageSection>
       ) : null}

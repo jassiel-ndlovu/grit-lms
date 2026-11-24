@@ -36,7 +36,7 @@ export const setCourseServices = viewerActionClient
     const ws = viewer.workspace!;
     const state = ws.billingState;
     if (state === "READ_ONLY" || state === "CANCELLED" || ws.readOnly) {
-      throw new BillingError("READ_ONLY", "The workspace is read-only until the bill is paid");
+      throw new BillingError("READ_ONLY", "Your organisation is locked until it's paid for. Everyone can still see their work, but nothing can be changed. Pay from Billing to unlock it.");
     }
 
     const now = new Date();
@@ -44,7 +44,7 @@ export const setCourseServices = viewerActionClient
     const after = derivedTier(applyServiceChange(course.enabledKeys, enable, disable));
     const billedNow = billedTier({ derived: before, holds: course.holds, override: course.override, at: now });
     if (state === "PAST_DUE" && tierAbove(after, billedNow)) {
-      throw new BillingError("PAST_DUE", "Pay the overdue bill before raising a course's tier");
+      throw new BillingError("PAST_DUE", "Pay the overdue bill before moving a course to a higher plan.");
     }
 
     const ctx = await loadServiceChangeContext(course, state, now);
@@ -164,7 +164,7 @@ export const startFirstPayment = viewerActionClient
   .action(async ({ parsedInput: { returnPath } }) => {
     const { viewer, workspace } = await billingManager();
     if (!["TRIAL", "READ_ONLY", "CANCELLED"].includes(workspace.billingState)) {
-      throw new BillingError("FORBIDDEN", `No first payment in state ${workspace.billingState}`);
+      throw new BillingError("FORBIDDEN", "Your organisation doesn't need a first payment right now. Refresh the page.");
     }
     const customerCode = await ensureProviderCustomer(workspace.id, viewer.user.email, workspace.name);
     await prisma.subscription.upsert({
@@ -176,7 +176,7 @@ export const startFirstPayment = viewerActionClient
     const invoice = await createFirstInvoice(workspace.id);
     if (invoice.totalCents <= 0) {
       await prisma.platformInvoice.update({ where: { id: invoice.id }, data: { status: "VOID" } });
-      throw new BillingError("NOTHING_TO_BILL", "No learners are enrolled yet");
+      throw new BillingError("NOTHING_TO_BILL", "No students are enrolled yet, so there's nothing to pay.");
     }
     const { authorizationUrl, reference } = await checkoutInvoice({
       invoice, workspaceId: workspace.id, userId: viewer.user.id, email: viewer.user.email, returnPath,
@@ -210,8 +210,8 @@ export const payPlatformInvoice = viewerActionClient
       where: { id: invoiceId, workspaceId: workspace.id, status: { in: ["OPEN", "PAST_DUE"] } },
       select: { id: true, totalCents: true },
     });
-    if (!invoice) throw new BillingError("NOT_FOUND", "No open invoice with that id");
-    if (invoice.totalCents <= 0) throw new BillingError("NOTHING_TO_BILL", "The invoice total is zero");
+    if (!invoice) throw new BillingError("NOT_FOUND", "That bill has already been paid or was cancelled. Refresh the page.");
+    if (invoice.totalCents <= 0) throw new BillingError("NOTHING_TO_BILL", "There's nothing to pay on this bill.");
 
     const charged = await chargeSavedCard({ invoice, workspaceId: workspace.id, userId: viewer.user.id });
     if (charged.status === "SUCCEEDED") {
@@ -316,18 +316,18 @@ export const redeemDiscountCode = viewerActionClient
     const now = new Date();
     const code = await prisma.discountCode.findUnique({ where: { code: parsedInput.code.toUpperCase() } });
     if (!code || !code.active || code.issuerWorkspaceId || code.scope === "PARENT_INVOICE") {
-      throw new BillingError("CODE_INVALID", "That code isn't valid for Nexa bills");
+      throw new BillingError("CODE_INVALID", "That code can't be used on your Nexa bill.");
     }
     if (code.startsAt > now || (code.endsAt && code.endsAt <= now)) throw new BillingError("CODE_EXPIRED", "That code has expired");
     const redeemerKey = `ws:${workspace.id}`;
     if (await prisma.redemption.findUnique({ where: { discountCodeId_redeemerKey: { discountCodeId: code.id, redeemerKey } } })) {
-      throw new BillingError("CODE_USED", "This workspace has already used that code");
+      throw new BillingError("CODE_USED", "Your organisation has already used that code.");
     }
     if (code.scope === "WORKSPACE_BILL") {
       const other = await prisma.redemption.count({
         where: { workspaceId: workspace.id, exhaustedAt: null, discountCode: { scope: "WORKSPACE_BILL", active: true } },
       });
-      if (other > 0) throw new BillingError("CODE_USED", "Another whole-bill discount is already running");
+      if (other > 0) throw new BillingError("CODE_USED", "Another discount on your whole bill is already running. You can use this code once it ends.");
     }
 
     await prisma.$transaction(async (tx) => {

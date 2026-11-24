@@ -74,7 +74,7 @@ export default async function FeesPage({ searchParams }: PageProps) {
         </>
       }
     >
-      <PageTitle icon={<Receipt />} title="Fees" />
+      <PageTitle icon={<Receipt />} title="Fees" description="Fees you send to students and parents: what has been paid, and what is still owed." />
       <RecoveryNotice state={sp.recovery} />
       {children}
     </PageFrame>
@@ -122,8 +122,8 @@ export default async function FeesPage({ searchParams }: PageProps) {
         <TonePanel tone="warning" role="status" className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <span>
             {payouts.payoutMode === "PER_TUTOR"
-              ? "Connect your payout account to send fees for your courses."
-              : "Connect a payout account to send fees. Parents then pay online, or you mark fees paid when you collect them."}
+              ? "Add the bank account your fees are paid into. Then you can send fees for your courses."
+              : "Add the bank account your fees are paid into, then send fees. Families pay by card, or you mark a fee as paid when they pay you in cash or by bank transfer."}
           </span>
           <Link href="/dashboard/settings/payouts" className="text-foreground font-medium underline underline-offset-2">
             Set up payouts
@@ -161,7 +161,7 @@ async function PayerFees({ viewer }: { viewer: Viewer }) {
   const forSelf = !(viewer.children.length > 0 && can(viewer, "fees.pay"));
   const shell = (children: React.ReactNode) => (
     <PageFrame type="settings" breadcrumb={[{ label: "Fees" }]}>
-      <PageTitle icon={<Receipt />} title="Fees" />
+      <PageTitle icon={<Receipt />} title="Fees" description={forSelf ? "What you owe your tutor or school, and what you've paid. Pay by card here." : "What you owe for your children's classes, and what you've paid. Pay by card here."} />
       {children}
     </PageFrame>
   );

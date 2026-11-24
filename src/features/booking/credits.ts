@@ -110,7 +110,7 @@ export async function adjustCredits(input: { workspaceId: string; learnerId: str
     prisma.learner.findUnique({ where: { id: input.learnerId }, select: { workspaceId: true } }),
     prisma.course.findUnique({ where: { id: input.courseId }, select: { workspaceId: true } }),
   ]);
-  if (learner?.workspaceId !== input.workspaceId || course?.workspaceId !== input.workspaceId) throw new UserError("That student or course isn't in this workspace.");
+  if (learner?.workspaceId !== input.workspaceId || course?.workspaceId !== input.workspaceId) throw new UserError("That student or course isn't in this organisation.");
   await prisma.lessonCredit.create({
     data: { workspaceId: input.workspaceId, learnerId: input.learnerId, courseId: input.courseId, kind: "ADJUSTMENT", lessons: input.lessons, byUserId: input.byUserId, note: input.note.slice(0, 300) },
   });

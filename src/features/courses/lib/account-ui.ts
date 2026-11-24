@@ -13,7 +13,7 @@ export function parseEmails(raw: string): { emails: string[]; bad: string[] } {
 }
 
 /** A readable message from a safe-action result. */
-export function actionError(res: { serverError?: string; validationErrors?: unknown } | undefined, fallback = "Something went wrong. Try again."): string {
+export function actionError(res: { serverError?: string; validationErrors?: unknown } | undefined, fallback = "That didn't work. Check your connection and try again."): string {
   if (res?.validationErrors) return "Check the details and try again.";
   const m = res?.serverError?.trim();
   if (!m) return fallback;

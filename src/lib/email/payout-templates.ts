@@ -21,7 +21,7 @@ export type PayoutTemplateData = {
 };
 export type PayoutTemplate = keyof PayoutTemplateData;
 
-const footer = () => "You're receiving this because you receive fee payments through Nexa. Payout emails can't be switched off. Questions: reply to this email.";
+const footer = () => "You're receiving this because families pay your fees by card through Nexa. These emails can't be switched off. Questions? Reply to this email.";
 
 function render(heading: string, paragraphs: string[], cta?: { path: string; label: string }): Rendered {
   const url = cta ? absoluteUrl(cta.path) : null;
@@ -40,7 +40,7 @@ export function renderPayoutEmail<T extends PayoutTemplate>(template: T, data: P
       `Hello ${d.payeeName},`,
       `After reviewing a request, Nexa refunded ${rands(d.refundCents)} of invoice ${d.invoiceNumber} (${d.studentName}) to the payer. Reason: ${d.reason}`,
       `Nexa paid this refund from its own account. Your share of it is ${rands(d.owedCents)}: the part of the payment that was sent to you. Nexa's commission on that amount is not charged to you.`,
-      `From ${d.deductFromOn}, we'll recover it from your next fee payouts, taking no more than ${d.maxSharePercent}% of any one payout, until it is repaid. Nothing is taken from your bank account directly.`,
+      `From ${d.deductFromOn}, we'll take it from the card fee payments we pay into your bank account, no more than ${d.maxSharePercent}% of any one payment, until it is repaid. Nothing is taken from your bank account directly.`,
       "If you think this is wrong, reply to this email before then and we'll hold the deduction while we look at it again.",
     ], { path: "/dashboard/fees", label: "View your fees" });
   }
@@ -48,13 +48,13 @@ export function renderPayoutEmail<T extends PayoutTemplate>(template: T, data: P
     const d = data as PayoutTemplateData["recovery-invoice"];
     return render(`Invoice: ${rands(d.outstandingCents)} still owed for a refund`, [
       `Hello ${d.payeeName},`,
-      `You still owe ${rands(d.outstandingCents)} for the refund of invoice ${d.invoiceNumber}. You haven't received a fee payout through Nexa in the last ${d.days} days, so we can't recover it from your payouts.`,
-      "You can pay it by card now. If you receive payouts again first, we'll keep recovering it from those instead, and you'll only ever be asked for what is still owed.",
+      `You still owe ${rands(d.outstandingCents)} for the refund of invoice ${d.invoiceNumber}. No card fee payments have been paid into your bank account through Nexa in the last ${d.days} days, so we can't take it from those.`,
+      "You can pay it by card now. If card fee payments start coming in again first, we'll take it from those instead, and you'll only ever be asked for what is still owed.",
     ], { path: d.payPath, label: "Pay by card" });
   }
   const d = data as PayoutTemplateData["recovery-repaid"];
   return render(`Repaid: ${rands(d.owedCents)} for invoice ${d.invoiceNumber}`, [
     `Hello ${d.payeeName},`,
-    `The ${rands(d.owedCents)} for the refund of invoice ${d.invoiceNumber} is fully repaid. Your payouts are back to normal. Thank you.`,
+    `The ${rands(d.owedCents)} for the refund of invoice ${d.invoiceNumber} is fully repaid. Your fee payments are back to normal. Thank you.`,
   ]);
 }

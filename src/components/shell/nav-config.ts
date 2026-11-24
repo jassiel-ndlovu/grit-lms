@@ -115,7 +115,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       ],
     },
     {
-      label: "Workspace",
+      label: "Organisation",
       items: [
         { label: "Timesheets", href: "/dashboard/timesheets", icon: "gradebook", keywords: ["hours", "pay", "payroll", "rate", "my timesheet"], organisation: true },
         // Shown without Plus too; the page says what opens it (billing.md Draft 1.17).

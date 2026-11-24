@@ -37,7 +37,7 @@ async function managedMembership(viewer: Viewer, membershipId?: string) {
   const id = membershipId ?? viewer.membership.id;
   if (id !== viewer.membership.id && !can(viewer, "cover.manage")) throw new ViewerError("FORBIDDEN");
   const m = await prisma.membership.findUnique({ where: { id }, select: { id: true, workspaceId: true, user: { select: { name: true } } } });
-  if (!m || m.workspaceId !== viewer.workspace.id) throw new UserError("That person isn't in this workspace.");
+  if (!m || m.workspaceId !== viewer.workspace.id) throw new UserError("That person isn't in this organisation.");
   return m;
 }
 

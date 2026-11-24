@@ -33,17 +33,17 @@ export const STATE_CHIP: Record<BillingState, { label: string; tone: Tone }> = {
   TRIAL: { label: "Trial", tone: "info" },
   ACTIVE: { label: "Active", tone: "success" },
   PAST_DUE: { label: "Payment overdue", tone: "warning" },
-  READ_ONLY: { label: "Read-only", tone: "danger" },
+  READ_ONLY: { label: "Locked", tone: "danger" },
   COMPED: { label: "Complimentary", tone: "neutral" },
   CANCELLED: { label: "Cancelled", tone: "neutral" },
 };
 
 const ERRORS: Record<string, string> = {
   TRIAL_CAP_REACHED: "Your trial's limit is reached. Choose plans to keep adding students.",
-  READ_ONLY: "Your workspace is read-only until the overdue bill is paid. You can still switch services off.",
+  READ_ONLY: "Your organisation is locked until the overdue bill is paid. You can still switch services off.",
   PAST_DUE: "Pay the overdue bill before moving a course to a higher plan.",
   BILLING_DISABLED: "Billing isn't switched on yet.",
-  NOT_FOUND: "That course wasn't found in your workspace.",
+  NOT_FOUND: "That course wasn't found in your organisation.",
   FORBIDDEN: "You don't have permission to change this course's services.",
   CARD_REQUIRED: "Add a card first.",
   PROVIDER_ERROR: "The payment provider didn't respond. Try again in a minute.",
@@ -52,9 +52,9 @@ const ERRORS: Record<string, string> = {
 
 /** next-safe-action's `serverError` ("CODE: detail") → a sentence for the user. */
 export function billingErrorMessage(serverError: string | undefined | null): string {
-  if (!serverError) return "Something went wrong. Try again.";
+  if (!serverError) return "That didn't work. Check your connection and try again.";
   const code = serverError.split(":")[0]?.trim() ?? "";
-  return ERRORS[code] ?? "Something went wrong. Try again.";
+  return ERRORS[code] ?? "That didn't work, and it isn't something you did. Try again in a minute. If it keeps happening, report it from Help.";
 }
 
 export interface ServiceRow {

@@ -92,13 +92,13 @@ export default async function PayoutsPage() {
           </p>
         )}
         {mine?.status === "ACTIVE" ? (
-          <p className="text-muted-foreground text-xs">Paystack holds the first payout to a new account until it has checked it.</p>
+          <p className="text-muted-foreground text-xs">The first payment into a new bank account can take a few extra days while the account is checked.</p>
         ) : null}
         {canConnect ? (
           <PayoutConnect banks={banks} current={mine} defaultBusinessName={mine?.businessName ?? viewer.workspace.name} />
         ) : (
           <p className="text-muted-foreground text-sm">
-            {perTutor ? "Ask the owner to give you a staff account in this workspace." : "The owner or an admin connects this account."}
+            {perTutor ? "Ask the owner to add you as staff in this organisation." : "The owner or an admin connects this account."}
           </p>
         )}
       </section>

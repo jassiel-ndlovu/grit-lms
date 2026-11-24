@@ -11,7 +11,7 @@ import type { BillingState } from "./billing-ui";
  * need the detail, so the message is shown as it is, without the code.
  */
 export function adminErrorMessage(serverError: string | null | undefined): string {
-  if (!serverError) return "Something went wrong. Try again.";
+  if (!serverError) return "That didn't work. Check your connection and try again.";
   const m = /^[A-Z_]+:\s*(.+)$/.exec(serverError.trim());
   return m ? m[1] : serverError;
 }

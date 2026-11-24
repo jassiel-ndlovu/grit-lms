@@ -21,7 +21,7 @@ interface PageProps {
 
 const ENDED: Record<string, { title: string; lead: string }> = {
   EXPIRED: { title: "This invite has expired", lead: "Invites work for 7 days. Ask the person who invited you for a new one." },
-  ACCEPTED: { title: "This invite has been used", lead: "If it was you, sign in to find the workspace in your list." },
+  ACCEPTED: { title: "This invite has been used", lead: "If it was you, sign in. The organisation is in your list at the top of the menu." },
   REVOKED: { title: "This invite was cancelled", lead: "Ask the person who invited you if you think that's a mistake." },
 };
 

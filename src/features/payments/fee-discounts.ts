@@ -38,14 +38,14 @@ export const redeemerKey = (payerUserId: string, learnerId: string) => `user:${p
 
 export async function createFeeDiscountCode(actor: Actor, workspaceId: string, input: FeeDiscountInput) {
   const code = input.code.trim().toUpperCase();
-  if (!/^[A-Z0-9_-]{3,32}$/.test(code)) throw new BillingError("CODE_INVALID", "Codes are 3 to 32 letters, digits, - or _");
-  if (input.kind === "PERCENT" && !(input.percentBps && input.percentBps > 0 && input.percentBps <= 10_000)) throw new BillingError("CODE_INVALID", "A percent code needs percentBps from 1 to 10000");
-  if (input.kind === "FIXED" && !(input.amountCents && input.amountCents > 0)) throw new BillingError("CODE_INVALID", "A fixed code needs amountCents above zero");
+  if (!/^[A-Z0-9_-]{3,32}$/.test(code)) throw new BillingError("CODE_INVALID", "A code is 3 to 32 characters long: letters, numbers, - or _.");
+  if (input.kind === "PERCENT" && !(input.percentBps && input.percentBps > 0 && input.percentBps <= 10_000)) throw new BillingError("CODE_INVALID", "A percentage discount must be between 1% and 100%.");
+  if (input.kind === "FIXED" && !(input.amountCents && input.amountCents > 0)) throw new BillingError("CODE_INVALID", "A fixed discount must be more than R0.");
   const startsAt = new Date(input.startsAt);
   const endsAt = input.endsAt ? new Date(input.endsAt) : null;
-  if (Number.isNaN(startsAt.getTime()) || (endsAt && !(endsAt > startsAt))) throw new BillingError("CODE_INVALID", "The end must come after the start");
+  if (Number.isNaN(startsAt.getTime()) || (endsAt && !(endsAt > startsAt))) throw new BillingError("CODE_INVALID", "The end date must be after the start date.");
   return prisma.$transaction(async (tx) => {
-    if (await tx.discountCode.findUnique({ where: { code } })) throw new BillingError("CODE_USED", "That code is taken; choose another");
+    if (await tx.discountCode.findUnique({ where: { code } })) throw new BillingError("CODE_USED", "That code is already in use. Choose another.");
     const row = await tx.discountCode.create({
       data: {
         code, issuerWorkspaceId: workspaceId, description: input.description, kind: input.kind,
@@ -99,7 +99,7 @@ export async function resolveCheckoutDiscount(
   if (!c || !c.active || c.scope !== "PARENT_INVOICE" || !c.issuerWorkspaceId) throw new BillingError("CODE_INVALID", "That code isn't valid");
   if (c.startsAt > input.now || (c.endsAt && c.endsAt <= input.now)) throw new BillingError("CODE_EXPIRED", "That code has expired");
   const own = input.invoices.filter((i) => i.workspaceId === c.issuerWorkspaceId);
-  if (own.length === 0) throw new BillingError("CODE_INVALID", "That code doesn't apply to these invoices");
+  if (own.length === 0) throw new BillingError("CODE_INVALID", "That code doesn't apply to these fees.");
 
   const learners = [...new Set(own.map((i) => i.learnerId))];
   const reds = await db.redemption.findMany({
@@ -127,7 +127,7 @@ export async function resolveCheckoutDiscount(
     if (shares[k] > 0) perInvoice[i.id] = shares[k];
   });
   const discountCents = Object.values(perInvoice).reduce((a, b) => a + b, 0);
-  if (discountCents === 0) throw new BillingError("CODE_INVALID", "That code takes nothing off these invoices");
+  if (discountCents === 0) throw new BillingError("CODE_INVALID", "That code doesn't take anything off these fees.");
   return { codeId: c.id, code: c.code, perInvoice, discountCents };
 }
 

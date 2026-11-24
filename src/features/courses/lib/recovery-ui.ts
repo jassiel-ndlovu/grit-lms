@@ -10,7 +10,7 @@ type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 export const RECOVERY_STATUSES = ["AWAITING_REFUND", "ACTIVE", "RECOVERED", "WAIVED", "CANCELLED"] as const satisfies readonly RecoveryStatus[];
 
 export const RECOVERY_CHIP: Record<RecoveryStatus, { label: string; tone: Tone }> = {
-  AWAITING_REFUND: { label: "Waiting for Paystack", tone: "info" },
+  AWAITING_REFUND: { label: "Refund on its way", tone: "info" },
   ACTIVE: { label: "Being recovered", tone: "warning" },
   RECOVERED: { label: "Repaid", tone: "success" },
   WAIVED: { label: "Waived", tone: "neutral" },
@@ -20,13 +20,13 @@ export const RECOVERY_CHIP: Record<RecoveryStatus, { label: string; tone: Tone }
 /** Where the payee lands after the pay link: `/dashboard/fees?recovery=<state>`. */
 const RETURN: Record<string, { tone: "success" | "info" | "danger"; text: string }> = {
   paid: { tone: "success", text: "Payment received. Nothing more will be taken from your payouts for that refund." },
-  pending: { tone: "info", text: "Your payment is being confirmed. It shows here once Paystack confirms it." },
+  pending: { tone: "info", text: "We're confirming your payment with your bank. It shows here within a few minutes." },
   failed: { tone: "danger", text: "The payment didn't go through and nothing was taken. You can try again below." },
   "nothing-owed": { tone: "info", text: "There's nothing left to pay on that refund." },
   "not-found": { tone: "danger", text: "We couldn't find that refund. The link may belong to another account." },
-  unknown: { tone: "danger", text: "We couldn't match that payment to a refund. If money left your account, it shows here once Paystack confirms it." },
+  unknown: { tone: "danger", text: "We couldn't match that payment yet. If money left your account, it will show here within an hour. Please don't pay again in the meantime." },
   unavailable: { tone: "info", text: "Online payments are switched off for now. Try again later." },
-  error: { tone: "danger", text: "Something went wrong starting the payment and nothing was taken. Try again." },
+  error: { tone: "danger", text: "We couldn't start the payment, and nothing was taken. Try again." },
 };
 
 /** The message for a `?recovery=` value, or null for none or one we don't know. */

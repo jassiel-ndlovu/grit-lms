@@ -47,8 +47,14 @@ export const actionClient = createSafeActionClient({
       return e.message;
     }
     // Stable codes from docs/revamp/contracts/billing.md ("CODE: message").
-    if (e instanceof BillingError || e instanceof ProviderError) {
+    if (e instanceof BillingError) {
       return `${e.code}: ${e.message}`;
+    }
+    // The payment service's own message names it and is technical: log it,
+    // and tell people what it means for them (docs/revamp/copy.md).
+    if (e instanceof ProviderError) {
+      console.error("[safe-action] payment service error:", e.message);
+      return `${e.code}: We couldn't reach the payment service. Nothing was charged. Try again in a minute.`;
     }
     // Messages written for the user (UserError and its subclasses).
     if (e instanceof UserError) {
@@ -59,7 +65,7 @@ export const actionClient = createSafeActionClient({
     }
     // Don't leak internal errors to the client; log server-side instead.
     console.error("[safe-action] unexpected error:", e);
-    return "Something went wrong. Please try again.";
+    return "That didn't work, and it isn't something you did. Try again in a minute. If it keeps happening, report it from Help.";
   },
 });
 
@@ -82,7 +88,7 @@ export const authActionClient = actionClient.use(async ({ next }) => {
 async function assertWritable() {
   const viewer = await getViewer();
   if (viewer?.persona === "staff" && viewer.workspace?.readOnly) {
-    throw new BillingError("READ_ONLY", "Your workspace is read-only. Pay to unlock it.");
+    throw new BillingError("READ_ONLY", "Your organisation is locked until it's paid for. Everyone can still see their work, but nothing can be changed. Pay from Billing to unlock it.");
   }
 }
 

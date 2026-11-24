@@ -31,7 +31,7 @@ interface PageProps {
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
 const SCOPE_LINE = {
-  WORKSPACE: "Fees and students across your workspace.",
+  WORKSPACE: "Fees collected, money owed and student numbers across your whole organisation.",
   BRANCHES: "Fees and students on your branches' courses.",
   OWN_COURSES: "Fees and students on your courses.",
 } as const;
@@ -94,7 +94,7 @@ function PlusFeature({ viewer }: { viewer: Viewer }) {
       description={
         canTurnOn
           ? "Switch on a Plus or Pro service on any course to see fees, students and tutors here."
-          : "It opens once someone who runs the workspace switches on a Plus or Pro service on a course."
+          : "It opens once an owner or admin switches on a Plus or Pro service for a course, in that course's settings."
       }
       action={
         canTurnOn ? (

@@ -39,7 +39,7 @@ export async function assertCanAddLearners(db: Db, workspaceId: string, learnerI
   if (after > cap.limitQuantity) {
     throw cap.source === "TRIAL"
       ? new BillingError("TRIAL_CAP_REACHED", `The trial allows ${cap.limitQuantity} students. Pay for your first 30 days to add more.`)
-      : new BillingError("FORBIDDEN", `This workspace's limit is ${cap.limitQuantity} active students. Raise it in billing to add more.`);
+      : new BillingError("FORBIDDEN", `Your organisation's limit is ${cap.limitQuantity} active students. Raise it in Billing to add more.`);
   }
 }
 

@@ -66,7 +66,7 @@ export async function createStudentAccountFor(actorUserId: string, workspaceId: 
   const email = input.email?.trim().toLowerCase() || null;
   if (email && (await prisma.user.findUnique({ where: { email }, select: { id: true } }))) throw new UserError("An account with that email already exists. Ask them to find your course on Nexa and request to join");
   const courses = await prisma.course.findMany({ where: { id: { in: input.courseIds }, workspaceId }, select: { id: true } });
-  if (courses.length !== new Set(input.courseIds).size) throw new UserError("One of the courses isn't in this workspace");
+  if (courses.length !== new Set(input.courseIds).size) throw new UserError("One of the courses isn't in this organisation.");
 
   return prisma.$transaction(async (tx) => {
     // A new learner enrolled in a course counts against a hard-stop student limit (the trial's 20).

@@ -62,7 +62,7 @@ export async function createWorkspaceFor(
   if (!user.emailVerified) throw new BillingError("FORBIDDEN", "Verify your email address first");
   const role = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true, roleUnconfirmed: true } });
   if (!role || role.roleUnconfirmed || (role.role !== "TUTOR" && role.role !== "ADMIN")) {
-    throw new BillingError("FORBIDDEN", "Only tutors can create a workspace; choose Tutor on the welcome page first");
+    throw new BillingError("FORBIDDEN", "Only tutors can set up an organisation. Choose I teach on the welcome page first.");
   }
   const timezone = input.timezone ?? "Africa/Johannesburg";
   if (!isTimeZone(timezone)) throw new BillingError("FORBIDDEN", "Unknown time zone");

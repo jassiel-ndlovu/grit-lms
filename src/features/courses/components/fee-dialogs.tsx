@@ -174,7 +174,7 @@ export function FeeRowActions({ fee, canMarkOffsite }: { fee: Fee; canMarkOffsit
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {canMarkOffsite ? <DropdownMenuItem onSelect={() => setOpen("offsite")}>Mark paid off-site…</DropdownMenuItem> : null}
+          {canMarkOffsite ? <DropdownMenuItem onSelect={() => setOpen("offsite")}>Paid in cash or by transfer…</DropdownMenuItem> : null}
           <DropdownMenuItem onSelect={() => setOpen("void")}>Cancel fee…</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -225,7 +225,7 @@ function OffsiteForm({ fee, onDone }: { fee: Fee; onDone: () => void }) {
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       <DialogHeader>
-        <DialogTitle>Mark paid off-site</DialogTitle>
+        <DialogTitle>Mark as paid in cash or by transfer</DialogTitle>
         <DialogDescription>
           {fee.number} · {fee.learnerName} · {formatRand(fee.totalCents)}. The parent sees it as paid to you directly. Nexa
           takes no commission on it.
@@ -237,7 +237,7 @@ function OffsiteForm({ fee, onDone }: { fee: Fee; onDone: () => void }) {
           {(
             [
               ["CASH", "Cash", Banknote],
-              ["EFT", "EFT to my account", Landmark],
+              ["EFT", "Bank transfer (EFT) to my account", Landmark],
               ["OTHER", "Other", CircleEllipsis],
             ] as const
           ).map(([v, label, Icon]) => (

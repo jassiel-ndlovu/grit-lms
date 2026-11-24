@@ -26,7 +26,7 @@ export const ERROR_COPY: Record<ErrorKind, { title: string; description: string 
   },
   "403": {
     title: "You don't have access to this page",
-    description: "Your account can't open it. If you think you should, ask the owner or an admin of your workspace to give you access.",
+    description: "Your account can't open it. If you think you should, ask the owner or an admin of your organisation to give you access.",
   },
   "500": {
     title: "Something went wrong on our side",

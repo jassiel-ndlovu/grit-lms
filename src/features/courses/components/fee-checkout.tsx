@@ -204,7 +204,7 @@ export function FeeCheckout({ open, paid, today, forSelf }: { open: PayableRow[]
                   {busy === "pay" ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
                   Pay {formatRand(total)} by card
                 </Button>
-                <p className="text-muted-foreground text-xs">Paystack takes the card. You come back here once it&apos;s done.</p>
+                <p className="text-muted-foreground text-xs">You&apos;ll enter your card details on a secure payment page, then come back here.</p>
               </div>
             </div>
           </>

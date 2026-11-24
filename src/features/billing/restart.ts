@@ -33,7 +33,7 @@ export type RestartResult =
 export async function restartWorkspaceFor(workspaceId: string, actorUserId: string, now: Date = new Date()): Promise<RestartResult> {
   const ws = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { billingState: true } });
   if (ws.billingState !== "CANCELLED" && ws.billingState !== "READ_ONLY") {
-    throw new BillingError("FORBIDDEN", "Only a cancelled or read-only workspace can be restarted");
+    throw new BillingError("FORBIDDEN", "Only a cancelled or locked organisation can be restarted");
   }
   const outstanding = await prisma.platformInvoice.findMany({ where: { workspaceId, status: { in: ["OPEN", "PAST_DUE"] }, totalCents: { gt: 0 } }, select: { id: true } });
   if (outstanding.length) return { status: "PAY_OUTSTANDING", invoiceIds: outstanding.map((i) => i.id) };

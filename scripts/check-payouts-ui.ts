@@ -24,9 +24,9 @@ check(
 check(
   "unknown account",
   payoutErrorMessage("NOT_FOUND: The bank doesn't recognise that account number"),
-  "Paystack couldn't find that account. Check the bank and number.",
+  "The bank couldn't find that account. Check the bank and the account number.",
 );
-check("provider detail kept", payoutErrorMessage("PROVIDER_ERROR: Paystack is down"), "Paystack is down");
+check("server wording kept, code dropped", payoutErrorMessage("PROVIDER_ERROR: We couldn't reach the payment service."), "We couldn't reach the payment service.");
 check("A's rule kept", payoutErrorMessage("FORBIDDEN: Connect a payout account first"), "Connect a payout account first");
 check("no code", payoutErrorMessage("You don't have access to do that."), "You don't have access to do that.");
 check("billing off", payoutErrorMessage("BILLING_DISABLED: off"), "Payments aren't switched on yet.");
@@ -41,7 +41,7 @@ check(
     feeChip("PAID", "ONLINE", "x", "y").label,
     feeChip("VOID", null, "x", "y").label,
   ],
-  ["Open", "Open", { label: "Overdue", tone: "danger" }, "Paid off-site", "Paid online", "Cancelled"],
+  ["Open", "Open", { label: "Overdue", tone: "danger" }, "Paid in cash or by transfer", "Paid online", "Cancelled"],
 );
 
 console.log(failures ? `\n${failures} failed` : "\nAll passed");

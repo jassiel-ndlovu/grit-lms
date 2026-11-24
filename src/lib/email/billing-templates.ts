@@ -32,7 +32,7 @@ export function rands(cents: number): string {
 
 const BILLING_PATH = "/dashboard/settings/billing";
 const footer = () =>
-  `You're receiving this because you manage billing for this ${escapeHtml("Nexa")} workspace. Billing emails can't be switched off.`;
+  `You're receiving this because you manage billing for this organisation on ${escapeHtml("Nexa")}. Billing emails can't be switched off.`;
 
 function render(heading: string, paragraphs: string[], cta: string): Rendered & { heading: string } {
   const url = absoluteUrl(BILLING_PATH);
@@ -64,7 +64,7 @@ export function renderBillingEmail<T extends BillingTemplate>(template: T, data:
       return render(
         "Your Nexa trial has ended",
         [
-          `The trial for ${d.workspaceName} is over, so the workspace is read-only for staff. Students can still take tests and submit work.`,
+          `The trial for ${d.workspaceName} is over, so your organisation is locked for staff: you can see everything, but can't make changes until it's paid for. Students can still take tests and hand in work.`,
           "Pay for your first 30 days and everything opens again straight away. Your courses are on Pro; if you'd like a cheaper plan, move any course to Core or Plus on the billing page before you pay.",
         ],
         "Review plans and pay",
@@ -80,7 +80,7 @@ export function renderBillingEmail<T extends BillingTemplate>(template: T, data:
         d.day === 7 ? `Final notice: ${d.workspaceName} goes read-only on ${d.readOnlyOn}` : `Payment failed for ${d.workspaceName}`,
         [
           lead,
-          `Invoice ${d.invoiceNumber} for ${rands(d.totalCents)} is unpaid. Pay now, or add a new card, before ${d.readOnlyOn}. After that the workspace is read-only for staff until it is paid. Students are never blocked.`,
+          `Invoice ${d.invoiceNumber} for ${rands(d.totalCents)} is unpaid. Pay now, or add a new card, before ${d.readOnlyOn}. After that your organisation is locked for staff until it's paid: you can see everything but can't make changes. Students are never blocked.`,
         ],
         "Pay now",
       );
@@ -127,7 +127,7 @@ export function renderBillingEmail<T extends BillingTemplate>(template: T, data:
           `${d.workspaceName} has had no payment for almost two months, so its courses, content and student records will be deleted on ${d.deleteOn} (${d.daysLeft} days from now).`,
           "Pay any time before then and everything stays as it is. Invoices and payment records are kept, as the law requires.",
         ],
-        "Pay and keep the workspace",
+        "Pay and keep your organisation open",
       );
     }
     default:

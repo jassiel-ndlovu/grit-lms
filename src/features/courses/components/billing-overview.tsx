@@ -76,7 +76,7 @@ export function BillingOverview({
           <p className="text-foreground font-semibold">Unpaid renewal</p>
           <p className="text-muted-foreground">
             {o.state === "READ_ONLY"
-              ? "Your workspace is read-only because the last renewal wasn't paid. Students can still see their work."
+              ? "Your organisation is locked because the last renewal wasn't paid. Students can still see their work, but nothing can be changed until it's paid."
               : "We couldn't take the last renewal. Update your card or pay to avoid interruptions."}
             {o.deleteAfter ? ` If nothing is paid, all data is deleted on ${day(o.deleteAfter)}.` : ""}
           </p>
@@ -265,14 +265,25 @@ export function CapBar({ cap, label }: { cap: BillingOverviewData["caps"][number
  * Settings › Billing [› page], the Overview / Usage / Payments / AI credits ribbon, and
  * the page's title (default "Billing").
  */
+/** One plain line under each billing tab's heading (docs/revamp/copy.md, rule 5). */
+const BILLING_LEADS: Record<string, string> = {
+  Billing: "What you pay Nexa: the plan for each course, your next payment and your card.",
+  Usage: "What this billing period has used so far, such as active students and AI marking, and what it adds to your bill.",
+  Payments: "Every payment to Nexa, with the invoice to download.",
+  "AI credits": "Credits your staff spend on AI help, such as drafting tests and suggesting marks. See what's left and buy more.",
+};
+
 export function BillingFrame({
   status,
   page,
   title = "Billing",
+  description,
   actions,
   children,
 }: {
   status?: React.ReactNode;
+  /** Defaults to the tab's own line. */
+  description?: string;
   /** Crumbs after Billing, e.g. [{ label: "Payments", href }, { label: "NX-2026-0142" }]. */
   page?: Crumb[];
   title?: string;
@@ -302,7 +313,7 @@ export function BillingFrame({
         />
       }
     >
-      <PageTitle title={title} />
+      <PageTitle title={title} description={description ?? BILLING_LEADS[title]} />
       {children}
     </PageFrame>
   );

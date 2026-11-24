@@ -93,10 +93,10 @@ export function accountBannersFor(viewer: Viewer, now: Date = new Date()): Accou
                 id: "billing",
                 tone: "danger",
                 message:
-                  "Your workspace is read-only because the renewal wasn't paid. Students can still see their work. Pay to unlock.",
+                  "Your organisation is locked because the renewal wasn't paid. Students can still see their work, but nothing can be changed. Pay to unlock it.",
                 actions: [payNow],
               }
-            : { id: "billing", tone: "danger", message: "This workspace is read-only. Ask the owner to renew.", actions: [] },
+            : { id: "billing", tone: "danger", message: "This organisation is locked until it's paid for. Ask the owner to pay the bill.", actions: [] },
         );
         break;
       case "CANCELLED":
@@ -105,10 +105,10 @@ export function accountBannersFor(viewer: Viewer, now: Date = new Date()): Accou
             ? {
                 id: "billing",
                 tone: "warning",
-                message: "Cancelled. The workspace becomes read-only when the last paid period ends.",
+                message: "Cancelled. Your organisation locks when the last paid period ends: everyone can still see their work, but nothing can be changed.",
                 actions: [{ kind: "link", label: "Reactivate", href: BILLING_HREF }],
               }
-            : { id: "billing", tone: "warning", message: "This workspace is closing.", actions: [] },
+            : { id: "billing", tone: "warning", message: "This organisation is closing.", actions: [] },
         );
         break;
       case "ACTIVE":

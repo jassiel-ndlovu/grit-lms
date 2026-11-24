@@ -66,7 +66,7 @@ function SignUpCard() {
       }
       setError(r.error);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("We couldn't create your account just now. Check your connection and try again.");
     }
     setPhase("form");
   }

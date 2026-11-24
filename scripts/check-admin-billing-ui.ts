@@ -30,7 +30,7 @@ function check(name: string, got: unknown, want: unknown) {
 
 check("error detail kept, code dropped", adminErrorMessage("FORBIDDEN: No trial to extend in state ACTIVE"), "No trial to extend in state ACTIVE");
 check("error without a code", adminErrorMessage("You don't have access to do that."), "You don't have access to do that.");
-check("no error text", adminErrorMessage(undefined), "Something went wrong. Try again.");
+check("no error text", adminErrorMessage(undefined), "That didn't work. Check your connection and try again.");
 
 check("note too short", noteProblem("  ok "), "Add a note of at least 3 characters: it goes in the audit log.");
 check("note fine", noteProblem("Owner asked by phone"), null);

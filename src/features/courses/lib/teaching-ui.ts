@@ -31,7 +31,7 @@ export function restartStep(r: RestartResult): { title: string; body: string; ac
     case "PAY_FIRST_PERIOD":
       return {
         title: "Pay for the first 30 days",
-        body: `You have ${r.activeStudents} active student${r.activeStudents === 1 ? "" : "s"}. The workspace opens again as soon as the first payment goes through.`,
+        body: `You have ${r.activeStudents} active student${r.activeStudents === 1 ? "" : "s"}. Your organisation unlocks as soon as the first payment goes through.`,
         action: "first-payment",
       };
     case "CARD_REQUIRED":
@@ -41,7 +41,7 @@ export function restartStep(r: RestartResult): { title: string; body: string; ac
         action: "add-card",
       };
     case "RESTARTED":
-      return { title: "Your workspace is open again", body: "Add students when you're ready. They're billed at the next renewal.", action: "done" };
+      return { title: "Your organisation is unlocked", body: "Add students when you're ready. They're billed at the next renewal.", action: "done" };
   }
 }
 
@@ -51,4 +51,4 @@ export function isReadOnlyError(serverError: string | null | undefined): boolean
 }
 
 /** Shown beside a disabled write control in a read-only workspace. */
-export const READ_ONLY_REASON = "Your workspace is read-only. Pay to unlock it.";
+export const READ_ONLY_REASON = "Your organisation is locked until it's paid for. Everyone can still see their work, but nothing can be changed. Pay from Billing to unlock it.";

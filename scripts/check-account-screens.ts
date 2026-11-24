@@ -20,7 +20,7 @@ check("blank", parseEmails("  \n ").emails, []);
 check("coded server error shows its message", actionError({ serverError: "STUDENT_LIMIT: Your plan allows 10 students" }), "Your plan allows 10 students");
 check("plain server error as is", actionError({ serverError: "That username is taken" }), "That username is taken");
 check("validation errors", actionError({ validationErrors: {} }), "Check the details and try again.");
-check("nothing", actionError(undefined), "Something went wrong. Try again.");
+check("nothing", actionError(undefined), "That didn't work. Check your connection and try again.");
 
 check("trial cap is a limit error", isStudentLimitError("TRIAL_CAP_REACHED: The trial allows 20 students. Pay for your first 30 days to add more."), true);
 check("own limit is a limit error", isStudentLimitError("FORBIDDEN: This workspace's limit is 40 active students. Raise it in billing to add more."), true);

@@ -65,17 +65,17 @@ export function RestartPanel({
     <section aria-labelledby="restart-heading" className="border-border space-y-3 rounded-lg border p-4">
       <div className="space-y-1">
         <h2 id="restart-heading" className="text-foreground text-sm font-semibold">
-          {step ? step.title : cancelled ? "Restart your workspace" : "Unlock your workspace"}
+          {step ? step.title : cancelled ? "Restart your organisation" : "Unlock your organisation"}
         </h2>
         <p className="text-muted-foreground text-sm">
           {step
             ? step.body
-            : `${cancelled ? "Your workspace is cancelled." : "Your workspace is read-only."} To open it again, pay anything still owed and the first 30 days. With no students yet, the first period is free once a card is saved.`}
+            : `${cancelled ? "Your organisation is cancelled." : "Your organisation is locked."} To open it again, pay anything still owed and the first 30 days. With no students yet, the first period is free once a card is saved.`}
         </p>
       </div>
 
       <div aria-live="polite" className="space-y-3">
-        {!result ? restartButton(cancelled ? "Restart workspace" : "Unlock workspace") : null}
+        {!result ? restartButton(cancelled ? "Restart my organisation" : "Unlock my organisation") : null}
 
         {result?.status === "PAY_OUTSTANDING" ? (
           <>

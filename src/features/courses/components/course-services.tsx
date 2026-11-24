@@ -94,7 +94,7 @@ export function CourseServices({
       await apply(s.key, on);
     } catch (e) {
       setState((m) => new Map(m).set(s.key, !on));
-      setErrors((x) => ({ ...x, [s.key]: e instanceof Error ? e.message : "Something went wrong. Try again." }));
+      setErrors((x) => ({ ...x, [s.key]: e instanceof Error ? e.message : "We couldn't change this service just now. Try again." }));
     } finally {
       setBusy(null);
     }
@@ -108,7 +108,7 @@ export function CourseServices({
       await apply(key, on);
     } catch (e) {
       setState((m) => new Map(m).set(key, !on));
-      setErrors((x) => ({ ...x, [key]: e instanceof Error ? e.message : "Something went wrong. Try again." }));
+      setErrors((x) => ({ ...x, [key]: e instanceof Error ? e.message : "We couldn't change this service just now. Try again." }));
     } finally {
       setBusy(null);
       setPending(null);
@@ -155,7 +155,7 @@ export function CourseServices({
                       {s.name}
                     </label>
                     {!allowed && s.reason === "READ_ONLY" ? (
-                      <p className="text-muted-foreground text-xs">Read-only until the overdue bill is paid.</p>
+                      <p className="text-muted-foreground text-xs">Locked until the overdue bill is paid.</p>
                     ) : null}
                     {!allowed && s.reason === "PAST_DUE" ? (
                       <p className="text-muted-foreground text-xs">Pay the overdue bill to move this course up a plan.</p>

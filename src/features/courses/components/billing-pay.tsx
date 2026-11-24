@@ -65,7 +65,7 @@ export function PayButton({ invoiceId, label }: { invoiceId: string | null; labe
           {error}
         </p>
       ) : null}
-      <p className="text-muted-foreground text-xs">Card payments through Paystack.</p>
+      <p className="text-muted-foreground text-xs">You&apos;ll pay by card on a secure payment page.</p>
     </div>
   );
 }
@@ -161,7 +161,7 @@ export function PaymentReturn({ reference }: { reference: string | null }) {
     return (
       <div role="status" className={`${box} border-border`}>
         <span className="inline-flex items-center gap-2">
-          <Loader2 aria-hidden className="size-4 animate-spin" /> {card ? "Checking your card…" : purpose ? "Checking your payment…" : "Checking with Paystack…"}
+          <Loader2 aria-hidden className="size-4 animate-spin" /> {card ? "Checking your card…" : purpose ? "Checking your payment…" : "Checking your payment…"}
         </span>
       </div>
     );
@@ -169,7 +169,7 @@ export function PaymentReturn({ reference }: { reference: string | null }) {
   if (phase === "slow") {
     return (
       <div role="status" className={`${box} border-border`}>
-        <span>We&apos;re confirming your payment. This page updates once Paystack confirms it; you can leave it.</span>
+        <span>We&apos;re confirming your payment with your bank. This page updates by itself, usually within a minute, and you can leave it.</span>
         <Button variant="outline" size="sm" onClick={dismiss}>
           Close
         </Button>
@@ -179,7 +179,7 @@ export function PaymentReturn({ reference }: { reference: string | null }) {
   if (phase === "unknown") {
     return (
       <div role="status" className={`${box} border-border`}>
-        <span>We couldn&apos;t check this payment. If it went through, it shows here once Paystack confirms it.</span>
+        <span>We couldn&apos;t check this payment just now. If money left your account, it will show here as paid within an hour. Please don&apos;t pay again in the meantime.</span>
         <Button variant="outline" size="sm" onClick={dismiss}>
           Close
         </Button>

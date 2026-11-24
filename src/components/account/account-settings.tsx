@@ -226,7 +226,7 @@ export function DeleteAccountPanel({
   if (soleOwnerOf.length) {
     return (
       <div className="border-border space-y-2 rounded-lg border p-4 text-sm">
-        <p className="text-foreground font-medium">Hand over your workspace first</p>
+        <p className="text-foreground font-medium">Hand over your organisation first</p>
         <p className="text-muted-foreground">
           You&apos;re the only owner of {soleOwnerOf.join(", ")}. Make someone else an owner, or close the workspace, before you delete
           your account.

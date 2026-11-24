@@ -270,7 +270,7 @@ export async function advanceImport(jobId: string, opts: { budgetMs?: number; no
             rows[cursor] = { ...row, outcome: r.outcome, result: r.result, undo: r.undo };
             if (r.cards?.length) cards = [...cards, ...r.cards];
           } catch (e) {
-            rows[cursor] = { ...row, outcome: "failed", result: e instanceof UserError ? e.message : "Something went wrong with this row." };
+            rows[cursor] = { ...row, outcome: "failed", result: e instanceof UserError ? e.message : "This row couldn't be added. Check it, then import it again." };
             if (!(e instanceof UserError)) console.error(`[imports] ${job0.kind} row ${row.n}:`, (e as Error).message);
           }
         }

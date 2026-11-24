@@ -98,7 +98,7 @@ export function deletionConsequences(opts: { isGuardian: boolean; isLearner: boo
     "Your sign-in details, preferences and notifications are deleted.",
   ];
   if (opts.isLearner) out.push("Your tests, assignments and grades are deleted.");
-  if (opts.isStaff) out.push("You leave every workspace you're a member of.");
+  if (opts.isStaff) out.push("You leave every organisation you're a member of.");
   if (opts.isGuardian) out.push("Your links to your children end. Their own accounts stay as they are.");
   out.push("Invoices and payments are kept with your name only, because the law requires financial records.");
   return out;

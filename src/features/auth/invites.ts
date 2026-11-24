@@ -35,9 +35,9 @@ export async function createStaffInvitesFor(
   const emails = [...new Set(input.emails.map((e) => e.trim().toLowerCase()).filter(Boolean))];
   if (emails.length === 0 || emails.length > 50) throw new UserError("Invite between 1 and 50 people at a time");
   const courseIds = input.courseIds ?? [];
-  if (courseIds.length && (await prisma.course.count({ where: { id: { in: courseIds }, workspaceId } })) !== courseIds.length) throw new UserError("One of the courses isn't in this workspace");
+  if (courseIds.length && (await prisma.course.count({ where: { id: { in: courseIds }, workspaceId } })) !== courseIds.length) throw new UserError("One of the courses isn't in this organisation.");
   const teamIds = input.teamIds ?? [];
-  if (teamIds.length && (await prisma.team.count({ where: { id: { in: teamIds }, workspaceId } })) !== teamIds.length) throw new UserError("One of the teams isn't in this workspace");
+  if (teamIds.length && (await prisma.team.count({ where: { id: { in: teamIds }, workspaceId } })) !== teamIds.length) throw new UserError("One of the teams isn't in this organisation.");
   const ws = await prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { name: true, timezone: true } });
   const out: Array<{ email: string; status: "INVITED" | "ALREADY_MEMBER" | "RESENT" }> = [];
   const keys: string[] = [];

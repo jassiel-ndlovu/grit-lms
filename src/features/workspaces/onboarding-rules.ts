@@ -36,7 +36,7 @@ export function orgChecklist(f: OrgFacts) {
     { key: "staff", label: "Staff invited (import \"Tutors and admins\", with Teams)", done: f.staffImported, optional: false },
     { key: "students", label: "Students imported", done: f.studentsImported, optional: false },
     { key: "calendar", label: "Timetable imported", done: f.calendarImported, optional: true },
-    { key: "payout", label: "Payout account connected", done: f.payout, optional: true },
+    { key: "payout", label: "Bank account for fees added", done: f.payout, optional: true },
     { key: "fees", label: "Fees set up", done: f.fees, optional: true },
     ...(f.brandAllowed ? [{ key: "brand", label: "Logo and sender name", done: f.brand, optional: true }] : []),
     { key: "enquiries", label: "Online enquiry form on", done: f.enquiryForm, optional: true },

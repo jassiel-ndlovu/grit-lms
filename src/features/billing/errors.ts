@@ -32,5 +32,5 @@ export function isBillingEnabled(): boolean {
 }
 
 export function assertBillingEnabled(): void {
-  if (!isBillingEnabled()) throw new BillingError("BILLING_DISABLED", "Billing is not switched on");
+  if (!isBillingEnabled()) throw new BillingError("BILLING_DISABLED", "Payments aren't switched on yet.");
 }

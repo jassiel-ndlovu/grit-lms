@@ -29,7 +29,7 @@ export function ResetForm({ token }: { token: string }) {
     setState({ phase: "pending" });
     const res = await resetPasswordAction({ token, password: pw });
     const d = res?.data;
-    if (!d) setState({ phase: "error", message: res?.serverError ?? "Something went wrong. Try again." });
+    if (!d) setState({ phase: "error", message: res?.serverError ?? "We couldn't change your password just now. Try again, or ask for a new link." });
     else if (d.status === "reset") setState({ phase: "done", email: d.email });
     else if (d.status === "weak") setState({ phase: "error", message: d.message });
     else setState({ phase: "dead", expired: d.status === "expired" });
