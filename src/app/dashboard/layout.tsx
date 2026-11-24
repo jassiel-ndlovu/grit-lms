@@ -32,11 +32,19 @@ import { authProvider } from "@/lib/better-auth";
 import { DATA_SAVER_COOKIE, readDataSaverChoice, saveDataRequested } from "@/lib/data-saver";
 import { resolveLocale } from "@/lib/datetime";
 import { getViewer } from "@/lib/viewer";
+import { planAtLeast, workspacePlan } from "@/features/billing/workspace-plan";
 import { isRevampUi, mathJaxVersion } from "@/lib/ui-flags";
 
 import { TWO_FACTOR_LATER_COOKIE } from "../two-factor-setup/cookie";
 import DashboardShell from "./dashboard-shell";
 import { LegacyProviders } from "./legacy-providers";
+
+/** The organisation's branding for its own members, while it's on Plus or Pro. */
+async function shellBrand(viewer: NonNullable<Awaited<ReturnType<typeof getViewer>>>) {
+  const ws = viewer.workspace;
+  if (!ws || (!ws.logoUrl && !ws.accentColor) || (viewer.persona !== "staff" && viewer.persona !== "learner")) return null;
+  return planAtLeast(await workspacePlan(ws.id), "PLUS") ? { name: ws.name, logoUrl: ws.logoUrl, accentColor: ws.accentColor } : null;
+}
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const [session, viewer] = await Promise.all([auth(), getViewer()]);
@@ -65,6 +73,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           isBillingEnabled() && viewer.user.emailVerified && (viewer.persona === "staff" || viewer.persona === "none"),
         // Organisation / Tutor switch: only while the organisation teaches.
         mode: viewer.workspace?.teaches ? viewer.mode : null,
+        brand: await shellBrand(viewer),
       }
     : null;
 

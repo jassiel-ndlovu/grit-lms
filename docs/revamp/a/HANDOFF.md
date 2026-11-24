@@ -3,6 +3,50 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-25 Enquiries, outcomes and reviews, getting set up, brand in the shell (from B's backlog), `revamp/a-crm-outcomes-onboarding`
+
+The owner asked A to take more of B's backlog (claimed on #216). No migration.
+
+**Enquiry pipeline** (`enquiries.manage`; "Enquiries" under People):
+- **`/dashboard/enquiries`:** a tab per stage with counts, filters (Mine, Nobody looking after it, Follow-up due, search), and the online form switch with its link (`workspace.settings`).
+- **`/dashboard/enquiries/new`:** add one that came by phone, in person or elsewhere.
+- **`/dashboard/enquiries/[id]`:**
+  - details and edit (follow-up date, who looks after it, branch);
+  - stage buttons; "Didn't join" needs a reason;
+  - a note, or an email to the family (Reply-To is the staff member);
+  - the history, with stage codes shown as words.
+- **`/enquire/<slug>`:** the public form, in the organisation's colour and logo. Not found while the form is off.
+
+**Tutor outcomes and reviews** (organisations):
+- **`/dashboard/outcomes`:** "Tutor outcomes" for `staff.reviews`. It shows last 30, 90 or 365 days. Managers get a table of tutors with "Start review"; others see their own figures.
+- **`/dashboard/reviews` and `/dashboard/reviews/[id]`:** "Reviews" for all organisation staff.
+  - The manager writes what went well, what to work on, goals and a rating, then shares it. Sharing an empty review is refused. "Update the numbers" refreshes the saved figures.
+  - The tutor reads it and replies with "I've read it", after which it's closed for edits.
+
+**Getting set up** (`teams.manage`):
+- **`/dashboard/settings/setup`:** the checklist, each step linking to where it's done (imports open on the right kind), and a row per branch with a progress bar and Start pilot, Go live or step back.
+- **`/dashboard/admin/onboarding`:** the Nexa-admin overview ("Onboarding" under Platform).
+
+**Brand in the shell:** for an organisation's staff and students while it's on Plus or Pro (`shellBrand` in `dashboard/layout.tsx`):
+- its logo and name at the top of the sidebar;
+- its colour as the primary and brand colour.
+
+Parents (no active organisation) keep the default.
+
+**B's text requests (#216, 25 Nov):**
+- the parent home says "Your children";
+- the two help articles (tests have no opening time; lessons show once saved);
+- notifications say "handed in" and "marked", not "submission" and "graded";
+- the email tick box says "marked";
+- `check-copy.ts` now also catches JSX text over several lines (tested against a probe).
+
+**Tested, real Chrome on Preview data:**
+- **Enquiries, 22 checks:** add one; note; stages; "Didn't join" needs a reason; follow-up; the public form at 390 px arrives as New from the online form; with the form off, the page is a 404; phone width; the parent wording.
+- **Outcomes, reviews, set-up and brand, 20 checks:** start, refuse empty, write, rate and share; the tutor sees, can't edit, replies; the manager sees the reply and it's locked; the set-up checklist links; the organisation colour on the primary and brand buttons; phone width.
+- No console errors. Test rows deleted, and the organisation's form switch and colour restored.
+
+Not covered: the branch rollout buttons, because the Preview organisation has no branches.
+
 ## 2026-11-24 Branding and API screens (taken from B's backlog), cover fixes, `revamp/a-brand-api-screens`
 
 The owner asked A to take B's backlog items. No migration.

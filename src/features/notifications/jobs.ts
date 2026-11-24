@@ -267,8 +267,8 @@ export async function gradingReminders(now: Date) {
     ].filter(Boolean);
     const r = await emitNotification(
       {
-        title: `${total} submission${total === 1 ? "" : "s"} waiting for a mark`,
-        message: `${parts.join(" and ")} handed in and not yet graded.`,
+        title: `${total} piece${total === 1 ? "" : "s"} of work waiting for a mark`,
+        message: `${parts.join(" and ")} handed in and not yet marked.`,
         link,
         type: "GRADING_REMINDER",
         userIds: [userId],

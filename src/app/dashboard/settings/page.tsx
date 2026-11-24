@@ -55,6 +55,7 @@ export default async function SettingsPage() {
   // The meeting app (#211): any workspace, for owners and admins.
   const showMeetings = viewer?.workspace != null && can(viewer, "workspace.settings");
   const showBranding = viewer?.workspace != null && can(viewer, "workspace.branding");
+  const showSetup = inOrganisation && can(viewer, "teams.manage");
   const showDevelopers = viewer?.workspace != null && can(viewer, "workspace.settings");
   const showPayouts =
     isBillingEnabled() && viewer?.workspace != null && (can(viewer, "payouts.connect") || can(viewer, "fees.manage"));
@@ -171,6 +172,19 @@ export default async function SettingsPage() {
           <span>
             <span className="text-foreground block font-semibold">Payouts</span>
             <span className="text-muted-foreground">The bank account parents&apos; fee payments go to.</span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
+
+      {showSetup ? (
+        <Link
+          href="/dashboard/settings/setup"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">Getting set up</span>
+            <span className="text-muted-foreground">The steps to bring your organisation onto Nexa, and each branch&apos;s rollout.</span>
           </span>
           <span aria-hidden className="text-muted-foreground">→</span>
         </Link>

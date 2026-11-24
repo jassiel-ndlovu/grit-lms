@@ -69,6 +69,8 @@ export interface ShellUser {
   workspaceId?: string | null;
   /** Offer "Set up an organisation" (billing on, verified email, not a learner or guardian). */
   canCreateWorkspace?: boolean;
+  /** The organisation's Plus branding (viewer.md "Branding and white-label"): its logo at the top, its colour as the primary. */
+  brand?: { name: string; logoUrl: string | null; accentColor: string | null } | null;
   /**
    * Organisation or tutor mode (viewer.mode, #192). Set only for an owner
    * or admin of an organisation that teaches (viewer.workspace.teaches)
@@ -323,6 +325,13 @@ function ShellSidebar({
 
   return (
     <Sidebar aria-label="Main" className={className}>
+      {user.brand?.logoUrl ? (
+        <div className="-mb-1 flex items-center gap-2 px-2 pt-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={user.brand.logoUrl} alt="" className="h-6 w-auto max-w-28 object-contain" />
+          <span className="text-muted-foreground min-w-0 truncate text-xs font-medium">{user.brand.name}</span>
+        </div>
+      ) : null}
       <div className="flex items-center gap-1">
         <AccountMenu user={user} />
         {notifications ? <BellSlot /> : null}
@@ -384,8 +393,12 @@ export function AppShell({ user, sections, children, search = true, notification
     );
   }
 
+  // An organisation's colour (Plus) becomes the primary for its members: buttons, links, focus.
+  const accent = user.brand?.accentColor && /^#[0-9a-fA-F]{6}$/.test(user.brand.accentColor) ? user.brand.accentColor : null;
+  const brandStyle = accent ? ({ "--primary": accent, "--primary-foreground": "#ffffff", "--ring": accent, "--sidebar-primary": accent, "--brand-terracotta": accent, "--brand-terracotta-foreground": "#ffffff" } as React.CSSProperties) : undefined;
+
   return (
-    <div className="bg-background text-foreground flex min-h-screen">
+    <div className="bg-background text-foreground flex min-h-screen" style={brandStyle}>
       <SkipLink />
       <ShellSidebar
         user={user}

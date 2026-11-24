@@ -722,7 +722,9 @@ These use the same service, gate, credits and run records as above. They're in `
 
 #216 phase 3, organisations. This is a workspace's own enquiries from families, not `PlatformEnquiry` (enquiries to Nexa). Actions are in `@/features/crm/actions`.
 
-**Public form** at `/enquire/<slug>` (B builds the page; it's off until the owner switches it on):
+**Screens built by A (25 Nov, from B's backlog):** `/dashboard/enquiries` (list, new, one enquiry) and `/enquire/<slug>`.
+
+**Public form** at `/enquire/<slug>` (it's off until the organisation switches it on):
 - `getEnquiryForm({ slug })` returns `{ name, logoUrl, accentColor, branches }`, or null when the form is off.
 - `submitWorkspaceEnquiryAction` takes:
   - `slug`, `name`, and an `email` or `phone` (one is required);
@@ -780,6 +782,8 @@ These use the same service, gate, credits and run records as above. They're in `
 
 **Privacy:** shared reviews are in the tutor's data export.
 
+**Screens built by A (25 Nov, from B's backlog):** `/dashboard/outcomes`, `/dashboard/reviews` and `/dashboard/reviews/[id]`.
+
 ### Branding and white-label (Draft 1.26)
 
 #216 phase 3. **Owner, 24 Nov: custom domains are on hold.** Everything stays on www.nexa-lms.co.za. Actions are in `@/features/workspaces/brand-actions` and need `workspace.branding`.
@@ -803,7 +807,7 @@ These use the same service, gate, credits and run records as above. They're in `
 **Built by A (24 Nov, from B's backlog):** Settings › Branding (`/dashboard/settings/branding`) and the branded sign-in page `/w/<slug>`.
 
 **For B:**
-- Use the brand in the dashboard shell for that workspace's members: the logo in the header, and the accent as the primary colour (`viewer.workspace.logoUrl` and `accentColor` are already on the viewer).
+- Built by A (25 Nov): the brand in the dashboard shell for the organisation's staff and students on Plus or Pro (logo at the top of the sidebar, colour as primary).
 - When `whiteLabel` is true, hide "Nexa" in the shell and footer for families, and show `supportEmail`.
 - Emails are handled by A.
 
@@ -823,8 +827,7 @@ Bringing a whole organisation on, branch by branch. **The order:**
 | `adminOnboardingOverviewAction` | `{ limit? }` | Nexa admins: each organisation's plan, branches (live and pilot) and checklist progress |
 
 **For B:**
-- An "Onboarding" page for organisation owners: the checklist with links to each import, and a row per branch with a progress bar, the rollout stage and "Start pilot" / "Go live".
-- On the admin console, a table of organisations.
+- Built by A (25 Nov): Settings › Getting set up (`/dashboard/settings/setup`) and `/dashboard/admin/onboarding`.
 
 ### Study assistant (Draft 1.27)
 

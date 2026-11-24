@@ -108,6 +108,9 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         // Shown without Pro too; the page says what opens it (viewer.md Draft 1.20).
         { label: "At risk", href: "/dashboard/at-risk", icon: "users", keywords: ["alerts", "falling marks", "missed work", "absent", "support"], requires: "grades.view" },
         { label: "Join requests", href: "/dashboard/join-requests", icon: "inbox", keywords: ["enrol", "approve", "listed", "waiting"], requires: "learners.invite" },
+        { label: "Tutor outcomes", href: "/dashboard/outcomes", icon: "analytics", keywords: ["performance", "tutors", "results", "staff"], requires: "staff.reviews", organisation: true },
+        { label: "Reviews", href: "/dashboard/reviews", icon: "users", keywords: ["appraisal", "feedback", "staff review"], organisation: true },
+        { label: "Enquiries", href: "/dashboard/enquiries", icon: "inbox", keywords: ["leads", "new families", "pipeline", "follow up", "trial"], requires: "enquiries.manage" },
         { label: "Queries", href: "/dashboard/support", icon: "inbox", keywords: ["help", "questions", "support", "feedback", "problems"], requires: "enquiries.manage" },
         // listReferrals needs learners.invite for the whole workspace.
         { label: "Referrals", href: "/dashboard/referrals", icon: "users", keywords: ["referred", "families", "word of mouth"], requires: "learners.invite", wholeWorkspace: true },
@@ -133,6 +136,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["accounts"], requires: "admin.console" },
         { label: "Billing", href: "/dashboard/admin/billing", icon: "billing", keywords: ["workspaces", "trial", "comp", "discount", "paystack"], requires: "admin.console", billing: true },
         { label: "Support", href: "/dashboard/admin/support", icon: "inbox", keywords: ["queries", "help", "feedback", "problems"], requires: "admin.console" },
+        { label: "Onboarding", href: "/dashboard/admin/onboarding", icon: "users", keywords: ["organisations", "set up", "rollout", "branches"], requires: "admin.console" },
         { label: "Enquiries", href: "/dashboard/admin/enquiries", icon: "inbox", keywords: ["contact form", "access requests", "leads", "organisations"], requires: "admin.console" },
       ],
     },
