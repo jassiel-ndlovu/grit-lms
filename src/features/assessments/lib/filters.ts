@@ -27,8 +27,8 @@ export const FILTER_LABELS: Record<FilterBucket, string> = {
   all: "All",
   upcoming: "Upcoming",
   missed: "Missed",
-  submitted: "Submitted",
-  graded: "Graded",
+  submitted: "Handed in",
+  graded: "Marked",
 };
 
 export interface FilterableItem {

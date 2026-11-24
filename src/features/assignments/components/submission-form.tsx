@@ -84,8 +84,8 @@ export function SubmissionForm({
           return { name: file.name, url };
         } catch (e) {
           toast.error(
-            `Failed to upload ${file.name}: ${
-              e instanceof Error ? e.message : "Upload failed"
+            `We couldn't upload ${file.name}: ${
+              e instanceof Error ? e.message : "check your connection and try again."
             }`,
           );
           return null;
@@ -114,7 +114,7 @@ export function SubmissionForm({
 
   async function onSubmit() {
     if (files.length === 0) {
-      toast.error("Add at least one file before submitting");
+      toast.error("Add at least one file before you hand in.");
       return;
     }
     setSubmitting(true);
@@ -124,10 +124,10 @@ export function SubmissionForm({
         fileUrl: files.map((f) => f.url),
       });
       if (result?.serverError) throw new Error(result.serverError);
-      toast.success("Submitted");
+      toast.success("Handed in. You'll get a notification when it's marked.");
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Submission failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't hand in your work. Check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -165,7 +165,7 @@ export function SubmissionForm({
       >
         <Upload className="text-brand-terracotta size-5" />
         <p className="text-muted-foreground">
-          {disabled ? "Submission locked" : "Drop files here, or click to browse"}
+          {disabled ? "This has been marked, so you can't add files" : "Drop files here, or click to browse"}
         </p>
         <p className="text-muted-foreground text-xs">
           Up to 100 MB each
@@ -240,7 +240,7 @@ export function SubmissionForm({
             disabled={submitting || files.length === 0}
           >
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Submit
+            Hand in
           </Button>
         </div>
       )}

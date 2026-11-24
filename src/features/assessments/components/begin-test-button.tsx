@@ -32,7 +32,7 @@ export interface BeginTestButtonProps {
 export function BeginTestButton({
   testId,
   redirectTo,
-  label = "Begin test",
+  label = "Start test",
   className,
 }: BeginTestButtonProps) {
   const router = useRouter();
@@ -45,7 +45,7 @@ export function BeginTestButton({
         if (result?.serverError) throw new Error(result.serverError);
         router.push(redirectTo);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not start test");
+        toast.error(e instanceof Error ? e.message : "We couldn't start the test. Check your connection and try again.");
         // It may have closed while this page was open: show that.
         router.refresh();
       }

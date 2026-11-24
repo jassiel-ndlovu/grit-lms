@@ -60,7 +60,7 @@ const dateFmt = schoolDateFormat({
   minute: "2-digit",
 });
 
-export const metadata = { title: "Test review" };
+export const metadata = { title: "Your test" };
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
 
@@ -96,7 +96,7 @@ export default async function TestReviewPage({ params }: PageProps) {
   if (!student) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: "/dashboard/tests" }, { label: "Review" }]}>
-        No student profile found for this account.
+        This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
       </PageMessage>
     );
   }
@@ -128,8 +128,8 @@ export default async function TestReviewPage({ params }: PageProps) {
       >
         <PageTitle
           eyebrow={test.course.name}
-          title="No submission yet"
-          description="You haven't started this test yet. Open it from your tests list to begin."
+          title="You haven't taken this test"
+          description="Choose Open test to read the instructions and start."
         />
       </PageFrame>
     );
@@ -209,7 +209,7 @@ export default async function TestReviewPage({ params }: PageProps) {
       ]}
       status={
         <StatusChip tone={graded ? "success" : status === "SUBMITTED" ? "info" : "neutral"}>
-          {graded ? "Graded" : status === "SUBMITTED" ? "Awaiting grade" : status}
+          {graded ? "Marked" : status === "SUBMITTED" ? "Waiting to be marked" : status === "LATE" ? "Handed in late" : "In progress"}
         </StatusChip>
       }
     >
@@ -222,13 +222,13 @@ export default async function TestReviewPage({ params }: PageProps) {
       <Card className="p-0 overflow-hidden">
         <div className="border-b border-border px-5 py-3">
           <h2 className="font-display text-sm leading-tight text-foreground">
-            Performance summary
+            Summary
           </h2>
         </div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 sm:grid-cols-4">
           <SummaryStat label="Student" value={student.fullName} />
           <SummaryStat
-            label="Submitted"
+            label="Handed in"
             value={
               submission.submittedAt
                 ? dateFmt.format(submission.submittedAt)
@@ -237,10 +237,10 @@ export default async function TestReviewPage({ params }: PageProps) {
           />
           <SummaryStat
             label="Time limit"
-            value={test.timeLimit ? `${test.timeLimit} min` : "Untimed"}
+            value={test.timeLimit ? `${test.timeLimit} min` : "No time limit"}
           />
           <SummaryStat
-            label="Total questions"
+            label="Questions"
             value={String(stats.total)}
           />
           <SummaryStat
@@ -250,16 +250,16 @@ export default async function TestReviewPage({ params }: PageProps) {
           {canSeeGrades ? (
             <>
               <SummaryStat
-                label="Auto-marked"
+                label="Marked automatically"
                 value={`${stats.autoMarked}/${stats.total}`}
               />
               <SummaryStat
-                label="Pending review"
+                label="Waiting for your tutor"
                 value={String(stats.pending)}
                 muted={stats.pending === 0}
               />
               <SummaryStat
-                label={graded ? "Final score" : "Score so far"}
+                label={graded ? "Your mark" : "Mark so far"}
                 value={
                   grade
                     ? `${grade.score}/${grade.outOf}`
@@ -270,8 +270,8 @@ export default async function TestReviewPage({ params }: PageProps) {
             </>
           ) : (
             <SummaryStat
-              label="Grade"
-              value="Hidden until released"
+              label="Your mark"
+              value="Shows once your tutor has marked the test"
               muted
             />
           )}
@@ -461,9 +461,9 @@ function ReviewNode({
     correct: { label: "Correct", cls: "bg-emerald-100 text-emerald-800" },
     partial: { label: "Partially correct", cls: "bg-sky-100 text-sky-800" },
     wrong: { label: "Incorrect", cls: "bg-red-100 text-red-800" },
-    pending: { label: "Pending review", cls: "bg-amber-100 text-amber-800" },
+    pending: { label: "Waiting for your tutor", cls: "bg-amber-100 text-amber-800" },
     unanswered: { label: "Not answered", cls: "bg-slate-100 text-slate-600" },
-    context: { label: "Context", cls: "bg-slate-100 text-slate-600" },
+    context: { label: "Information", cls: "bg-slate-100 text-slate-600" },
   }[statusTone];
 
   const children = byParent.get(q.id) ?? [];
@@ -475,7 +475,7 @@ function ReviewNode({
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-muted-foreground text-xs font-medium tabular-nums">
-            {isContext ? `Context ${path}` : `Question ${path} · ${q.points} ${q.points === 1 ? "point" : "points"}`}
+            {isContext ? `Information ${path}` : `Question ${path} · ${q.points} ${q.points === 1 ? "mark" : "marks"}`}
           </p>
           <div className="mt-1">
             <LessonMarkdown content={q.question} className="prose-sm" />
@@ -546,7 +546,7 @@ function ReviewNode({
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
           <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-amber-800">
             <Wand2 className="size-3" />
-            Tutor feedback
+            Your tutor&apos;s comment
           </p>
           <LessonMarkdown content={qg.feedback} className="prose-sm" />
         </div>
@@ -619,7 +619,7 @@ function AnswerView({ type, value }: { type: string; value: unknown }) {
     (typeof value === "string" && value.trim() === "") ||
     (Array.isArray(value) && value.length === 0);
   if (empty) {
-    return <p className="text-muted-foreground italic text-xs">No answer recorded.</p>;
+    return <p className="text-muted-foreground italic text-xs">You didn&apos;t answer this question.</p>;
   }
   switch (type) {
     case "MULTIPLE_CHOICE":
@@ -732,7 +732,7 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
   switch (q.type) {
     case "MATH_EXPRESSION":
       if (typeof q.answer !== "string" || q.answer.trim() === "") {
-        return <p className="text-muted-foreground italic text-xs">Tutor-only — graded manually.</p>;
+        return <p className="text-muted-foreground italic text-xs">Your tutor marks this one.</p>;
       }
       return <MathsAnswerText tex={q.answer} className="text-foreground" />;
     case "MULTIPLE_CHOICE":
@@ -740,13 +740,13 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
     case "SHORT_ANSWER":
     case "NUMERIC":
       if (q.answer == null || (typeof q.answer === "string" && q.answer.trim() === "")) {
-        return <p className="text-muted-foreground italic text-xs">Tutor-only — graded manually.</p>;
+        return <p className="text-muted-foreground italic text-xs">Your tutor marks this one.</p>;
       }
       return <div className="text-foreground"><LessonMarkdown content={String(q.answer)} className="prose-sm" /></div>;
 
     case "MULTI_SELECT": {
       const arr = Array.isArray(q.answer) ? (q.answer as string[]) : [];
-      if (arr.length === 0) return <p className="text-muted-foreground italic text-xs">No key provided.</p>;
+      if (arr.length === 0) return <p className="text-muted-foreground italic text-xs">Your tutor hasn&apos;t added the answer.</p>;
       return (
         <ul className="text-foreground list-disc pl-5 space-y-0.5">
           {arr.map((v, i) => <li key={i}><LessonMarkdown content={v} className="prose-sm" /></li>)}
@@ -756,7 +756,7 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
 
     case "FILL_IN_THE_BLANK": {
       const arr = Array.isArray(q.answer) ? (q.answer as string[]) : [];
-      if (arr.length === 0) return <p className="text-muted-foreground italic text-xs">No key provided.</p>;
+      if (arr.length === 0) return <p className="text-muted-foreground italic text-xs">Your tutor hasn&apos;t added the answer.</p>;
       return (
         <ol className="text-foreground list-decimal pl-5 space-y-0.5">
           {arr.map((v, i) => <li key={i}>{v}</li>)}
@@ -766,7 +766,7 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
 
     case "REORDER": {
       const arr = q.reorderItems ?? [];
-      if (arr.length === 0) return <p className="text-muted-foreground italic text-xs">No key provided.</p>;
+      if (arr.length === 0) return <p className="text-muted-foreground italic text-xs">Your tutor hasn&apos;t added the answer.</p>;
       return (
         <ol className="text-foreground list-decimal pl-5 space-y-0.5">
           {arr.map((v, i) => <li key={i}><LessonMarkdown content={v} className="prose-sm" /></li>)}
@@ -776,7 +776,7 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
 
     case "MATCHING": {
       const pairs = (q.matchPairs ?? []) as Array<{ left: string; right: string }>;
-      if (pairs.length === 0) return <p className="text-muted-foreground italic text-xs">No pairs provided.</p>;
+      if (pairs.length === 0) return <p className="text-muted-foreground italic text-xs">Your tutor hasn&apos;t added the answer.</p>;
       return (
         <ul className="text-foreground space-y-1">
           {pairs.map((p, i) => (
@@ -797,7 +797,7 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
     case "ESSAY":
     case "CODE": {
       if (typeof q.answer !== "string" || q.answer.trim() === "") {
-        return <p className="text-muted-foreground italic text-xs">Graded manually — your tutor hasn&apos;t published a model answer.</p>;
+        return <p className="text-muted-foreground italic text-xs">Your tutor marks this one, and hasn&apos;t added a model answer.</p>;
       }
       return q.type === "CODE" ? (
         <pre className="text-foreground whitespace-pre-wrap font-mono text-xs">{q.answer}</pre>
@@ -809,7 +809,7 @@ function CorrectAnswerView({ q }: { q: QuestionRow }) {
     case "FILE_UPLOAD": {
       const solution = toFileUploadMemo(q.answer);
       if (!solution) {
-        return <p className="text-muted-foreground italic text-xs">Graded manually — your tutor hasn&apos;t published a model answer.</p>;
+        return <p className="text-muted-foreground italic text-xs">Your tutor marks this one, and hasn&apos;t added a model answer.</p>;
       }
       if (solution.kind === "text") {
         return <div className="text-foreground"><LessonMarkdown content={solution.text} className="prose-sm" /></div>;

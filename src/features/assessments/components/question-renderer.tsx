@@ -116,7 +116,7 @@ export function QuestionRenderer(props: QuestionRendererProps) {
     default:
       return (
         <p className="text-muted-foreground italic text-sm">
-          Unsupported question type.
+          This kind of question can&apos;t be shown here. Ask your tutor about it.
         </p>
       );
   }
@@ -565,7 +565,7 @@ function Matching({ question, value, onChange, disabled, shuffleSeed }: Question
             disabled={disabled}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select match" />
+              <SelectValue placeholder="Choose the match" />
             </SelectTrigger>
             <SelectContent>
               {rightOptions.map((r) => (
@@ -620,7 +620,7 @@ function FileUpload({ question, value, onChange, disabled, testId }: QuestionRen
         });
         toast.success(`Uploaded ${file.name}.`, { id: t });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Upload failed";
+        const message = err instanceof Error ? err.message : "The upload failed. Check your connection and try again.";
         // Surface it both ways: the toast for the moment, the inline message
         // so the student still sees why nothing attached after it fades.
         toast.error(`${file.name}: ${message}`, { id: t });

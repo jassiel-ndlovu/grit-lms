@@ -37,7 +37,7 @@ export function RubricEditor({
         <Button type="button" variant="outline" size="sm" onClick={() => onChange(starterRubric(points))}>
           <ListChecks /> Add a rubric
         </Button>
-        <span className="text-muted-foreground text-xs">Split the marks into criteria, for you and for AI marking.</span>
+        <span className="text-muted-foreground text-xs">Split the marks into criteria, such as method and answer. You and AI marking both use them.</span>
       </div>
     );
   }
@@ -62,7 +62,7 @@ export function RubricEditor({
               id={`${idPrefix}-crit-${c.id}`}
               value={c.label}
               maxLength={200}
-              placeholder="e.g. Uses evidence from the text"
+              placeholder="Uses evidence from the text"
               onChange={(e) => setCriterion(i, { label: e.target.value })}
               className="h-9 min-w-0 flex-1"
             />

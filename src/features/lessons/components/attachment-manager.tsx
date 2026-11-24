@@ -86,8 +86,8 @@ export function AttachmentManager({
           return { title: deriveTitleFromFilename(file.name), url };
         } catch (e) {
           toast.error(
-            `Failed to upload ${file.name}: ${
-              e instanceof Error ? e.message : "Upload failed"
+            `We couldn't upload ${file.name}: ${
+              e instanceof Error ? e.message : "check your connection and try again."
             }`,
           );
           return null;
@@ -100,8 +100,8 @@ export function AttachmentManager({
       onChange([...value, ...ok]);
       toast.success(
         ok.length === 1
-          ? "Attachment uploaded"
-          : `${ok.length} attachments uploaded`,
+          ? "File added"
+          : `${ok.length} files added`,
       );
     }
 
@@ -155,7 +155,7 @@ export function AttachmentManager({
           </button>
         </p>
         <p className="text-muted-foreground text-xs">
-          PDFs, images, Office docs — up to 100 MB each
+          PDFs, images, Word, Excel or PowerPoint files, up to 100 MB each
         </p>
       </div>
 
@@ -176,7 +176,7 @@ export function AttachmentManager({
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground text-xs">
           {value.length === 0
-            ? "No attachments yet"
+            ? "No files or links yet"
             : `${value.length} attachment${value.length === 1 ? "" : "s"}`}
         </p>
         <Button type="button" variant="outline" size="sm" onClick={addLink}>
@@ -196,7 +196,7 @@ export function AttachmentManager({
                 <Input
                   value={a.title}
                   onChange={(e) => update(i, { title: e.target.value })}
-                  placeholder="Resource title"
+                  placeholder="What students see, for example Worksheet 1"
                 />
                 <Input
                   type="url"

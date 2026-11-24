@@ -87,7 +87,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     if (!student) {
       return (
         <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Assignment" }]}>
-          No student profile found for this account.
+          This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
         </PageMessage>
       );
     }
@@ -103,7 +103,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     if (!enrolled) {
       return (
         <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Assignment" }]}>
-          You aren&apos;t enrolled in this course.
+          You&apos;re not on this course. Ask your tutor to add you.
         </PageMessage>
       );
     }
@@ -125,7 +125,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
               </span>
               <span className="inline-flex items-center gap-1">
                 <Hourglass className="size-4" />
-                {submission.totalPoints} points
+                {submission.totalPoints} marks
               </span>
               {submission.maxAttempts && (
                 <span className="inline-flex items-center gap-1">
@@ -141,7 +141,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
           <Card className="space-y-3 p-6">
             <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
               <FileText className="text-brand-terracotta size-4" />
-              Brief
+              What to do
             </h2>
             {/* The rich document when there is one, else the markdown
                 (contracts/editor.md); both render maths. */}
@@ -173,7 +173,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         <Card className="space-y-4 p-6">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-              Your submission
+              Your work
             </h2>
             {entry && (
               <Badge
@@ -186,11 +186,11 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                 }
               >
                 {graded
-                  ? "Graded"
+                  ? "Marked"
                   : entry.status === "SUBMITTED"
-                    ? "Awaiting grade"
+                    ? "Waiting to be marked"
                     : entry.status === "LATE"
-                      ? "Late"
+                      ? "Handed in late"
                       : "In progress"}
               </Badge>
             )}
@@ -220,7 +220,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
               {grade.finalComments && (
                 <div className="max-w-md text-right text-sm">
                   <p className="text-muted-foreground text-xs uppercase tracking-wide">
-                    Feedback
+                    Your tutor&apos;s comment
                   </p>
                   <p className="text-foreground mt-1">{grade.finalComments}</p>
                 </div>
@@ -245,11 +245,10 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
             <Card className="p-6">
               <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
                 <BookOpen className="text-brand-terracotta size-4" />
-                Section breakdown
+                Marks for each section
               </h2>
               <p className="text-muted-foreground mt-1 text-xs">
-                Your tutor split this into sections. Click any memo link to
-                open the model answer for that part.
+                Your tutor marked this in sections. Open a section&apos;s memo to see its model answer.
               </p>
               <Separator className="my-4" />
               <ul className="space-y-4">
@@ -328,10 +327,10 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
             <Card className="p-6">
               <h2 className="font-display flex items-center gap-2 text-lg leading-tight tracking-tight text-foreground">
                 <Paperclip className="text-brand-terracotta size-4" />
-                Memo &amp; model answers
+                Memo and model answers
               </h2>
               <p className="text-muted-foreground mt-1 text-xs">
-                Solution notes shared by your tutor for this assignment.
+                Your tutor&apos;s worked solutions for this assignment.
               </p>
               <Separator className="my-4" />
               <ul className="space-y-1 text-sm">
@@ -364,7 +363,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
     if (teaches === 0) {
       return (
         <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Assignment" }]}>
-          You don&apos;t own this assignment.
+          Only staff who teach or manage this assignment&apos;s course can open this page.
         </PageMessage>
       );
     }
@@ -384,7 +383,7 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
               </span>
               <span className="inline-flex items-center gap-1">
                 <Hourglass className="size-4" />
-                {submission.totalPoints} points
+                {submission.totalPoints} marks
               </span>
             </div>
           }
@@ -393,11 +392,11 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
         <Card className="overflow-hidden p-0">
           <div className="flex items-baseline justify-between gap-3 px-5 py-4">
             <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-              Student submissions
+              Students&apos; work
             </h2>
             <span className="text-muted-foreground text-xs">
               {entries.length}{" "}
-              {entries.length === 1 ? "entry" : "entries"}
+              handed in
             </span>
           </div>
           <Separator />
@@ -405,8 +404,8 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
             <EmptyState
               compact
               illustration={<Scene name="nothing-to-grade" />}
-              title="No submissions yet"
-              description="Students' work shows up here when they hand in."
+              title="Nothing handed in yet"
+              description="Each student's work shows here when they hand it in, ready to mark."
             />
           ) : (
             <ul className="divide-border divide-y">
@@ -443,11 +442,11 @@ export default async function SubmissionDetailPage({ params }: PageProps) {
                           }
                         >
                           {e.status === "GRADED"
-                            ? "Graded"
+                            ? "Marked"
                             : e.status === "SUBMITTED"
-                              ? "Awaiting grade"
+                              ? "Waiting to be marked"
                               : e.status === "LATE"
-                                ? "Late"
+                                ? "Handed in late"
                                 : "In progress"}
                         </Badge>
                         {e.grade && (

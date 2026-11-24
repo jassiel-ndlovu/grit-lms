@@ -42,7 +42,7 @@ export default async function StudentCoursesPage() {
   // Staff who aren't also students manage courses rather than take them (old links and bookmarks land here).
   if (!student && session.user.role !== "STUDENT") redirect("/dashboard/manage-courses");
   if (!student) {
-    return <PageMessage breadcrumb={[{ label: "My courses" }]}>No student profile found for this account.</PageMessage>;
+    return <PageMessage breadcrumb={[{ label: "My courses" }]}>This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.</PageMessage>;
   }
 
   const courses = await listCoursesByStudentId(student.id);
@@ -68,7 +68,7 @@ export default async function StudentCoursesPage() {
         </>
       }
     >
-      <PageTitle icon={<BookOpen />} title="My courses" description="Continue learning where you left off." />
+      <PageTitle icon={<BookOpen />} title="My courses" description="The courses you're on. Open one to carry on with its lessons, tests and assignments." />
 
       <CourseGrid
         view={(await getUserPreferences(session.user.id)).preferredView}
@@ -77,8 +77,8 @@ export default async function StudentCoursesPage() {
           <EmptyState
             className="border-input rounded-lg border border-dashed"
             illustration={<Scene name="empty-courses" />}
-            title="You haven't enrolled in any courses yet"
-            description="Browse the catalogue to find a course to enrol in."
+            title="You're not on any courses yet"
+            description="Choose Find courses to ask to join one, or ask your tutor to add you."
           />
         }
       >

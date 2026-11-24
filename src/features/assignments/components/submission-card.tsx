@@ -51,19 +51,19 @@ function statusFor(entry: CardEntry, dueDate: Date) {
   if (!entry) {
     return dueDate.getTime() < Date.now()
       ? { label: "Past due", tone: "destructive" as const }
-      : { label: "Not submitted", tone: "muted" as const };
+      : { label: "Not handed in", tone: "muted" as const };
   }
   switch (entry.status) {
     case "GRADED":
-      return { label: "Graded", tone: "brand" as const };
+      return { label: "Marked", tone: "brand" as const };
     case "SUBMITTED":
-      return { label: "Awaiting grade", tone: "soft" as const };
+      return { label: "Waiting to be marked", tone: "soft" as const };
     case "LATE":
-      return { label: "Late", tone: "destructive" as const };
+      return { label: "Handed in late", tone: "destructive" as const };
     case "IN_PROGRESS":
       return { label: "In progress", tone: "secondary" as const };
     default:
-      return { label: "Not submitted", tone: "muted" as const };
+      return { label: "Not handed in", tone: "muted" as const };
   }
 }
 
@@ -132,7 +132,7 @@ export function SubmissionCard({
 
         {score != null && outOf > 0 && (
           <div className="border-border flex items-center justify-between border-t pt-3">
-            <span className="text-muted-foreground text-xs">Score</span>
+            <span className="text-muted-foreground text-xs">Mark</span>
             <span className="font-display tabular-nums text-foreground">
               {score}
               <span className="text-muted-foreground"> / {outOf}</span>

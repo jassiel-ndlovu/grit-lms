@@ -49,7 +49,7 @@ export default async function PreviewTestPage({ params }: PageProps) {
   if (!owns) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: testRoutes.list }, { label: "Test" }]}>
-        You don&apos;t own this test.
+        Only staff who teach or manage this test&apos;s course can open this page.
       </PageMessage>
     );
   }

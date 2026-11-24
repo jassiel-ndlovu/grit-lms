@@ -262,7 +262,7 @@ export function EventForm({ courseId, timeZone, initialDate, series, occurrence,
       onSuccess?.();
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't save the session. Check your connection and try again.");
     } finally {
       setPending(false);
     }
@@ -423,7 +423,7 @@ export function EventForm({ courseId, timeZone, initialDate, series, occurrence,
                 ) : null}
               </div>
               <FormDescription>
-                {provider ? `${provider} link. ` : ""}Paste a Meet, Zoom or Teams link. Learners get a Join button 15 minutes before the start.
+                {provider ? `${provider} link. ` : ""}Paste a Meet, Zoom or Teams link. Students get a Join button 15 minutes before the start.
               </FormDescription>
               <FormMessage />
             </FormItem>

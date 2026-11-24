@@ -108,8 +108,8 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     topic: "TESTS",
     keywords: ["results", "grades", "feedback", "marked"],
     body: [
-      "Your tutor marks your work and chooses when to share the marks. Until then, the test shows as handed in.",
-      "When marks are shared, you'll get a notification. Open Grades to see your mark, each answer and your tutor's comments.",
+      "Questions with a set answer can be marked straight away, if your tutor chose that. The rest show once your tutor has marked your work. Until then, it shows as waiting to be marked.",
+      "When your mark is in, you'll get a notification. Open Grades to see your mark, each answer and your tutor's comments.",
       "If it has been more than a week, ask your tutor through Help: choose \"Tests, assignments and marks\".",
     ],
   },
@@ -121,7 +121,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     keywords: ["upload", "submit", "homework", "file"],
     body: [
       "1. Choose Assignments in the menu and open the assignment.",
-      "2. Add your file or type your answer, then hand it in.",
+      "2. Add your files, then choose Hand in.",
       "3. You'll see a receipt, and your tutor is told. You can hand in again before the due date if your tutor allows it.",
     ],
   },
@@ -236,7 +236,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
       "1. Open Tests and choose New test. Add questions and the correct answers: questions with set answers are marked for you.",
       "2. Choose when it opens and when it's due, then publish it. Students are told.",
       "3. When students hand in, open the test's submissions to mark written answers and add comments.",
-      "4. Share the marks when you're ready. Students and parents see them only after that.",
+      "4. Choose Save and share mark for each student. The student gets a notification, and they and their parents can see the mark.",
     ],
   },
   {

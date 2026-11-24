@@ -74,7 +74,7 @@ export function GenerateFromBankDialog({
         picks: valid.map((row) => ({ topic: row.topic, count: Math.min(MAX_DRAW_COUNT, Math.floor(Number(row.count))) })),
       });
       if (r?.serverError) throw new Error(r.serverError);
-      if (!r?.data) throw new Error("The draw didn't work. Try again.");
+      if (!r?.data) throw new Error("We couldn't pick the questions. Try again.");
       const { items, short } = r.data;
       if (items.length) onAdd(items);
       if (short.length) {
@@ -85,7 +85,7 @@ export function GenerateFromBankDialog({
       if (items.length) setOpen(false);
       else if (!short.length) toast.error("Nothing to add.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "The draw didn't work. Try again.");
+      toast.error(e instanceof Error ? e.message : "We couldn't pick the questions. Try again.");
     } finally {
       setPending(false);
     }

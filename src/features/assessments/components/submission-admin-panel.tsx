@@ -42,10 +42,10 @@ import {
 const STATUS_OPTIONS = [
   { value: "NOT_STARTED", label: "Not started" },
   { value: "IN_PROGRESS", label: "In progress" },
-  { value: "SUBMITTED", label: "Submitted (awaiting grade)" },
-  { value: "GRADED", label: "Graded" },
-  { value: "LATE", label: "Late" },
-  { value: "NOT_SUBMITTED", label: "Not submitted" },
+  { value: "SUBMITTED", label: "Handed in (to mark)" },
+  { value: "GRADED", label: "Marked" },
+  { value: "LATE", label: "Handed in late" },
+  { value: "NOT_SUBMITTED", label: "Not handed in" },
 ] as const;
 
 type Status = (typeof STATUS_OPTIONS)[number]["value"];
@@ -76,10 +76,10 @@ export function SubmissionAdminPanel({
       const result = await updateTestSubmissionStatus({ id: submissionId, status: next });
       if (result?.serverError) throw new Error(result.serverError);
       setStatus(next);
-      toast.success("Status updated");
+      toast.success("Status changed.");
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update status");
+      toast.error(e instanceof Error ? e.message : "We couldn't change the status. Try again.");
     } finally {
       setSavingStatus(false);
     }
@@ -94,7 +94,7 @@ export function SubmissionAdminPanel({
       router.push(`/dashboard/tutor-tests/${testId}/submissions`);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't delete this attempt. Try again.");
       setDeleting(false);
     }
   }
@@ -107,7 +107,7 @@ export function SubmissionAdminPanel({
             Submission
           </h2>
           <p className="text-muted-foreground text-xs">
-            Change the status by hand, or delete the attempt. Deleting removes the grade too.
+            Change this attempt&apos;s status by hand, or delete it. Deleting it deletes its mark too.
           </p>
         </div>
 
@@ -156,10 +156,7 @@ export function SubmissionAdminPanel({
               Delete {studentName}&apos;s submission?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes their answers, per-question grades,
-              and overall grade for this test. The student will need to
-              retake the test if they still have access. This action cannot
-              be undone.
+              Their answers, the mark for each question and their total are deleted. They can take the test again if it&apos;s still open. This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

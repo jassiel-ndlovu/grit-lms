@@ -133,7 +133,7 @@ export function KindChooser() {
         ))}
       </div>
       <p className="text-muted-foreground text-xs">
-        You can&apos;t change this later, but you can create another workspace. Your 14-day trial starts now, with no card.
+        You can&apos;t change this later, but you can set up another organisation. Your 14-day trial starts now, with no card.
       </p>
       <ErrorText error={error} />
     </div>

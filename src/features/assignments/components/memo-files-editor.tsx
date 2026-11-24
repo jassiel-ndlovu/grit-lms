@@ -67,7 +67,7 @@ export function MemoFilesEditor({ submissionId, initialUrls }: Props) {
         uploaded.push({ name: file.name, url });
         toast.success(`Uploaded ${file.name}.`, { id: t });
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Upload failed", {
+        toast.error(err instanceof Error ? err.message : "The upload failed. Check your connection and try again.", {
           id: t,
         });
       }
@@ -95,7 +95,7 @@ export function MemoFilesEditor({ submissionId, initialUrls }: Props) {
       toast.success("Memo files saved.");
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed");
+      toast.error(err instanceof Error ? err.message : "We couldn't save the memo files. Try again.");
     } finally {
       setSaving(false);
     }
@@ -105,7 +105,7 @@ export function MemoFilesEditor({ submissionId, initialUrls }: Props) {
     <div className="space-y-3">
       {files.length === 0 ? (
         <p className="text-muted-foreground rounded-md border border-dashed p-3 text-center text-xs">
-          No memo files attached to this assignment yet.
+          No memo yet. Add the worked solutions as a file if you have them.
         </p>
       ) : (
         <ul className="space-y-1">

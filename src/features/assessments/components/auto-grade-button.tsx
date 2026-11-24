@@ -35,11 +35,11 @@ export function AutoGradeButton({ submissionId }: AutoGradeButtonProps) {
       const data = result?.data;
       if (!data) throw new Error("Auto-grade returned no payload");
       toast.success(
-        `Auto-graded ${data.autoCount} question${data.autoCount === 1 ? "" : "s"} (${data.autoScore}/${data.autoOutOf}). ${data.pendingCount} still need manual review.`,
+        `Marked ${data.autoCount} question${data.autoCount === 1 ? "" : "s"} (${data.autoScore}/${data.autoOutOf}). ${data.pendingCount} still need you to mark them.`,
       );
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Auto-grade failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't mark these automatically. Try again.");
     } finally {
       setPending(false);
     }
@@ -58,7 +58,7 @@ export function AutoGradeButton({ submissionId }: AutoGradeButtonProps) {
       ) : (
         <Wand2 className="size-4" />
       )}
-      Run auto-grade
+      Auto-mark
     </Button>
   );
 }

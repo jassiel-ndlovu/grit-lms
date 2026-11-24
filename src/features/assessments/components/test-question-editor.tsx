@@ -126,7 +126,7 @@ export const TYPE_LABELS: Record<EditorQuestionType, string> = {
   FILL_IN_THE_BLANK: "Fill in the blank",
   NUMERIC: "Numeric",
   MATH_EXPRESSION: "Maths expression",
-  NONE: "Context (no answer)",
+  NONE: "Information (no answer)",
 };
 
 /** Fresh blank question — kept here so the outer form and this component
@@ -228,7 +228,7 @@ export function TestQuestionEditor({
           toast.success(`Attached ${file.name}.`, { id: t });
         } catch (err) {
           toast.error(
-            `${file.name}: ${err instanceof Error ? err.message : "Upload failed"}`,
+            `${file.name}: ${err instanceof Error ? err.message : "the upload failed. Check your connection and try again."}`,
             { id: t },
           );
         }
@@ -319,7 +319,7 @@ export function TestQuestionEditor({
               isContext ? "text-muted-foreground" : "text-brand-terracotta",
             )}
           >
-            {isContext ? `Context ${label}` : `Question ${label}`}
+            {isContext ? `Information ${label}` : `Question ${label}`}
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -330,7 +330,7 @@ export function TestQuestionEditor({
               size="icon"
               className="size-7"
               onClick={onMoveUp}
-              aria-label={`Move ${isContext ? "context" : "question"} ${label} up`}
+              aria-label={`Move ${isContext ? "information" : "question"} ${label} up`}
             >
               <ChevronUp className="size-3.5" />
             </Button>
@@ -342,7 +342,7 @@ export function TestQuestionEditor({
               size="icon"
               className="size-7"
               onClick={onMoveDown}
-              aria-label={`Move ${isContext ? "context" : "question"} ${label} down`}
+              aria-label={`Move ${isContext ? "information" : "question"} ${label} down`}
             >
               <ChevronDown className="size-3.5" />
             </Button>
@@ -354,7 +354,7 @@ export function TestQuestionEditor({
               size="icon"
               className="size-7"
               onClick={onSaveToBank}
-              aria-label={`Save ${isContext ? "context" : "question"} ${label} to the question bank`}
+              aria-label={`Save ${isContext ? "information" : "question"} ${label} to the question bank`}
               title="Save to bank"
             >
               <BookmarkPlus className="size-3.5" />
@@ -366,7 +366,7 @@ export function TestQuestionEditor({
             size="icon"
             className="text-muted-foreground hover:text-destructive size-7"
             onClick={onRemove}
-            aria-label={`Remove ${isContext ? "context" : "question"} ${label}`}
+            aria-label={`Remove ${isContext ? "information" : "question"} ${label}`}
           >
             <Trash2 className="size-3.5" />
           </Button>
@@ -397,7 +397,7 @@ export function TestQuestionEditor({
         </div>
         {!isContext && (
           <div className="space-y-1.5">
-            <label className="text-foreground text-xs font-medium">Points</label>
+            <label className="text-foreground text-xs font-medium">Marks</label>
             <Input
               type="number"
               min={0}
@@ -415,15 +415,15 @@ export function TestQuestionEditor({
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label className="text-foreground text-xs font-medium">
-            {isContext ? "Context text" : "Question"}
+            {isContext ? "Information" : "Question"}
           </label>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground hidden text-[11px] sm:inline">
-              Images embed inline; other files become download links.
+              Images show in the question. Other files show as a link to download.
             </span>
             <PreviewRenderButton
               content={question.question}
-              title={`${isContext ? "Context" : "Question"} ${label} preview`}
+              title={`${isContext ? "Information" : "Question"} ${label} preview`}
             />
             <input
               ref={fileRef}
@@ -478,8 +478,8 @@ export function TestQuestionEditor({
             onChange={(e) => patch("question", e.target.value)}
             placeholder={
               isContext
-                ? "Passage / instructions the sub-questions refer to…"
-                : "What is the derivative of $x^2$? — or drop an image / PDF here"
+                ? "A passage or instructions for the sub-questions below…"
+                : "What is the derivative of $x^2$? You can also drop an image or PDF here."
             }
           />
         </div>
@@ -582,7 +582,7 @@ function TypeSpecificFields({
             onValueChange={(v) => patch("answer", v)}
           >
             <SelectTrigger className="max-w-40">
-              <SelectValue placeholder="Pick one" />
+              <SelectValue placeholder="Choose one" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="true">True</SelectItem>
@@ -623,14 +623,14 @@ function TypeSpecificFields({
             <Input
               value={question.language ?? ""}
               onChange={(e) => patch("language", e.target.value)}
-              placeholder="typescript, python, ..."
+              placeholder="python, java…"
             />
           </div>
           <ModelAnswerField
             value={question.answer}
             onChange={(v) => patch("answer", v)}
             mono
-            placeholder="A reference implementation"
+            placeholder="Code that works, for you to compare with"
           />
         </div>
       );
@@ -639,7 +639,7 @@ function TypeSpecificFields({
         <ModelAnswerField
           value={question.answer}
           onChange={(v) => patch("answer", v)}
-          placeholder="What a full-mark answer covers..."
+          placeholder="What an answer needs for full marks…"
         />
       );
     case "FILE_UPLOAD":
@@ -714,8 +714,7 @@ function ModelAnswerField({
         previewTitle="Model answer preview"
       />
       <p className="text-muted-foreground text-xs">
-        Shown to students in the review page. This question is still marked
-        by hand — a model answer never scores it automatically.
+        Students see it once their test is marked. You still mark this question yourself.
       </p>
     </div>
   );
@@ -764,12 +763,12 @@ function FileUploadModelAnswer({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-foreground text-xs font-medium">Model answer as</span>
+        <span className="text-foreground text-xs font-medium">Give the model answer as</span>
         <div className="border-border inline-flex rounded-md border p-0.5" role="radiogroup">
           {(
             [
               ["files", "Document"],
-              ["text", "Text solution"],
+              ["text", "Text"],
             ] as const
           ).map(([m, name]) => (
             <button
@@ -796,7 +795,7 @@ function FileUploadModelAnswer({
         <ModelAnswerField
           value={value}
           onChange={onChange}
-          placeholder="Write the worked solution — Markdown and $\LaTeX$ supported…"
+          placeholder="Write the worked solution. Maths between $ signs shows as maths…"
         />
       )}
     </div>
@@ -843,7 +842,7 @@ function ModelAnswerFiles({
         toast.success(`Attached ${file.name}.`, { id: t });
       } catch (err) {
         toast.error(
-          `${file.name}: ${err instanceof Error ? err.message : "Upload failed"}`,
+          `${file.name}: ${err instanceof Error ? err.message : "the upload failed. Check your connection and try again."}`,
           { id: t },
         );
       }
@@ -919,8 +918,7 @@ function ModelAnswerFiles({
         {files.length > 0 ? "Add another file" : "Attach a worked solution"}
       </Button>
       <p className="text-muted-foreground text-xs">
-        Shown to students in the review page. This question is still marked
-        by hand.
+        Students see it once their test is marked. You still mark this question yourself.
       </p>
     </div>
   );
@@ -986,7 +984,7 @@ function OptionsEditor({
   return (
     <div className="space-y-2">
       <label className="text-foreground text-xs font-medium">
-        Options {multi ? "(check the correct answers)" : "(pick one as correct)"}
+        Options {multi ? "(mark every correct one)" : "(mark the correct one)"}
       </label>
       <ul className="space-y-2">
         {options.map((opt, i) => (
@@ -1066,7 +1064,7 @@ function MatchingEditor({
   return (
     <div className="space-y-2">
       <label className="text-foreground text-xs font-medium">
-        Pairs (right column is shuffled for students)
+        Pairs (students see the right column in a mixed-up order)
       </label>
       <ul className="space-y-2">
         {pairs.map((p, i) => (
@@ -1262,13 +1260,13 @@ const MATH_MODES: Array<{ value: MathModeValue; label: string; hint: string }> =
   },
   {
     value: "FORM",
-    label: "Same form as the key",
-    hint: "Order and spacing don't matter, but the form does: for a factorised key, x²+3x is wrong.",
+    label: "Same form as your answer",
+    hint: "Order and spacing don't matter, but the form does: if your answer is factorised, x²+3x is wrong.",
   },
   {
     value: "MARGIN",
     label: "A number within a margin",
-    hint: "Write the margin in the key with ±, e.g. 3.14 ± 0.01. Without one the value must match.",
+    hint: "Write the margin after your answer with ±, for example 3,14 ± 0,01. Without one, the number must match.",
   },
 ];
 
@@ -1287,7 +1285,7 @@ function MathsKeyFields({
         <span className="text-foreground text-xs font-medium">Correct answer</span>
         <MathField label="Correct answer" value={key} onChange={(v) => patch("answer", v)} />
         <p className="text-muted-foreground text-xs">
-          Answers that can&apos;t be checked automatically go to you to mark.
+          Answers Nexa can&apos;t check are left for you to mark.
         </p>
       </div>
       <div className="space-y-1.5">

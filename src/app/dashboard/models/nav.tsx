@@ -104,7 +104,7 @@ const ADMIN_NAV_ITEMS: ReadonlyArray<NavItem> = [
 ];
 
 const PARENT_NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { icon: Home, hue: "home", label: "Dashboard", link: "/dashboard", description: "Your learners" },
+  { icon: Home, hue: "home", label: "Dashboard", link: "/dashboard", description: "Your children" },
   { icon: Bell, hue: "inbox", label: "Notifications", link: "/dashboard/notifications", description: "Updates" },
 ];
 

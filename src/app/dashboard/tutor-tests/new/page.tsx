@@ -37,7 +37,7 @@ export default async function NewTestPage() {
           className="border-input rounded-lg border border-dashed"
           illustration={<Scene name="empty-courses" />}
           title="No courses yet"
-          description="Create a course first: tests live inside a course."
+          description="Every test belongs to a course, so create a course first."
           action={
             <Button asChild>
               <Link href="/dashboard/manage-courses">Go to your courses</Link>
@@ -55,7 +55,7 @@ export default async function NewTestPage() {
 
   return (
     <PageFrame type="editor" breadcrumb={[{ label: "Tests", href: "/dashboard/tutor-tests" }, { label: "New test" }]}>
-      <PageTitle title="New test" description="Draft first, publish when ready. Publishing sends a notification to enrolled students." />
+      <PageTitle title="New test" description="Save it as a draft while you work on it. When you publish it, the course's students get a notification and can take it." />
 
       <TestForm courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel }, questionBank: bank.has(c.id) }))} />
     </PageFrame>

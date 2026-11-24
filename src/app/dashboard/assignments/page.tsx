@@ -58,7 +58,7 @@ export default async function SubmissionsIndexPage() {
     if (!student) {
       return (
         <PageMessage breadcrumb={[{ label: "Assignments" }]}>
-          No student profile found for this account.
+          This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
         </PageMessage>
       );
     }
@@ -90,16 +90,26 @@ export default async function SubmissionsIndexPage() {
               illustration={<Scene name="empty-submissions" />}
               title={
                 b === "upcoming"
-                  ? "No upcoming assignments"
+                  ? "No assignments to hand in right now"
                   : b === "missed"
-                    ? "No missed assignments"
+                    ? "You haven't missed any assignments"
                     : b === "submitted"
-                      ? "Nothing waiting for a grade"
+                      ? "Nothing waiting to be marked"
                       : b === "graded"
-                        ? "No graded assignments yet"
-                        : "No active assignments"
+                        ? "No marked assignments yet"
+                        : "No assignments yet"
               }
-              description={b === "upcoming" || b === "missed" ? "You're caught up." : undefined}
+              description={
+                b === "upcoming"
+                  ? "When a tutor sets an assignment on one of your courses, it shows here with its due date."
+                  : b === "submitted"
+                    ? "Work you hand in shows here until your tutor marks it."
+                    : b === "graded"
+                      ? "Your marks and your tutor's comments show here after your work is marked."
+                      : b === "all"
+                        ? "Assignments your tutors set show here."
+                        : undefined
+              }
             />
           }
         >
@@ -137,9 +147,9 @@ export default async function SubmissionsIndexPage() {
     return (
       <PageFrame type="list" breadcrumb={[{ label: "Assignments" }]}>
         <PageTitle
-          eyebrow="Coursework"
+          eyebrow="Your courses"
           title="Assignments"
-          description="Every assignment across your courses, grouped by status."
+          description="Work your tutors have set. Open one to read it and hand in your files."
           illustration={<HeaderAssignments />}
         />
 
@@ -182,14 +192,14 @@ export default async function SubmissionsIndexPage() {
           </WriteGuard>
         }
       >
-        <PageTitle title="Assignments" description="Every assignment you've published, newest due-date first." />
+        <PageTitle title="Assignments" description="Work you've set for your courses, latest due date first. Open one to see and mark what students handed in." />
 
         {rows.length === 0 ? (
           <EmptyState
             className="border-input rounded-lg border border-dashed"
             illustration={<Scene name="empty-submissions" />}
             title="No assignments yet"
-            description="Use New assignment to set the first one."
+            description="Choose New assignment to set one. Students see it once it's published."
           />
         ) : (
           <div className="border-border overflow-hidden rounded-lg border bg-card">
@@ -209,8 +219,8 @@ export default async function SubmissionsIndexPage() {
                     <th className="w-[40%] px-4 py-2 text-left font-medium">Title</th>
                     <th className="px-4 py-2 text-left font-medium">Status</th>
                     <th className="px-4 py-2 text-left font-medium">Due</th>
-                    <th className="px-4 py-2 text-right font-medium">Entries</th>
-                    <th className="px-4 py-2 text-right font-medium">Points</th>
+                    <th className="px-4 py-2 text-right font-medium">Handed in</th>
+                    <th className="px-4 py-2 text-right font-medium">Marks</th>
                     <th className="px-4 py-2 text-right font-medium">Actions</th>
                   </tr>
                 </thead>

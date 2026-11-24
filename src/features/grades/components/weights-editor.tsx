@@ -91,13 +91,13 @@ export function WeightsEditor({ courseId, assessments }: WeightsEditorProps) {
         return;
       }
       if (res?.validationErrors) {
-        toast.error("Some weights were rejected. Check the values and retry.");
+        toast.error("Some weights couldn't be saved. Use numbers from 0 to 100.");
         return;
       }
       toast.success("Weights saved.");
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't save the weights. Try again.");
     } finally {
       setPending(false);
     }
@@ -107,8 +107,7 @@ export function WeightsEditor({ courseId, assessments }: WeightsEditorProps) {
     return (
       <Card className="p-8 text-center">
         <p className="text-muted-foreground text-sm">
-          This course has no tests or assignments yet, so there is nothing to
-          weight.
+          This course has no tests or assignments yet. Add one, then set how much it counts.
         </p>
       </Card>
     );
@@ -121,11 +120,10 @@ export function WeightsEditor({ courseId, assessments }: WeightsEditorProps) {
       <div className="flex flex-wrap items-baseline justify-between gap-3 px-5 py-4">
         <div>
           <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-            Assessment weights
+            How much each one counts
           </h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            Leave a row blank to weight it by its marks. Explicit weights are
-            taken first; whatever is left over is shared among the rest.
+            Set each test&apos;s or assignment&apos;s percentage of the final mark. Leave one empty and it shares what&apos;s left over, by its total marks.
           </p>
         </div>
         <Badge
@@ -137,7 +135,7 @@ export function WeightsEditor({ courseId, assessments }: WeightsEditorProps) {
           ) : (
             <AlertTriangle className="mr-1 size-3" />
           )}
-          {plan.allocated}% allocated
+          {plan.allocated}% set
         </Badge>
       </div>
       <Separator />
@@ -169,9 +167,9 @@ export function WeightsEditor({ courseId, assessments }: WeightsEditorProps) {
               <div className="flex items-center gap-3 shrink-0">
                 <span
                   className="text-muted-foreground w-28 text-right text-xs tabular-nums"
-                  title="Share of the final mark this row actually carries"
+                  title="How much of the final mark this counts for"
                 >
-                  {a.explicit ? "set" : "by points"} ·{" "}
+                  {a.explicit ? "set" : "from its marks"} ·{" "}
                   {Math.round(a.effectiveWeight * 10) / 10}%
                 </span>
                 <div className="flex items-center gap-1">
@@ -199,8 +197,8 @@ export function WeightsEditor({ courseId, assessments }: WeightsEditorProps) {
                   onClick={() =>
                     setValues((prev) => ({ ...prev, [a.id]: "" }))
                   }
-                  aria-label={`Reset ${a.title} to weight by points`}
-                  title="Back to weighting by points"
+                  aria-label={`Reset ${a.title} to count by its marks`}
+                  title="Count it by its marks"
                 >
                   <RotateCcw className="size-4" />
                 </Button>
@@ -220,7 +218,7 @@ export function WeightsEditor({ courseId, assessments }: WeightsEditorProps) {
           }
         >
           {plan.warning ??
-            "Weights add up to 100%. Students are measured against the assessments that have actually been graded."}
+            "The weights add up to 100%. A student's mark so far uses only what has been marked."}
         </p>
         <Button onClick={onSave} disabled={pending || !dirty} variant="brand">
           {pending ? (

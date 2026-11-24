@@ -44,12 +44,12 @@ export function DeleteEntryButton({
     setPending(true);
     try {
       const res = await deleteEntry({ id: entryId });
-      if (!res?.data) throw new Error(res?.serverError ?? "Delete failed");
+      if (!res?.data) throw new Error(res?.serverError ?? "We couldn't delete this work. Try again.");
       toast.success(`Deleted ${studentName}'s hand-in`);
       setOpen(false);
       router.push(assignmentRoutes.detail(submissionId));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Delete failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't delete this work. Try again.");
     } finally {
       setPending(false);
     }
@@ -66,9 +66,7 @@ export function DeleteEntryButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {studentName}&apos;s hand-in?</AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently removes this hand-in, its grade and its section
-            marks. {studentName} can hand in again while the assignment is
-            open. This cannot be undone.
+            The files they handed in, the mark and any section marks are deleted. {studentName} can hand in again while the assignment is open. This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

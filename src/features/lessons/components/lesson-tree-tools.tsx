@@ -36,7 +36,7 @@ export function LessonTreeTools({ courseId, labelScheme, tree, titles }: LessonT
       scheme: isDefaultScheme(next) ? [] : next,
     });
     if (res?.serverError || res?.validationErrors) {
-      toast.error(res.serverError ?? "Numbering was rejected.");
+      toast.error(res.serverError ?? "We couldn't save that numbering. Try again.");
       return;
     }
     toast.success("Lesson numbering updated.");
@@ -47,7 +47,7 @@ export function LessonTreeTools({ courseId, labelScheme, tree, titles }: LessonT
     const t = toast.loading("Saving lesson order…");
     const res = await reorderLessons({ courseId, tree: next });
     if (res?.serverError || res?.validationErrors) {
-      toast.error(res.serverError ?? "Order was rejected.", { id: t });
+      toast.error(res.serverError ?? "We couldn't save that order. Try again.", { id: t });
       return;
     }
     toast.success("Lesson order saved.", { id: t });

@@ -142,7 +142,7 @@ export default async function DashboardLanding({
     select: { id: true, fullName: true },
   });
   if (!student) {
-    return <PageMessage breadcrumb={[{ label: "Home" }]}>No student profile found for this account.</PageMessage>;
+    return <PageMessage breadcrumb={[{ label: "Home" }]}>This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.</PageMessage>;
   }
 
   const prefs = await getUserPreferences(session.user.id);
@@ -251,13 +251,13 @@ export default async function DashboardLanding({
         title="Welcome back to your studies"
         description={
           courses.length === 0
-            ? "Browse the catalogue to enrol in your first course."
-            : `${courses.length} ${courses.length === 1 ? "course" : "courses"} in motion. ${completedLessons} ${completedLessons === 1 ? "lesson" : "lessons"} completed.`
+            ? "You're not on a course yet. Choose Find courses in the menu to ask to join one, or ask your tutor to add you."
+            : `${courses.length} ${courses.length === 1 ? "course" : "courses"} on the go. ${completedLessons} ${completedLessons === 1 ? "lesson" : "lessons"} completed.`
         }
         properties={
           <StatTiles>
             <StatTile icon={<TrendingUp />} label="Progress" value={`${averageProgress}%`} />
-            <StatTile icon={<Target />} label="Up next" value={String(upNext.length)} />
+            <StatTile icon={<Target />} label="Coming up" value={String(upNext.length)} />
             <StatTile icon={<GraduationCap />} label="Average" value={overall != null ? `${overall}%` : "-"} />
           </StatTiles>
         }
@@ -302,7 +302,7 @@ export default async function DashboardLanding({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="space-y-4">
-          <SectionHeader title="Up next" href="/dashboard/calendar" label="View schedule" />
+          <SectionHeader title="Coming up" href="/dashboard/calendar" label="Open calendar" />
           <Card className="overflow-hidden p-0">
             {upNext.length === 0 ? (
               <EmptyState
@@ -341,14 +341,14 @@ export default async function DashboardLanding({
         </section>
 
         <section className="space-y-4">
-          <SectionHeader title="Recent grades" href="/dashboard/grades" label="All grades" />
+          <SectionHeader title="Latest marks" href="/dashboard/grades" label="All marks" />
           <Card className="overflow-hidden p-0">
             {recentGrades.length === 0 ? (
               <EmptyState
                 compact
                 illustration={<Scene name="nothing-to-grade" />}
-                title="No grades released yet"
-                description="Marks show up here once they're released."
+                title="No marks yet"
+                description="When a tutor marks your work, the mark shows here."
               />
             ) : (
               <ul className="divide-border divide-y">

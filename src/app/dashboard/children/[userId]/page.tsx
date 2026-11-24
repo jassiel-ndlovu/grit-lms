@@ -38,7 +38,7 @@ import { DEFAULT_TIME_ZONE, formatDate, resolveLocale } from "@/lib/datetime";
 import { canIn, getViewer } from "@/lib/viewer";
 import { ProgressBar } from "@/components/ui/progress-bar";
 
-export const metadata = { title: "Your learner" };
+export const metadata = { title: "Your child" };
 
 export default async function ChildPage({ params }: { params: Promise<{ userId: string }> }) {
   const viewer = await getViewer();
@@ -65,9 +65,9 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
   const latest = overview.marks[0] ?? null;
 
   return (
-    <PageFrame type="record" breadcrumb={[{ label: "Your learners", href: childRoutes.home }, { label: child.name }]}>
+    <PageFrame type="record" breadcrumb={[{ label: "Your children", href: childRoutes.home }, { label: child.name }]}>
       <PageTitle
-        eyebrow={child.workspaces.length ? child.workspaces.map((w) => w.name).join(" · ") : "Not learning anywhere yet"}
+        eyebrow={child.workspaces.length ? child.workspaces.map((w) => w.name).join(" · ") : "Not on a course yet"}
         title={child.name}
         description={
           courseCount === 0
@@ -142,7 +142,7 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
                 compact
                 illustration={<Scene name="calendar-empty" />}
                 title="Nothing due soon"
-                description="Tests and assignments due in the next two weeks show up here."
+                description="Tests and assignments due in the next two weeks show here."
               />
             ) : (
               <ul className="divide-border divide-y">
@@ -177,8 +177,8 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
               <EmptyState
                 compact
                 illustration={<Scene name="nothing-to-grade" />}
-                title="No marks released yet"
-                description="Marks show up here once the tutor releases them."
+                title="No marks yet"
+                description="When a tutor marks their work, the mark shows here."
               />
             ) : (
               <ul className="divide-border divide-y">

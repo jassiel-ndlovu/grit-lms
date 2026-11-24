@@ -3,6 +3,34 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Wording on the learning pages (part 2), `revamp/b-wording`
+
+No migration, no env vars. Follows copy.md.
+
+- **Words:** marks are shared, not released; "marks", not "points" or "grades"
+  (the Grades page keeps its name); students hand in, and their work is
+  "marked" or "waiting to be marked"; "Your children", not "Your learners";
+  Start test, Hand in, Share with families.
+- **Save and share mark** replaces Save grade: saving has always shown the mark
+  to the student straight away.
+- **Raw codes** no longer show (`GRADED`, `LIVE`) on an assignment's marking
+  page and a student's course page.
+- **Notifications:** publishing a draft test or assignment now says "New test"
+  or "New assignment", not "changed".
+- **AI marking's consent** says "an AI service outside South Africa", with no
+  company name (copy.md rule 2). No page names the company now.
+- **Outside B's paths:** `features/support/help-articles.ts`, for the changed
+  buttons (A's written OK on #216).
+- **For A to change** (text in the #216 comment): the parents' home page still
+  says "Your learners"; two help articles say tests have an opening time and
+  lessons are published; the email tick box says "graded"; hand-in
+  notifications say "submission".
+- **For A:** `check-copy.ts` misses JSX text that runs over several lines,
+  which is how "Anthropic" got past it.
+- Not touched: the study assistant's chat page (its redesign is in another
+  session), Nexa admin screens, and the JSON format in `test-io.ts`'s AI
+  instructions.
+
 ## 2026-11-24 "Application error" after signing in, `revamp/b-signin-error`
 
 No migration, no env vars.

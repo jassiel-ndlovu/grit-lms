@@ -6,10 +6,10 @@
 import type { CreateNotificationInput } from "@/features/notifications/schemas";
 
 const KIND_LABEL: Record<string, string> = {
-  LECTURE: "Lecture",
+  LECTURE: "Lesson",
   TEST: "Test",
   REMINDER: "Reminder",
-  SUBMISSION: "Submission",
+  SUBMISSION: "Assignment",
   LIVE: "Live session",
   EXAM: "Exam",
   MEETING: "Meeting",
@@ -24,7 +24,7 @@ export function eventChangeNotification(
   const verb = { created: "scheduled", updated: "updated", deleted: "cancelled" }[change];
   return {
     title: `${kind} ${verb}`,
-    message: `"${event.title}" has been ${verb}.`,
+    message: `"${event.title}" was ${verb}. Open the calendar for the details.`,
     link: "/dashboard/calendar",
     type: change === "created" ? "EVENT_CREATED" : change === "updated" ? "EVENT_UPDATED" : "EVENT_DELETED",
     courseId: event.courseId,

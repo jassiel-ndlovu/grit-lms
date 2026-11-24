@@ -98,7 +98,7 @@ export function LineChart({
         )}
         style={{ height }}
       >
-        No grades yet — this chart will populate as grades come in.
+        No marks yet. The chart fills in as work is marked.
       </div>
     );
   }
@@ -220,7 +220,7 @@ export function BarChart({
         )}
         style={{ height }}
       >
-        No data.
+        Nothing to show yet.
       </div>
     );
   }
@@ -463,7 +463,7 @@ export function Histogram({
         )}
         style={{ height }}
       >
-        No grades to distribute yet.
+        No marks yet.
       </div>
     );
   }

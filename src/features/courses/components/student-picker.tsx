@@ -49,12 +49,12 @@ export function StudentPicker({
         }}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select a student to enrol" />
+          <SelectValue placeholder="Choose a student to add" />
         </SelectTrigger>
         <SelectContent>
           {available.length === 0 ? (
             <div className="text-muted-foreground px-2 py-1.5 text-sm">
-              All students enrolled
+              Every student is on this course
             </div>
           ) : (
             available.map((s) => (

@@ -51,6 +51,7 @@ import { listEventsByCourseId } from "@/features/events/queries";
 import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesson-tree";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { labelFor } from "@/features/events/components/entry-meta";
 import { schoolDateFormat } from "@/lib/datetime";
 import { ProgressBar } from "@/components/ui/progress-bar";
 
@@ -83,7 +84,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
     select: { id: true },
   });
   if (!student) {
-    return <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: "Course" }]}>No student profile found for this account.</PageMessage>;
+    return <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: "Course" }]}>This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.</PageMessage>;
   }
 
   const course = await getCourseDetailById(courseId);
@@ -94,7 +95,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
   if (!enrolled) {
     return (
       <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: course.name }]}>
-        You aren&apos;t enrolled in this course.
+        You&apos;re not on this course. Ask your tutor to add you.
       </PageMessage>
     );
   }
@@ -181,7 +182,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
               <StatTile icon={<BookOpen />} label="Lessons" value={`${completedCount}/${totalLessons}`} />
               <StatTile icon={<TrendingUp />} label="Progress" value={`${progressPct}%`} />
               <StatTile icon={<GraduationCap />} label="Average" value={courseAverage != null ? `${courseAverage}%` : "-"} />
-              <StatTile icon={<Target />} label="Up next" value={String(pendingTests.length + pendingAssignments.length)} />
+              <StatTile icon={<Target />} label="To do" value={String(pendingTests.length + pendingAssignments.length)} />
             </StatTiles>
             <div className="max-w-xl space-y-2">
               <div className="text-muted-foreground flex items-baseline justify-between text-xs">
@@ -203,7 +204,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
         />
         {lessons.length === 0 ? (
           <Card className="p-0">
-            <EmptyState compact illustration={<Scene name="empty-lessons" />} title="No lessons published yet" />
+            <EmptyState compact illustration={<Scene name="empty-lessons" />} title="No lessons yet" />
           </Card>
         ) : (
           <Card className="overflow-hidden p-0">
@@ -246,11 +247,11 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
       {/* Pending assessments + assignments */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="space-y-4">
-          <SectionHeader title="Active tests" href="/dashboard/tests" label="All tests" />
+          <SectionHeader title="Tests to take" href="/dashboard/tests" label="All tests" />
           <Card className="overflow-hidden p-0">
             {pendingTests.length === 0 ? (
               <div className="text-muted-foreground p-8 text-center text-sm">
-                No pending tests in this course.
+                No tests to take on this course right now.
               </div>
             ) : (
               <ul className="divide-border divide-y">
@@ -273,7 +274,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
                         </p>
                       </div>
                       <Badge variant={sub?.status === "IN_PROGRESS" ? "secondary" : "soft"} className="shrink-0">
-                        {sub?.status === "IN_PROGRESS" ? "In progress" : "Begin"}
+                        {sub?.status === "IN_PROGRESS" ? "In progress" : "Start"}
                       </Badge>
                     </Link>
                   </li>
@@ -284,11 +285,11 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
         </section>
 
         <section className="space-y-4">
-          <SectionHeader title="Active assignments" href={assignmentRoutes.index} label="All assignments" />
+          <SectionHeader title="Assignments to hand in" href={assignmentRoutes.index} label="All assignments" />
           <Card className="overflow-hidden p-0">
             {pendingAssignments.length === 0 ? (
               <div className="text-muted-foreground p-8 text-center text-sm">
-                No pending assignments in this course.
+                No assignments to hand in on this course right now.
               </div>
             ) : (
               <ul className="divide-border divide-y">
@@ -310,7 +311,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
                         </p>
                       </div>
                       <Badge variant={entry ? "secondary" : "soft"} className="shrink-0">
-                        {entry ? "Resume" : "Submit"}
+                        {entry ? "Carry on" : "Hand in"}
                       </Badge>
                     </Link>
                   </li>
@@ -324,10 +325,10 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
       {/* Schedule + Grades */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="space-y-4">
-          <SectionHeader title="Schedule" href="/dashboard/calendar" label="Full schedule" />
+          <SectionHeader title="Coming up" href="/dashboard/calendar" label="Open calendar" />
           <Card className="overflow-hidden p-0">
             {upcomingEvents.length === 0 ? (
-              <EmptyState compact illustration={<Scene name="calendar-empty" />} title="No upcoming events" />
+              <EmptyState compact illustration={<Scene name="calendar-empty" />} title="Nothing on the calendar" />
             ) : (
               <ul className="divide-border divide-y">
                 {upcomingEvents.map((event) => (
@@ -337,7 +338,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{event.title}</p>
-                      <p className="text-muted-foreground text-xs">{event.type}</p>
+                      <p className="text-muted-foreground text-xs">{labelFor({ kind: "event", type: event.type })}</p>
                     </div>
                     <Badge variant="secondary" className="shrink-0 tabular-nums">
                       {dateFmt.format(event.date)}
@@ -350,10 +351,10 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
         </section>
 
         <section className="space-y-4">
-          <SectionHeader title="Grades" href="/dashboard/grades" label="All grades" />
+          <SectionHeader title="Your marks" href="/dashboard/grades" label="All marks" />
           <Card className="overflow-hidden p-0">
             {grades.length === 0 ? (
-              <EmptyState compact illustration={<Scene name="nothing-to-grade" />} title="No grades released yet" />
+              <EmptyState compact illustration={<Scene name="nothing-to-grade" />} title="No marks yet" />
             ) : (
               <ul className="divide-border divide-y">
                 {grades.slice(0, 5).map((g) => {
@@ -368,7 +369,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
                       </div>
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <p className="truncate text-sm font-medium text-foreground">{linkedTitle}</p>
-                        <p className="text-muted-foreground truncate text-xs">{g.type}</p>
+                        <p className="text-muted-foreground truncate text-xs">{g.type === "TEST" ? "Test" : "Assignment"}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <Badge variant={itemPct >= 50 ? "soft" : "secondary"} className="tabular-nums">

@@ -89,12 +89,12 @@ export default async function CourseGradebookPage({ params }: PageProps) {
       <PageTitle
         eyebrow="Gradebook"
         title={book.course.name}
-        description={`${book.students.length} ${book.students.length === 1 ? "student" : "students"} · ${book.assessments.length} assessments`}
+        description={`${book.students.length} ${book.students.length === 1 ? "student" : "students"} · ${book.assessments.length} ${book.assessments.length === 1 ? "test or assignment" : "tests and assignments"}`}
         properties={
           <StatTiles>
             <StatTile label="Class average" value={fmt(stats.mean)} />
             <StatTile label="Median" value={fmt(stats.median)} />
-            <StatTile label="Range" value={stats.min == null ? "—" : `${fmt(stats.min)}–${fmt(stats.max)}`} />
+            <StatTile label="Lowest to highest" value={stats.min == null ? "—" : `${fmt(stats.min)}–${fmt(stats.max)}`} />
           </StatTiles>
         }
       />
@@ -103,7 +103,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
       <Card className="p-5">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-display text-lg leading-tight tracking-tight text-foreground">
-            Spread
+            How marks are spread
           </h2>
           <span className="text-muted-foreground text-xs">
             {stats.gradedStudents} of {stats.totalStudents} students have a
@@ -147,7 +147,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
             Students
           </h2>
           <span className="text-muted-foreground text-xs">
-            Weighted marks · click a student for the breakdown
+            Each student&apos;s mark, with tests and assignments counted by weight. Open a student for the detail.
           </span>
         </div>
         <Separator />
@@ -157,7 +157,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
             compact
             illustration={<Scene name="empty-courses" />}
             title="Nobody is enrolled yet"
-            description="Students appear here once they join this course."
+            description="Students show here once they're on this course."
           />
         ) : (
           <div className="relative overflow-x-auto">
@@ -171,7 +171,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
                     <th
                       key={a.id}
                       className="px-3 py-2 text-right font-medium whitespace-nowrap"
-                      title={`${a.title} — ${Math.round(a.effectiveWeight * 10) / 10}% of the final mark`}
+                      title={`${a.title}: ${Math.round(a.effectiveWeight * 10) / 10}% of the final mark`}
                     >
                       <span className="block max-w-28 truncate">{a.title}</span>
                       <span className="text-muted-foreground/70 block tabular-nums font-normal">
@@ -180,10 +180,10 @@ export default async function CourseGradebookPage({ params }: PageProps) {
                     </th>
                   ))}
                   <th className="px-4 py-2 text-right font-medium whitespace-nowrap">
-                    Mark to date
+                    Mark so far
                   </th>
                   <th className="px-4 py-2 text-right font-medium whitespace-nowrap">
-                    Of course
+                    Of the whole course
                   </th>
                   <th className="px-2 py-2" />
                 </tr>
@@ -232,7 +232,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
                           {fmt(mark.markOfCourse)}
                         </span>
                         <span className="text-muted-foreground/60 block text-[10px] tabular-nums">
-                          {fmt(mark.coverage)} graded
+                          {fmt(mark.coverage)} marked
                         </span>
                       </td>
                       <td className="px-2 py-3 text-right">
@@ -270,7 +270,7 @@ export default async function CourseGradebookPage({ params }: PageProps) {
         <Card className="border-destructive/40 bg-destructive/5 p-4">
           <p className="text-destructive text-sm">
             <Badge variant="secondary" className="mr-2">
-              Heads up
+              Check this
             </Badge>
             {plan.warning}
           </p>

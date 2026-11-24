@@ -183,7 +183,7 @@ export default async function TestAnalysisPage({ params, searchParams }: PagePro
   if (!(await testBelongsToTutor(testId, scope))) {
     return (
       <PageMessage breadcrumb={[{ label: "Tests", href: testRoutes.list }, { label: "Test" }]}>
-        You don&apos;t own this test.
+        Only staff who teach or manage this test&apos;s course can open this page.
       </PageMessage>
     );
   }

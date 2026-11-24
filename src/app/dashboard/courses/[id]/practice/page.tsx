@@ -31,7 +31,7 @@ export default async function StudentPracticePage({ params }: { params: Promise<
   if (!student) {
     return (
       <PageMessage breadcrumb={[{ label: "My courses", href: studentCourseRoutes.list }, { label: "Practice" }]}>
-        No student profile found for this account.
+        This page is for students, and this account isn&apos;t set up as one. If you&apos;re a student, ask your tutor or school to check it.
       </PageMessage>
     );
   }
@@ -53,7 +53,7 @@ export default async function StudentPracticePage({ params }: { params: Promise<
           compact
           illustration={<Scene name="empty-tests" />}
           title="Nothing to practise yet"
-          description="Practice sets from your tutor show up here."
+          description="When your tutor adds practice questions, they show here."
         />
       ) : (
         <ul className="divide-border border-border divide-y border-y">

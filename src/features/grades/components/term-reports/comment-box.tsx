@@ -26,7 +26,7 @@ async function send(target: CommentTarget, text: string): Promise<string | null>
   const { termId, learnerId, courseId } = target;
   const r = await (courseId ? saveCourseComment({ termId, learnerId, courseId, text }) : saveOverallComment({ termId, learnerId, text })).catch(() => null);
   if (r?.data) return null;
-  return r?.serverError ?? "It couldn't be saved. Check your connection.";
+  return r?.serverError ?? "We couldn't save it. Check your connection.";
 }
 
 export function CommentBox({ target, initial, label, placeholder, save = send }: {

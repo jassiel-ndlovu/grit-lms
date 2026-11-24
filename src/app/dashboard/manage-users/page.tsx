@@ -44,7 +44,7 @@ export default async function ManageUsersPage() {
       <PageTitle
         eyebrow="Administration"
         title="Manage users"
-        description="Provision student accounts and reset passwords when someone forgets. This replaces the old seed route."
+        description="Create student accounts, and reset the password of anyone who's locked out."
         illustration={<HeaderPeople />}
         properties={
           <StatTiles>
@@ -61,7 +61,7 @@ export default async function ManageUsersPage() {
               Add a student
             </h2>
             <p className="text-muted-foreground text-sm">
-              Creates the sign-in account and the linked student profile.
+              Makes an account they can sign in with.
             </p>
           </div>
           <CreateUserForm />

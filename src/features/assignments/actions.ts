@@ -90,8 +90,8 @@ export const createSubmission = tutorActionClient
     if (created.isActive) {
       await emitNotification(
         {
-          title: "New Assignment",
-          message: `Assignment "${created.title}" has been created.`,
+          title: "New assignment",
+          message: `"${created.title}" is ready. Open it to see what to do and when it's due.`,
           link: assignmentRoutes.detail(created.id),
           type: "SUBMISSION_CREATED",
           priority: "NORMAL",
@@ -156,17 +156,21 @@ export const updateSubmission = tutorActionClient
     });
 
     if (updated.isActive) {
+      // A draft students never saw is new to them.
+      const published = !existing.isActive;
       const dueChanged =
         parsedInput.dueDate !== undefined &&
         parsedInput.dueDate.getTime() !== existing.dueDate.getTime();
       await emitNotification(
         {
-          title: dueChanged ? "Assignment Due Date Changed" : "Assignment Updated",
+          title: published ? "New assignment" : dueChanged ? "New due date" : "Assignment changed",
           // No date in the text: recipients are in different time zones,
           // and the assignment page shows it in each one's own.
-          message: dueChanged
-            ? `The due date for "${updated.title}" has changed.`
-            : `The assignment "${updated.title}" has been updated.`,
+          message: published
+            ? `"${updated.title}" is ready. Open it to see what to do and when it's due.`
+            : dueChanged
+            ? `The due date for "${updated.title}" changed. Open it to see the new date.`
+            : `Your tutor changed "${updated.title}". Open it to see what's new.`,
           link: assignmentRoutes.detail(updated.id),
           type: "SUBMISSION_UPDATED",
           courseId: updated.courseId,
@@ -205,8 +209,8 @@ export const deleteSubmission = tutorActionClient
 
     await emitNotification(
       {
-        title: "Assignment Deleted",
-        message: `The assignment "${title}" has been removed.`,
+        title: "Assignment removed",
+        message: `"${title}" was removed. You don't need to hand it in.`,
         type: "SUBMISSION_DELETED",
         priority: "NORMAL",
         courseId,
@@ -420,8 +424,8 @@ export const gradeEntry = tutorActionClient
 
     await emitNotification(
       {
-        title: "Grade Released",
-        message: `You received ${parsedInput.score}/${parsedInput.outOf} for "${entry.submission.title}".`,
+        title: "Your mark is in",
+        message: `You got ${parsedInput.score} out of ${parsedInput.outOf} for "${entry.submission.title}".`,
         link: assignmentRoutes.detail(entry.submission.id),
         type: "SUBMISSION_GRADED",
         priority: "NORMAL",
@@ -528,8 +532,8 @@ export const gradeEntryWithSections = tutorActionClient
 
     await emitNotification(
       {
-        title: "Grade Released",
-        message: `You received ${parsedInput.score}/${parsedInput.outOf} for "${entry.submission.title}".`,
+        title: "Your mark is in",
+        message: `You got ${parsedInput.score} out of ${parsedInput.outOf} for "${entry.submission.title}".`,
         link: assignmentRoutes.detail(entry.submission.id),
         type: "SUBMISSION_GRADED",
         priority: "NORMAL",

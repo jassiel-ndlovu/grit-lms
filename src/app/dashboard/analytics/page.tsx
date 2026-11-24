@@ -76,7 +76,7 @@ export default async function TutorAnalyticsPage() {
     return {
       label: course.name,
       value: pct(s, o) ?? 0,
-      meta: `${grades.length} grades`,
+      meta: `${grades.length} ${grades.length === 1 ? "mark" : "marks"} given`,
     };
   });
 
@@ -87,7 +87,7 @@ export default async function TutorAnalyticsPage() {
       .map((g) => ({
         x: g.updatedAt.getTime(),
         y: pct(g.score, g.outOf) ?? 0,
-        label: `${g.student.fullName} — ${g.title}`,
+        label: `${g.student.fullName}: ${g.title}`,
       }))
       .sort((a, b) => a.x - b.x),
   }));
@@ -132,15 +132,15 @@ export default async function TutorAnalyticsPage() {
   return (
     <PageFrame type="list" breadcrumb={[{ label: "Analytics" }]}>
       <PageTitle
-        eyebrow={`${tutor.fullName.split(" ")[0]}'s teaching analytics`}
-        title="Class performance"
-        description="How your students are doing across every course you teach. Distribution charts help you spot items that need re-teaching."
+        eyebrow={`${tutor.fullName.split(" ")[0]}'s classes`}
+        title="Analytics"
+        description="How your students are doing on every course you teach, and which tests and assignments they found hard."
         illustration={<HeaderAnalytics />}
         properties={
           <StatTiles>
-            <StatTile label="Students graded" value={studentSet.size} />
-            <StatTile label="Grades issued" value={allGrades.length} />
-            {overall != null ? <StatTile label="Overall class avg" value={`${overall}%`} /> : null}
+            <StatTile label="Students with marks" value={studentSet.size} />
+            <StatTile label="Marks given" value={allGrades.length} />
+            {overall != null ? <StatTile label="Average of all marks" value={`${overall}%`} /> : null}
           </StatTiles>
         }
       />
@@ -152,11 +152,10 @@ export default async function TutorAnalyticsPage() {
           </div>
           <div>
             <h3 className="font-display text-xl leading-tight text-foreground">
-              No grades yet
+              No marks yet
             </h3>
             <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-sm">
-              Once you&apos;ve graded a few tests and assignments, this page
-              will show class-wide distributions and per-course trends.
+              After you mark a few tests and assignments, this page shows averages for each course and how marks are spread.
             </p>
           </div>
         </Card>
@@ -166,10 +165,10 @@ export default async function TutorAnalyticsPage() {
             <Card className="p-5 lg:col-span-2">
               <div className="mb-3">
                 <h2 className="font-display text-lg leading-tight">
-                  Timeline
+                  Marks over time
                 </h2>
                 <p className="text-muted-foreground text-xs">
-                  Every graded item, coloured by course.
+                  Each dot is one marked test or assignment. Each course has its own colour.
                 </p>
               </div>
               <LineChart series={lineSeries} height={220} />
@@ -177,10 +176,10 @@ export default async function TutorAnalyticsPage() {
             <Card className="p-5">
               <div className="mb-3">
                 <h2 className="font-display text-lg leading-tight">
-                  Tests vs assignments
+                  Tests and assignments
                 </h2>
                 <p className="text-muted-foreground text-xs">
-                  By total points graded.
+                  How much of the total marks came from each.
                 </p>
               </div>
               <DonutChart
@@ -199,10 +198,10 @@ export default async function TutorAnalyticsPage() {
             <Card className="p-5">
               <div className="mb-3">
                 <h2 className="font-display text-lg leading-tight">
-                  Class average per course
+                  Class average for each course
                 </h2>
                 <p className="text-muted-foreground text-xs">
-                  Point-weighted across every graded item in the course.
+                  Tests and assignments with more marks count for more.
                 </p>
               </div>
               <BarChart data={barData} height={240} />
@@ -212,11 +211,10 @@ export default async function TutorAnalyticsPage() {
           <section className="space-y-4">
             <div>
               <h2 className="font-display text-2xl leading-tight tracking-tight text-foreground">
-                Distributions
+                How marks are spread
               </h2>
               <p className="text-muted-foreground text-sm">
-                Score histogram per graded item — spot the items that need
-                re-teaching.
+                How many students got each range of marks, for each test and assignment. Low ones may need teaching again.
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -232,7 +230,7 @@ export default async function TutorAnalyticsPage() {
                         </h3>
                         <p className="text-muted-foreground text-xs">
                           {row.values.length}{" "}
-                          {row.values.length === 1 ? "grade" : "grades"} · avg{" "}
+                          {row.values.length === 1 ? "student" : "students"} · average{" "}
                           <span className="text-foreground font-medium tabular-nums">
                             {Math.round(avg)}%
                           </span>

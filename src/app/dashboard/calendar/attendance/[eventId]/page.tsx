@@ -56,7 +56,7 @@ export default async function AttendancePage({ params, searchParams }: { params:
         </PageSection>
       ) : null}
       <PageSection
-        title="Learners"
+        title="Students"
         description={`P present, L late, A absent, E excused. Each mark saves straight away.${live ? " Parents get one email when their child is first marked absent." : ""}`}
       >
         <AttendanceSheet eventId={sheet.eventId} occurrenceStart={sheet.occurrenceStart} learners={sheet.learners as SheetLearner[]} />

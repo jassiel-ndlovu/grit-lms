@@ -51,8 +51,8 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
   ]);
   const subtitle =
     session.user.role === "TUTOR"
-      ? "Student submissions, grading reminders and course activity."
-      : "Activity from your courses, tutors, and submissions.";
+      ? "When students hand in work or ask to join, and news about your courses."
+      : "New tests and assignments, marks, and news from your tutors.";
 
   return (
     <PageFrame

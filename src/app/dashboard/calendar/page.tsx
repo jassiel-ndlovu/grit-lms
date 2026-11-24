@@ -126,7 +126,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         }
         properties={
           guardian && viewer.children.length > 1 ? (
-            <nav aria-label="Learner" className="flex flex-wrap gap-1.5">
+            <nav aria-label="Child" className="flex flex-wrap gap-1.5">
               {viewer.children.map((c) => (
                 <Link
                   key={c.userId}
@@ -157,7 +157,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
             compact
             illustration={<Scene name="calendar-empty" />}
             title={view === "day" ? "Nothing on this day" : "Nothing in the next 30 days"}
-            description={tutor ? "Add a session with New session." : "Sessions your tutors add show up here."}
+            description={tutor ? "Add a session with New session." : "Classes and other sessions your tutors add show here."}
           />
         }
       />

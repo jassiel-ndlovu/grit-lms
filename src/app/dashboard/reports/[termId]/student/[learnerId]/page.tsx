@@ -30,7 +30,7 @@ export default async function StudentReportPage({ params }: { params: Promise<{ 
       breadcrumb={[{ label: "Term reports", href: reportRoutes.home }, { label: term.title, href: reportRoutes.term(term.id) }, { label: view.report.name }]}
       actions={view.complete ? <DownloadReport termId={term.id} learnerId={view.report.learnerId} /> : undefined}
     >
-      <PageTitle eyebrow={term.title} title={view.report.name} description="Released marks only. Work that was due and has no mark shows a dash." />
+      <PageTitle eyebrow={term.title} title={view.report.name} description="Only marks the student can see. Work that was due and has no mark shows a dash." />
       <StudentReportBody termId={term.id} report={view.report} overall={view.overall} complete={view.complete} canEditOverall={view.canEditOverall} />
     </PageFrame>
   );

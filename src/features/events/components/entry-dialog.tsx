@@ -72,7 +72,7 @@ export function EntryDialog({ entry, onClose, ctx }: { entry: CalendarEntry | nu
     setBusy("edit");
     const r = await getCourseEventSeries({ id: e.eventId });
     setBusy(null);
-    if (!r?.data) return toast.error(r?.serverError ?? "Couldn't load this event");
+    if (!r?.data) return toast.error(r?.serverError ?? "We couldn't load this. Close it and try again.");
     setEditing({ series: r.data as EventSeries, entry: e });
     onClose();
   }

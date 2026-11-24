@@ -44,7 +44,7 @@ export default async function FeeDiscountsPage() {
         title="Discount codes"
         description={
           <>
-            Parents enter a code when they pay your fees online. It takes money off fees in this workspace only, and each
+            Parents enter a code when they pay your fees online. It takes money off fees in this organisation only, and each
             student can use it once per payment.
           </>
         }

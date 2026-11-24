@@ -28,7 +28,7 @@ import {
 
 export const AttachmentSchema = z.object({
   id: CuidSchema,
-  title: NonEmptyString.max(120, "Title too long"),
+  title: NonEmptyString.max(120, "That title is too long."),
   url: UrlSchema,
   lessonId: CuidSchema,
 });
@@ -58,8 +58,8 @@ export type LessonType = z.infer<typeof LessonTypeSchema>;
 
 export const LessonSchema = z.object({
   id: CuidSchema,
-  title: NonEmptyString.max(120, "Title too long"),
-  description: z.string().max(20000, "Description too long").nullable(),
+  title: NonEmptyString.max(120, "That title is too long."),
+  description: z.string().max(20000, "That description is too long.").nullable(),
   order: z.number().int().nonnegative(),
   courseId: CuidSchema,
   duration: z.number().int().positive().nullable(),
@@ -83,8 +83,8 @@ export type Lesson = z.infer<typeof LessonSchema>;
 const DescriptionJsonInput = z.unknown();
 
 export const CreateLessonSchema = z.object({
-  title: NonEmptyString.max(120, "Title too long"),
-  description: z.string().max(20000, "Description too long").nullable().default(null),
+  title: NonEmptyString.max(120, "That title is too long."),
+  description: z.string().max(20000, "That description is too long.").nullable().default(null),
   descriptionJson: DescriptionJsonInput.optional(),
   courseId: CuidSchema,
   order: z.number().int().nonnegative().default(0),
@@ -106,8 +106,8 @@ export type CreateLessonInput = z.infer<typeof CreateLessonSchema>;
  */
 export const UpdateLessonSchema = z.object({
   id: CuidSchema,
-  title: NonEmptyString.max(120, "Title too long").optional(),
-  description: z.string().max(20000, "Description too long").nullable().optional(),
+  title: NonEmptyString.max(120, "That title is too long.").optional(),
+  description: z.string().max(20000, "That description is too long.").nullable().optional(),
   descriptionJson: DescriptionJsonInput.optional(),
   order: z.number().int().nonnegative().optional(),
   duration: z.number().int().positive().nullable().optional(),

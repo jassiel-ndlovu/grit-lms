@@ -310,10 +310,10 @@ export function SubmitSheet({ timesheetId, summary, leftOut, forName }: {
   }
 
   return (
-    <WriteGuard label="Submit" variant="default">
+    <WriteGuard label="Submit for approval" variant="default">
       <Button type="button" size="sm" onClick={() => setOpen(true)}>
         <Send aria-hidden className="size-4" />
-        Submit
+        Submit for approval
       </Button>
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
@@ -336,7 +336,7 @@ export function SubmitSheet({ timesheetId, summary, leftOut, forName }: {
               <Icon pending={pending}>
                 <Send aria-hidden className="size-4" />
               </Icon>
-              Submit
+              Submit for approval
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

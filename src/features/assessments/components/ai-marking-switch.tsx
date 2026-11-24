@@ -70,7 +70,7 @@ export function AiMarkingSwitch({
       setConsent(false);
       toast.success(next ? "AI-suggested marks are on for this test" : "AI-suggested marks are off for this test");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't change the setting");
+      setError(e instanceof Error ? e.message : "We couldn't change this setting. Try again.");
     } finally {
       setPending(false);
     }
@@ -85,9 +85,7 @@ export function AiMarkingSwitch({
             AI-suggested marks
           </p>
           <p id={descId} className="text-muted-foreground text-xs">
-            The AI suggests a mark for short answers and essays. You accept, edit or reject every one; nothing reaches
-            students until you save and release the grade. Answers are sent without names to Anthropic, outside South
-            Africa.
+            The AI suggests a mark for short answers and essays. You accept, edit or reject every one, and students see nothing until you save the mark. Answers are sent, without names, to an AI service outside South Africa.
           </p>
         </div>
         {state === "upgrade" ? null : (
@@ -129,8 +127,7 @@ export function AiMarkingSwitch({
           <DialogHeader>
             <DialogTitle>Turn on AI-suggested marks?</DialogTitle>
             <DialogDescription>
-              Students&apos; written answers will be sent, without names, to Anthropic for a suggested mark. That is a
-              transfer outside South Africa, so you need parents&apos; consent for this class first.
+              Students&apos; written answers will be sent, without names, to an AI service outside South Africa, which suggests a mark. You need parents&apos; consent for this class first.
             </DialogDescription>
           </DialogHeader>
           <label className="flex items-start gap-3 text-sm">

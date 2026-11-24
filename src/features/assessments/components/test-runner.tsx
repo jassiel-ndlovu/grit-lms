@@ -280,7 +280,7 @@ export function TestRunner({
       });
       const message =
         result?.serverError ??
-        (result?.validationErrors ? "Answer format rejected by the server" : null);
+        (result?.validationErrors ? "one of the answers couldn't be read" : null);
       if (message) {
         fail(message);
       } else {
@@ -290,7 +290,7 @@ export function TestRunner({
         setUnsavedIds(new Set());
       }
     } catch (e) {
-      fail(e instanceof Error ? e.message : "Network error");
+      fail(e instanceof Error ? e.message : "no connection");
     } finally {
       setSaving(false);
     }
@@ -381,13 +381,13 @@ export function TestRunner({
           const n = result?.data?.updated ?? 0;
           toast.success(
             n === 0
-              ? "Nothing to save yet - answer a question first."
+              ? "Nothing to save yet. Answer a question first."
               : `Answer key saved for ${n} ${n === 1 ? "question" : "questions"}.`,
           );
           setDirty(false);
           router.refresh();
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "Could not save the answer key");
+          toast.error(e instanceof Error ? e.message : "We couldn't save the answer key. Check your connection and try again.");
         } finally {
           setSubmitting(false);
         }
@@ -395,7 +395,7 @@ export function TestRunner({
       }
 
       if (!submissionId) {
-        toast.error("No attempt to submit.");
+        toast.error("Your test wasn't handed in. Reload the page and try again.");
         setSubmitting(false);
         return;
       }
@@ -411,10 +411,10 @@ export function TestRunner({
         } catch {
           // Nothing to tidy if storage is blocked.
         }
-        toast.success(auto ? "Time up - submitted automatically" : "Test submitted");
+        toast.success(auto ? "Time's up. Your answers were handed in." : "Handed in. You'll get a notification when it's marked.");
         router.push(`/dashboard/tests/review/${testId}`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Submission failed");
+        toast.error(e instanceof Error ? e.message : "We couldn't hand in your test. Check your connection and try again.");
         setSubmitting(false);
       }
     },
@@ -494,7 +494,7 @@ export function TestRunner({
       <Card className="p-8 sm:p-12 text-center">
         <h2 className="font-display text-xl text-foreground">No questions yet</h2>
         <p className="text-muted-foreground mt-2 text-sm">
-          This test doesn&apos;t have any questions published. Check back later.
+          Your tutor hasn&apos;t added questions to this test yet. Check again later, or ask them.
         </p>
       </Card>
     );
@@ -521,10 +521,7 @@ export function TestRunner({
         <TonePanel tone="accent" className="flex flex-wrap items-start gap-2 p-3">
           <Eye className="text-brand-terracotta mt-0.5 size-4 shrink-0" />
           <p className="text-foreground text-xs leading-relaxed">
-            <span className="font-medium">Preview.</span> This is exactly
-            what students see. Answers you give here are saved as the
-            answer key for this test - the memo their work is marked
-            against. Nothing autosaves; press{" "}
+            <span className="font-medium">Preview.</span> This is exactly what students see. The answers you give here become the test&apos;s answer key: students&apos; answers are marked against them. Nothing saves by itself, so press{" "}
             <span className="font-medium">Save answer key</span> when
             you&apos;re done.
           </p>
@@ -609,14 +606,14 @@ export function TestRunner({
               size="sm"
               onClick={requestSubmit}
               disabled={submitting}
-              title={preview ? "Save these answers as the answer key" : "Submit test"}
+              title={preview ? "Save these answers as the answer key" : "Hand in test"}
             >
               {submitting ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden />
               ) : preview ? (
                 <Save className="size-4" aria-hidden />
               ) : null}
-              {preview ? "Save answer key" : "Submit"}
+              {preview ? "Save answer key" : "Hand in"}
             </Button>
           </div>
         </div>
@@ -683,7 +680,7 @@ export function TestRunner({
         ) : (
           <Button type="button" variant="brand" onClick={requestSubmit} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" aria-hidden />}
-            {preview ? "Save answer key" : "Submit test"}
+            {preview ? "Save answer key" : "Hand in test"}
           </Button>
         )}
       </div>
@@ -693,8 +690,7 @@ export function TestRunner({
           <p>Leave a question blank to mark it by hand.</p>
         ) : saveError ? (
           <p className="text-destructive">
-            Your last save failed ({saveError}). Press Save to try again
-            before leaving this page.
+            Your last save failed ({saveError}). Press Save to try again before you leave this page.
           </p>
         ) : (
           <p>Your answers save as you go.</p>
@@ -715,12 +711,12 @@ export function TestRunner({
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Submit this test?</AlertDialogTitle>
+              <AlertDialogTitle>Hand in this test?</AlertDialogTitle>
               <AlertDialogDescription>
                 {unanswered.length > 0
                   ? `You've answered ${totalAnswered} of ${totalAnswerable} questions. `
                   : "You've answered every question. "}
-                {"Once submitted you can't change your answers."}
+                {"Once you hand it in, you can't change your answers."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             {unanswered.length > 0 || flaggedSteps.length > 0 || saveError ? (
@@ -728,7 +724,7 @@ export function TestRunner({
                 {saveError ? (
                   <p className="text-destructive flex items-start gap-1.5">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-                    Your last save failed. Submitting sends your answers again.
+                    Your last save failed. Handing in sends your answers again.
                   </p>
                 ) : null}
                 {unanswered.length > 0 ? (
@@ -755,7 +751,7 @@ export function TestRunner({
                   void onSubmit(false);
                 }}
               >
-                Submit test
+                Hand in test
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -996,8 +992,8 @@ function QuestionView({
           )}
         >
           {isContext
-            ? `Context ${path}`
-            : `Question ${path} - ${question.points} ${question.points === 1 ? "point" : "points"}`}
+            ? `Information ${path}`
+            : `Question ${path} - ${question.points} ${question.points === 1 ? "mark" : "marks"}`}
         </p>
         <LessonMarkdown content={question.question} />
       </div>

@@ -196,7 +196,7 @@ export function LessonForm({
       if (redirectTo) router.push(redirectTo);
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toast.error(e instanceof Error ? e.message : "We couldn't save the lesson. Check your connection and try again.");
     } finally {
       setPending(false);
     }
@@ -273,7 +273,7 @@ export function LessonForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription>Nest this under a group or another lesson.</FormDescription>
+                  <FormDescription>Optional. Put it inside a group or another lesson.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -345,8 +345,7 @@ export function LessonForm({
                     />
                   </FormControl>
                   <FormDescription>
-                    Position among its siblings — lower comes first. Rearrange
-                    in the sidebar for drag-and-drop.
+                    Lower numbers come first. To drag lessons into order, choose Rearrange in the list.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -395,7 +394,7 @@ export function LessonForm({
                   />
                 </FormControl>
                 <FormDescription>
-                  YouTube URLs render as embedded players for students.
+                  Paste YouTube links. Students watch them in the lesson.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -407,7 +406,7 @@ export function LessonForm({
             name="attachments"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Attachments</FormLabel>
+                <FormLabel>Files and links</FormLabel>
                 <FormControl>
                   <AttachmentManager
                     courseId={courseId}

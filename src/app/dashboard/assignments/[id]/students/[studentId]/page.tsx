@@ -62,7 +62,14 @@ function fileNameFromUrl(url: string): string {
   }
 }
 
-export const metadata = { title: "Grade submission" };
+const ENTRY_STATUS: Record<string, string> = {
+  SUBMITTED: "To mark",
+  GRADED: "Marked",
+  LATE: "Handed in late",
+  NOT_SUBMITTED: "Not handed in",
+};
+
+export const metadata = { title: "Mark work" };
 
 export default async function StudentGradingPage({ params }: PageProps) {
   const { id: submissionId, studentId } = await params;
@@ -76,8 +83,8 @@ export default async function StudentGradingPage({ params }: PageProps) {
   const owns = await submissionBelongsToTutor(submissionId, scope);
   if (!owns) {
     return (
-      <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Entry" }]}>
-        You don&apos;t own this assignment.
+      <PageMessage breadcrumb={[{ label: "Assignments", href: assignmentRoutes.index }, { label: "Student's work" }]}>
+        Only staff who teach or manage this assignment&apos;s course can open this page.
       </PageMessage>
     );
   }
@@ -94,14 +101,14 @@ export default async function StudentGradingPage({ params }: PageProps) {
         breadcrumb={[
           { label: "Assignments", href: assignmentRoutes.index },
           { label: submission.title, href: assignmentRoutes.detail(submissionId) },
-          { label: "Entry" },
+          { label: "Student's work" },
         ]}
       >
         <PageTitle eyebrow={submission.course.name} title={submission.title} />
         <Card className="p-8 text-center">
           <FileText className="text-muted-foreground mx-auto size-8" />
           <p className="mt-3 text-sm text-muted-foreground">
-            This student hasn&apos;t submitted this assignment yet.
+            This student hasn&apos;t handed in this assignment yet.
           </p>
         </Card>
       </PageFrame>
@@ -139,7 +146,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
         { label: submission.title, href: assignmentRoutes.detail(submissionId) },
         { label: entry.student.fullName },
       ]}
-      status={<StatusChip tone={entry.status === "GRADED" ? "success" : "info"}>{entry.status.replace("_", " ")}</StatusChip>}
+      status={<StatusChip tone={entry.status === "GRADED" ? "success" : "info"}>{ENTRY_STATUS[entry.status] ?? "In progress"}</StatusChip>}
       actions={<DeleteEntryButton entryId={entry.id} submissionId={submissionId} studentName={entry.student.fullName} />}
     >
       <PageTitle
@@ -148,7 +155,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
         properties={
           <PropertyList>
             <PropertyRow label="Due">{dateFmt.format(submission.dueDate)}</PropertyRow>
-            <PropertyRow label="Points">{submission.totalPoints}</PropertyRow>
+            <PropertyRow label="Marks">{submission.totalPoints}</PropertyRow>
           </PropertyList>
         }
       />
@@ -158,7 +165,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
           <Card className="p-6">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="font-display text-lg leading-tight">
-                Submitted files
+                Files handed in
               </h2>
               <Badge variant="secondary">
                 Attempt #{entry.attemptNumber}
@@ -167,7 +174,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
             <Separator className="mb-4" />
             {entry.fileUrl.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                No files uploaded with this submission.
+                The student handed this in without any files.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -246,7 +253,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
             </h3>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Submitted</span>
+                <span className="text-muted-foreground">Handed in</span>
                 <span className="text-foreground">
                   {dateFmt.format(entry.submittedAt)}
                 </span>
@@ -262,7 +269,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
                 <Badge
                   variant={entry.status === "GRADED" ? "brand" : "secondary"}
                 >
-                  {entry.status.replace("_", " ")}
+                  {ENTRY_STATUS[entry.status] ?? "In progress"}
                 </Badge>
               </div>
               {grade && (
@@ -270,7 +277,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
                   <Separator className="my-2" />
                   <div className="flex items-baseline justify-between">
                     <span className="text-muted-foreground text-xs">
-                      Current grade
+                      Current mark
                     </span>
                     <span className="font-display tabular-nums text-foreground">
                       {grade.score}
@@ -293,8 +300,7 @@ export default async function StudentGradingPage({ params }: PageProps) {
               </h3>
             </div>
             <p className="text-muted-foreground mt-1 mb-3 text-xs">
-              Model answers / solution notes. Visible to every student who
-              has submitted this assignment.
+              Model answers or worked solutions. Every student who has handed in this assignment can see them.
             </p>
             <MemoFilesEditor
               submissionId={submission.id}

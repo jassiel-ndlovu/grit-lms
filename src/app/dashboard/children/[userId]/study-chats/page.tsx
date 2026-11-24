@@ -35,7 +35,7 @@ export default async function ChildStudyChatsPage({ params }: { params: Promise<
   return (
     <PageFrame
       type="record"
-      breadcrumb={[{ label: "Your learners", href: childRoutes.home }, { label: child.name, href: childRoutes.child(userId) }, { label: "Study chats" }]}
+      breadcrumb={[{ label: "Your children", href: childRoutes.home }, { label: child.name, href: childRoutes.child(userId) }, { label: "Study chats" }]}
     >
       <PageTitle title="Study chats" description={`What ${first} asks the study assistant. ${first} is told that you can read these, and chats are kept for a year.`} />
       {off.length ? (
