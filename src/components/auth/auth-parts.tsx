@@ -42,21 +42,39 @@ export function keepCallback(path: "/auth" | "/auth/sign-up", raw: string | null
  * The sign-in, sign-up and invite frame. From 1024 px a photo fills the
  * right half; below that it's hidden and, being lazy, never fetched.
  */
-export function AuthFrame({ title, lead, children }: { title: string; lead: string; children: React.ReactNode }) {
-  const joining = usePathname() !== "/auth";
+export type AuthBrand = { name: string; logoUrl: string | null; accentColor: string | null; whiteLabel: boolean };
+
+export function AuthFrame({ title, lead, brand, children }: { title: string; lead: string; brand?: AuthBrand; children: React.ReactNode }) {
+  const joining = usePathname() !== "/auth" && !brand;
+  // An organisation's colour becomes the page's primary colour (buttons, links, focus).
+  const accent = brand?.accentColor && /^#[0-9a-fA-F]{6}$/.test(brand.accentColor) ? brand.accentColor : null;
+  const style = accent ? ({ "--primary": accent, "--primary-foreground": "#ffffff", "--ring": accent, "--brand-terracotta": accent, "--brand-terracotta-foreground": "#ffffff" } as React.CSSProperties) : undefined;
   return (
-    <div className="grid min-h-screen bg-card lg:grid-cols-[1.1fr_1fr]">
+    <div className="grid min-h-screen bg-card lg:grid-cols-[1.1fr_1fr]" style={style}>
       <div className="flex min-w-0 flex-col bg-gradient-to-b from-brand-terracotta/5 via-background to-background">
         <header className="border-b border-border bg-background/80 backdrop-blur">
           <div className="flex items-center justify-between gap-4 px-6 py-4">
-            <Link href="/" className="flex items-center gap-2">
-              <BrandMark className="dark:ring-0" />
-              <span className="text-lg font-semibold tracking-tight text-foreground">{APP_NAME}</span>
-            </Link>
-            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
-              <ArrowLeft aria-hidden className="size-4" />
-              Back to home
-            </Link>
+            {brand ? (
+              <span className="flex min-w-0 items-center gap-2">
+                {brand.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={brand.logoUrl} alt="" className="h-8 w-auto max-w-40 object-contain" />
+                ) : null}
+                <span className="truncate text-lg font-semibold tracking-tight text-foreground">{brand.name}</span>
+                {brand.whiteLabel ? null : <span className="hidden text-xs text-muted-foreground sm:inline">on {APP_NAME}</span>}
+              </span>
+            ) : (
+              <Link href="/" className="flex items-center gap-2">
+                <BrandMark className="dark:ring-0" />
+                <span className="text-lg font-semibold tracking-tight text-foreground">{APP_NAME}</span>
+              </Link>
+            )}
+{brand?.whiteLabel ? null : (
+              <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+                <ArrowLeft aria-hidden className="size-4" />
+                Back to home
+              </Link>
+            )}
           </div>
         </header>
         <main className="flex flex-1 items-center justify-center px-4 py-12">
@@ -69,7 +87,7 @@ export function AuthFrame({ title, lead, children }: { title: string; lead: stri
           </div>
         </main>
         <footer className="px-6 py-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} {APP_NAME}
+          © {new Date().getFullYear()} {brand?.whiteLabel ? brand.name : APP_NAME}
         </footer>
       </div>
       <div className="sticky top-0 hidden h-screen bg-muted lg:block">

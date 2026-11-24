@@ -54,6 +54,8 @@ export default async function SettingsPage() {
   const showOrganisation = viewer?.workspace?.kind === "ORGANISATION" && can(viewer, "workspace.settings");
   // The meeting app (#211): any workspace, for owners and admins.
   const showMeetings = viewer?.workspace != null && can(viewer, "workspace.settings");
+  const showBranding = viewer?.workspace != null && can(viewer, "workspace.branding");
+  const showDevelopers = viewer?.workspace != null && can(viewer, "workspace.settings");
   const showPayouts =
     isBillingEnabled() && viewer?.workspace != null && (can(viewer, "payouts.connect") || can(viewer, "fees.manage"));
   const defaults: SettingsFormValues = {
@@ -169,6 +171,32 @@ export default async function SettingsPage() {
           <span>
             <span className="text-foreground block font-semibold">Payouts</span>
             <span className="text-muted-foreground">The bank account parents&apos; fee payments go to.</span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
+
+      {showBranding ? (
+        <Link
+          href="/dashboard/settings/branding"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">Branding</span>
+            <span className="text-muted-foreground">Your logo, colour and name on families&apos; emails and your sign-in page.</span>
+          </span>
+          <span aria-hidden className="text-muted-foreground">→</span>
+        </Link>
+      ) : null}
+
+      {showDevelopers ? (
+        <Link
+          href="/dashboard/settings/developers"
+          className="border-border hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 text-sm"
+        >
+          <span>
+            <span className="text-foreground block font-semibold">API and webhooks</span>
+            <span className="text-muted-foreground">Connect Nexa to your other systems: read-only API keys, and webhooks that tell them when things happen.</span>
           </span>
           <span aria-hidden className="text-muted-foreground">→</span>
         </Link>

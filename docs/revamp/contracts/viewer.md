@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.29, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.30, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.30. Study assistant: reason `OFF_FOR_STUDENT` (B's per-student switch, #275) |
 | 2026-11-24 | Draft 1.29. Study assistant paid by students' own credits; opens with billing in January |
 | 2026-11-24 | Draft 1.28. AI marks on photo and PDF answers; session notes from transcripts; diagrams |
 | 2026-11-24 | Draft 1.27. Course study assistant for students (Pro) |
@@ -799,6 +800,8 @@ These use the same service, gate, credits and run records as above. They're in `
 | `setWhiteLabelAction` | `{ hideNexaBranding, supportEmail? }` | Pro. Switching it on needs a support email |
 | `getBrandForSlug` | `{ slug }` (public) | For the branded sign-in page **`/w/<slug>`** (please build it): `{ slug, name, logoUrl, accentColor, welcomeText, whiteLabel, supportEmail }`, or null without branding |
 
+**Built by A (24 Nov, from B's backlog):** Settings › Branding (`/dashboard/settings/branding`) and the branded sign-in page `/w/<slug>`.
+
 **For B:**
 - Use the brand in the dashboard shell for that workspace's members: the logo in the header, and the accent as the primary colour (`viewer.workspace.logoUrl` and `accentColor` are already on the viewer).
 - When `whiteLabel` is true, hide "Nexa" in the shell and footer for families, and show `supportEmail`.
@@ -883,5 +886,6 @@ Bringing a whole organisation on, branch by branch. **The order:**
 
 Owner, 24 Nov: the tutor- and organisation-funded study assistant is parked.
 - Students (adults who pay) or parents now buy **study credits** (billing.md, "AI credit top-ups"), and each answer spends them.
-- `getStudyStatus` adds `reason` (`NOT_ON_PLAN`, `COMING_SOON`, `NO_CREDITS` or null) and `credits`. When the reason is `NO_CREDITS`, show "Buy study credits", with the packs from `getTopupOffer({ forWhom: "STUDENT" })`.
+- `getStudyStatus` adds `reason` (`NOT_ON_PLAN`, `OFF_FOR_STUDENT`, `COMING_SOON`, `NO_CREDITS` or null) and `credits`. When the reason is `NO_CREDITS`, show "Buy study credits", with the packs from `getTopupOffer({ forWhom: "STUDENT" })`.
+- `OFF_FOR_STUDENT` (Draft 1.30, B's #275): a tutor has switched the assistant off for this one student. `askStudy` refuses; say that their tutor has switched it off, and to ask them.
 - With billing off, it says it opens in January.

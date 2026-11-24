@@ -17,6 +17,7 @@
  *   tests/<testId>/answers/<questionId>/<sanitized-filename>     (student)
  *   users/<userId>/avatar/<sanitized-filename>
  *   support/<userId>/<sanitized-filename>                        (help-centre screenshots)
+ *   workspaces/<workspaceId>/logo/<sanitized-filename>           (branding)
  *
  * Random suffixes are added by Vercel Blob (`addRandomSuffix: true`), so
  * paths here don't need to be unique on their own.
@@ -43,6 +44,8 @@ export const BlobKind = {
   UserAvatar: "user-avatar",
   /** A screenshot on a help-centre query (support.md). */
   SupportAttachment: "support-attachment",
+  /** An organisation's logo (viewer.md, "Branding and white-label"). */
+  WorkspaceLogo: "workspace-logo",
 } as const;
 
 export type BlobKind = (typeof BlobKind)[keyof typeof BlobKind];
@@ -111,6 +114,10 @@ export function supportAttachmentPath(userId: string, filename: string): string 
   return `support/${userId}/${sanitizeFilename(filename)}`;
 }
 
+export function workspaceLogoPath(workspaceId: string, filename: string): string {
+  return `workspaces/${workspaceId}/logo/${sanitizeFilename(filename)}`;
+}
+
 /**
  * Validate that a pathname matches the expected scheme for a given kind.
  * Used by the upload-token endpoint to refuse forged paths.
@@ -139,6 +146,8 @@ export function isValidPath(kind: BlobKind, pathname: string): boolean {
       return /^users\/[^/]+\/avatar\/[^/]+$/.test(pathname);
     case BlobKind.SupportAttachment:
       return /^support\/[^/]+\/[^/]+$/.test(pathname);
+    case BlobKind.WorkspaceLogo:
+      return /^workspaces\/[^/]+\/logo\/[^/]+$/.test(pathname);
     default:
       return false;
   }
@@ -200,6 +209,7 @@ export const ALLOWED_CONTENT_TYPES: Record<BlobKind, string[] | undefined> = {
   [BlobKind.TestAnswer]: undefined,
   [BlobKind.UserAvatar]: ["image/png", "image/jpeg", "image/webp"],
   [BlobKind.SupportAttachment]: ["image/png", "image/jpeg", "image/webp"],
+  [BlobKind.WorkspaceLogo]: ["image/png", "image/jpeg", "image/webp"],
 };
 
 /**
@@ -216,4 +226,5 @@ export const MAX_BYTES: Record<BlobKind, number> = {
   [BlobKind.TestAnswer]: 50 * 1024 * 1024, // 50 MB
   [BlobKind.UserAvatar]: 2 * 1024 * 1024, // 2 MB
   [BlobKind.SupportAttachment]: 5 * 1024 * 1024, // 5 MB
+  [BlobKind.WorkspaceLogo]: 1 * 1024 * 1024, // 1 MB
 };

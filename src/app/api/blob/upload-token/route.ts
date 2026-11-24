@@ -26,6 +26,7 @@ import { staffFor } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { BlobKind } from "@/lib/blob/paths";
 import { issueUploadToken, type ClientPayload } from "@/lib/blob/server";
+import { effectiveRole } from "@/lib/roles";
 
 export async function POST(request: Request): Promise<NextResponse> {
   const body = (await request.json()) as HandleUploadBody;
@@ -61,6 +62,17 @@ export async function POST(request: Request): Promise<NextResponse> {
           if (!pathname.startsWith(expectedPrefix)) {
             throw new Error("Cannot upload avatar to another user's folder");
           }
+        }
+
+        // An organisation's logo: only staff whose role there includes branding.
+        if (payload.kind === BlobKind.WorkspaceLogo) {
+          const workspaceId = pathname.split("/")[1];
+          const m = await prisma.membership.findFirst({
+            where: { workspaceId, userId: session.user.id, status: "ACTIVE" },
+            select: { role: true, presetRole: true, customRole: { select: { id: true, name: true, permissions: true, scope: true } } },
+          });
+          const allowed = m && effectiveRole({ role: m.role, presetRole: m.presetRole, customRole: m.customRole ?? null }).permissions.includes("workspace.branding");
+          if (!allowed) throw new Error("Only staff who manage branding can upload this organisation's logo");
         }
 
         // Help-centre screenshots go in the requester's own folder.
@@ -111,6 +123,7 @@ function assertRoleAllowsKind(role: string, kind: ClientPayload["kind"]): void {
       return;
     case BlobKind.UserAvatar:
     case BlobKind.SupportAttachment:
+    case BlobKind.WorkspaceLogo:
       // Any authenticated user (the path check above keeps it to their own folder).
       return;
     default:
