@@ -328,7 +328,7 @@ export function StudentDeletionPanel({
 
   if (deleteOn) {
     return (
-      <div className="border-destructive/40 bg-destructive/5 space-y-3 rounded-lg border p-4 text-sm">
+      <div data-slot="tone-panel" data-tone="danger" className="space-y-3 rounded-lg p-4 text-sm">
         <p className="text-foreground font-medium">Deletion pending</p>
         <p className="text-muted-foreground">
           {name}&apos;s account will be deleted on {formatDeletionDate(deleteOn)}. They can&apos;t sign in until then. Cancel if the parent

@@ -29,6 +29,7 @@ import { DEFAULT_TIME_ZONE, formatDate, resolveLocale, type DateContext } from "
 import { can, getViewer, type Viewer } from "@/lib/viewer";
 import { needsScope } from "@/lib/viewer-core";
 import { Button } from "@/components/ui/button";
+import { TonePanel } from "@/components/ui/nexus";
 
 export const metadata = { title: "Fees" };
 
@@ -118,7 +119,7 @@ export default async function FeesPage({ searchParams }: PageProps) {
   return shell(
     <>
       {noAccount ? (
-        <div role="status" className="border-warning/40 bg-warning/5 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4 text-sm">
+        <TonePanel tone="warning" role="status" className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <span>
             {payouts.payoutMode === "PER_TUTOR"
               ? "Connect your payout account to send fees for your courses."
@@ -127,7 +128,7 @@ export default async function FeesPage({ searchParams }: PageProps) {
           <Link href="/dashboard/settings/payouts" className="text-foreground font-medium underline underline-offset-2">
             Set up payouts
           </Link>
-        </div>
+        </TonePanel>
       ) : null}
       <PayoutRecoveries items={recoveries} ctx={ctx} now={new Date().toISOString()} />
       <FeeFilters status={status} courseId={courseId} courses={courses} />

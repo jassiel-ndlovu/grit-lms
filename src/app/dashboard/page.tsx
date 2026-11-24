@@ -67,6 +67,8 @@ import { SetupChecklist } from "@/features/courses/components/setup-checklist";
 import { setupChecklistFor } from "@/features/courses/setup-checklist";
 import { getViewer } from "@/lib/viewer";
 import { getCourseScope } from "@/features/courses/course-access";
+import { dueTone } from "@/lib/nexus";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 export const metadata = { title: "Dashboard" };
 
@@ -237,7 +239,8 @@ export default async function DashboardLanding({
 
   const recentGrades = grades.slice(0, 4);
   const firstName = student.fullName.split(" ")[0];
-  const greeting = greetingFor(new Date(), dateCtx.timeZone);
+  const now = new Date();
+  const greeting = greetingFor(now, dateCtx.timeZone);
 
   return (
     <PageFrame type="home" breadcrumb={[{ label: "Home" }]}>
@@ -286,9 +289,7 @@ export default async function DashboardLanding({
                       <span className="text-muted-foreground">Progress</span>
                       <span className="font-medium tabular-nums">{done}/{total}</span>
                     </div>
-                    <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                      <div className="bg-brand-terracotta h-full transition-all" style={{ width: `${percent}%` }} />
-                    </div>
+                    <ProgressBar label="Lessons completed" value={percent} valueText={`${done} of ${total}`} />
                   </div>
                 </Link>
               </Card>
@@ -313,7 +314,7 @@ export default async function DashboardLanding({
                 {upNext.map((item) => {
                   const Icon = item.kind === "test" ? Pencil : item.kind === "assignment" ? Hourglass : CalendarDays;
                   return (
-                    <li key={`${item.kind}-${item.id}`}>
+                    <li key={`${item.kind}-${item.id}`} data-slot="tone-row" data-tone={item.kind === "event" ? "neutral" : dueTone(item.date, now)}>
                       <Link href={item.href} className="hover:bg-muted/40 flex items-center gap-3 px-4 py-3 sm:px-5 transition-colors">
                         <div className="bg-brand-terracotta/12 text-brand-terracotta flex size-9 items-center justify-center rounded-md shrink-0">
                           <Icon className="size-4" />

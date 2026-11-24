@@ -45,7 +45,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, ArrowRight, Eye, Flag, Loader2, LogOut, Save, WifiOff } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Eye, Flag, Loader2, LogOut, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -83,6 +83,8 @@ import {
   unansweredLabels,
   type StepSummary,
 } from "../lib/runner-state";
+import { TonePanel } from "@/components/ui/nexus";
+import { SaveState } from "@/components/ui/save-state";
 
 /**
  * Question shape consumed by the runner. Top-level questions carry an
@@ -185,7 +187,7 @@ export function TestRunner({
   const [currentIdx, setCurrentIdx] = React.useState(0);
   const [submitting, setSubmitting] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
-  const [online, setOnline] = React.useState(true);
+  const [savedAt, setSavedAt] = React.useState<Date | null>(null);
   // Last draft-save outcome. Draft saves used to fail silently into
   // console.warn, so a student whose work wasn't persisting had no way to
   // know until they reloaded and found it gone.
@@ -228,19 +230,6 @@ export function TestRunner({
   // enforce SAVE_MAX_WAIT_MS so a continuously-typing student never goes
   // longer than that window without a save.
   const lastSavedAtRef = React.useRef<number>(Date.now());
-
-  /* ───── Online/offline ───── */
-  React.useEffect(() => {
-    setOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
-    function up() { setOnline(true); }
-    function down() { setOnline(false); }
-    window.addEventListener("online", up);
-    window.addEventListener("offline", down);
-    return () => {
-      window.removeEventListener("online", up);
-      window.removeEventListener("offline", down);
-    };
-  }, []);
 
   /* ───── Flags, kept in this browser for this attempt ───── */
   const flagsLoaded = React.useRef(false);
@@ -296,6 +285,7 @@ export function TestRunner({
         fail(message);
       } else {
         lastSavedAtRef.current = Date.now();
+        setSavedAt(new Date());
         setSaveError(null);
         setUnsavedIds(new Set());
       }
@@ -528,7 +518,7 @@ export function TestRunner({
   return (
     <div className="space-y-5">
       {preview && (
-        <div className="border-brand-terracotta/40 bg-brand-terracotta/8 flex flex-wrap items-start gap-2 rounded-md border p-3">
+        <TonePanel tone="accent" className="flex flex-wrap items-start gap-2 p-3">
           <Eye className="text-brand-terracotta mt-0.5 size-4 shrink-0" />
           <p className="text-foreground text-xs leading-relaxed">
             <span className="font-medium">Preview.</span> This is exactly
@@ -538,7 +528,7 @@ export function TestRunner({
             <span className="font-medium">Save answer key</span> when
             you&apos;re done.
           </p>
-        </div>
+        </TonePanel>
       )}
 
       {/* The header and the question strip. In a sitting they stick to the
@@ -555,30 +545,17 @@ export function TestRunner({
             {title}
           </h1>
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {!preview && !online && (
-              <span
-                className="text-destructive inline-flex items-center gap-1 text-xs"
-                title="Offline - answers save again when you reconnect"
-              >
-                <WifiOff className="size-3" aria-hidden />
-                <span className="hidden sm:inline">Offline</span>
-              </span>
+            {preview ? (
+              dirty ? <SaveState kind="pending" quiet /> : null
+            ) : (
+              <SaveState
+                kind={saving ? "saving" : saveError ? "failed" : savedAt ? "saved" : "idle"}
+                at={savedAt}
+                quiet
+                compact
+                announce={false}
+              />
             )}
-            {preview && dirty && (
-              <span className="text-muted-foreground text-xs">Unsaved</span>
-            )}
-            {saving ? (
-              <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                <Save className="size-3" aria-hidden /> <span className="hidden sm:inline">Saving</span>
-              </span>
-            ) : saveError ? (
-              <span
-                className="text-destructive inline-flex items-center gap-1 text-xs"
-                title={`Last save failed: ${saveError}`}
-              >
-                <AlertTriangle className="size-3" aria-hidden /> Not saved
-              </span>
-            ) : null}
             {preview && timeLimit != null && (
               <Badge
                 variant="soft"

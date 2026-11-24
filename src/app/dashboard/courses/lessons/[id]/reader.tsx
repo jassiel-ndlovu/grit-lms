@@ -46,6 +46,7 @@ import {
   flattenLessonTree,
 } from "@/features/lessons/lib/lesson-tree";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 /** A lesson of a course; without `lessonId`, the first one. */
 export async function LessonReader({ courseId, lessonId = null }: { courseId: string; lessonId?: string | null }) {
@@ -155,9 +156,7 @@ export async function LessonReader({ courseId, lessonId = null }: { courseId: st
                 {completedCount}/{total} ({progressPct}%)
               </span>
             </div>
-            <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-              <div className="bg-brand-terracotta h-full transition-all" style={{ width: `${progressPct}%` }} />
-            </div>
+            <ProgressBar label="Lessons completed" value={progressPct} valueText={`${completedCount} of ${total}`} />
           </div>
           <Separator className="hidden lg:block" />
           <MobileCollapsible label={`All lessons (${total})`}>

@@ -10,6 +10,7 @@ import { formatDate, type DateContext } from "@/lib/datetime";
 
 import { formatRand } from "../lib/billing-ui";
 import { RECOVERY_CHIP, deductionsStarted, recoveryReturn } from "../lib/recovery-ui";
+import { TonePanel } from "@/components/ui/nexus";
 
 export type PayoutRecovery = Awaited<ReturnType<typeof listPayoutRecoveries>>[number];
 
@@ -34,7 +35,7 @@ export function PayoutRecoveries({ items, ctx, now }: { items: PayoutRecovery[];
   if (active.length === 0) return null;
   const day = (iso: string) => formatDate(new Date(iso), ctx, { day: "numeric", month: "short", year: "numeric" });
   return (
-    <section aria-labelledby="recoveries-heading" className="border-warning/40 space-y-3 rounded-lg border p-4">
+    <TonePanel as="section" tone="warning" aria-labelledby="recoveries-heading" className="space-y-3">
       <div className="space-y-1">
         <h2 id="recoveries-heading" className="text-foreground text-sm font-semibold">
           Refunds being taken from your payouts
@@ -80,6 +81,6 @@ export function PayoutRecoveries({ items, ctx, now }: { items: PayoutRecovery[];
           );
         })}
       </ul>
-    </section>
+    </TonePanel>
   );
 }

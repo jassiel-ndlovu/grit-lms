@@ -6,32 +6,13 @@
  */
 
 import * as React from "react";
-import { CloudOff, HardDriveDownload, History, Loader2, Save } from "lucide-react";
+import { History, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { TonePanel } from "@/components/ui/nexus";
+import { SaveState } from "@/components/ui/save-state";
 import type { LocalDraft } from "@/lib/use-local-draft";
-
-function useOnline(): boolean {
-  const [online, setOnline] = React.useState(true);
-  React.useEffect(() => {
-    setOnline(navigator.onLine);
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener("online", on);
-    window.addEventListener("offline", off);
-    return () => {
-      window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
-    };
-  }, []);
-  return online;
-}
-
-function timeOf(d: Date): string {
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
 
 export function DraftStatus({
   draft,
@@ -40,35 +21,8 @@ export function DraftStatus({
   draft: Pick<LocalDraft<unknown>, "status" | "lastSavedAt">;
   className?: string;
 }) {
-  const online = useOnline();
-  let text: string;
-  if (draft.status === "dirty") text = "Saving progress…";
-  else if (draft.status === "error") text = "Couldn't save progress on this device";
-  else if (draft.lastSavedAt) text = `Progress saved ${timeOf(draft.lastSavedAt)}`;
-  else text = "Progress auto-saves on this device";
-
-  return (
-    <span
-      className={cn(
-        "text-muted-foreground inline-flex items-center gap-1.5 text-xs",
-        draft.status === "error" && "text-destructive",
-        className,
-      )}
-      aria-live="polite"
-    >
-      {draft.status === "dirty" ? (
-        <Loader2 className="size-3 animate-spin" />
-      ) : (
-        <HardDriveDownload className="size-3" />
-      )}
-      {text}
-      {!online && (
-        <span className="text-brand-terracotta inline-flex items-center gap-1">
-          <CloudOff className="size-3" /> Offline — kept locally
-        </span>
-      )}
-    </span>
-  );
+  const kind = draft.status === "dirty" ? "saving" : draft.status === "error" ? "failed" : draft.lastSavedAt ? "saved" : "idle";
+  return <SaveState kind={kind} at={draft.lastSavedAt} where="device" className={className} />;
 }
 
 export function SaveProgressButton({
@@ -106,7 +60,7 @@ export function RestoreDraftBanner<T>({
   if (!draft.pending) return null;
   const at = draft.pending.savedAt;
   return (
-    <div className="border-brand-terracotta/40 bg-brand-terracotta/5 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3">
+    <TonePanel tone="accent" className="flex flex-wrap items-center justify-between gap-3 py-3">
       <div className="flex items-start gap-3">
         <History className="text-brand-terracotta mt-0.5 size-4 shrink-0" />
         <div className="text-sm">
@@ -137,6 +91,6 @@ export function RestoreDraftBanner<T>({
           Restore
         </Button>
       </div>
-    </div>
+    </TonePanel>
   );
 }

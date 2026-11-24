@@ -33,6 +33,7 @@ import { getExtraTime } from "@/features/assessments/accommodations";
 import { attemptDeadline, effectiveTimeLimit } from "@/features/assessments/lib/attempt-deadline";
 import { hasExtraTime, minutesLabel } from "@/features/assessments/lib/extra-time";
 import { schoolDateFormat } from "@/lib/datetime";
+import { TonePanel } from "@/components/ui/nexus";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -153,10 +154,7 @@ export default async function PreTestPage({ params }: PageProps) {
       </Card>
 
       {ifStartedNow.cutShort && minutesIfStartedNow != null && (
-        <div
-          role="note"
-          className="border-destructive/40 bg-destructive/5 flex items-start gap-3 rounded-md border p-4"
-        >
+        <TonePanel tone="danger" role="note" className="flex items-start gap-3">
           <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
           <p className="text-foreground text-sm">
             This test closes at its due time ({dateFmt.format(test.dueDate)}). If you
@@ -164,7 +162,7 @@ export default async function PreTestPage({ params }: PageProps) {
             the full {limitText}. Your answers are submitted automatically when it
             closes.
           </p>
-        </div>
+        </TonePanel>
       )}
 
       {test.preTestInstructions && (

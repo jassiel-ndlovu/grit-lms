@@ -8,8 +8,8 @@ import { CalendarX2, FileX2, TrendingDown, TriangleAlert, type LucideIcon } from
 
 import { StatusChip } from "@/components/shell/status-chip";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { TonePanel } from "@/components/ui/nexus";
 import type { SharedRiskAlert } from "@/features/risk/alerts";
 import type { RiskReason } from "@/features/risk/rules";
 import { formatDate, type DateContext } from "@/lib/datetime";
@@ -65,7 +65,12 @@ export function AlertList({ rows, ctx }: { rows: AlertRow[]; ctx: DateContext })
         const open = a.closedAt === null;
         const shared = sharedWithLabel(a.sharedWith);
         return (
-          <li key={a.id} className="space-y-3 p-4 sm:p-5">
+          <li
+            key={a.id}
+            data-slot="tone-row"
+            data-tone={open ? (LEVEL_CHIP[a.level].tone === "danger" ? "danger" : "warning") : "neutral"}
+            className="space-y-3 p-4 sm:p-5"
+          >
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
               <div className="min-w-0">
                 <h2 className="text-foreground font-medium">{a.student.name}</h2>
@@ -153,7 +158,7 @@ export function FamilyNotes({ notes, ctx, withStudent = false }: { notes: Shared
       <h2 id="tutor-notes" className="text-foreground text-base font-semibold">
         Notes from your tutors
       </h2>
-      <Card className="overflow-hidden p-0">
+      <TonePanel tone="accent" className="p-0">
         <ul className="divide-border divide-y">
           {notes.map((n) => (
             <li key={n.id} className="space-y-2 px-4 py-4 sm:px-5">
@@ -169,7 +174,7 @@ export function FamilyNotes({ notes, ctx, withStudent = false }: { notes: Shared
             </li>
           ))}
         </ul>
-      </Card>
+      </TonePanel>
     </section>
   );
 }

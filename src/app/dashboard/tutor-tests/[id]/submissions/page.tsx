@@ -20,6 +20,9 @@ import {
   listSubmissionsForTest,
   testBelongsToTutor,
 } from "@/features/assessments/queries";
+import { PeekButton } from "@/components/ui/peek-panel";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { ScriptPeeks } from "@/features/assessments/components/script-peek";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { PageMessage, PageTitle } from "@/components/shell/page-frame";
 import { TestFrame, testRoutes } from "@/features/assessments/components/test-frame";
@@ -101,6 +104,21 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
         }
       />
 
+      {graded + submitted > 0 ? (
+        <div className="flex max-w-sm items-center gap-3">
+          <ProgressBar
+            label="Scripts marked"
+            value={graded}
+            max={graded + submitted}
+            valueText={`${graded} of ${graded + submitted} marked`}
+            tone={submitted === 0 ? "success" : "primary"}
+          />
+          <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
+            {graded} of {graded + submitted} marked
+          </span>
+        </div>
+      ) : null}
+
       {ai ? (
         <AiMarkingQueue testId={test.id} questions={written} progress={ai.progress} />
       ) : written.length > 0 ? (
@@ -120,15 +138,18 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
           description="Attempts show up here as students start them."
         />
       ) : (
+        <ScriptPeeks
+          items={submissions.map((s) => ({ id: s.id, title: s.student.fullName, href: `/dashboard/tutor-tests/submissions/${test.id}/${s.studentId}` }))}
+        >
         <ul className="divide-border border-border divide-y border-y">
           {submissions.map((s) => {
             const itemPct = s.grade != null ? pct(s.grade.score, s.grade.outOf) : null;
             const c = chip(s.status);
             return (
-              <li key={s.id}>
+              <li key={s.id} className="hover:bg-muted/40 flex items-center">
                 <Link
                   href={`/dashboard/tutor-tests/submissions/${test.id}/${s.studentId}`}
-                  className="hover:bg-muted/40 flex items-center gap-3 px-2 py-3 transition-colors"
+                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3"
                 >
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="text-foreground truncate text-sm font-medium">{s.student.fullName}</p>
@@ -157,10 +178,12 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
                     ) : null}
                   </div>
                 </Link>
+                <PeekButton id={s.id} name={s.student.fullName} />
               </li>
             );
           })}
         </ul>
+        </ScriptPeeks>
       )}
     </TestFrame>
   );

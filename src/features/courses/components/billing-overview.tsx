@@ -18,6 +18,7 @@ import { STATE_CHIP, TIER_LABEL, capLabel, capTone, formatRand } from "../lib/bi
 import { CardButton, PayButton, PaymentReturn } from "./billing-pay";
 import { RestartPanel } from "./billing-restart";
 import { courseRoutes } from "./course-frame";
+import { TonePanel } from "@/components/ui/nexus";
 
 export type BillingOverviewData = Awaited<ReturnType<typeof getBillingOverview>>;
 export type CourseTierRow = Awaited<ReturnType<typeof getCourseTiers>>[number];
@@ -70,7 +71,7 @@ export function BillingOverview({
       {payment ? <PaymentReturn reference={payment.reference} /> : null}
 
       {overdue ? (
-        <section role="alert" className="border-destructive/40 bg-destructive/5 space-y-1 rounded-lg border p-4 text-sm">
+        <TonePanel as="section" tone="danger" role="alert" className="space-y-1 text-sm">
           <p className="text-foreground font-semibold">Unpaid renewal</p>
           <p className="text-muted-foreground">
             {o.state === "READ_ONLY"
@@ -83,7 +84,7 @@ export function BillingOverview({
               <PayButton invoiceId={o.overdueInvoiceId} label="Pay now" />
             </div>
           ) : null}
-        </section>
+        </TonePanel>
       ) : null}
 
       {o.state === "CANCELLED" && o.deleteAfter ? (

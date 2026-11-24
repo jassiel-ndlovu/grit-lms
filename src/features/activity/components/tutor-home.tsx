@@ -13,8 +13,10 @@ import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { StatusChip, type StatusTone } from "@/components/shell/status-chip";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { TonePanel } from "@/components/ui/nexus";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { formatDate, greetingFor } from "@/lib/datetime";
+import { dueTone } from "@/lib/nexus";
 import { cn } from "@/lib/utils";
 
 import { atRiskRoutes } from "../lib/at-risk";
@@ -164,7 +166,12 @@ export function TutorHome({
                   </thead>
                   <tbody>
                     {rows.map((r) => (
-                      <tr key={`${r.kind}-${r.id}`} className="border-border hover:bg-muted/40 border-b last:border-0">
+                      <tr
+                        key={`${r.kind}-${r.id}`}
+                        data-slot="tone-row"
+                        data-tone={dueTone(r.dueDate, now)}
+                        className="border-border hover:bg-muted/40 border-b last:border-0"
+                      >
                         <td className="px-4 py-2.5">
                           <Link href={rowHref(r)} className="text-foreground font-medium hover:underline">
                             {r.title}
@@ -190,8 +197,8 @@ export function TutorHome({
           </Card>
         </section>
 
-        <aside className="space-y-8">
-          <section aria-labelledby="week-heading" className="space-y-2">
+        <aside className="space-y-4">
+          <TonePanel as="section" nexus="week" aria-labelledby="week-heading" className="space-y-2">
             <h2 id="week-heading" className="text-foreground text-base font-semibold">
               This week
             </h2>
@@ -218,9 +225,9 @@ export function TutorHome({
                 </div>
               ) : null}
             </dl>
-          </section>
+          </TonePanel>
 
-          <section aria-labelledby="next-heading" className="space-y-2">
+          <TonePanel as="section" aria-labelledby="next-heading" className="space-y-2">
             <div className="flex items-baseline justify-between">
               <h2 id="next-heading" className="text-foreground text-base font-semibold">
                 Coming up
@@ -247,7 +254,7 @@ export function TutorHome({
                 ))}
               </ul>
             )}
-          </section>
+          </TonePanel>
         </aside>
       </div>
     </PageFrame>

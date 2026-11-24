@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SaveState } from "@/components/ui/save-state";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { READ_ONLY_REASON, useReadOnly } from "@/components/shell/workspace-access";
 import { markAttendance, openCheckIn } from "@/features/calendar/actions";
@@ -41,6 +42,8 @@ export function AttendanceSheet({ eventId, occurrenceStart, learners: initial }:
   const readOnly = useReadOnly();
   const [rows, setRows] = React.useState(initial);
   const [saving, setSaving] = React.useState<Set<string>>(new Set());
+  const [savedAt, setSavedAt] = React.useState<Date | null>(null);
+  const [saveFailed, setSaveFailed] = React.useState(false);
   const [noteFor, setNoteFor] = React.useState<string | null>(null);
 
   async function save(marks: Array<{ learnerId: string; status: AttendanceStatus; note?: string | null }>) {
@@ -53,11 +56,13 @@ export function AttendanceSheet({ eventId, occurrenceStart, learners: initial }:
     setSaving((s) => new Set([...s, ...ids]));
     const res = await markAttendance({ eventId, occurrenceStart, marks });
     setSaving((s) => new Set([...s].filter((x) => !ids.has(x))));
+    setSaveFailed(!res?.data);
     if (!res?.data) {
       setRows(before);
       toast.error(res?.serverError ?? "Couldn't save. Try again.");
       return;
     }
+    setSavedAt(new Date());
     if (res.data.guardiansEmailed > 0) toast.message(`Parents emailed about ${res.data.guardiansEmailed === 1 ? "an absence" : "absences"}`);
   }
 
@@ -75,6 +80,7 @@ export function AttendanceSheet({ eventId, occurrenceStart, learners: initial }:
           {rows.length - unmarked.length} of {rows.length} marked
           {rate.percent != null ? ` · ${rate.attended} attended` : ""}
         </p>
+        <SaveState kind={saving.size > 0 ? "saving" : saveFailed ? "failed" : savedAt ? "saved" : "idle"} at={savedAt} quiet className="mr-auto" />
         <Button
           size="sm"
           variant="outline"
@@ -95,7 +101,6 @@ export function AttendanceSheet({ eventId, occurrenceStart, learners: initial }:
                 <p className="text-muted-foreground text-xs">
                   {r.status ? ATTENDANCE_STATUSES.find((s) => s.value === r.status)?.label : "Not marked"}
                   {r.method === "CHECK_IN_CODE" ? " · checked in" : ""}
-                  {saving.has(r.learnerId) ? <Loader2 aria-label="Saving" className="ml-1 inline size-3 animate-spin" /> : null}
                 </p>
               </div>
               <div role="radiogroup" aria-label={`Attendance for ${r.name}`} className="flex gap-1">

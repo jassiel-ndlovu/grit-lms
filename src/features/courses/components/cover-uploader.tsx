@@ -13,13 +13,15 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { ImageIcon, Loader2, X } from "lucide-react";
+import { ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, courseCoverPath } from "@/lib/blob/paths";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { NexusLoader } from "@/components/ui/nexus";
 
 export interface CoverUploaderProps {
   /** A pseudo-id used to build the blob path before the course exists. */
@@ -104,13 +106,8 @@ export function CoverUploader({
 
         {progress !== null && (
           <div className="bg-background/80 absolute inset-0 flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
-            <Loader2 className="text-primary size-6 animate-spin" />
-            <div className="bg-muted h-1 w-32 overflow-hidden rounded-full">
-              <div
-                className="bg-primary h-full transition-all"
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </div>
+            <NexusLoader size={28} label={null} />
+            <ProgressBar label="Upload progress" value={progress * 100} className="h-1 w-32" />
           </div>
         )}
       </div>

@@ -38,6 +38,9 @@ import {
   GradingSessionProvider,
   LiveScore,
 } from "@/features/assessments/components/grading-session";
+import { latestPerStudent } from "@/features/assessments/lib/item-analysis";
+import { markingProgress, nextToMark } from "@/features/assessments/lib/marking-flow";
+import { commentsUsedOnTest } from "@/features/assessments/marking-comments";
 import { neighbours, writtenQuestions, type AiSuggestion } from "@/features/assessments/lib/ai-marking-ui";
 import { courseRoutes } from "@/features/courses/components/course-frame";
 import {
@@ -193,6 +196,12 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
   const near = neighbours(all, studentId);
   const href = (sid: string) => `/dashboard/tutor-tests/submissions/${test.id}/${sid}`;
 
+  // How far the marker is, the next script, and comments to use again.
+  const scripts = latestPerStudent(all.filter((s) => s.status !== "IN_PROGRESS"));
+  const progress = markingProgress(scripts);
+  const after = nextToMark(scripts, studentId);
+  const comments = await commentsUsedOnTest(test.id, all.map((s) => s.student.fullName));
+
   // AI-suggested marks (#150), when the test has them on.
   const suggestions: AiSuggestion[] | null = test.aiMarking ? ((await suggestionsFor(submission.id)) as AiSuggestion[]) : null;
   const byId = new Map(test.questions.map((q) => [q.id, q]));
@@ -228,6 +237,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
             position={near.index >= 0 ? `${near.index + 1} of ${all.length}` : null}
             rubrics={rubrics}
             aiEnabled={suggestions !== null}
+            progress={progress}
           />
         }
       >
@@ -261,6 +271,8 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
           existingGrade={existingGrade}
           labelScheme={test.labelScheme}
           ai={suggestions ? { initial: suggestions } : null}
+          comments={comments}
+          next={after ? { href: href(after.studentId), name: after.student.fullName } : null}
         />
 
         <SubmissionAdminPanel
