@@ -21,7 +21,9 @@ import { StatTile, StatTiles } from "@/components/ui/stat-tile";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { practiceForChild } from "@/features/assessments/practice-queries";
+import { notesFromTutors } from "@/features/activity/at-risk";
 import { getChildOverview } from "@/features/activity/child-overview";
+import { FamilyNotes } from "@/features/activity/components/at-risk/views";
 import { getAttendanceHistory } from "@/features/calendar/actions";
 import { AttendanceHistory, type HistoryRow } from "@/features/events/components/attendance-history";
 import { calendarRoutes } from "@/features/events/lib/calendar-ui";
@@ -46,11 +48,12 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
   const shortDate = (d: Date) => formatDate(d, dateCtx, { weekday: "short", month: "short", day: "numeric" });
 
   const now = new Date();
-  const [overview, attendance, practice, reports] = await Promise.all([
+  const [overview, attendance, practice, reports, notes] = await Promise.all([
     getChildOverview(child, now),
     getAttendanceHistory({ childUserId: userId }),
     practiceForChild(userId, now),
     releasedReportsFor(viewer, userId),
+    notesFromTutors(viewer, userId),
   ]);
   const courseCount = overview.workspaces.reduce((s, w) => s + w.courses.length, 0);
   const latest = overview.marks[0] ?? null;
@@ -73,6 +76,8 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
           </StatTiles>
         }
       />
+
+      <FamilyNotes notes={notes} ctx={dateCtx} />
 
       <section className="space-y-4">
         <h2 className="text-foreground text-base font-semibold">Courses</h2>

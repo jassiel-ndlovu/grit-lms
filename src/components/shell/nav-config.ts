@@ -98,6 +98,8 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       label: "People",
       items: [
         { label: "Students", href: "/dashboard/students", icon: "users", keywords: ["learners", "parents", "sign-in code", "accounts"], requires: "learners.invite" },
+        // Shown without Pro too; the page says what opens it (viewer.md Draft 1.20).
+        { label: "At risk", href: "/dashboard/at-risk", icon: "users", keywords: ["alerts", "falling marks", "missed work", "absent", "support"], requires: "grades.view" },
         { label: "Join requests", href: "/dashboard/join-requests", icon: "inbox", keywords: ["enrol", "approve", "listed", "waiting"], requires: "learners.invite" },
         // listReferrals needs learners.invite for the whole workspace.
         { label: "Referrals", href: "/dashboard/referrals", icon: "users", keywords: ["referred", "families", "word of mouth"], requires: "learners.invite", wholeWorkspace: true },

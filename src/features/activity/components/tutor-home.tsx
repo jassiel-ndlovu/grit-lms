@@ -17,6 +17,7 @@ import { assignmentRoutes } from "@/features/assignments/routes";
 import { formatDate, greetingFor } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
+import { atRiskRoutes } from "../lib/at-risk";
 import { filterRows, type AttentionBucket, type AttentionFilter, type AttentionRow } from "../lib/attention";
 import type { TutorHomeData } from "../tutor-home";
 import { NewMenu } from "./new-menu";
@@ -78,6 +79,7 @@ export function TutorHome({
   now,
   dateCtx,
   setup,
+  atRisk = 0,
 }: {
   firstName: string;
   data: TutorHomeData;
@@ -86,6 +88,8 @@ export function TutorHome({
   dateCtx: DateCtx;
   /** "Finish setting up" for a workspace in its trial, when there's anything left. */
   setup?: React.ReactNode;
+  /** Open at-risk alerts; no row when there are none. */
+  atRisk?: number;
 }) {
   const rows = filterRows(data.rows, filter);
   const today = formatDate(now, dateCtx, { weekday: "long", day: "numeric", month: "long" });
@@ -203,6 +207,16 @@ export function TutorHome({
                   <dd className="text-foreground font-mono tabular-nums">{value}</dd>
                 </div>
               ))}
+              {atRisk > 0 ? (
+                <div className="flex h-9 items-center justify-between">
+                  <dt>
+                    <Link href={atRiskRoutes.list} className="text-foreground hover:underline">
+                      At risk
+                    </Link>
+                  </dt>
+                  <dd className="text-foreground font-mono tabular-nums">{atRisk}</dd>
+                </div>
+              ) : null}
             </dl>
           </section>
 

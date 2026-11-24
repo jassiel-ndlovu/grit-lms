@@ -11,6 +11,7 @@
 import "server-only";
 
 import { isBillingEnabled } from "@/features/billing/errors";
+import { RELEASED_GRADE } from "@/features/grades/lib/release";
 import { emitNotification } from "@/features/notifications/server";
 import type { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
@@ -55,7 +56,8 @@ export async function gatherCourse(courseId: string, now: Date): Promise<Array<{
   const profileIds = students.flatMap((s) => (s.profileId ? [s.profileId] : []));
 
   const [grades, tests, assignments, attendance] = await Promise.all([
-    prisma.grade.findMany({ where: { courseId, studentId: { in: profileIds }, createdAt: { gte: marksStart }, outOf: { gt: 0 } }, select: { studentId: true, score: true, outOf: true, createdAt: true } }),
+    // Released marks only: the summary can be shared with the family.
+    prisma.grade.findMany({ where: { courseId, studentId: { in: profileIds }, createdAt: { gte: marksStart }, outOf: { gt: 0 }, ...RELEASED_GRADE }, select: { studentId: true, score: true, outOf: true, createdAt: true } }),
     prisma.test.findMany({
       where: { courseId, isActive: true, dueDate: { gte: windowStart, lt: now } },
       select: { title: true, dueDate: true, submissions: { where: { studentId: { in: profileIds }, status: { not: "IN_PROGRESS" } }, select: { studentId: true } } },
