@@ -24,7 +24,7 @@ const COMING_SOON = [
 
 type Learner = Viewer["children"][number] & { summary: ChildSummary };
 
-export function ParentDashboard({ firstName, learners }: { firstName: string; learners: Learner[] }) {
+export function ParentDashboard({ firstName, learners, notes }: { firstName: string; learners: Learner[]; /** Notes from tutors (at-risk alerts shared with parents). */ notes?: React.ReactNode }) {
   return (
     <PageFrame type="home" breadcrumb={[{ label: "Home" }]}>
       <PageTitle
@@ -83,6 +83,8 @@ export function ParentDashboard({ firstName, learners }: { firstName: string; le
           </ul>
         )}
       </section>
+
+      {notes}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="space-y-4">

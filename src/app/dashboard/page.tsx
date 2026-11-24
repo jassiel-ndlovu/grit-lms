@@ -57,7 +57,10 @@ import { getChildSummary } from "@/features/activity/child-overview";
 import { DEFAULT_TIME_ZONE, formatDate, greetingFor, resolveLocale } from "@/lib/datetime";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { notesFromTutors, openAlertCounts } from "@/features/activity/at-risk";
+import { FamilyNotes } from "@/features/activity/components/at-risk/views";
 import { TutorHome } from "@/features/activity/components/tutor-home";
+import { totalAlerts } from "@/features/activity/lib/at-risk";
 import { parseAttentionFilter } from "@/features/activity/lib/attention";
 import { getTutorHome } from "@/features/activity/tutor-home";
 import { SetupChecklist } from "@/features/courses/components/setup-checklist";
@@ -66,6 +69,9 @@ import { getViewer } from "@/lib/viewer";
 import { getCourseScope } from "@/features/courses/course-access";
 
 export const metadata = { title: "Dashboard" };
+
+/** Notes from tutors on a family's home: the latest few. */
+const HOME_NOTES = 5;
 
 function pct(score: number, outOf: number) {
   if (outOf <= 0) return 0;
@@ -89,9 +95,10 @@ export default async function DashboardLanding({
     const [prefs, { show }] = await Promise.all([getUserPreferences(session.user.id), searchParams]);
     const dateCtx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
     const now = new Date();
-    const [data, setup] = await Promise.all([
+    const [data, setup, alerts] = await Promise.all([
       getTutorHome(scope, now, dateCtx.timeZone),
       getViewer().then(setupChecklistFor),
+      getViewer().then(openAlertCounts),
     ]);
     return (
       <TutorHome
@@ -100,6 +107,7 @@ export default async function DashboardLanding({
         filter={parseAttentionFilter(show)}
         now={now}
         dateCtx={dateCtx}
+        atRisk={totalAlerts(alerts)}
         setup={setup ? <SetupChecklist workspaceId={setup.workspaceId} items={setup.items} /> : null}
       />
     );
@@ -108,13 +116,20 @@ export default async function DashboardLanding({
     return <AdminDashboard firstName={userFirstName} />;
   }
   if (session.user.role === "PARENT") {
-    const learners = (await getViewer())?.children ?? [];
+    const parent = await getViewer();
+    const learners = parent?.children ?? [];
     const now = new Date();
-    const summaries = await Promise.all(learners.map((c) => getChildSummary(c, now)));
+    const [summaries, notes, prefs] = await Promise.all([
+      Promise.all(learners.map((c) => getChildSummary(c, now))),
+      notesFromTutors(parent),
+      getUserPreferences(session.user.id),
+    ]);
+    const noteCtx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
     return (
       <ParentDashboard
         firstName={userFirstName}
         learners={learners.map((c, i) => ({ ...c, summary: summaries[i] }))}
+        notes={<FamilyNotes notes={notes.slice(0, HOME_NOTES)} ctx={noteCtx} withStudent={learners.length > 1} />}
       />
     );
   }
@@ -137,12 +152,13 @@ export default async function DashboardLanding({
   const shortDate = (d: Date) =>
     formatDate(d, dateCtx, { weekday: "short", month: "short", day: "numeric" });
 
-  const [courses, tests, assignments, grades, events] = await Promise.all([
+  const [courses, tests, assignments, grades, events, notes] = await Promise.all([
     listCoursesByStudentId(student.id),
     listActiveTestsForStudent(student.id),
     listActiveSubmissionsForStudent(student.id),
     listGradesForStudent(student.id),
     listUpcomingEventsForStudent(student.id),
+    getViewer().then((v) => notesFromTutors(v)),
   ]);
 
   const progressByCourse = await Promise.all(
@@ -241,6 +257,8 @@ export default async function DashboardLanding({
           </StatTiles>
         }
       />
+
+      <FamilyNotes notes={notes.slice(0, HOME_NOTES)} ctx={dateCtx} />
 
       {progressByCourse.length > 0 && (
         <section className="space-y-4">

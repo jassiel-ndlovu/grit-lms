@@ -7,7 +7,11 @@
  * enrolment on Settings (`./settings`); CourseFrame links all three.
  */
 
+import Link from "next/link";
+
 import { prisma } from "@/lib/db";
+import { openAlertCounts } from "@/features/activity/at-risk";
+import { atRiskRoutes } from "@/features/activity/lib/at-risk";
 import { CourseOverview } from "@/features/courses/components/course-overview";
 import { lessonSummary, sortWork, type WorkItem } from "@/features/courses/lib/course-overview";
 import { PageMessage } from "@/components/shell/page-frame";
@@ -18,6 +22,7 @@ import { describeRecurrence, occurrencesOf } from "@/features/events/lib/recurre
 import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesson-tree";
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, formatDate, resolveLocale } from "@/lib/datetime";
+import { getViewer } from "@/lib/viewer";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -33,12 +38,13 @@ export default async function ManageCourseOverviewPage({ params }: PageProps) {
   if (!loaded.ok) return <PageMessage breadcrumb={[{ label: "Courses", href: courseRoutes.list }, { label: "Course" }]}>{loaded.message}</PageMessage>;
   const { course, userId } = loaded;
 
-  const [prefs, assignments] = await Promise.all([
+  const [prefs, assignments, alerts] = await Promise.all([
     getUserPreferences(userId),
     prisma.submission.findMany({
       where: { courseId: id },
       select: { id: true, title: true, dueDate: true, isActive: true },
     }),
+    getViewer().then(openAlertCounts),
   ]);
   const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
   const now = new Date();
@@ -85,6 +91,15 @@ export default async function ManageCourseOverviewPage({ params }: PageProps) {
       `${tests} test${tests === 1 ? "" : "s"} · ${assignments.length} assignment${assignments.length === 1 ? "" : "s"}`,
     ],
   );
+  const atRisk = alerts[id] ?? 0;
+  if (atRisk > 0) {
+    props.push([
+      "At risk",
+      <Link key="at-risk" href={atRiskRoutes.view("open", id)} className="hover:underline">
+        {atRisk} {atRisk === 1 ? "student" : "students"}
+      </Link>,
+    ]);
+  }
   if (schedule.length) props.push(["Schedule", schedule.slice(0, 2).join("; ")]);
   props.push([
     "Next session",

@@ -3,6 +3,24 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 At-risk alert screens (#216, phase 2), `revamp/b-at-risk`
+
+Viewer contract Draft 1.20, B's side. No migration.
+
+Done:
+- **`/dashboard/at-risk`** (People, needs `grades.view`): open and closed
+  alerts in every course the viewer reads grades for, by course, with Share,
+  Sorted and Not a concern. Share shows only with `messages.direct` there and
+  Pro on the course.
+- **Links in:** a row on the tutor home and one on the manage course page.
+  `/dashboard/courses/<id>/at-risk`, where A's notice points, redirects to the
+  list for that course.
+- **Families:** "Notes from your tutors" on the student home, the parent home
+  and a child's page.
+- In A's file: `parents/components/parent-dashboard.tsx` takes an optional
+  `notes` slot.
+- Samples: `/design-system/at-risk`. Check: `check-at-risk.ts`.
+
 ## 2026-11-23 Roles, branches and teams (#216, phase 1), `revamp/b-roles`
 
 Viewer contract Draft 1.17, B's side. No migration.
