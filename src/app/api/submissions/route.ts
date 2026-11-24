@@ -2,69 +2,27 @@
  * /api/submissions — legacy route for the client pages under
  * /dashboard/submissions (create, overview, portal, review).
  *
- * GET only returns assignments in courses the caller can see (own courses
- * for a tutor, enrolled courses for a student). POST mirrors
- * `createSubmission` in `src/features/submissions/actions.ts`: tutor only,
- * and the tutor must own the course.
+ * POST mirrors `createSubmission` in `src/features/submissions/actions.ts`:
+ * tutor only, and the tutor must own the course. GET is retired: no page
+ * reads assignments through this URL.
  *
  * TODO[chapter-3-cleanup]: drop this file once those pages are retired.
  */
 
 import { NextResponse } from "next/server";
 
-import type { Prisma } from "@/generated/prisma";
-import { enrolledStudent, taughtBy } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { emitNotification } from "@/features/notifications/server";
 import {
   forbidden,
+  gone,
   requireApiStaffWrite,
-  requireApiSession,
   tutorOwnsCourse,
-  visibleCoursesWhere,
 } from "@/lib/api-guard";
 
-export async function GET(req: Request) {
-  const guard = await requireApiSession();
-  if (!guard.ok) return guard.response;
-
-  const visible = visibleCoursesWhere(guard.session);
-  if (!visible) return forbidden();
-
-  const { searchParams } = new URL(req.url);
-  const courseIds = searchParams.get("courseIds");
-  const courseId = searchParams.get("courseId");
-  const tutorId = searchParams.get("tutorId");
-  const studentId = searchParams.get("studentId");
-  const subId = searchParams.get("id");
-
-  const findVisible = (course: Prisma.CourseWhereInput) =>
-    prisma.submission.findMany({
-      where: { course: { AND: [course, visible] } },
-      orderBy: { dueDate: "asc" },
-    });
-
-  if (courseId && studentId) {
-    return NextResponse.json(
-      await findVisible({ id: courseId, ...enrolledStudent(studentId) }),
-    );
-  } else if (courseIds) {
-    return NextResponse.json(await findVisible({ id: { in: courseIds.split(",") } }));
-  } else if (studentId) {
-    return NextResponse.json(
-      await findVisible(enrolledStudent(studentId)),
-    );
-  } else if (tutorId) {
-    return NextResponse.json(await findVisible(taughtBy(tutorId)));
-  } else if (subId) {
-    const submission = await prisma.submission.findFirst({
-      where: { id: subId, course: visible },
-    });
-
-    return NextResponse.json(submission);
-  }
-
-  return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+/** Retired: assignments are read through `src/features/assignments/queries.ts`. */
+export function GET() {
+  return gone("Read assignments through src/features/assignments/queries.ts.");
 }
 
 // POST /api/submissions
