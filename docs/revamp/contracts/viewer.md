@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.24, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.25, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.25. Enquiry pipeline (with a public form), tutor outcomes and staff reviews |
 | 2026-11-24 | Draft 1.24. Timesheets, pay rates, payroll export and cover for absent tutors |
 | 2026-11-24 | (No change here.) API keys, the REST API and webhooks have their own contract: `contracts/api.md` |
 | 2026-11-24 | Draft 1.23. Pro AI drafts: lessons, tests and assignments from documents; feedback; report comments; curriculum gaps |
@@ -711,3 +712,65 @@ These use the same service, gate, credits and run records as above. They're in `
 - **"My timesheet":** month picker, suggestions with "Add all", entries, totals, Submit.
 - **"Timesheets" for managers:** month list with status badges, approve or reject with a note, pay rates, the payroll download.
 - **Calendar:** on an occurrence, "I need cover" for the tutor and "Arrange cover" for managers, with the candidate list.
+
+### Enquiry pipeline (Draft 1.25)
+
+#216 phase 3, organisations. This is a workspace's own enquiries from families, not `PlatformEnquiry` (enquiries to Nexa). Actions are in `@/features/crm/actions`.
+
+**Public form** at `/enquire/<slug>` (B builds the page; it's off until the owner switches it on):
+- `getEnquiryForm({ slug })` returns `{ name, logoUrl, accentColor, branches }`, or null when the form is off.
+- `submitWorkspaceEnquiryAction` takes:
+  - `slug`, `name`, and an `email` or `phone` (one is required);
+  - optional `studentName`, `gradeLevel`, `subjects`, `message` and `branchId`;
+  - the same `startedAt` and hidden `website` honeypot as the landing form.
+- It returns `{ ok: true }`. It's rate-limited, bots are dropped silently, and managers get an in-app note (plus email, by their settings).
+- `setEnquiryFormAction({ on })` (`workspace.settings`) returns `{ on, path }`. Show the link to share.
+
+**Staff** need `enquiries.manage`. A branch role sees enquiries for their branches plus those with no branch. An own-courses role sees those assigned to them.
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `listEnquiriesAction` | `{ stage?, assigned?: "me" \| "none", branchId?, q?, dueOnly?, limit? }` | `{ items, counts: { NEW, CONTACTED, TRIAL, ENROLLED, LOST } }` for a board or list |
+| `getEnquiryAction` | `{ id }` | The enquiry plus its `notes` (`NOTE`, `STAGE`, `EMAIL`, with author) |
+| `createEnquiryAction` | `{ name, email?, phone?, studentName?, gradeLevel?, subjects?, message?, source?, branchId?, assignedMembershipId?, nextFollowUpAt? }` | Sources: MANUAL, PHONE, WALK_IN, SOCIAL, REFERRAL, IMPORT, OTHER. Assigned to the creator by default |
+| `updateEnquiryAction` | `{ id, …same fields }` | A new follow-up date resets the reminder |
+| `moveEnquiryAction` | `{ id, stage, lostReason?, learnerId? }` | LOST needs a reason. ENROLLED can link the learner. Logged as a STAGE note |
+| `addEnquiryNoteAction` | `{ id, body }` | |
+| `emailEnquirerAction` | `{ id, subject, body }` | Staff write every word. Reply-To is them. Logged as an EMAIL note. A NEW enquiry moves to CONTACTED |
+| `enquiryFunnelAction` | `{ from, to }` | `{ total, byStage, bySource, conversionRate, medianDaysToEnrol, lostReasons }`, for the business dashboard |
+
+- **Follow-ups:** when `nextFollowUpAt` passes, the assigned person gets one reminder, from housekeeping.
+- **Retention:** enquiries untouched for 24 months are deleted.
+
+### Tutor outcomes and reviews (Draft 1.25)
+
+**Outcomes:** `listTutorOutcomesAction({ from, to, membershipIds? })` returns `[{ membershipId, name, outcomes }]`.
+- **Who sees what:** managers with `staff.reviews` or `reports.view` see the tutors in their scope; anyone else sees only their own.
+- **`outcomes`** comes from the courses the tutor teaches or owns:
+
+  | Field | Meaning |
+  | --- | --- |
+  | `courses`, `activeStudents` | Counts |
+  | `marks` | Number of marks in the period |
+  | `averagePercent` | Average mark |
+  | `averageChange` | Last mark minus first, per student, averaged |
+  | `studentsImproving`, `studentsDeclining` | Change of ±5 points or more |
+  | `completionRate` | Hand-ins against work due |
+  | `attendanceRate` | Present or late, out of all non-excused |
+  | `riskOpened`, `riskResolved` | At-risk alerts |
+  | `hours` | From approved timesheets |
+  | `bookingsCompleted`, `bookingsNoShow` | Booked lessons |
+
+  Where there's no data, the value is null, not 0.
+
+**Reviews** (`staff.reviews`, never your own):
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `createReviewAction` | `{ membershipId, from, to }` | Saves the outcomes with the review (DRAFT) |
+| `updateReviewAction` | `{ id, strengths?, improvements?, goals?, rating? (1–5), refreshOutcomes? }` | Not once acknowledged |
+| `shareReviewAction` | `{ id }` | Needs some text. The tutor gets a note (`/dashboard/reviews/<id>`) |
+| `acknowledgeReviewAction` | `{ id, response? }` | The tutor only, once it's shared |
+| `listReviewsAction` | `{ membershipId? }` | A manager sees reviews for staff in scope (drafts too) and their own shared ones; a tutor sees their shared ones |
+
+**Privacy:** shared reviews are in the tutor's data export.

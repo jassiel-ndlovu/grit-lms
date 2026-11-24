@@ -29,7 +29,7 @@ import { renderAbsenceEmail, type AbsenceData } from "./attendance-templates";
 import { renderEnquiryEmail, type EnquiryEmailData } from "./enquiry-templates";
 import { renderRiskSharedEmail, type RiskSharedData } from "./risk-templates";
 import { renderBookingEmail, type BookingEmailData, type BookingTemplate } from "./booking-templates";
-import { renderCoverAssignedEmail, type CoverAssignedData } from "./staff-templates";
+import { renderCoverAssignedEmail, renderEnquiryReplyEmail, type CoverAssignedData, type EnquiryReplyData } from "./staff-templates";
 import { renderJoinEmail, type JoinTemplate, type JoinTemplateData } from "./join-templates";
 import { renderWeeklySummaryEmail, type WeeklySummaryData } from "./parent-templates";
 import { renderPayoutEmail, type PayoutTemplate, type PayoutTemplateData } from "./payout-templates";
@@ -115,6 +115,7 @@ function renderRow(template: string, to: string, data: unknown): Rendered & { re
     const t = template.slice("fees:".length) as FeeTemplate;
     return renderFeeEmail(t, data as FeeTemplateData[typeof t]);
   }
+  if (template === "enquiry:reply") return renderEnquiryReplyEmail(data as EnquiryReplyData);
   if (template === "staff:cover-assigned") return renderCoverAssignedEmail(data as CoverAssignedData);
   if (template.startsWith("booking:")) return renderBookingEmail(template.slice("booking:".length) as BookingTemplate, data as BookingEmailData);
   if (template === "risk:shared") return renderRiskSharedEmail(data as RiskSharedData);
