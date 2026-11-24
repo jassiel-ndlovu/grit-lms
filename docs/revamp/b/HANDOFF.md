@@ -3,6 +3,42 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Nexus look and six UI features (owner's request), `revamp/b-nexus-ui`
+
+No migration, no env vars, no flag. Samples: `/design-system/nexus`. Checks:
+`scripts/check-nexus.ts`. Screenshots: `docs/revamp/b/testing/nexus/`.
+
+Done:
+- **Nexus geometry** (`lib/nexus.ts`, `ui/nexus.tsx`, `app/nexus.css`): a centre
+  circle with lines to smaller ones, in the theme's colours. On page titles and
+  panels, in the revamp UI only. Off in the contrast theme, forced colours,
+  "more contrast" and print.
+- **Toned panels**: use `TonePanel` (neutral, accent, success, warning, danger)
+  for a boxed notice, and `data-slot="tone-row"` for a late or due-soon row.
+- **Toasts**: a light tint, a coloured border and the state's symbol in a
+  circle. `richColors` is gone. They follow the app's theme, not the computer's.
+- **Loading**: `loading.tsx` per area with `PageSkeleton`, `NexusLoader`, one
+  `ProgressBar`, and the signature strip moves while a page is on its way.
+- **One saving indicator**: `SaveState` in drafts, the test runner, report
+  comments and the register.
+- **Marking**: keys (Enter, Shift+Enter, F, C, Ctrl+Enter), reused comments,
+  "Save and next", and how many are marked. Reused comments leave out any that
+  name a learner.
+- **Peek panel**: on the students list and a test's submissions.
+- **Class mode**: `/dashboard/calendar/class/[eventId]`, linked from a session
+  and from the tutor's home.
+- **Topic map**: `/dashboard/courses/[id]/topics` for a learner (released marks
+  only) and above the tutor's coverage table.
+
+Good to know:
+- With `loading.tsx`, a page's redirect or 404 now arrives while it streams.
+- Toasts and tones also show in production's Inkwell; the geometry doesn't.
+
+Not done:
+- Assignment marking keeps its own flow (it has the saving indicator only).
+- Parents don't get the topic map or the class page.
+- The final logo: swap the drawing in `hubFigure` when it arrives.
+
 ## 2026-11-24 Unused reads retired, `revamp/b-retire-reads`
 
 In A's files, with the owner's OK:
