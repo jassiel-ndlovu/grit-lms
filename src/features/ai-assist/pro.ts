@@ -9,6 +9,7 @@ import "server-only";
 
 import { scrubIdentifiers } from "@/features/ai-marking/rules";
 import { topicsFor } from "@/features/courses/lib/curriculum";
+import { RELEASED_GRADE } from "@/features/grades/lib/release";
 import { prisma } from "@/lib/db";
 import { UserError } from "@/lib/user-error";
 import type { Viewer } from "@/lib/viewer";
@@ -126,7 +127,8 @@ export async function reportCommentDrafts(
   const profileIds = students.flatMap((s) => (s.profileId ? [s.profileId] : []));
   const range = { gte: input.from, lt: input.to };
   const [grades, attendance, tests, assignments] = await Promise.all([
-    prisma.grade.findMany({ where: { courseId: course.id, studentId: { in: profileIds }, createdAt: range, outOf: { gt: 0 } }, orderBy: { createdAt: "asc" }, select: { studentId: true, title: true, score: true, outOf: true } }),
+    // Released marks only, like the term report itself: families read the comment.
+    prisma.grade.findMany({ where: { courseId: course.id, studentId: { in: profileIds }, createdAt: range, outOf: { gt: 0 }, ...RELEASED_GRADE }, orderBy: { createdAt: "asc" }, select: { studentId: true, title: true, score: true, outOf: true } }),
     prisma.sessionAttendance.groupBy({ by: ["learnerId", "status"], where: { learnerId: { in: students.map((s) => s.learnerId) }, occurrenceStart: range, event: { courseId: course.id } }, _count: true }),
     prisma.test.findMany({ where: { courseId: course.id, isActive: true, dueDate: { ...range, lt: new Date(Math.min(input.to.getTime(), now.getTime())) } }, select: { submissions: { where: { studentId: { in: profileIds }, status: { not: "IN_PROGRESS" } }, select: { studentId: true } } } }),
     prisma.submission.findMany({ where: { courseId: course.id, isActive: { not: false }, dueDate: { ...range, lt: new Date(Math.min(input.to.getTime(), now.getTime())) } }, select: { entries: { where: { studentId: { in: profileIds } }, select: { studentId: true } } } }),
