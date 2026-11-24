@@ -49,7 +49,7 @@ export function renderRichContent(doc: JSONContent): React.ReactNode {
           return spec ? <GraphFigure spec={spec} /> : null;
         },
         table: ({ children }) => (
-          <div className="my-4 overflow-x-auto">
+          <div className="relative my-4 overflow-x-auto">
             <table>
               <tbody>{children}</tbody>
             </table>

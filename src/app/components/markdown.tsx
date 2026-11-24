@@ -127,7 +127,7 @@ function buildComponents(maxImageWidth: string): Components {
       );
     },
     table: (props) => (
-      <div className="my-4 overflow-x-auto">
+      <div className="relative my-4 overflow-x-auto">
         <table
           className="border-border min-w-full border-collapse border"
           {...props}

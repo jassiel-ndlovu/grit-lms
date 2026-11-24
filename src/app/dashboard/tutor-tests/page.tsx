@@ -86,7 +86,7 @@ export default async function TutorTestsPage() {
           />
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full min-w-[44rem] text-sm">
             <thead className="text-muted-foreground border-border border-b text-xs">
               <tr>
