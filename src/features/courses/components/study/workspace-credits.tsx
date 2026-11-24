@@ -24,10 +24,11 @@ export function WorkspaceCredits({
 }) {
   return (
     <>
-      <PageSection
-        id="left"
-        description="Your staff's AI marking and AI help use these: the credits in your plan first, then the ones you bought. Students' study credits are separate."
-      >
+      <PageSection id="left">
+        <p className="text-muted-foreground text-sm">
+          Your staff&apos;s AI marking and AI help use these: the credits in your plan first, then the ones you bought. Students&apos; study
+          credits are separate.
+        </p>
         <StatTiles>
           <StatTile label="Plan credits left" value={r.included ? number(r.included.left) : "-"} />
           <StatTile label="Bought credits left" value={number(Math.max(0, r.bought))} />

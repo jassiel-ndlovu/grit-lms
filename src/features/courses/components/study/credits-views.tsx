@@ -48,12 +48,12 @@ export function StudyAccountSection({
     <PageSection
       id={`credits-${a.studentUserId}-${a.workspace.id}`}
       title={title}
-      description={
-        a.courses.length
-          ? `For the study assistant in ${a.courses.map((c) => c.name).join(", ")}.`
-          : "No course has the study assistant on at the moment."
-      }
     >
+      <p className="text-muted-foreground text-sm">
+        {a.courses.length
+          ? `For the study assistant in ${a.courses.map((c) => c.name).join(", ")}.`
+          : "No course has the study assistant on at the moment."}
+      </p>
       <StatTiles>
         <StatTile label="Credits left" value={number(a.balance)} />
         <StatTile label="Answers (about)" value={number(roughAnswers(a.balance))} />
