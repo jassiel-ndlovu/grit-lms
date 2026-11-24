@@ -1,10 +1,11 @@
 /** Icon and label for a calendar entry (#149). */
 
-import { CalendarDays, GraduationCap, Megaphone, Pencil, Presentation, Users, Video } from "lucide-react";
+import { CalendarCheck, CalendarDays, GraduationCap, Megaphone, Pencil, Presentation, Users, Video } from "lucide-react";
 
 import type { CalendarEntry } from "../lib/calendar-ui";
 
 export function iconFor(e: Pick<CalendarEntry, "kind" | "type">) {
+  if (e.kind === "booking") return CalendarCheck;
   if (e.kind !== "event") return Pencil;
   switch (e.type) {
     case "LECTURE":
@@ -23,6 +24,7 @@ export function iconFor(e: Pick<CalendarEntry, "kind" | "type">) {
 }
 
 export function labelFor(e: Pick<CalendarEntry, "kind" | "type">): string {
+  if (e.kind === "booking") return "Booked lesson";
   if (e.kind === "test") return "Test due";
   if (e.kind === "assignment") return "Assignment due";
   switch (e.type) {

@@ -3,6 +3,27 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Session booking screens (#216, phase 2), `revamp/b-booking`
+
+No migration, no env vars. All in B's paths, over A's `features/booking`
+(viewer.md Draft 1.21).
+
+Done:
+- `/dashboard/bookings`: families see upcoming and past lessons and the
+  lessons left on their packs; staff see a week of their own, a course's
+  (`courses.edit`) or another tutor's (`cover.manage`), with cancel, done,
+  no-show and the online link.
+- `/dashboard/bookings/book`: free times for a week, for a student, a parent
+  (per child) or staff (per student). Courses without Plus or without hours
+  aren't offered.
+- `/dashboard/bookings/hours`: weekly hours, time off, and the booking rules
+  (`workspace.settings`).
+- Student page: a Lessons tab with the pack balances and a correction
+  (`fees.manage`).
+- Buy shows only while billing is on; it goes to Fees for the checkout.
+- Bookings in the sidebar, booked lessons on the calendar, a link on the
+  child page. Samples on `/design-system/booking`, `check-booking-ui.ts`.
+
 ## 2026-11-24 Unused reads retired, `revamp/b-retire-reads`
 
 In A's files, with the owner's OK:
