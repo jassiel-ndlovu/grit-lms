@@ -36,3 +36,27 @@ export function renderCoverAssignedEmail(d: CoverAssignedData): Rendered {
     text: [`Hi ${first},`, "", ...lines, "", link].join("\n"),
   };
 }
+
+export type EnquiryReplyData = {
+  recipientName: string;
+  workspaceName: string;
+  staffName: string;
+  staffEmail: string;
+  subject: string;
+  body: string;
+};
+
+/** A staff member's email to someone who enquired (#216). Every word is theirs; Reply-To is them. */
+export function renderEnquiryReplyEmail(d: EnquiryReplyData): Rendered & { replyTo: string } {
+  const paras = d.body.split(/\n{2,}/).map((p) => `<p style="margin:0 0 12px;">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`).join("");
+  return {
+    subject: d.subject,
+    html: layout({
+      heading: d.workspaceName,
+      bodyHtml: `${paras}<p style="margin:16px 0 0;">${escapeHtml(d.staffName)}<br><span style="color:#6b7280;">${escapeHtml(d.workspaceName)}</span></p>`,
+      footer: `You enquired with ${escapeHtml(d.workspaceName)}. Reply to this email to answer ${escapeHtml(d.staffName)}.`,
+    }),
+    text: [d.body, "", d.staffName, d.workspaceName].join("\n"),
+    replyTo: d.staffEmail,
+  };
+}

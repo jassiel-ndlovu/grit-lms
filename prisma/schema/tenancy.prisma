@@ -138,6 +138,10 @@ model Workspace {
   timesheets          Timesheet[]
   payRates            PayRate[]
   coverRequests       CoverRequest[]
+  workspaceEnquiries  WorkspaceEnquiry[]
+  staffReviews        StaffReview[]
+  /// The public enquiry form at /enquire/<slug> (#216). Off by default.
+  enquiryFormOn       Boolean               @default(false)
 }
 
 /// Organisations only. A solo practice has no teams.
@@ -187,6 +191,8 @@ model Membership {
 
   timesheets Timesheet[]
   payRate    PayRate?
+
+  staffReviews StaffReview[]
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -805,4 +811,99 @@ model CoverRequest {
   @@index([workspaceId, startsAt])
   @@index([coverMembershipId, startsAt])
   @@index([absentMembershipId, startsAt])
+}
+
+// An organisation's enquiry pipeline, and staff reviews (#216 phase 3; A).
+
+enum EnquiryStage {
+  NEW
+  CONTACTED
+  TRIAL
+  ENROLLED
+  LOST
+}
+
+/// A family or student asking an organisation about lessons. Not PlatformEnquiry (enquiries to Nexa).
+model WorkspaceEnquiry {
+  id                   String       @id @default(cuid())
+  workspaceId          String
+  /// The person enquiring (often a parent).
+  name                 String       @db.VarChar(120)
+  email                String?      @db.VarChar(254)
+  phone                String?      @db.VarChar(40)
+  studentName          String?      @db.VarChar(120)
+  gradeLevel           Int?
+  subjects             String[]     @default([])
+  message              String?      @db.VarChar(4000)
+  /// FORM, MANUAL, REFERRAL, IMPORT, PHONE, WALK_IN, SOCIAL, OTHER
+  source               String       @db.VarChar(16)
+  stage                EnquiryStage @default(NEW)
+  branchId             String?
+  assignedMembershipId String?
+  nextFollowUpAt       DateTime?
+  followUpRemindedAt   DateTime?
+  lostReason           String?      @db.VarChar(300)
+  /// The learner they became, when ENROLLED.
+  learnerId            String?
+  stageChangedAt       DateTime     @default(now())
+  ipHash               String?      @db.VarChar(64)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notes     EnquiryNote[]
+
+  @@index([workspaceId, stage, createdAt])
+  @@index([assignedMembershipId, nextFollowUpAt])
+  @@index([ipHash, createdAt])
+}
+
+/// A note, a stage change, or an email sent to the enquirer.
+model EnquiryNote {
+  id           String   @id @default(cuid())
+  enquiryId    String
+  authorUserId String?
+  /// NOTE, STAGE, EMAIL
+  kind         String   @db.VarChar(8)
+  body         String   @db.VarChar(4000)
+  createdAt    DateTime @default(now())
+
+  enquiry WorkspaceEnquiry @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+
+  @@index([enquiryId, createdAt])
+}
+
+enum StaffReviewStatus {
+  DRAFT
+  SHARED
+  ACKNOWLEDGED
+}
+
+/// A manager's review of a tutor for a period, with the outcomes it was based on.
+model StaffReview {
+  id             String            @id @default(cuid())
+  workspaceId    String
+  membershipId   String
+  reviewerUserId String
+  periodStart    DateTime
+  periodEnd      DateTime
+  /// TutorOutcomes at the time of writing (features/staff/outcomes.ts).
+  outcomes       Json
+  strengths      String?           @db.VarChar(4000)
+  improvements   String?           @db.VarChar(4000)
+  goals          String?           @db.VarChar(4000)
+  /// 1 to 5, optional.
+  rating         Int?
+  status         StaffReviewStatus @default(DRAFT)
+  sharedAt       DateTime?
+  acknowledgedAt DateTime?
+  /// The tutor's reply when acknowledging.
+  response       String?           @db.VarChar(2000)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, membershipId, periodEnd])
 }

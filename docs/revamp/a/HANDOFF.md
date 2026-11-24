@@ -3,6 +3,28 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: enquiry pipeline, tutor outcomes and reviews, `revamp/a-enquiries-reviews`
+
+Migration `39_enquiries_reviews`: WorkspaceEnquiry, EnquiryNote, StaffReview and their enums, plus `Workspace.enquiryFormOn`. Viewer contract Draft 1.25.
+
+Owner, 24 Nov: **white-labelling for businesses stays in scope; custom domains are on hold.**
+
+Done:
+- **`crm/enquiries.ts`**:
+  - the public form (off by default; honeypot, fill time, rate limits);
+  - in-app notes to managers in scope;
+  - create, update, stage moves (LOST needs a reason), notes;
+  - staff-written emails to the enquirer (`enquiry:reply`, Reply-To the staff member);
+  - the board with counts and search, and the funnel for the dashboard;
+  - follow-up reminders and a 24-month prune (housekeeping).
+- **`staff/outcomes-math.ts`** (pure) and **`staff/outcomes.ts`**: per-tutor outcomes; reviews (create with the outcomes saved, edit, share, acknowledge, list) with scope from `staff.reviews`.
+- **`crm/actions.ts`**.
+- Shared reviews are in the user export.
+
+Tested:
+- `scripts/check-outcomes.ts` (in CI).
+- 25 checks against the Preview DB covering form off and on, the honeypot, board, search, notes, stage rules, email, funnel, reminder, outcomes scope, and the review lifecycle. Cleaned up afterwards.
+
 ## 2026-11-24 #216 phase 3: timesheets, payroll export and cover, `revamp/a-timesheets-cover`
 
 Migration `38_timesheets_cover`: Timesheet, TimesheetEntry, PayRate and CoverRequest, with their enums. Viewer contract Draft 1.24.
