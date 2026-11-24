@@ -51,9 +51,9 @@ export function LinkSelect({ label, value, options, placeholder }: { label: stri
 const STEP =
   "text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring inline-flex h-7 items-center gap-1.5 rounded-md px-1 text-sm outline-none focus-visible:ring-2 sm:px-2 [&_svg]:size-4";
 
-/** Previous, today and next in the ribbon. A null link is off. */
+/** Previous, today and next in the ribbon, a week or a month at a time. A null link is off. */
 export function WeekStepper({
-  label, previous, today, next, isToday, todayLabel = "Today",
+  label, previous, today, next, isToday, todayLabel = "Today", unit = "week",
 }: {
   label: string;
   previous: string | null;
@@ -61,6 +61,7 @@ export function WeekStepper({
   next: string | null;
   isToday: boolean;
   todayLabel?: string;
+  unit?: "week" | "month";
 }) {
   const step = (href: string | null, name: string, icon: React.ReactNode) =>
     href ? (
@@ -79,13 +80,13 @@ export function WeekStepper({
       <span className="text-foreground hidden pr-2 text-sm font-medium lg:inline" aria-live="polite">
         {label}
       </span>
-      {step(previous, "Previous week", <ChevronLeft aria-hidden />)}
+      {step(previous, `Previous ${unit}`, <ChevronLeft aria-hidden />)}
       <ToolbarPrimitive.Link asChild>
         <Link href={today} scroll={false} className={cn(STEP, isToday && "text-foreground font-medium")} aria-current={isToday ? "date" : undefined}>
           {todayLabel}
         </Link>
       </ToolbarPrimitive.Link>
-      {step(next, "Next week", <ChevronRight aria-hidden />)}
+      {step(next, `Next ${unit}`, <ChevronRight aria-hidden />)}
     </RibbonToolbar>
   );
 }

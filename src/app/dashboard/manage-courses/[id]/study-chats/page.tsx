@@ -4,17 +4,22 @@
  * who may see the course (`content.view`); A's query checks it.
  */
 
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Power } from "lucide-react";
 
 import { PageTitle } from "@/components/shell/page-frame";
+import { Button } from "@/components/ui/button";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { isBillingEnabled } from "@/features/billing/errors";
+import { courseRoutes } from "@/features/courses/components/course-frame";
 import { editsCourse, StudyChatsFrame } from "@/features/courses/components/study/staff-frame";
 import { StudyChatList } from "@/features/courses/components/study/tutor-views";
 import { hasStudyAssistant, orNotFound, studyCourse } from "@/features/courses/study";
 import { courseStudyChats } from "@/features/study/study";
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, resolveLocale } from "@/lib/datetime";
-import { getViewer } from "@/lib/viewer";
+import { canIn, getViewer } from "@/lib/viewer";
 
 export const metadata = { title: "Study chats" };
 
@@ -29,7 +34,11 @@ export default async function StudyChatsPage({ params }: { params: Promise<{ id:
   const rows = await orNotFound(() => courseStudyChats(viewer, { courseId: id, limit: LIMIT }));
   // The tab is hidden without the service; earlier chats stay readable.
   if (rows.length === 0 && !(await hasStudyAssistant(id))) notFound();
-  const [prefs, editor] = await Promise.all([getUserPreferences(viewer.user.id), editsCourse(viewer, id)]);
+  const [prefs, editor, services] = await Promise.all([
+    getUserPreferences(viewer.user.id),
+    editsCourse(viewer, id),
+    canIn(viewer, "courses.services", { courseId: id }),
+  ]);
   const ctx = { timeZone: prefs.timeZone ?? DEFAULT_TIME_ZONE, locale: resolveLocale(prefs.preferredLanguage) };
   const flagged = rows.filter((r) => r.flaggedAt).length;
 
@@ -37,7 +46,17 @@ export default async function StudyChatsPage({ params }: { params: Promise<{ id:
     <StudyChatsFrame course={course} editor={editor}>
       <PageTitle
         title="Study chats"
-        description={`What students ask the study assistant. They're told that you can read these, and chats are kept for a year.${
+        actions={
+          editor && services && isBillingEnabled() ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href={courseRoutes.services(id)}>
+                <Power aria-hidden className="size-4" />
+                Turn on or off
+              </Link>
+            </Button>
+          ) : undefined
+        }
+        description={`What students ask the study assistant. They're told that you and their parents can read these, and chats are kept for a year.${
           flagged ? ` ${flagged} ${flagged === 1 ? "chat needs" : "chats need"} a look.` : ""
         }`}
       />

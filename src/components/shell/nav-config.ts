@@ -11,7 +11,7 @@
  * That hides UI; the page and its actions still check on the server.
  */
 
-import { staffScope, type Permission, type Persona, type Viewer } from "@/lib/viewer-core";
+import { staffScope, type Permission, type Persona, type Viewer, type ViewerWorkspace } from "@/lib/viewer-core";
 import { assignmentRoutes } from "@/features/assignments/routes";
 
 export type NavIcon =
@@ -45,6 +45,8 @@ export interface NavLink {
   requires?: Permission;
   /** Shown only to staff whose role covers the whole workspace: no tutors or branch roles (viewer.md Draft 1.17). */
   wholeWorkspace?: boolean;
+  /** Shown only in an organisation, not a solo tutor's workspace (viewer.md Draft 1.24). */
+  organisation?: boolean;
   /** Shown only with billing on (BILLING=1). */
   billing?: boolean;
 }
@@ -92,6 +94,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Courses", href: "/dashboard/manage-courses", icon: "book", keywords: ["lessons", "authoring"], requires: "courses.edit" },
         CALENDAR,
         { ...BOOKINGS, requires: "content.view" },
+        { label: "Cover", href: "/dashboard/cover", icon: "calendar", keywords: ["absent", "away", "substitute", "stand in", "leave"], organisation: true },
         { label: "Tests", href: "/dashboard/tutor-tests", icon: "test", keywords: ["quiz", "grading", "marking"], requires: "courses.edit" },
         { label: "Assignments", href: assignmentRoutes.index, icon: "assignment", keywords: ["submissions", "marking"], requires: "courses.edit" },
         { label: "Gradebook", href: "/dashboard/gradebook", icon: "gradebook", keywords: ["marks", "weights"], requires: "grades.view" },
@@ -114,6 +117,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
     {
       label: "Workspace",
       items: [
+        { label: "Timesheets", href: "/dashboard/timesheets", icon: "gradebook", keywords: ["hours", "pay", "payroll", "rate", "my timesheet"], organisation: true },
         // Shown without Plus too; the page says what opens it (billing.md Draft 1.17).
         { label: "Business", href: "/dashboard/business", icon: "analytics", keywords: ["reports", "income", "collected", "overdue", "students", "dashboard"], requires: "reports.view" },
         { label: "Fees", href: "/dashboard/fees", icon: "fees", keywords: ["parents", "invoices", "paid", "cash", "eft"], requires: "fees.manage", billing: true },
@@ -145,7 +149,7 @@ export const FOOTER_LINKS: NavLink[] = [
 ];
 
 /** The parts of the viewer the nav reads; the whole Viewer also fits. */
-export type NavViewer = Pick<Viewer, "persona" | "permissions"> & Partial<Pick<Viewer, "membership" | "mode">>;
+export type NavViewer = Pick<Viewer, "persona" | "permissions"> & Partial<Pick<Viewer, "membership" | "mode">> & { workspace?: Pick<ViewerWorkspace, "kind"> | null };
 
 /**
  * The viewer's sections, with links they lack the permission for removed.
@@ -155,11 +159,12 @@ export type NavViewer = Pick<Viewer, "persona" | "permissions"> & Partial<Pick<V
 export function navSectionsFor(viewer: NavViewer | null, opts: { billing?: boolean } = {}): NavSection[] {
   const persona = viewer?.persona ?? "none";
   const held = new Set(viewer?.permissions ?? []);
+  const organisation = viewer?.workspace?.kind === "ORGANISATION";
   const whole = viewer !== null && staffScope(viewer as Viewer) === "WORKSPACE";
   return (BY_PERSONA[persona] ?? BY_PERSONA.none)
     .map((s) => ({
       ...s,
-      items: s.items.filter((l) => (!l.requires || held.has(l.requires)) && (!l.wholeWorkspace || whole) && (!l.billing || opts.billing === true)),
+      items: s.items.filter((l) => (!l.requires || held.has(l.requires)) && (!l.wholeWorkspace || whole) && (!l.organisation || organisation) && (!l.billing || opts.billing === true)),
     }))
     .filter((s) => s.items.length > 0);
 }

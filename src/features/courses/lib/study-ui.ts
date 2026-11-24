@@ -14,6 +14,9 @@ export const studyRoutes = {
   /** The tutor's side. */
   chats: (courseId: string, chatId?: string) =>
     `/dashboard/manage-courses/${courseId}/study-chats${chatId ? `/${chatId}` : ""}`,
+  /** A parent reads their child's chats. */
+  childChats: (childUserId: string, chatId?: string) =>
+    `/dashboard/children/${encodeURIComponent(childUserId)}/study-chats${chatId ? `/${encodeURIComponent(chatId)}` : ""}`,
   credits: "/dashboard/credits",
   childCredits: (childUserId: string) => `/dashboard/credits?child=${encodeURIComponent(childUserId)}`,
   creditsReturn: "/dashboard/credits/return",

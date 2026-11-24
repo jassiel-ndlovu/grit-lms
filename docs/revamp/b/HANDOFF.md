@@ -3,6 +3,43 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Timesheets, cover and parents' study chats (#216, phase 3), `revamp/b-timesheets`
+
+No migration, no env vars. All in B's paths, over A's `features/staff`
+(viewer.md Draft 1.24) and `features/study` (Draft 1.27).
+
+Done:
+- `/dashboard/timesheets` (`timesheets.manage`): a month of everyone's, with
+  pay rates and the payroll files. `/[membershipId]` approves, sends back or
+  reopens one, and can fill it in for someone. `/mine` is one's own.
+- Classes still to come are listed apart from those taught, and "Add all"
+  leaves them out.
+- `/dashboard/cover`: what needs cover, what's arranged, the past. On the
+  calendar a class has "I need cover" (its tutor) and "Arrange cover"
+  (`cover.manage`, asks who is away, then lists the free tutors).
+- Both are for organisations: the sidebar hides them in a solo workspace
+  (`organisation` on a nav link) and the pages are a 404 there.
+- `/dashboard/children/[userId]/study-chats`: a parent reads a child's study
+  chats (owner, 24 Nov). Read-only; flags and concerns stay with the staff.
+- Study chats links to the course's Services, where `courses.services` turns
+  the assistant on or off for the course.
+- Samples on `/design-system/staff-time`, `check-staff-time-ui.ts`.
+
+For A, on cover:
+- Nobody is told when a tutor asks for cover, so managers only see it on the
+  Cover page.
+- Calling off arranged cover doesn't tell the tutor who was covering. The
+  dialog asks the manager to.
+- Changing or calling off cover removes the covering tutor's ASSISTANT access
+  even when they still cover another class of that course. `endCoverAccess`
+  already checks for that.
+- The in-app note to the absent tutor has no link; `/dashboard/cover` fits.
+
+For A, on the study assistant:
+- Parents may read the chats: the owner has decided. `askStudy` still lets a
+  parent ask in a child's chat; the screens don't offer it.
+- The owner also wants the assistant switched on and off for one student.
+
 ## 2026-11-24 Nexus look and six UI features (owner's request), `revamp/b-nexus-ui`
 
 No migration, no env vars, no flag. Samples: `/design-system/nexus`. Checks:

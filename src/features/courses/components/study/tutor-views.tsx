@@ -1,4 +1,4 @@
-/** A course's study chats as its tutors see them. Server-safe. */
+/** Study chats as a course's tutors, and a student's parents, read them. Server-safe. */
 
 import Link from "next/link";
 import { ArrowRight, TriangleAlert } from "lucide-react";
@@ -38,6 +38,34 @@ export function StudyChatList({ courseId, rows, ctx }: { courseId: string; rows:
               </span>
             </span>
             {r.flaggedAt ? <StatusChip tone="danger">Needs a look</StatusChip> : null}
+            <ArrowRight aria-hidden className="text-muted-foreground size-4" />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A child's chats, for a parent: newest first, with the course. */
+export function FamilyChatList({ childUserId, rows, ctx }: {
+  childUserId: string;
+  rows: Array<{ id: string; title: string; courseName: string; updatedAt: Date }>;
+  ctx: DateContext;
+}) {
+  return (
+    <ul className="divide-border border-border divide-y border-y">
+      {rows.map((r) => (
+        <li key={r.id}>
+          <Link
+            href={studyRoutes.childChats(childUserId, r.id)}
+            className="hover:bg-muted/40 flex items-center gap-4 px-2 py-3 transition-colors"
+          >
+            <span className="min-w-0 flex-1 space-y-0.5">
+              <span className="text-foreground block truncate text-sm font-medium">{r.title}</span>
+              <span className="text-muted-foreground block truncate text-xs">
+                {r.courseName} · {formatDate(r.updatedAt, ctx, { day: "numeric", month: "short" })}
+              </span>
+            </span>
             <ArrowRight aria-hidden className="text-muted-foreground size-4" />
           </Link>
         </li>

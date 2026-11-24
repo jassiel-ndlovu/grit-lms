@@ -20,6 +20,7 @@ check("assistant", [studyRoutes.assistant("c1"), studyRoutes.assistant("c1", nul
   "/dashboard/courses/c1/assistant", "/dashboard/courses/c1/assistant", "/dashboard/courses/c1/assistant?chat=a%20b",
 ]);
 check("tutor chats", [studyRoutes.chats("c1"), studyRoutes.chats("c1", "x")], ["/dashboard/manage-courses/c1/study-chats", "/dashboard/manage-courses/c1/study-chats/x"]);
+check("a parent's chats", [studyRoutes.childChats("u 1"), studyRoutes.childChats("u1", "x")], ["/dashboard/children/u%201/study-chats", "/dashboard/children/u1/study-chats/x"]);
 check("Paystack may return to us", safeReturnPath(studyRoutes.creditsReturn), studyRoutes.creditsReturn);
 
 // Messages

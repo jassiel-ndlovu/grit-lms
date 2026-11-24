@@ -34,9 +34,11 @@ import { WriteGuard } from "@/components/shell/workspace-access";
 import { editCourseEventOccurrence } from "@/features/calendar/actions";
 
 import { deleteCourseEvent, getCourseEventSeries } from "../actions";
+import type { CalendarCover } from "../staff-time";
 import { calendarRoutes, joinOpen, meetingProvider, meetingProviderOf, takesAttendance, type CalendarEntry } from "../lib/calendar-ui";
 import { iconFor, labelFor } from "./entry-meta";
 import { CheckInButton } from "./calendar-tools";
+import { EntryCover } from "./staff-time/entry-cover";
 import { EventForm, type EventSeries } from "./event-form";
 import { MeetingAppMark } from "./meeting-app-mark";
 
@@ -48,6 +50,8 @@ export type EntryContext = {
   editableCourseIds: string[];
   /** A learner's courses with check-in codes (Plus). Empty for everyone else. */
   checkInCourseIds: string[];
+  /** Cover for absent tutors (organisations' staff). */
+  cover?: CalendarCover | null;
   /** Staff and learners open class mode; parents don't. */
   classMode?: boolean;
 };
@@ -191,6 +195,8 @@ export function EntryDialog({ entry, onClose, ctx }: { entry: CalendarEntry | nu
                   </Button>
                 )}
               </div>
+
+              {ctx.cover && <EntryCover entry={e} cover={ctx.cover} when={`${fmtDay.format(new Date(e.start))} at ${fmtTime.format(new Date(e.start))}`} />}
 
               {canEdit && (
                 <div className="border-border flex flex-wrap gap-2 border-t pt-4">

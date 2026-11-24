@@ -12,10 +12,10 @@ import { notFound } from "next/navigation";
 import { myStudyCredits } from "@/features/ai-credits/topups";
 import { isBillingEnabled } from "@/features/billing/errors";
 import { hasService } from "@/features/billing/services";
-import { STUDY_SERVICE, studyAssistantConfigured } from "@/features/study/study";
+import { myStudyChats, STUDY_SERVICE, studyAssistantConfigured } from "@/features/study/study";
 import { prisma } from "@/lib/db";
 import { UserError } from "@/lib/user-error";
-import { getViewer, ViewerError, type Viewer } from "@/lib/viewer";
+import { canIn, getViewer, ViewerError, type Viewer } from "@/lib/viewer";
 
 /**
  * Whether the course's assistant shows in its tabs: on the plan, set up, and
@@ -101,6 +101,32 @@ export async function studyAccounts(viewer: Viewer, onlyChild?: string | null): 
     }),
   );
   return rows.filter((r) => r !== null);
+}
+
+/** A parent may read this child's chats (owner, 24 Nov); anyone else gets a 404. */
+export async function childForStudy(viewer: Viewer, childUserId: string) {
+  const child = viewer.persona === "guardian" ? viewer.children.find((c) => c.userId === childUserId) : undefined;
+  if (!child || !(await canIn(viewer, "grades.view", { childUserId }))) notFound();
+  return child;
+}
+
+/** A child's study chats on the courses they're on now, newest first. */
+export async function childStudyChats(viewer: Viewer, childUserId: string) {
+  if (!isBillingEnabled()) return [];
+  const courses = await prisma.course.findMany({
+    where: { enrollments: { some: { endedAt: null, learner: { userId: childUserId } } } },
+    select: { id: true, name: true },
+  });
+  const lists = await Promise.all(
+    courses.map(async (c) => {
+      const rows = await myStudyChats(viewer, { courseId: c.id, studentUserId: childUserId }).catch((e) => {
+        if (e instanceof ViewerError) return [];
+        throw e;
+      });
+      return rows.map((r) => ({ id: r.id, title: r.title, courseName: c.name, updatedAt: r.updatedAt }));
+    }),
+  );
+  return lists.flat().sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 }
 
 /** Whether a child has a course with the assistant, for the link on their page. */
