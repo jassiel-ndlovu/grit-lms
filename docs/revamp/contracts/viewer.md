@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.25, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.26, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.26. Branding (Plus), white-label (Pro; custom domains on hold) and bulk onboarding |
 | 2026-11-24 | Draft 1.25. Enquiry pipeline (with a public form), tutor outcomes and staff reviews |
 | 2026-11-24 | Draft 1.24. Timesheets, pay rates, payroll export and cover for absent tutors |
 | 2026-11-24 | (No change here.) API keys, the REST API and webhooks have their own contract: `contracts/api.md` |
@@ -774,3 +775,47 @@ These use the same service, gate, credits and run records as above. They're in `
 | `listReviewsAction` | `{ membershipId? }` | A manager sees reviews for staff in scope (drafts too) and their own shared ones; a tutor sees their shared ones |
 
 **Privacy:** shared reviews are in the tutor's data export.
+
+### Branding and white-label (Draft 1.26)
+
+#216 phase 3. **Owner, 24 Nov: custom domains are on hold.** Everything stays on www.nexa-lms.co.za. Actions are in `@/features/workspaces/brand-actions` and need `workspace.branding`.
+
+- **Plus (`custom-branding`):** a logo, an accent colour, a sender name and welcome text.
+  - Families' emails come from "<sender> via Nexa" (Nexa's address).
+  - Those emails carry the workspace's name and logo in the header, and its colour.
+- **Pro (white-label):** the same, plus:
+  - emails come from "<sender>";
+  - every "Nexa" and "Nexa LMS" in families' emails becomes the workspace's name; links stay;
+  - the branded pages show the workspace's support email instead of Nexa's.
+- **Not branded:** Nexa's own emails (billing, accounts, payouts, sign-in) keep Nexa's name.
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `getBrandingAction` | `{}` | `{ name, slug, logoUrl, accentColor, senderName, welcomeText, hideNexaBranding, supportEmail, plan, canBrand, canWhiteLabel, signInPath }` |
+| `setBrandingAction` | `{ logoUrl?, accentColor?, senderName?, welcomeText? }` | The logo must be uploaded through your Blob uploader. Colours look like `#1F6FEB`. Plus or Pro; otherwise "Your logo, colour and sender name are part of the Plus plan." |
+| `setWhiteLabelAction` | `{ hideNexaBranding, supportEmail? }` | Pro. Switching it on needs a support email |
+| `getBrandForSlug` | `{ slug }` (public) | For the branded sign-in page **`/w/<slug>`** (please build it): `{ slug, name, logoUrl, accentColor, welcomeText, whiteLabel, supportEmail }`, or null without branding |
+
+**For B:**
+- Use the brand in the dashboard shell for that workspace's members: the logo in the header, and the accent as the primary colour (`viewer.workspace.logoUrl` and `accentColor` are already on the viewer).
+- When `whiteLabel` is true, hide "Nexa" in the shell and footer for families, and show `supportEmail`.
+- Emails are handled by A.
+
+### Bulk onboarding (Draft 1.26)
+
+Bringing a whole organisation on, branch by branch. **The order:**
+1. Import "Branches and teams" (`branches`).
+2. Import "Tutors and admins" with the Teams column; people join their teams when they accept.
+3. Courses (your screens; put each course in a team).
+4. Import students.
+5. Import the timetable (`calendar`).
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `getOnboardingAction` | `{}` | `teams.manage`. Returns `{ name, plan, checklist: [{ key, label, done, optional }], branches: [{ id, name, rollout, rolloutAt, counts: { teams, staff, invited, courses, students, events }, progress: { steps, percent, waitingOnInvites } }], live }` |
+| `setBranchRolloutAction` | `{ branchId, rollout: "PLANNED" \| "PILOT" \| "LIVE" }` | Owners and admins. LIVE needs staff and at least one course |
+| `adminOnboardingOverviewAction` | `{ limit? }` | Nexa admins: each organisation's plan, branches (live and pilot) and checklist progress |
+
+**For B:**
+- An "Onboarding" page for organisation owners: the checklist with links to each import, and a row per branch with a progress bar, the rollout stage and "Start pilot" / "Go live".
+- On the admin console, a table of organisations.

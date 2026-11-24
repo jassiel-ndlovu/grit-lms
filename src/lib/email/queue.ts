@@ -21,6 +21,8 @@ import { prisma } from "@/lib/db";
 import { createHash } from "node:crypto";
 
 import { decryptSecret, encryptSecret } from "@/features/payments/secrets";
+import { applyBrand, brandedTemplate, senderLabel } from "@/features/workspaces/brand-rules";
+import { emailBrandFor } from "@/features/workspaces/branding";
 
 import { renderBillingEmail, type BillingTemplate, type BillingTemplateData, type Rendered } from "./billing-templates";
 import { renderFeeEmail, type FeeTemplate, type FeeTemplateData } from "./fee-templates";
@@ -199,8 +201,17 @@ async function processRow(id: string): Promise<{ outcome: RowOutcome; error?: st
   }
   let result: Awaited<ReturnType<typeof sendEmail>>;
   try {
-    const msg = renderRow(row.template, row.toEmail, row.data);
-    result = await sendEmail({ ...msg, to: row.toEmail }, { idempotencyKey: row.idempotencyKey });
+    let msg = renderRow(row.template, row.toEmail, row.data);
+    let fromName: string | undefined;
+    // A workspace's own emails carry its brand (Plus) or only its brand (Pro white-label), #216.
+    if (row.workspaceId && brandedTemplate(row.template)) {
+      const brand = await emailBrandFor(row.workspaceId).catch(() => null);
+      if (brand) {
+        msg = applyBrand(msg, brand);
+        fromName = senderLabel(brand);
+      }
+    }
+    result = await sendEmail({ ...msg, to: row.toEmail, fromName }, { idempotencyKey: row.idempotencyKey });
   } catch (e) {
     result = { ok: false, error: (e as Error).message, httpStatus: 400 }; // a render error never fixes itself
   }

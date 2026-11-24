@@ -24,14 +24,14 @@ import * as engine from "./engine";
 import { importerFor, importerKinds } from "./registry";
 import type { ImportContext } from "./types";
 
-const PERMISSION: Record<string, Permission> = { students: "learners.invite", staff: "members.invite", calendar: "courses.edit" };
+const PERMISSION: Record<string, Permission> = { students: "learners.invite", staff: "members.invite", calendar: "courses.edit", branches: "teams.manage" };
 const id = z.string().min(1).max(64);
 
 function contextFor(viewer: Viewer, kind: string): ImportContext {
   const permission = PERMISSION[kind];
   if (!permission || !viewer.workspace || !can(viewer, permission)) throw new ViewerError("FORBIDDEN");
   const scoped = needsScope(viewer, permission);
-  if (scoped && kind === "staff") throw new ViewerError("FORBIDDEN");
+  if (scoped && (kind === "staff" || kind === "branches")) throw new ViewerError("FORBIDDEN");
   if (scoped && !viewer.membership) throw new ViewerError("FORBIDDEN");
   const actorRole = viewer.persona === "admin" ? "NEXA_ADMIN" : viewer.mode === "tutor" ? "TUTOR" : (viewer.membership?.role ?? "TUTOR");
   return {

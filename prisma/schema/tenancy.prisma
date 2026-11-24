@@ -142,6 +142,14 @@ model Workspace {
   staffReviews        StaffReview[]
   /// The public enquiry form at /enquire/<slug> (#216). Off by default.
   enquiryFormOn       Boolean               @default(false)
+  /// Branding (#216): the name emails come from ("Ubuntu Tutors"). Plus and Pro.
+  senderName          String?               @db.VarChar(60)
+  /// Shown on the branded sign-in page /w/<slug>.
+  welcomeText         String?               @db.VarChar(300)
+  /// White-label (Pro): no Nexa name in families' emails or on the branded pages.
+  hideNexaBranding    Boolean               @default(false)
+  /// Where families' questions go instead of Nexa support, when white-labelled.
+  supportEmail        String?               @db.VarChar(254)
 }
 
 /// Organisations only. A solo practice has no teams.
@@ -346,6 +354,9 @@ model Invite {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   invitedBy User      @relation("InviteInvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
 
+  /// Teams to join on accepting (bulk onboarding, #216).
+  teamIds String[] @default([])
+
   @@index([workspaceId, kind])
   @@index([email])
 }
@@ -510,6 +521,10 @@ model Branch {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   teams     Team[]
+
+  /// Bulk onboarding (#216): PLANNED, PILOT, then LIVE.
+  rollout   BranchRollout @default(PLANNED)
+  rolloutAt DateTime?
 
   @@unique([workspaceId, name])
 }
@@ -906,4 +921,10 @@ model StaffReview {
   membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, membershipId, periodEnd])
+}
+
+enum BranchRollout {
+  PLANNED
+  PILOT
+  LIVE
 }
