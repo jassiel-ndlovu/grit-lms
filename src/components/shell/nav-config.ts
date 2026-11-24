@@ -57,6 +57,8 @@ export interface NavSection {
 
 const HOME: NavLink = { label: "Home", href: "/dashboard", icon: "home", keywords: ["dashboard", "overview"] };
 const CALENDAR: NavLink = { label: "Calendar", href: "/dashboard/calendar", icon: "calendar", keywords: ["schedule", "events", "timetable"] };
+/** Extra lessons with a tutor (viewer.md Draft 1.21). */
+const BOOKINGS: NavLink = { label: "Bookings", href: "/dashboard/bookings", icon: "calendar", keywords: ["book", "lesson", "session", "one-to-one", "availability", "hours"] };
 /** Paying fees: guardians, and adult students who see their own (fees.pay). */
 const PAY_FEES: NavLink = { label: "Fees", href: "/dashboard/fees", icon: "fees", keywords: ["pay", "invoices", "card"], requires: "fees.pay", billing: true };
 /** Listed courses a student (or a parent, for a child) asks to join (#206). */
@@ -74,6 +76,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Courses", href: "/dashboard/courses", icon: "book" },
         FIND_COURSES,
         CALENDAR,
+        BOOKINGS,
         { label: "Tests", href: "/dashboard/tests", icon: "test", keywords: ["quiz", "assessment"] },
         { label: "Assignments", href: assignmentRoutes.index, icon: "assignment", keywords: ["submissions", "tasks"] },
         { label: "Grades", href: "/dashboard/grades", icon: "grades", keywords: ["marks", "results"], requires: "grades.view" },
@@ -88,6 +91,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
       items: [
         { label: "Courses", href: "/dashboard/manage-courses", icon: "book", keywords: ["lessons", "authoring"], requires: "courses.edit" },
         CALENDAR,
+        { ...BOOKINGS, requires: "content.view" },
         { label: "Tests", href: "/dashboard/tutor-tests", icon: "test", keywords: ["quiz", "grading", "marking"], requires: "courses.edit" },
         { label: "Assignments", href: assignmentRoutes.index, icon: "assignment", keywords: ["submissions", "marking"], requires: "courses.edit" },
         { label: "Gradebook", href: "/dashboard/gradebook", icon: "gradebook", keywords: ["marks", "weights"], requires: "grades.view" },
@@ -128,7 +132,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
   ],
   // Guardians get their children's pages in Phase 1 (viewer.children).
   // Calendar: each child's sessions, one at a time (#149).
-  guardian: [{ items: [HOME, INBOX] }, { label: "Learning", items: [CALENDAR, FIND_COURSES] }, { label: "Account", items: [PAY_FEES, REFER] }],
+  guardian: [{ items: [HOME, INBOX] }, { label: "Learning", items: [CALENDAR, BOOKINGS, FIND_COURSES] }, { label: "Account", items: [PAY_FEES, REFER] }],
   none: [{ items: [HOME, INBOX] }],
 };
 

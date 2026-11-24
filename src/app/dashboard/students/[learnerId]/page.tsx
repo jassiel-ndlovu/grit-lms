@@ -1,18 +1,24 @@
 /**
  * /dashboard/students/[learnerId] — a student's profile (#174; a/ux/01,
- * section 7): the Sign-in tab (new code), the Parents tab (link, unlink)
- * and the Account tab (#182: data export, deletion on a parent's request).
- * `?tab=parents` or `?tab=account` opens that tab.
+ * section 7): the Sign-in tab (new code), the Parents tab (link, unlink),
+ * the Lessons tab (prepaid lessons left, `fees.manage`) and the Account tab
+ * (#182: data export, deletion on a parent's request). `?tab=parents`,
+ * `?tab=lessons` or `?tab=account` opens that tab.
  */
 
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { DataExportButton, StudentDeletionPanel } from "@/components/account/account-settings";
 import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { StatusChip } from "@/components/shell/status-chip";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ParentsPanel, SignInPanel, type ParentRow } from "@/features/courses/components/accounts/student-account-panels";
 import { getRosterStudent } from "@/features/courses/lib/roster";
+import { staffCredits } from "@/features/events/bookings";
+import { StaffCredits } from "@/features/events/components/booking/credits";
+import { bookingRoutes } from "@/features/events/lib/booking-ui";
 import { listParents } from "@/features/users/account-actions";
 import { DELETION_GRACE_DAYS } from "@/features/users/deletion";
 import { can, getViewer } from "@/lib/viewer";
@@ -33,6 +39,7 @@ export default async function StudentProfilePage({ params, searchParams }: PageP
   const student = await getRosterStudent(viewer, learnerId);
   if (!student) notFound();
 
+  const credits = await staffCredits(viewer, learnerId);
   const canLink = can(viewer, "guardians.link");
   const parentsRes = canLink ? await listParents({ learnerId }) : null;
   const parents: ParentRow[] = (parentsRes?.data ?? []).map((p) => ({
@@ -56,10 +63,11 @@ export default async function StudentProfilePage({ params, searchParams }: PageP
         }
       />
 
-      <Tabs defaultValue={tab === "parents" && canLink ? "parents" : tab === "account" ? "account" : "sign-in"}>
+      <Tabs defaultValue={tab === "parents" && canLink ? "parents" : tab === "lessons" && credits ? "lessons" : tab === "account" ? "account" : "sign-in"}>
         <TabsList>
           <TabsTrigger value="sign-in">Sign-in</TabsTrigger>
           {canLink ? <TabsTrigger value="parents">Parents</TabsTrigger> : null}
+          {credits ? <TabsTrigger value="lessons">Lessons</TabsTrigger> : null}
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
         <TabsContent value="sign-in" className="pt-3">
@@ -82,6 +90,19 @@ export default async function StudentProfilePage({ params, searchParams }: PageP
                 We couldn&apos;t load this student&apos;s parents just now. Refresh to try again.
               </p>
             )}
+          </TabsContent>
+        ) : null}
+        {credits ? (
+          <TabsContent value="lessons" className="space-y-3 pt-3">
+            <p className="text-muted-foreground max-w-prose text-sm">Prepaid lessons left for bookings. Packs paid through Nexa are added for you.</p>
+            {credits.length > 0 ? (
+              <StaffCredits learnerId={student.learnerId} studentName={student.name} courses={credits} />
+            ) : (
+              <p className="text-muted-foreground text-sm">Not on a course you manage fees for.</p>
+            )}
+            <Button asChild size="sm" variant="outline">
+              <Link href={bookingRoutes.book({ student: student.learnerId })}>Book a lesson</Link>
+            </Button>
           </TabsContent>
         ) : null}
         <TabsContent value="account" className="space-y-8 pt-3">

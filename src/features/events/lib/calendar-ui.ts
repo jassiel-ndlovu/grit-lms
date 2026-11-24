@@ -155,11 +155,11 @@ export function dayLabel(key: string, locale: string, opts: Intl.DateTimeFormatO
 /* Entries                                                                    */
 /* ------------------------------------------------------------------------- */
 
-/** One row on the calendar: an event occurrence, or a test or assignment due. */
+/** One row on the calendar: an event occurrence, a booked lesson, or a test or assignment due. */
 export type CalendarEntry = {
-  /** Unique on the page: `eventId#occurrenceStart`, or the test or assignment id. */
+  /** Unique on the page: `eventId#occurrenceStart`, or the kind and the row's id. */
   id: string;
-  kind: "event" | "test" | "assignment";
+  kind: "event" | "booking" | "test" | "assignment";
   /** Events only. */
   eventId: string | null;
   /** Events only: the original start, the key for edits, attendance and check-in. */
@@ -177,7 +177,7 @@ export type CalendarEntry = {
   recurring: boolean;
   courseId: string;
   courseName: string;
-  /** Where "Open" goes, for tests and assignments. */
+  /** Where "Open" goes, for everything but events. */
   href: string | null;
 };
 
