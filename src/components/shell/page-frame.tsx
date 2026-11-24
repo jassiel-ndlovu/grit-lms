@@ -97,7 +97,7 @@ export function PageTitle({
       className={cn("relative isolate flex min-w-0 flex-col gap-2", illustration ? "flex-1" : className)}
     >
       {/* Nexa's mark on the page: where nothing else sits beside the title. */}
-      {signature ? <NexusCorner seed="page-title" size={80} className="-top-3" /> : null}
+      {signature ? <NexusCorner seed={typeof title === "string" ? title : "page-title"} size={80} className="-top-3" /> : null}
       {icon ? (
         <span aria-hidden className="text-muted-foreground mb-1 grid size-8 place-items-center text-2xl [&_svg]:size-7">
           {icon}

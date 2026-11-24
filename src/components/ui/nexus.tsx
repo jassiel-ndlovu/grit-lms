@@ -43,6 +43,8 @@ type TonePanelProps = React.HTMLAttributes<HTMLElement> & {
   tone?: Tone;
   /** Seed for the corner figure; leave out for none. */
   nexus?: string;
+  /** Smaller where the panel's own content starts high on the right. */
+  nexusSize?: number;
   as?: "div" | "section" | "article" | "aside" | "p";
 };
 
@@ -50,10 +52,10 @@ type TonePanelProps = React.HTMLAttributes<HTMLElement> & {
  * A panel whose colour says how much it matters (TONES). The tone is never
  * the only signal: the panel's words say it too.
  */
-export function TonePanel({ tone = "neutral", nexus, as: As = "div", className, children, ...props }: TonePanelProps) {
+export function TonePanel({ tone = "neutral", nexus, nexusSize = 72, as: As = "div", className, children, ...props }: TonePanelProps) {
   return (
     <As data-slot="tone-panel" data-tone={tone} className={cn("text-card-foreground rounded-lg p-4", className)} {...props}>
-      {nexus ? <NexusCorner seed={nexus} /> : null}
+      {nexus ? <NexusCorner seed={nexus} size={nexusSize} /> : null}
       {children}
     </As>
   );

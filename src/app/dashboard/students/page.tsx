@@ -60,7 +60,7 @@ export default async function StudentsPage() {
         }
       />
 
-      <TonePanel as="section" nexus="add-student" aria-labelledby="add-heading" className="space-y-4 p-5">
+      <TonePanel as="section" nexus="add-student" nexusSize={48} aria-labelledby="add-heading" className="space-y-4 p-5">
         <h2 id="add-heading" className="text-foreground text-sm font-semibold">
           Add a student
         </h2>

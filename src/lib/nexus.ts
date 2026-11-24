@@ -49,12 +49,15 @@ export function cornerFigure(seed: string, size = 96): Figure {
   const rnd = seeded(seed);
   const hub = point(size * 0.74, size * 0.26, size * 0.06, 1);
   // From straight left (180 degrees) round to straight down (90), y pointing down.
-  const nodes = [172, 140, 106].map((deg, i) => {
-    const t = ((deg + (rnd() - 0.5) * 18) * Math.PI) / 180;
-    const len = size * [0.56, 0.4, 0.6][i] * (0.82 + rnd() * 0.18);
+  const count = rnd() < 0.5 ? 3 : 4;
+  const step = 80 / (count - 1);
+  const nodes = Array.from({ length: count }, (_, i) => {
+    const t = ((180 - i * step + (rnd() - 0.5) * step * 0.6) * Math.PI) / 180;
+    // Long and short by turns, so neighbouring points keep apart.
+    const len = size * (i % 2 === 0 ? 0.46 + rnd() * 0.18 : 0.28 + rnd() * 0.16);
     const r = size * (0.022 + rnd() * 0.016);
     const clamp = (v: number) => Math.min(size - MARGIN - r, Math.max(MARGIN + r, v));
-    return point(clamp(hub.x + Math.cos(t) * len), clamp(hub.y + Math.sin(t) * len), r, (i + 1) as Hue);
+    return point(clamp(hub.x + Math.cos(t) * len), clamp(hub.y + Math.sin(t) * len), r, ((i % 3) + 1) as Hue);
   });
   return { hub, nodes, lines: nodes.map((n) => edge(hub, n)), size };
 }
@@ -84,4 +87,10 @@ export type Tone = (typeof TONES)[number];
 export function dueTone(due: Date, now: Date): Tone {
   const hours = (due.getTime() - now.getTime()) / 3_600_000;
   return hours < 0 ? "danger" : hours <= 48 ? "warning" : "neutral";
+}
+
+/** Work waiting to be marked: a warning once it is in, danger after a week. */
+export function markTone(due: Date, now: Date): Tone {
+  const days = (now.getTime() - due.getTime()) / 86_400_000;
+  return days > 7 ? "danger" : days >= 0 ? "warning" : "neutral";
 }

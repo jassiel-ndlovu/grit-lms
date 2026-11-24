@@ -43,7 +43,7 @@ export function StudentPeekBody({ d }: { d: StudentPeek }) {
           {d.isMinor ? <StatusChip tone="neutral">Under 18</StatusChip> : null}
         </div>
       ) : null}
-      <PropertyList>
+      <PropertyList className="[&_[data-slot=property-row]]:grid-cols-[5.5rem_1fr]">
         {d.username ? <PropertyRow label="Username">{d.username}</PropertyRow> : null}
         <PropertyRow label="Email">{d.email ?? "No email"}</PropertyRow>
         <PropertyRow label="Courses">{d.courses.length ? d.courses.map((c) => c.name).join(", ") : "Not on a course"}</PropertyRow>

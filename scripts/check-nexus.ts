@@ -12,7 +12,7 @@ import { latestPerStudent } from "../src/features/assessments/lib/item-analysis"
 import { markingProgress, markKey, namesSomeone, nextToMark, reusableComments, withComment } from "../src/features/assessments/lib/marking-flow";
 import { classTopics, learnerTopics, topicCounts, topicLine, topicTrail } from "../src/features/courses/lib/topic-map";
 import { classPercent, classPhase, lessonsToShow, phaseLabel, spanLabel } from "../src/features/events/lib/class-mode";
-import { cornerFigure, dueTone, hubFigure, type Figure } from "../src/lib/nexus";
+import { cornerFigure, dueTone, hubFigure, markTone, type Figure } from "../src/lib/nexus";
 import { saveText } from "../src/lib/save-state";
 
 let failures = 0;
@@ -35,7 +35,7 @@ check("the same seed draws the same figure", cornerFigure("a"), cornerFigure("a"
 check("another seed draws another", JSON.stringify(cornerFigure("a")) === JSON.stringify(cornerFigure("b")), false);
 check("200 corner figures stay in their box", Array.from({ length: 200 }, (_, i) => cornerFigure(`s${i}`)).every(inside), true);
 check("hub figures stay in their box", [3, 6, 8].every((n) => inside(hubFigure(n))), true);
-check("one line per point", [cornerFigure("x").lines.length, hubFigure(6).lines.length], [3, 6]);
+check("one line per point", [["a", "b", "c", "x"].every((s) => cornerFigure(s).lines.length === cornerFigure(s).nodes.length), hubFigure(6).lines.length], [true, 6]);
 check(
   "lines stop at the rims",
   hubFigure(6).lines.every((l) => Math.abs(Math.hypot(l.x1 - 24, l.y1 - 24) - hubFigure(6).hub.r) < 0.05),
@@ -46,6 +46,7 @@ check(
 const now = new Date("2026-11-24T10:00:00Z");
 const inHours = (h: number) => new Date(now.getTime() + h * 3_600_000);
 check("due tones", [dueTone(inHours(-1), now), dueTone(inHours(47), now), dueTone(inHours(49), now)], ["danger", "warning", "neutral"]);
+check("marking tones", [markTone(inHours(1), now), markTone(inHours(-1), now), markTone(inHours(-24 * 8), now)], ["neutral", "warning", "danger"]);
 
 /* Saving */
 check("saved, with the time", saveText("saved", { time: "14:32" }), "Saved 14:32");

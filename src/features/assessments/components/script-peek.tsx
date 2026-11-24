@@ -46,7 +46,7 @@ export function ScriptPeekBody({ d }: { d: ScriptPeek }) {
   return (
     <>
       <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
-      <PropertyList>
+      <PropertyList className="[&_[data-slot=property-row]]:grid-cols-[5.5rem_1fr]">
         <PropertyRow label="Email">{d.email}</PropertyRow>
         <PropertyRow label={d.submittedAt ? "Submitted" : "Started"}>{when(d.submittedAt ?? d.startedAt)}</PropertyRow>
         {d.grade ? (

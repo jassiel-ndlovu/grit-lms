@@ -17,7 +17,7 @@ import { TonePanel } from "@/components/ui/nexus";
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { calendarRoutes } from "@/features/events/lib/calendar-ui";
 import { formatDate, greetingFor } from "@/lib/datetime";
-import { dueTone } from "@/lib/nexus";
+import { dueTone, markTone } from "@/lib/nexus";
 import { cn } from "@/lib/utils";
 
 import { atRiskRoutes } from "../lib/at-risk";
@@ -170,7 +170,7 @@ export function TutorHome({
                       <tr
                         key={`${r.kind}-${r.id}`}
                         data-slot="tone-row"
-                        data-tone={dueTone(r.dueDate, now)}
+                        data-tone={(r.bucket === "mark" ? markTone : dueTone)(r.dueDate, now)}
                         className="border-border hover:bg-muted/40 border-b last:border-0"
                       >
                         <td className="px-4 py-2.5">
@@ -199,7 +199,7 @@ export function TutorHome({
         </section>
 
         <aside className="space-y-4">
-          <TonePanel as="section" nexus="week" aria-labelledby="week-heading" className="space-y-2">
+          <TonePanel as="section" nexus="week" nexusSize={48} aria-labelledby="week-heading" className="space-y-2">
             <h2 id="week-heading" className="text-foreground text-base font-semibold">
               This week
             </h2>

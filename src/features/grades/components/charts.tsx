@@ -165,8 +165,8 @@ export function LineChart({
                   fill={color}
                 >
                   <title>
-                    {s.name}
-                    {p.label ? ` — ${p.label}` : ""}: {Math.round(p.y)}%
+                    {/* One string: React can't hydrate a title made of several. */}
+                    {`${s.name}${p.label ? ` — ${p.label}` : ""}: ${Math.round(p.y)}%`}
                   </title>
                 </circle>
               ))}
@@ -290,8 +290,7 @@ export function BarChart({
                 opacity={0.9}
               >
                 <title>
-                  {d.label}: {Math.round(d.value)}%
-                  {d.meta ? ` — ${d.meta}` : ""}
+                  {`${d.label}: ${Math.round(d.value)}%${d.meta ? ` — ${d.meta}` : ""}`}
                 </title>
               </rect>
               <text
@@ -395,7 +394,7 @@ export function DonutChart({
         {paths.map((p, i) => (
           <path key={i} d={p.d} fill={p.color}>
             <title>
-              {p.label}: {Math.round((p.value / total) * 100)}%
+              {`${p.label}: ${Math.round((p.value / total) * 100)}%`}
             </title>
           </path>
         ))}
@@ -530,7 +529,7 @@ export function Histogram({
                 opacity={0.85}
               >
                 <title>
-                  {binStart}-{binEnd}%: {c} {c === 1 ? "student" : "students"}
+                  {`${binStart}-${binEnd}%: ${c} ${c === 1 ? "student" : "students"}`}
                 </title>
               </rect>
               {c > 0 && (
