@@ -42,15 +42,15 @@ export function AcceptInvite({ token, workspaceName, signedInAs, emailMasked }: 
 
   if (wrongAccount) {
     return (
-      <div className="space-y-4 text-sm text-slate-700">
+      <div className="space-y-4 text-sm text-foreground">
         <p role="alert">
-          This invite is for <span className="font-medium text-slate-900">{wrongAccount}</span>. You&apos;re signed in as{" "}
-          <span className="font-medium text-slate-900">{signedInAs}</span>.
+          This invite is for <span className="font-medium text-foreground">{wrongAccount}</span>. You&apos;re signed in as{" "}
+          <span className="font-medium text-foreground">{signedInAs}</span>.
         </p>
         <button
           type="button"
           onClick={() => appSignOut(`/auth?callbackUrl=${encodeURIComponent(`/auth/invite/${token}`)}`)}
-          className="w-full rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+          className="w-full rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           Sign in with {wrongAccount}
         </button>
@@ -60,19 +60,19 @@ export function AcceptInvite({ token, workspaceName, signedInAs, emailMasked }: 
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600">
-        Signed in as <span className="font-medium text-slate-900">{signedInAs}</span>.
+      <p className="text-sm text-muted-foreground">
+        Signed in as <span className="font-medium text-foreground">{signedInAs}</span>.
       </p>
       <button
         type="button"
         onClick={join}
         disabled={busy}
-        className="w-full rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+        className="w-full rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
       >
         {busy ? "Joining…" : `Join ${workspaceName}`}
       </button>
       {error ? (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       ) : null}

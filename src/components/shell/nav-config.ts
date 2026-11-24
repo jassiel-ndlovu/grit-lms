@@ -133,6 +133,7 @@ const BY_PERSONA: Record<Persona, NavSection[]> = {
         { label: "Users", href: "/dashboard/manage-users", icon: "users", keywords: ["accounts"], requires: "admin.console" },
         { label: "Billing", href: "/dashboard/admin/billing", icon: "billing", keywords: ["workspaces", "trial", "comp", "discount", "paystack"], requires: "admin.console", billing: true },
         { label: "Support", href: "/dashboard/admin/support", icon: "inbox", keywords: ["queries", "help", "feedback", "problems"], requires: "admin.console" },
+        { label: "Enquiries", href: "/dashboard/admin/enquiries", icon: "inbox", keywords: ["contact form", "access requests", "leads", "organisations"], requires: "admin.console" },
       ],
     },
   ],

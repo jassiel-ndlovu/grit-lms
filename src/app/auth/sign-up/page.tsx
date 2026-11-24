@@ -73,18 +73,18 @@ function SignUpCard() {
 
   if (phase === "sent") {
     return (
-      <div role="status" className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-orange-100 text-orange-700">
+      <div role="status" className="rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-brand-terracotta/15 text-brand-terracotta">
           <MailCheck aria-hidden className="size-6" />
         </div>
-        <h2 className="mt-4 text-base font-medium text-slate-900">Check your email</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          We&apos;ve sent a link to <span className="font-medium text-slate-900">{email.trim()}</span>. Open it to verify your
+        <h2 className="mt-4 text-base font-medium text-foreground">Check your email</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          We&apos;ve sent a link to <span className="font-medium text-foreground">{email.trim()}</span>. Open it to verify your
           address and finish setting up.
         </p>
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-muted-foreground">
           Nothing there? Check your spam folder, or{" "}
-          <button type="button" onClick={() => setPhase("form")} className="font-medium text-slate-700 underline underline-offset-2">
+          <button type="button" onClick={() => setPhase("form")} className="font-medium text-foreground underline underline-offset-2">
             try a different address
           </button>
           .
@@ -95,7 +95,7 @@ function SignUpCard() {
 
   return (
     <>
-      <div className="min-h-[420px] rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="min-h-[420px] rounded-xl border border-border bg-card p-6 shadow-sm">
         {phase === "creating" ? (
           <Busy message="Creating your account…" sub="One moment." />
         ) : (
@@ -146,7 +146,7 @@ function SignUpCard() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 transition-colors hover:text-slate-600"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground transition-colors hover:text-foreground"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -155,28 +155,28 @@ function SignUpCard() {
               </Field>
 
               {error ? (
-                <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                   {error}
                 </div>
               ) : null}
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+                className="flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Create account
                 <ArrowRight aria-hidden className="size-4" />
               </button>
-              <p className="text-center text-xs text-slate-500">
+              <p className="text-center text-xs text-muted-foreground">
                 For tutors, students and parents. You&apos;ll choose which after you verify your email.
               </p>
             </form>
           </div>
         )}
       </div>
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href={keepCallback("/auth", callbackUrl)} className="font-medium text-slate-900 underline underline-offset-2">
+        <Link href={keepCallback("/auth", callbackUrl)} className="font-medium text-foreground underline underline-offset-2">
           Sign in
         </Link>
       </p>
@@ -186,12 +186,12 @@ function SignUpCard() {
 
 function ClosedCard() {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-      <h2 className="text-base font-medium text-slate-900">Sign-up isn&apos;t open yet</h2>
-      <p className="mt-1 text-sm text-slate-600">For now, accounts are created by request.</p>
+    <div className="rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+      <h2 className="text-base font-medium text-foreground">Sign-up isn&apos;t open yet</h2>
+      <p className="mt-1 text-sm text-muted-foreground">For now, accounts are created by request.</p>
       <Link
         href="/auth"
-        className="mt-4 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+        className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         Back to sign in
       </Link>

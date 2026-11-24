@@ -47,7 +47,7 @@ export function SetPasswordForm() {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm" noValidate>
+    <form onSubmit={submit} className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm" noValidate>
       <Field id="new-password" label="New password" icon={<Lock className="size-4" />} hint="At least 8 characters, with letters and numbers or symbols.">
         <input
           id="new-password"
@@ -62,7 +62,7 @@ export function SetPasswordForm() {
         <button
           type="button"
           onClick={() => setShow((v) => !v)}
-          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+          className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
           aria-label={show ? "Hide password" : "Show password"}
         >
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -80,14 +80,14 @@ export function SetPasswordForm() {
         />
       </Field>
       {error ? (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       ) : null}
       <button
         type="submit"
         disabled={busy}
-        className="w-full rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+        className="w-full rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
       >
         {busy ? "Saving…" : "Save and continue"}
       </button>

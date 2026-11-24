@@ -19,6 +19,14 @@ export const EMAIL_FROM =
 /** Optional Reply-To, e.g. a support inbox. */
 export const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || undefined;
 
+/**
+ * Where Nexa's own team gets enquiries and support queries. Never shown on
+ * the site. Set SUPPORT_TO (and ENQUIRY_TO for enquiries) in Vercel; the
+ * last fallback is the owner's inbox until then.
+ */
+export const NEXA_INBOX = process.env.SUPPORT_TO || process.env.ENQUIRY_TO || "nkosijassiel@gmail.com";
+export const ENQUIRY_INBOX = process.env.ENQUIRY_TO || NEXA_INBOX;
+
 export const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 /**

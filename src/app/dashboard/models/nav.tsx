@@ -49,9 +49,7 @@ import {
   Home,
   LogOut,
   Mail,
-  MapPin,
   PenTool,
-  Phone,
   Settings,
   User,
   UserCog,
@@ -62,7 +60,7 @@ import {
 
 import type { ShellUser } from "@/components/shell/app-shell";
 import { navFill, navHue, type NavHue } from "@/components/shell/nav-config";
-import { APP_CONTACT, APP_LEGAL_NAME, APP_SHORT_NAME } from "@/lib/branding";
+import { APP_LEGAL_NAME, APP_SHORT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -405,25 +403,10 @@ function NavFooter() {
   const year = new Date().getFullYear();
   return (
     <footer className="mt-3 space-y-2 border-t border-border px-2 pt-3 text-xs text-muted-foreground">
-      <ul className="space-y-1.5">
-        <li className="flex min-w-0 items-center gap-1.5">
-          <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <a
-            href={`mailto:${APP_CONTACT.email}`}
-            className="truncate transition-colors hover:text-foreground"
-          >
-            {APP_CONTACT.email}
-          </a>
-        </li>
-        <li className="flex items-center gap-1.5">
-          <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span>{APP_CONTACT.phone}</span>
-        </li>
-        <li className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span>{APP_CONTACT.location}</span>
-        </li>
-      </ul>
+      <Link href="/dashboard/help" className="flex items-center gap-1.5 transition-colors hover:text-foreground">
+        <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        Help and contact
+      </Link>
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {FOOTER_LINKS.map((link) => (
           <Link

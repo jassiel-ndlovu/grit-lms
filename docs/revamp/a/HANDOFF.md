@@ -3,6 +3,36 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 Sidebar scroll, personal details removed, legal pages, sign-in theming, contact form, `revamp/a-sidebar-legal`
+
+Owner's requests (24 Nov). No migration.
+
+**Sidebar:** the sections scroll when they don't fit, and Settings and Help stay pinned at the bottom (`app-shell.tsx`, `data-slot="sidebar-scroll"`). The account menu's organisation list scrolls on its own after about eight rows.
+
+**No personal details on the site:**
+- `APP_CONTACT` now holds only `supportPath`, `contactPath` and "South Africa".
+- Nexa's own inbox is server-only: `NEXA_INBOX` and `ENQUIRY_INBOX` in `lib/email/config.ts` (SUPPORT_TO, then ENQUIRY_TO, then the owner's inbox until those are set).
+- Removed:
+  - the landing page's email links ("Request access", "Ask about your organisation" and "Email us"; they now go to `/contact`);
+  - the sign-in page's request-access email;
+  - the parent dashboard's "Contact the school" email (now "Ask for help" in Help);
+  - the legacy sidebar's contact block;
+  - the old footer, deleted.
+
+**Contact form** (B's backlog item, taken):
+- `/contact` with `?kind=ACCESS|TEAM|OTHER`, sending to A's `submitPlatformEnquiry`.
+- **Nexa-admin inbox:** `/dashboard/admin/enquiries`, "Enquiries" under Platform. Mark each one Replied, Done or Spam, with a note. The enquiry email's button opens it.
+
+**Legal pages rewritten:** `/privacy-policy` (POPIA-shaped: responsible party vs operator, children, AI, cross-border, retention, cookies, rights, the Information Regulator) and `/terms-of-service` (accounts, organisations, use, content, AI, plans, fees, credits, ending, liability, law). Both use the shared `components/legal/legal-page.tsx`. Every fact follows the code: 14-day trial, 30-day billing, 2% commission, 14-day deletion grace, retention periods, cookies. **The owner should have both reviewed legally.**
+
+**Sign-in theming:** the auth pages and parts (sign-in, sign-up, invite, set password, two-step) use theme tokens instead of slate, white and orange. Dark mode and the colour themes follow what the person chose, which is saved in the browser and survives signing out.
+
+**Tested:** real Chrome:
+- the sidebar at 560 px high (scrolls; Help visible; the last item reachable);
+- the auth pages in light, dark with Ocean, and Sunset (buttons follow the theme);
+- legal, contact and landing at 1366 and 390 px (no personal details, no Nexa email links, no sideways scroll);
+- the contact form end to end. No console errors.
+
 ## 2026-11-24 Wording pass, part 1: payments, billing, settings and messages, `revamp/a-wording`
 
 Owner's request (24 Nov): text must be useful, unambiguous, relevant and specific; no supplier names; don't assume people know the app.

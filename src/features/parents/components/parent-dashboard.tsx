@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { ChildSummary } from "@/features/activity/child-overview";
 import { childRoutes } from "@/features/activity/lib/child-overview";
-import { APP_CONTACT } from "@/lib/branding";
 import type { Viewer } from "@/lib/viewer-core";
 
 const COMING_SOON = [
@@ -52,9 +51,9 @@ export function ParentDashboard({ firstName, learners, notes }: { firstName: str
               </p>
             </div>
             <Button asChild variant="outline" size="sm">
-              <a href={`mailto:${APP_CONTACT.email}?subject=Link%20my%20parent%20account`}>
-                Contact the school
-              </a>
+              <Link href="/dashboard/help/new?kind=QUESTION&topic=ACCOUNT">
+                Ask for help
+              </Link>
             </Button>
           </Card>
         ) : (

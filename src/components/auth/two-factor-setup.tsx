@@ -32,8 +32,8 @@ export function secretFromTotpUri(uri: string): string {
   }
 }
 
-const BUTTON = "w-full rounded-md bg-slate-900 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60";
-const QUIET = "w-full rounded-md py-2 text-sm text-slate-600 hover:text-slate-900";
+const BUTTON = "w-full rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60";
+const QUIET = "w-full rounded-md py-2 text-sm text-muted-foreground hover:text-foreground";
 
 type Step = { kind: "password" } | { kind: "scan"; uri: string; backupCodes: string[] } | { kind: "codes"; backupCodes: string[] };
 
@@ -53,7 +53,7 @@ export function TotpKeyBlock({ uri }: { uri: string }) {
   return (
     <>
       Add Nexa to your authenticator app. Scan the QR code with the app,{" "}
-      <a href={uri} className="inline-flex items-center gap-1 font-medium text-slate-900 underline underline-offset-2">
+      <a href={uri} className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-2">
         <Smartphone className="size-3.5" /> open it in the app
       </a>{" "}
       on this phone, or choose &quot;Enter a setup key&quot; in the app and type the key.
@@ -63,13 +63,13 @@ export function TotpKeyBlock({ uri }: { uri: string }) {
             role="img"
             aria-label="QR code for your authenticator app"
             data-testid="totp-qr"
-            className="block size-40 shrink-0 rounded-md border border-slate-200 bg-white p-1 [&_svg]:size-full"
+            className="block size-40 shrink-0 rounded-md border border-border bg-card p-1 [&_svg]:size-full"
             dangerouslySetInnerHTML={{ __html: qr }}
           />
         ) : null}
         <span className="block min-w-0 flex-1">
-          <span className="block text-xs text-slate-500">Setup key</span>
-          <span className="mt-1 block rounded-md bg-slate-100 px-3 py-2 font-mono text-sm tracking-wider break-all text-slate-900" data-testid="totp-secret">
+          <span className="block text-xs text-muted-foreground">Setup key</span>
+          <span className="mt-1 block rounded-md bg-muted px-3 py-2 font-mono text-sm tracking-wider break-all text-foreground" data-testid="totp-secret">
             {secret}
           </span>
         </span>
@@ -133,16 +133,16 @@ export function TwoFactorSetup({ remindLater, hasPassword = true }: { remindLate
   }
 
   const alert = error ? (
-    <p role="alert" className="text-sm text-red-600">
+    <p role="alert" className="text-sm text-destructive">
       {error}
     </p>
   ) : null;
-  const card = "space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm";
+  const card = "space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm";
 
   if (step.kind === "password") {
     return (
       <form onSubmit={start} className={card} noValidate>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           You&apos;ll need an authenticator app on your phone, such as Google Authenticator, Microsoft Authenticator or 1Password.
         </p>
         {hasPassword ? (
@@ -157,7 +157,7 @@ export function TwoFactorSetup({ remindLater, hasPassword = true }: { remindLate
             />
           </Field>
         ) : (
-          <p className="text-sm text-slate-600">You sign in with Google, so there&apos;s no password to enter.</p>
+          <p className="text-sm text-muted-foreground">You sign in with Google, so there&apos;s no password to enter.</p>
         )}
         {alert}
         <button type="submit" disabled={busy} className={BUTTON}>
@@ -173,7 +173,7 @@ export function TwoFactorSetup({ remindLater, hasPassword = true }: { remindLate
   if (step.kind === "scan") {
     return (
       <form onSubmit={verify} className={card} noValidate>
-        <ol className="list-decimal space-y-3 pl-5 text-sm text-slate-700">
+        <ol className="list-decimal space-y-3 pl-5 text-sm text-foreground">
           <li>
             <TotpKeyBlock uri={step.uri} />
           </li>
@@ -200,17 +200,17 @@ export function TwoFactorSetup({ remindLater, hasPassword = true }: { remindLate
 
   return (
     <div className={card}>
-      <p className="text-sm font-medium text-slate-900">Two-factor sign-in is on.</p>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm font-medium text-foreground">Two-factor sign-in is on.</p>
+      <p className="text-sm text-muted-foreground">
         Keep these backup codes somewhere safe. Each one signs you in once if you lose your phone. This is the only time
         they&apos;re shown.
       </p>
-      <ul className="grid grid-cols-2 gap-2 rounded-md bg-slate-100 p-3 font-mono text-sm text-slate-900">
+      <ul className="grid grid-cols-2 gap-2 rounded-md bg-muted p-3 font-mono text-sm text-foreground">
         {step.backupCodes.map((c) => (
           <li key={c}>{c}</li>
         ))}
       </ul>
-      <button type="button" onClick={() => copyCodes(step.backupCodes)} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-900">
+      <button type="button" onClick={() => copyCodes(step.backupCodes)} className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-foreground">
         <Copy className="size-3.5" /> Copy the codes
       </button>
       <button

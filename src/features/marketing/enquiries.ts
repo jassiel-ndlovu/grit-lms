@@ -1,8 +1,8 @@
 /**
  * Landing-page enquiries to Nexa (#216). B's form calls
  * `submitPlatformEnquiry` (./enquiry-actions.ts); Nexa admins list and
- * update them. Each new enquiry emails the Nexa inbox (ENQUIRY_TO, else
- * APP_CONTACT.email). Nothing is sent to the enquirer, so the form can't be
+ * update them. Each new enquiry emails the Nexa inbox (ENQUIRY_INBOX in
+ * lib/email/config.ts). Nothing is sent to the enquirer, so the form can't be
  * used to send mail to strangers.
  *
  * Privacy: the IP is kept only as a keyed hash, for rate limits. Rows are
@@ -13,8 +13,8 @@ import "server-only";
 
 import { createHmac } from "node:crypto";
 
-import { APP_CONTACT } from "@/lib/branding";
 import { prisma } from "@/lib/db";
+import { ENQUIRY_INBOX } from "@/lib/email/config";
 import { enqueueEmail, sendQueuedNow } from "@/lib/email/queue";
 import { UserError } from "@/lib/user-error";
 
@@ -28,7 +28,7 @@ export function hashIp(ip: string): string {
 }
 
 function inbox(): string {
-  return process.env.ENQUIRY_TO || APP_CONTACT.email;
+  return ENQUIRY_INBOX;
 }
 
 export type SubmitResult = { ok: true };
