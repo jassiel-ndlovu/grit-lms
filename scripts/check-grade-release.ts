@@ -64,6 +64,14 @@ for (const file of [
   check(`${file} reads released marks only`, [queries.length > 0, queries.filter((l) => !l.includes("...RELEASED_GRADE"))], [true, []]);
 }
 
+const lines = (file: string) => readFileSync(file, "utf8").split(/\r?\n/);
+check(
+  "the export leaves out unreleased report comments",
+  lines("src/features/users/export.ts").filter((l) => /report(Overall)?Comments: [{]/.test(l)).map((l) => l.includes("where: { term: { releasedAt: { not: null } } }")),
+  [true, true],
+);
+check("the old entries URL reads nothing", lines("src/app/api/submission-entry/route.ts").filter((l) => /submissionEntry[.]find|grade/i.test(l)), []);
+
 if (failures) {
   console.error(`\n${failures} check(s) failed.`);
   process.exit(1);

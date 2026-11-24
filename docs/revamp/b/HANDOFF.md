@@ -11,6 +11,9 @@ In A's files, with the owner's OK:
 - `ai-assist/pro.ts`: report comment drafts use released marks, like the term
   report.
 - `check-grade-release.ts` checks the Grade queries in both.
+- `users/export.ts` also leaves out comments on term reports that aren't
+  released.
+- `GET /api/submission-entry` is retired (410); no page used it.
 
 ## 2026-11-24 At-risk alert screens (#216, phase 2), `revamp/b-at-risk`
 

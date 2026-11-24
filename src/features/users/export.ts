@@ -32,9 +32,9 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
           id: true, isMinor: true, paymentVisible: true, consentAttestedAt: true, createdAt: true, workspace: { select: { name: true } },
           enrollments: { select: { status: true, startedAt: true, endedAt: true, course: { select: { name: true } } } },
           attendance: { select: { occurrenceStart: true, status: true, note: true, event: { select: { title: true } } } },
-          // B's term reports: the comments on this student's reports.
-          reportComments: { select: { text: true, updatedAt: true, term: { select: { title: true } }, course: { select: { name: true } } } },
-          reportOverallComments: { select: { text: true, updatedAt: true, term: { select: { title: true } } } },
+          // B's term reports: the comments on this student's released reports.
+          reportComments: { where: { term: { releasedAt: { not: null } } }, select: { text: true, updatedAt: true, term: { select: { title: true } }, course: { select: { name: true } } } },
+          reportOverallComments: { where: { term: { releasedAt: { not: null } } }, select: { text: true, updatedAt: true, term: { select: { title: true } } } },
         },
       },
       guardianOf: { select: { relationship: true, status: true, createdAt: true, student: { select: { name: true } } } },
@@ -79,7 +79,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
   await prisma.auditLog.create({ data: { workspaceId: actor.workspaceId, actorUserId: actor.userId, action: "user.export", targetType: "User", targetId: targetUserId, data: { self: actor.userId === targetUserId } } });
 
   return {
-    about: "Your data held by Nexa (nexa-lms.co.za), exported under POPIA. Amounts are in South African cents. Passwords and security keys are never included. Marks a tutor hasn't released yet are left out.",
+    about: "Your data held by Nexa (nexa-lms.co.za), exported under POPIA. Amounts are in South African cents. Passwords and security keys are never included. Marks and report comments a tutor hasn't released yet are left out.",
     exportedAt: now.toISOString(),
     account: {
       name: u.name, email: u.emailIsPlaceholder ? null : u.email, username: u.username, createdAt: u.createdAt, emailVerifiedAt: u.emailVerified,

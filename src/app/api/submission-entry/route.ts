@@ -2,10 +2,9 @@
  * /api/submission-entry — legacy route for the client pages under
  * /dashboard/submissions (portal, review, overview).
  *
- * GET only returns entries the caller can see: a student's own entries, or
- * entries on assignments in a tutor's own courses. POST mirrors
- * `submitEntry` in `src/features/submissions/actions.ts`: student only, for
- * themselves, on an open assignment in a course they're enrolled in.
+ * POST mirrors `submitEntry` in `src/features/submissions/actions.ts`:
+ * student only, for themselves, on an open assignment in a course they're
+ * enrolled in. GET is retired: no page reads entries through this URL.
  *
  * TODO[chapter-3-cleanup]: drop this file once those pages are retired.
  */
@@ -13,66 +12,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { NextRequest, NextResponse } from "next/server";
-import type { Session } from "@/lib/auth";
 
-import type { Prisma } from "@/generated/prisma";
-import { enrollmentFor, taughtByEmail } from "@/features/courses/lib/tenancy-where";
+import { enrollmentFor } from "@/features/courses/lib/tenancy-where";
 import { prisma } from "@/lib/db";
 import { notifyHandIn } from "@/features/notifications/server";
-import type { Role } from "@/features/shared/enums";
 import {
   forbidden,
+  gone,
   requireApiRole,
-  requireApiSession,
   studentForSession,
 } from "@/lib/api-guard";
 
-function visibleEntriesWhere(session: Session): Prisma.SubmissionEntryWhereInput | null {
-  const email = session.user.email;
-  switch (session.user.role as Role) {
-    case "TUTOR":
-      return { submission: { course: taughtByEmail(email) } };
-    case "STUDENT":
-      return { student: { email } };
-    case "ADMIN":
-      return {};
-    default:
-      return null;
-  }
-}
-
-// GET: fetch entries (optionally filtered by submissionId or studentId)
-export async function GET(req: Request) {
-  const guard = await requireApiSession();
-  if (!guard.ok) return guard.response;
-
-  const visible = visibleEntriesWhere(guard.session);
-  if (!visible) return forbidden();
-
-  const { searchParams } = new URL(req.url);
-  const submissionId = searchParams.get("submissionId");
-  const studentId = searchParams.get("studentId");
-
-  const where: Prisma.SubmissionEntryWhereInput = { AND: [visible] };
-  const include = {
-    student: true,
-    grade: true,
-    questionGrades: true,
-  };
-
-  if (submissionId && studentId) {
-    const entry = await prisma.submissionEntry.findFirst({
-      where: { submissionId, studentId, AND: [visible] },
-      include,
-    });
-
-    return NextResponse.json(entry);
-  } else if (submissionId) where.submissionId = submissionId;
-  else if (studentId) where.studentId = studentId;
-
-  const entries = await prisma.submissionEntry.findMany({ where, include });
-
-  return NextResponse.json(entries);
+/** Retired: entries are read through `src/features/assignments/queries.ts`. */
+export function GET() {
+  return gone("Read entries through src/features/assignments/queries.ts.");
 }
 
 // POST: create a new entry
