@@ -31,6 +31,7 @@ import {
   AiError, AiLeftLine, AiNote, AiWorking, aiData, DocumentField, documentInput, EMPTY_DOCUMENT, useAiLeft, useAiRun, type AiDocument,
 } from "@/features/courses/components/ai-help";
 import type { AiFeature, AiHelp, AiLeft } from "@/features/courses/lib/ai-help";
+import { draftMarkdown, plainMaths } from "@/features/courses/lib/ai-text";
 import { cn } from "@/lib/utils";
 
 import { createLessonsFromDraft } from "../actions";
@@ -67,11 +68,7 @@ const SAVER: DraftSaver = {
     aiData(await createTest(toCreateInput(parseTestJson(testImport(test, inAWeek())), courseId)), "The test wasn't added. Try again.");
   },
   async assignment(courseId, a) {
-    const brief = assignmentBrief(a);
-    aiData(
-      await createSubmission({ title: a.title.trim().slice(0, 200) || "Assignment", ...brief, courseId, dueDate: inAWeek(), isActive: false }),
-      "The assignment wasn't added. Try again.",
-    );
+    aiData(await createSubmission({ ...assignmentBrief(a), courseId, dueDate: inAWeek(), isActive: false }), "The assignment wasn't added. Try again.");
   },
 };
 
@@ -340,17 +337,17 @@ function OutlineReview({ draft, kept, disabled, toggle }: { draft: OutlineDraft;
   const { outline } = draft;
   return (
     <div className="space-y-4">
-      {outline.summary ? <p className="text-foreground text-sm">{outline.summary}</p> : null}
+      {outline.summary ? <p className="text-foreground text-sm">{plainMaths(outline.summary)}</p> : null}
       {outline.sections.map((s, i) => {
         const keys = s.lessons.map((_, j) => `${i}.${j}`);
         const on = keys.filter((k) => kept.has(k)).length;
         return (
-          <section key={i} aria-label={s.title} className="border-border rounded-lg border">
+          <section key={i} aria-label={plainMaths(s.title)} className="border-border rounded-lg border">
             <label className="bg-muted/40 flex items-start gap-3 rounded-t-lg px-4 py-3">
               <Checkbox className="mt-0.5" disabled={disabled} checked={on === keys.length ? true : on === 0 ? false : "indeterminate"} onCheckedChange={(v) => toggle(keys, v !== false)} />
               <span className="min-w-0 flex-1">
-                <span className="text-foreground block text-sm font-medium">{s.title}</span>
-                {s.objectives.length > 0 ? <span className="text-muted-foreground block text-xs">{s.objectives.join(" · ")}</span> : null}
+                <span className="text-foreground block text-sm font-medium">{plainMaths(s.title)}</span>
+                {s.objectives.length > 0 ? <span className="text-muted-foreground block text-xs">{s.objectives.map(plainMaths).join(" · ")}</span> : null}
               </span>
             </label>
             <ul className="divide-border divide-y">
@@ -359,8 +356,8 @@ function OutlineReview({ draft, kept, disabled, toggle }: { draft: OutlineDraft;
                   <label className="flex items-start gap-3 px-4 py-2.5 pl-8">
                     <Checkbox className="mt-0.5" disabled={disabled} checked={kept.has(keys[j])} onCheckedChange={(v) => toggle([keys[j]], v === true)} />
                     <span className="min-w-0 flex-1 text-sm">
-                      <span className="text-foreground block">{l.title}</span>
-                      <span className="text-muted-foreground block text-xs">{l.summary}</span>
+                      <span className="text-foreground block">{plainMaths(l.title)}</span>
+                      <span className="text-muted-foreground block text-xs">{plainMaths(l.summary)}</span>
                     </span>
                   </label>
                 </li>
@@ -409,11 +406,11 @@ function LessonsReview({ draft, kept, added, disabled, toggle }: {
   );
   return (
     <ul className="space-y-3">
-      {d.lessons.map((l, i) => row(`l${i}`, l.title, `Lesson · ${l.summary}`, <LessonMarkdown content={l.body} className="prose-sm" dynamic={false} />))}
+      {d.lessons.map((l, i) => row(`l${i}`, plainMaths(l.title), `Lesson · ${plainMaths(l.summary)}`, <LessonMarkdown content={draftMarkdown(l.body)} className="prose-sm" dynamic={false} />))}
       {d.tests.map((t, i) =>
         row(
           `t${i}`,
-          t.title,
+          plainMaths(t.title),
           `Test · ${plural(t.questions.length, "question")}`,
           <ol className="space-y-3">
             {t.questions.map((q, j) => (
@@ -428,7 +425,7 @@ function LessonsReview({ draft, kept, added, disabled, toggle }: {
         const brief = assignmentBrief(a);
         return row(
           `a${i}`,
-          a.title,
+          brief.title,
           `Assignment · ${plural(brief.totalPoints, "mark")}`,
           <>
             <LessonMarkdown content={brief.description} className="prose-sm" dynamic={false} />

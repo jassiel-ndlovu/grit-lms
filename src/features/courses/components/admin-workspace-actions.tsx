@@ -48,7 +48,7 @@ export function WorkspaceActions({ workspace }: { workspace: { workspaceId: stri
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" aria-label={`Billing actions for ${workspace.name}`}>
             <MoreHorizontal aria-hidden className="size-4" />

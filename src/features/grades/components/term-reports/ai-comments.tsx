@@ -23,6 +23,7 @@ import { AI_ASSIST_INPUT } from "@/features/ai-assist/limits";
 import type { reportCommentDrafts } from "@/features/ai-assist/pro";
 import { AiError, AiLeftLine, AiWorking, aiData, useAiLeft, useAiRun } from "@/features/courses/components/ai-help";
 import type { AiFeature, AiHelp, AiLeft } from "@/features/courses/lib/ai-help";
+import { plainMaths } from "@/features/courses/lib/ai-text";
 import { cn } from "@/lib/utils";
 
 import { COMMENT_MAX } from "../../lib/term-report";
@@ -97,7 +98,7 @@ export function AiComments({ help, term, students, runWith = draftComments, save
     );
     if (!r) return;
     const written = r.comments.filter((c) => c.comment.trim());
-    setTexts(Object.fromEntries(written.map((c) => [c.learnerId, c.comment.trim()])));
+    setTexts(Object.fromEntries(written.map((c) => [c.learnerId, plainMaths(c.comment).trim()])));
     setKept(new Set(written.map((c) => c.learnerId)));
     setErrors({});
   }

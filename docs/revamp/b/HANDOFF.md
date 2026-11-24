@@ -32,6 +32,18 @@ No migration, no env vars. Screens for viewer.md "AI help for tutors"
   fill their boxes on the page.
 - **Coverage:** "Suggest where to cover gaps". Changes nothing.
 - **maxDuration** is set on the pages that run these.
+- **Text from the AI** (`courses/lib/ai-text.ts`): titles, notes and report
+  comments get plain maths (they can't typeset), lesson and tidied text gets
+  a blank line where the AI ended a line, and maths goes to the AI as `\(…\)`.
+- **Tested with the real AI on Preview (Maths Grade 10 (seed), Pro):**
+  questions, outline, lessons/tests/assignments, simplify. Everything added
+  was deleted. Not tested with the real AI, only with samples: comments on
+  answers, report comments and coverage gaps (the seed has no term, no
+  curriculum on the course, and no typed answer without an AI mark). The text
+  fixes above came out of that test and were checked with samples.
+- **Menus that open a dialog** must be `modal={false}`: the menu and dialog
+  packages carry separate copies of Radix's dismissable layer, and deleting
+  from such a menu left the whole page unclickable. Fixed in all eight of B's.
 - **Not done:** session notes and diagrams (Draft 1.28), feedback on uploaded
   assignment work.
 - **Owner, 25 Nov:** no need to name the AI company (the owner will confirm

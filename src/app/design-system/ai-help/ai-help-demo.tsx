@@ -101,8 +101,8 @@ export function AiHelpDemo() {
               runWith={() =>
                 wait({
                   runId: "r",
-                  text: "## Factorising\n\nTo factorise a trinomial, find two numbers that multiply to the last term and add to the middle one. For example, \\(x^2 + 7x + 12\\).\n\n- Write down the pairs\n- Check the sum",
-                  changes: ["Fixed the grammar in the first sentence", "Split a long sentence in two"],
+                  text: "## Factorising\n\nTo factorise a trinomial, find two numbers that multiply to the last term and add to the middle one. For example, \\(x^2 + 7x + 12\\).\n- Write down the pairs\n- Check the sum\nThen check by multiplying out.",
+                  changes: ["Fixed the grammar before \\(x^2 + 7x + 12\\)", "Split a long sentence in two"],
                   allowance: left("TIDY"),
                 })
               }
@@ -222,7 +222,7 @@ function sampleDocument(input: { kind: "outline" | "lessons" }): Promise<SampleR
           summary: "Products, factors and equations, in the order of the scheme of work.",
           note: "Week 6 in the document has no topic.",
           sections: [
-            { title: "Products and factors", objectives: ["Multiply binomials", "Factorise trinomials"], lessons: [{ title: "Multiplying binomials", summary: "From the area model to FOIL.", topicCodes: [] }, { title: "Factorising trinomials", summary: "Finding the pair of numbers.", topicCodes: [] }] },
+            { title: "Products and factors", objectives: ["Multiply \\((x + a)(x + b)\\)", "Factorise trinomials"], lessons: [{ title: "Multiplying binomials", summary: "From the area model to FOIL.", topicCodes: [] }, { title: "Factorising trinomials", summary: "Finding the pair for \\(x^2 + bx + c\\).", topicCodes: [] }] },
             { title: "Equations", objectives: ["Solve quadratic equations"], lessons: [{ title: "Solving by factorising", summary: "The zero-product rule.", topicCodes: [] }] },
           ],
         },

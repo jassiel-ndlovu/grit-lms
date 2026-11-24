@@ -17,6 +17,7 @@ import { AI_ASSIST_INPUT } from "@/features/ai-assist/limits";
 import type { FeedbackDraft } from "@/features/ai-assist/pro";
 import { AiError, AiWorking, aiData, useAiRun } from "@/features/courses/components/ai-help";
 import { leftText } from "@/features/courses/lib/ai-help";
+import { plainMaths } from "@/features/courses/lib/ai-text";
 
 import { feedbackText } from "../lib/ai-drafts";
 
@@ -101,7 +102,7 @@ export function AiFeedback({ context, path, question, answer, memo, maxPoints, h
           <p className="text-foreground font-medium">What the answer does well</p>
           <ul className="text-muted-foreground list-disc pl-5">
             {result.strengths.map((s) => (
-              <li key={s}>{s}</li>
+              <li key={s}>{plainMaths(s)}</li>
             ))}
           </ul>
         </div>

@@ -25,6 +25,7 @@ import { tidyTextAction } from "@/features/ai-assist/actions";
 import type { TidyDraft } from "@/features/ai-assist/assist";
 import { AiError, AiLeftLine, AiWorking, aiData, useAiLeft, useAiRun } from "@/features/courses/components/ai-help";
 import type { AiFeature, AiHelp, AiLeft } from "@/features/courses/lib/ai-help";
+import { draftMarkdown, plainMaths, texParens } from "@/features/courses/lib/ai-text";
 import { docToMarkdown, markdownToDoc } from "@/lib/content/markdown";
 import { validateDoc } from "@/lib/content/schema";
 import { cn } from "@/lib/utils";
@@ -46,7 +47,7 @@ function pick(editor: Editor): Picked {
   const from = whole ? 0 : selection.$from.depth >= 1 ? selection.$from.before(1) : selection.from;
   const to = whole ? doc.content.size : selection.$to.depth >= 1 ? selection.$to.after(1) : selection.to;
   const content = (doc.slice(from, to).content.toJSON() ?? []) as JSONContent[];
-  const text = docToMarkdown({ type: "doc", content: JSON.parse(JSON.stringify(content)) as JSONContent[] });
+  const text = texParens(docToMarkdown({ type: "doc", content: JSON.parse(JSON.stringify(content)) as JSONContent[] }));
   return { from, to, text, whole, problem: tidyProblem(content, text, whole) };
 }
 
@@ -75,7 +76,7 @@ export function AiTidy({ editor, help, runWith = tidy, loadLeft }: {
 
   function replace() {
     if (!picked || !ai.result) return;
-    const doc = validateDoc(markdownToDoc(ai.result.text));
+    const doc = validateDoc(markdownToDoc(draftMarkdown(ai.result.text)));
     if (!doc?.content?.length) {
       toast.error("That text couldn't be put in the lesson. Try again, or copy it in yourself.");
       return;
@@ -117,14 +118,14 @@ export function AiTidy({ editor, help, runWith = tidy, loadLeft }: {
               <>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Version label="Your text" text={picked?.text ?? ""} />
-                  <Version label="New text" text={result.text} />
+                  <Version label="New text" text={draftMarkdown(result.text)} />
                 </div>
                 {result.changes.length > 0 ? (
                   <div className="text-sm">
                     <p className="text-foreground font-medium">What changed</p>
                     <ul className="text-muted-foreground list-disc pl-5">
                       {result.changes.map((c) => (
-                        <li key={c}>{c}</li>
+                        <li key={c}>{plainMaths(c)}</li>
                       ))}
                     </ul>
                   </div>

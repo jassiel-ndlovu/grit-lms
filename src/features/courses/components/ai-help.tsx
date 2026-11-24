@@ -20,6 +20,7 @@ import { uploadFile } from "@/lib/blob/client";
 import { BlobKind, lessonAttachmentPath } from "@/lib/blob/paths";
 
 import { AI_WAIT, leftText, type AiFeature, type AiHelp, type AiLeft } from "../lib/ai-help";
+import { plainMaths } from "../lib/ai-text";
 
 type ActionResult<T> = { data?: T; serverError?: string; validationErrors?: unknown } | undefined;
 
@@ -108,7 +109,7 @@ export function AiNote({ children }: { children: string }) {
   return (
     <p className="border-border bg-muted/40 text-foreground flex gap-2 rounded-md border p-3 text-sm">
       <Info aria-hidden className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{plainMaths(children)}</span>
     </p>
   );
 }

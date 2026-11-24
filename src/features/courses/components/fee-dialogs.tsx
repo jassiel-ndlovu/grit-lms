@@ -167,7 +167,7 @@ export function FeeRowActions({ fee, canMarkOffsite }: { fee: Fee; canMarkOffsit
   const [open, setOpen] = React.useState<"offsite" | "void" | null>(null);
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" aria-label={`Actions for fee ${fee.number}`}>
             <MoreHorizontal aria-hidden className="size-4" />

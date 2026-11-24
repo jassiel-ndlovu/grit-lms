@@ -11,6 +11,7 @@
 
 import type { DraftQuestion } from "@/features/ai-assist/model";
 import type { DraftLessons } from "@/features/ai-assist/model-pro";
+import { draftMarkdown, plainMaths } from "@/features/courses/lib/ai-text";
 
 import type { ImportQuestion } from "./test-io";
 
@@ -90,6 +91,8 @@ export type LessonGroupDraft = {
   lessons: Array<{ title: string; description: string; topics: string[] }>;
 };
 
+/** Titles are plain text everywhere, so their maths is too. */
+const plainTitle = (s: string, max = LESSON_TITLE_MAX) => cut(plainMaths(s), max);
 const cut = (s: string, max: number) => (s.trim().length > max ? `${s.trim().slice(0, max - 1)}…` : s.trim());
 
 /** The outline's ticked lessons, as groups. Sections with none ticked are left out. */
@@ -99,11 +102,11 @@ export function outlineGroups(
 ): LessonGroupDraft[] {
   return sections
     .map((s, i) => ({
-      title: cut(s.title, LESSON_TITLE_MAX),
+      title: plainTitle(s.title),
       lessons: s.lessons
         .map((l, j) => ({ l, on: ticked(i, j) }))
         .filter(({ l, on }) => on && l.title.trim())
-        .map(({ l }) => ({ title: cut(l.title, LESSON_TITLE_MAX), description: l.summary.trim(), topics: l.topicCodes })),
+        .map(({ l }) => ({ title: plainTitle(l.title), description: l.summary.trim(), topics: l.topicCodes })),
     }))
     .filter((g) => g.title && g.lessons.length > 0);
 }
@@ -112,7 +115,7 @@ export function outlineGroups(
 export function lessonGroup(lessons: ReadonlyArray<DraftLessons["lessons"][number]>): LessonGroupDraft {
   return {
     title: null,
-    lessons: lessons.map((l) => ({ title: cut(l.title, LESSON_TITLE_MAX), description: cut(l.body, 20_000), topics: l.topicCodes })),
+    lessons: lessons.map((l) => ({ title: plainTitle(l.title), description: cut(draftMarkdown(l.body), 20_000), topics: l.topicCodes })),
   };
 }
 
@@ -120,7 +123,7 @@ export function lessonGroup(lessons: ReadonlyArray<DraftLessons["lessons"][numbe
 export function testImport(t: DraftLessons["tests"][number], dueDate: Date) {
   return {
     version: 1 as const,
-    title: cut(t.title, LESSON_TITLE_MAX) || "Test",
+    title: plainTitle(t.title) || "Test",
     dueDate: dueDate.toISOString(),
     isActive: false,
     preTestInstructions: t.instructions.trim() || null,
@@ -129,11 +132,11 @@ export function testImport(t: DraftLessons["tests"][number], dueDate: Date) {
 }
 
 /** The brief students read: what to do, then how it's marked. The memo is never in it. */
-export function assignmentBrief(a: DraftLessons["assignments"][number]): { description: string; totalPoints: number } {
+export function assignmentBrief(a: DraftLessons["assignments"][number]): { title: string; description: string; totalPoints: number } {
   const rubric = a.rubric.filter((r) => r.criterion.trim() && r.points > 0);
   const lines = rubric.map((r) => `- ${r.criterion.trim()}: ${r.points} ${r.points === 1 ? "mark" : "marks"}`);
-  const description = cut([a.brief.trim(), lines.length ? `## How it's marked\n\n${lines.join("\n")}` : ""].filter(Boolean).join("\n\n"), 10_000);
-  return { description, totalPoints: rubric.reduce((n, r) => n + r.points, 0) || 1 };
+  const description = cut([draftMarkdown(a.brief), lines.length ? `## How it's marked\n\n${lines.join("\n")}` : ""].filter(Boolean).join("\n\n"), 10_000);
+  return { title: plainTitle(a.title, 200) || "Assignment", description, totalPoints: rubric.reduce((n, r) => n + r.points, 0) || 1 };
 }
 
 /* ─── Feedback ──────────────────────────────────────────────────────────── */

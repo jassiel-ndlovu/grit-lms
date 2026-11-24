@@ -234,7 +234,7 @@ export function InvoiceActions({ invoice }: { invoice: { id: string; number: str
   const [open, setOpen] = React.useState<InvoiceAction | null>(null);
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" aria-label={`Actions for invoice ${invoice.number}`}>
             Actions <MoreHorizontal aria-hidden className="size-4" />

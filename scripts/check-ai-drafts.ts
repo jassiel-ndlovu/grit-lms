@@ -13,6 +13,7 @@ import {
   assignmentBrief, draftToQuestion, feedbackText, isTypableKey, lessonGroup, numericKey, outlineGroups, testImport, type DraftQuestion,
 } from "../src/features/assessments/lib/ai-drafts";
 import { leftText } from "../src/features/courses/lib/ai-help";
+import { draftMarkdown, plainMaths, texParens } from "../src/features/courses/lib/ai-text";
 import { blockedBlock, tidyProblem } from "../src/features/lessons/lib/ai-tidy";
 import { CreateLessonsFromDraftSchema } from "../src/features/lessons/schemas";
 import { numericMatches } from "../src/features/assessments/lib/numeric";
@@ -93,6 +94,30 @@ pass(tidyProblem(doc("Short"), "Short", true) !== null && tidyProblem([], "x".re
 pass(tidyProblem(doc("This is long enough to tidy."), "This is long enough to tidy.", false) === null, "ordinary text is accepted");
 const round = "## Heading\n\nUse \\(x^2\\) and **bold**.\n\n- one\n- two";
 pass(/\$x\^2\$/.test(docToMarkdown(markdownToDoc(round))) && docToMarkdown(markdownToDoc(round)).includes("## Heading"), "text survives the trip to markdown and back");
+
+// Text from the AI
+const plain = (from: string, to: string) => pass(plainMaths(from) === to, "plain maths: " + to, plainMaths(from) === to ? "" : plainMaths(from));
+plain("Expand \\((x+1)^2\\) and \\(a^{-n}\\)", "Expand (x+1)² and a⁻ⁿ");
+plain("Use $a(b+c)=ab+ac$", "Use a(b+c)=ab+ac");
+plain("\\(\\frac{x+1}{2} \\times \\sqrt{2}\\)", "(x+1)/2 × √2");
+plain("\\(\\frac{x^2}{3}\\) and \\(x^{2n+1}\\)", "x²/3 and x²ⁿ⁺¹");
+plain("\\(x^{ab}\\)", "x^(ab)");
+plain("\\(\\sin 30^\\circ \\leq \\theta\\)", "sin 30° ≤ θ");
+plain("\\(H_2O\\) at \\(25\\,\\text{mL}\\)", "H₂O at 25 mL");
+plain("Costs $5 and $10, or R20", "Costs $5 and $10, or R20");
+plain("No maths here", "No maths here");
+const md = (from: string, to: string, name: string) => pass(draftMarkdown(from) === to, name, draftMarkdown(from) === to ? "" : JSON.stringify(draftMarkdown(from)));
+md("One.\nTwo.", "One.\n\nTwo.", "a line of its own is a paragraph of its own");
+md("Steps:\n- a\n- b\nThen add.", "Steps:\n\n- a\n- b\n\nThen add.", "text after a list leaves the list");
+md("1. a\n   more\n2. b", "1. a\n   more\n2. b", "a list item keeps its own lines");
+md("a line wrapped\nin the middle", "a line wrapped\nin the middle", "a wrapped sentence stays whole");
+md("| a | b |\n| - | - |\n| 1 | 2 |", "| a | b |\n| - | - |\n| 1 | 2 |", "a table stays whole");
+md("So:\n\\[\nx = 1\n+ Y\n\\]\nDone.", "So:\n\n\\[\nx = 1\n+ Y\n\\]\n\nDone.", "display maths stays whole");
+md("```\nOne\nTwo\n```", "```\nOne\nTwo\n```", "code stays whole");
+pass(texParens("Use $x^2$ for \\$5 and `$a$`") === "Use \\(x^2\\) for \\$5 and `$a$`", "maths goes to the AI in brackets; prices and code don't");
+const sent = texParens(docToMarkdown(markdownToDoc("Text $x^2$.\n\n$$y$$")));
+pass(!/\$/.test(sent) && docToMarkdown(markdownToDoc(sent)) === docToMarkdown(markdownToDoc("Text $x^2$.\n\n$$y$$")), "and comes back the same", sent);
+pass(lessonGroup([{ title: "Expand \\(x^2\\)", summary: "", body: "A.\nB.", topicCodes: [] }]).lessons[0].title === "Expand x²", "titles carry plain maths");
 
 pass(leftText("QUESTIONS", { left: 8, limit: 10 }) === "8 of 10 batches of questions left this month", "what's left");
 pass(leftText("TIDY", { left: 0, limit: 50 }).startsWith("No tidy-ups left"), "none left");

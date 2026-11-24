@@ -17,6 +17,7 @@ import { curriculumGapsAction } from "@/features/ai-assist/actions";
 import type { GapsDraft } from "@/features/ai-assist/pro";
 
 import { leftText, type AiHelp } from "../lib/ai-help";
+import { plainMaths } from "../lib/ai-text";
 import { AiError, AiNote, AiWorking, aiData, useAiRun } from "./ai-help";
 
 async function findGaps(courseId: string): Promise<GapsDraft> {
@@ -52,7 +53,7 @@ export function AiGaps({ help, lessonsHref, runWith = findGaps }: {
               {r.missing.map((m) => (
                 <li key={m.code} className="space-y-1 px-4 py-3">
                   <p className="text-foreground text-sm font-medium">{m.title}</p>
-                  {m.suggestion ? <p className="text-muted-foreground text-sm">{m.suggestion}</p> : <p className="text-muted-foreground text-sm">No suggestion for this one.</p>}
+                  {m.suggestion ? <p className="text-muted-foreground text-sm">{plainMaths(m.suggestion)}</p> : <p className="text-muted-foreground text-sm">No suggestion for this one.</p>}
                   {m.lessonId && m.lessonTitle ? (
                     <p className="text-sm">
                       <Link href={`${lessonsHref}?lesson=${m.lessonId}`} className="text-foreground underline underline-offset-2">
@@ -61,7 +62,7 @@ export function AiGaps({ help, lessonsHref, runWith = findGaps }: {
                     </p>
                   ) : m.newLessonTitle ? (
                     <p className="text-sm">
-                      New lesson: <span className="text-foreground">{m.newLessonTitle}</span>
+                      New lesson: <span className="text-foreground">{plainMaths(m.newLessonTitle)}</span>
                     </p>
                   ) : null}
                 </li>
@@ -74,7 +75,7 @@ export function AiGaps({ help, lessonsHref, runWith = findGaps }: {
               <ul className="space-y-2">
                 {r.restructure.map((s) => (
                   <li key={s.suggestion} className="text-sm">
-                    <span className="text-foreground">{s.suggestion}</span> <span className="text-muted-foreground">{s.why}</span>
+                    <span className="text-foreground">{plainMaths(s.suggestion)}</span> <span className="text-muted-foreground">{plainMaths(s.why)}</span>
                   </li>
                 ))}
               </ul>
