@@ -153,6 +153,7 @@ check(
   writtenQuestions(flat, []).map((q) => [q.id, q.label, q.preview]),
   [["2a", "2.a", "Name it"], ["2b", "2.b", "Discuss x"], ["3", "3", "Explain"]],
 );
+check("a preview drops maths delimiters", plainPreview("Solve \\( 2x = 10\\)."), "Solve 2x = 10.");
 check("preview is cut with an ellipsis", plainPreview("a".repeat(100), 10), `${"a".repeat(9)}…`);
 
 if (failures > 0) {

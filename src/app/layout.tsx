@@ -111,7 +111,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {children}
-        <Toaster richColors closeButton position="top-right" />
+        <Toaster closeButton position="top-right" />
         {process.env.VERCEL_ENV === "production" ? <SiteAnalytics /> : null}
       </body>
     </html>

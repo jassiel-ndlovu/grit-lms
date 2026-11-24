@@ -7,10 +7,10 @@
  */
 
 import * as React from "react";
-import { Check, Loader2, TriangleAlert } from "lucide-react";
 
 import { useReadOnly } from "@/components/shell/workspace-access";
 import { Button } from "@/components/ui/button";
+import { SaveState } from "@/components/ui/save-state";
 import { Textarea } from "@/components/ui/textarea";
 
 import { COMMENT_MAX } from "../../lib/term-report";
@@ -43,6 +43,7 @@ export function CommentBox({ target, initial, label, placeholder, save = send }:
   const [text, setText] = React.useState(initial);
   const [state, setState] = React.useState<State>("idle");
   const [error, setError] = React.useState<string | null>(null);
+  const [savedAt, setSavedAt] = React.useState<Date | null>(null);
   const latest = React.useRef(initial);
   const stored = React.useRef(initial.trim());
   const busy = React.useRef(false);
@@ -58,7 +59,10 @@ export function CommentBox({ target, initial, label, placeholder, save = send }:
       const sending = latest.current.trim();
       setState("saving");
       failed = await save(target, sending);
-      if (!failed) stored.current = sending;
+      if (!failed) {
+        stored.current = sending;
+        setSavedAt(new Date());
+      }
     }
     busy.current = false;
     setError(failed);
@@ -105,24 +109,7 @@ export function CommentBox({ target, initial, label, placeholder, save = send }:
         onBlur={() => void flush()}
       />
       <div id={statusId} className="text-muted-foreground flex min-h-5 flex-wrap items-center justify-between gap-2 text-xs">
-        <span role="status" className="inline-flex items-center gap-1">
-          {state === "saving" ? (
-            <>
-              <Loader2 aria-hidden className="size-3 animate-spin" />
-              Saving
-            </>
-          ) : state === "saved" ? (
-            <>
-              <Check aria-hidden className="size-3" />
-              Saved
-            </>
-          ) : state === "failed" ? (
-            <span className="text-destructive inline-flex items-center gap-1">
-              <TriangleAlert aria-hidden className="size-3" />
-              {error}
-            </span>
-          ) : null}
-        </span>
+        <SaveState kind={state === "waiting" ? "pending" : state} at={savedAt} error={error} quiet />
         {state === "failed" ? (
           <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => void flush()}>
             Try again

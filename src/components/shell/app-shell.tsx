@@ -40,6 +40,7 @@ import { APP_SHORT_NAME } from "@/lib/branding";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+import { RouteProgress } from "./route-progress";
 import { SkipLink } from "./skip-link";
 import { FOOTER_LINKS, activeHref, isFocusRoute, navFill, navHue, type NavIcon, type NavSection } from "./nav-config";
 
@@ -357,6 +358,7 @@ export function AppShell({ user, sections, children, search = true, notification
     return (
       <div data-shell="focus" className="bg-background text-foreground min-h-screen">
         <SkipLink />
+        <RouteProgress />
         {banner ? <div data-slot="account-banner">{banner}</div> : null}
         <main id="main-content" tabIndex={-1} className="outline-none">{children}</main>
       </div>

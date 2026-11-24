@@ -26,6 +26,7 @@ import { WriteGuard } from "@/components/shell/workspace-access";
 import { requestAiMarking } from "@/features/ai-marking/actions";
 
 import { progressLabel, queuedLabel, type AiProgress } from "../lib/ai-marking-ui";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 type RequestAiMarking = (input: { testId: string; questionIds?: string[] }) => Promise<{ data?: { queued: number; skipped: number }; serverError?: string } | undefined>;
 
@@ -103,16 +104,7 @@ export function AiMarkingQueue({
       </div>
 
       {progress.total > 0 ? (
-        <div
-          role="progressbar"
-          aria-label="AI marking progress"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={pct}
-          className="bg-muted h-1.5 overflow-hidden rounded-full"
-        >
-          <div className="bg-primary h-full transition-[width] motion-reduce:transition-none" style={{ width: `${pct}%` }} />
-        </div>
+        <ProgressBar label="AI marking progress" value={pct} />
       ) : null}
 
       {result ? (

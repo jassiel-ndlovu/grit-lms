@@ -29,6 +29,7 @@ import { switchTeachingOff } from "@/features/workspaces/actions";
 
 import { actionError } from "../lib/account-ui";
 import { confirmsName } from "../lib/teaching-ui";
+import { TonePanel } from "@/components/ui/nexus";
 
 export function TeachingOffButton({ organisationName }: { organisationName: string }) {
   const router = useRouter();
@@ -71,7 +72,7 @@ export function TeachingOffButton({ organisationName }: { organisationName: stri
             <DialogTitle>Switch teaching off for {organisationName}?</DialogTitle>
             <DialogDescription>Your organisation will only run things. Its tutors keep teaching.</DialogDescription>
           </DialogHeader>
-          <div role="note" className="border-destructive/40 bg-destructive/5 space-y-2 rounded-md border p-3 text-sm">
+          <TonePanel tone="danger" role="note" className="space-y-2 p-3 text-sm">
             <p className="text-foreground flex items-center gap-2 font-semibold">
               <AlertTriangle aria-hidden className="text-destructive size-4 shrink-0" />
               You can&apos;t undo this yourself
@@ -84,7 +85,7 @@ export function TeachingOffButton({ organisationName }: { organisationName: stri
                 <strong className="text-foreground">Only Nexa support can switch teaching back on.</strong>
               </li>
             </ul>
-          </div>
+          </TonePanel>
           <div className="space-y-1.5">
             <Label htmlFor="confirm-name">
               Type <span className="text-foreground font-semibold">{organisationName}</span> to confirm

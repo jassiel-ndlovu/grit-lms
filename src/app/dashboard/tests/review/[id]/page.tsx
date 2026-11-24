@@ -45,6 +45,7 @@ import {
   getTestDetailById,
   getTestSubmissionByStudentAndTest,
 } from "@/features/assessments/queries";
+import { TonePanel } from "@/components/ui/nexus";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -279,7 +280,7 @@ export default async function TestReviewPage({ params }: PageProps) {
 
       {/* ───── Overall score callout (only when there's a grade to show) ───── */}
       {canSeeGrades && grade && (
-        <Card className="bg-brand-terracotta/8 border-brand-terracotta/30 flex flex-wrap items-center justify-between gap-4 p-5">
+        <TonePanel tone="accent" className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div className="flex items-center gap-3">
             <div className="bg-brand-terracotta/15 text-brand-terracotta flex size-12 items-center justify-center rounded-md">
               <GraduationCap className="size-6" />
@@ -301,7 +302,7 @@ export default async function TestReviewPage({ params }: PageProps) {
               &ldquo;{submission.feedback}&rdquo;
             </p>
           )}
-        </Card>
+        </TonePanel>
       )}
 
       {/* ───── Test memo (tutor's worked solutions) — only once graded ───── */}

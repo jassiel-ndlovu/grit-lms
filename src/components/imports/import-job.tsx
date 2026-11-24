@@ -37,6 +37,8 @@ import {
   canConfirm, canUndo, cellIssue, columnsOf, fieldLabel, hasError, hasProblem, importRoutes, isWorking, pendingEdits,
   progressPercent, rowIssues, rowsLabel, toImport,
 } from "./import-ui";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { NexusLoader, TonePanel } from "@/components/ui/nexus";
 
 const POLL_MS = 2000;
 
@@ -98,9 +100,9 @@ export function ImportJob({ initial, headers = [] }: { initial: ImportView; head
       {isWorking(view.status) ? <Progress view={view} /> : null}
       {view.status === "DONE" || view.status === "UNDONE" ? <Outcome view={view} headers={headers} busy={busy} run={run} /> : null}
       {view.status === "FAILED" ? (
-        <p role="alert" className="border-destructive/40 bg-destructive/5 text-destructive rounded-lg border p-4 text-sm">
+        <TonePanel as="p" tone="danger" role="alert" className="text-destructive text-sm">
           The import stopped: {view.error ?? "something went wrong"}. Rows already imported stay; their results are below.
-        </p>
+        </TonePanel>
       ) : null}
       {view.status === "FAILED" ? <OutcomeTable view={view} headers={headers} /> : null}
       {view.status === "CANCELLED" ? (
@@ -376,19 +378,10 @@ function Progress({ view }: { view: ImportView }) {
   return (
     <section aria-labelledby="progress-heading" className="border-border space-y-3 rounded-lg border p-4">
       <h2 id="progress-heading" className="text-foreground flex items-center gap-2 text-sm font-semibold">
-        <Loader2 aria-hidden className="size-4 animate-spin" />
+        <NexusLoader size={20} label={null} />
         {undoing ? "Undoing the import…" : "Importing…"}
       </h2>
-      <div
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={pct}
-        aria-label={undoing ? "Undo progress" : "Import progress"}
-        className="bg-muted h-2 overflow-hidden rounded-full"
-      >
-        <div className="bg-primary h-full transition-[width] duration-500" style={{ width: `${pct}%` }} />
-      </div>
+      <ProgressBar label={undoing ? "Undo progress" : "Import progress"} value={pct} className="h-2" />
       <p className="text-muted-foreground text-xs" aria-live="polite">
         {undoing ? view.progress.total - view.progress.cursor : view.progress.cursor} of {view.progress.total} · You can leave this
         page; it carries on.

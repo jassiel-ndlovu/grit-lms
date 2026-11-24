@@ -13,8 +13,11 @@ import { PageFrame, PageTitle } from "@/components/shell/page-frame";
 import { StatusChip, type StatusTone } from "@/components/shell/status-chip";
 import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
+import { TonePanel } from "@/components/ui/nexus";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { calendarRoutes } from "@/features/events/lib/calendar-ui";
 import { formatDate, greetingFor } from "@/lib/datetime";
+import { dueTone, markTone } from "@/lib/nexus";
 import { cn } from "@/lib/utils";
 
 import { atRiskRoutes } from "../lib/at-risk";
@@ -164,13 +167,19 @@ export function TutorHome({
                   </thead>
                   <tbody>
                     {rows.map((r) => (
-                      <tr key={`${r.kind}-${r.id}`} className="border-border hover:bg-muted/40 border-b last:border-0">
+                      <tr
+                        key={`${r.kind}-${r.id}`}
+                        data-slot="tone-row"
+                        data-tone={(r.bucket === "mark" ? markTone : dueTone)(r.dueDate, now)}
+                        className="border-border hover:bg-muted/40 border-b last:border-0"
+                      >
                         <td className="px-4 py-2.5">
                           <Link href={rowHref(r)} className="text-foreground font-medium hover:underline">
                             {r.title}
                           </Link>
                           <p className="text-muted-foreground text-xs">
                             {rowDetail(r)}
+                            {r.bucket === "mark" && markTone(r.dueDate, now) === "danger" ? " · Waiting over a week" : null}
                             <span className="sm:hidden"> · {r.course}</span>
                           </p>
                         </td>
@@ -190,8 +199,8 @@ export function TutorHome({
           </Card>
         </section>
 
-        <aside className="space-y-8">
-          <section aria-labelledby="week-heading" className="space-y-2">
+        <aside className="space-y-4">
+          <TonePanel as="section" nexus="week" nexusSize={48} aria-labelledby="week-heading" className="space-y-2">
             <h2 id="week-heading" className="text-foreground text-base font-semibold">
               This week
             </h2>
@@ -218,9 +227,9 @@ export function TutorHome({
                 </div>
               ) : null}
             </dl>
-          </section>
+          </TonePanel>
 
-          <section aria-labelledby="next-heading" className="space-y-2">
+          <TonePanel as="section" aria-labelledby="next-heading" className="space-y-2">
             <div className="flex items-baseline justify-between">
               <h2 id="next-heading" className="text-foreground text-base font-semibold">
                 Coming up
@@ -236,7 +245,12 @@ export function TutorHome({
                 {data.upcoming.map((e) => (
                   <li key={e.id} className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-foreground truncate">{e.title}</p>
+                      <Link
+                        href={calendarRoutes.classMode(e.eventId, e.date.toISOString())}
+                        className="text-foreground block truncate hover:underline"
+                      >
+                        {e.title}
+                      </Link>
                       <p className="text-muted-foreground truncate text-xs">{e.course}</p>
                     </div>
                     <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
@@ -247,7 +261,7 @@ export function TutorHome({
                 ))}
               </ul>
             )}
-          </section>
+          </TonePanel>
         </aside>
       </div>
     </PageFrame>

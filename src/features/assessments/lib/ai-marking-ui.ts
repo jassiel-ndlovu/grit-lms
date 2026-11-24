@@ -253,7 +253,7 @@ export function writtenQuestions<Q extends { id: string; parentId: string | null
 
 /** A question's first words without markdown, for a one-line list. */
 export function plainPreview(md: string, max = 90): string {
-  const t = md.replace(/[#*_`>\[\]()$]/g, " ").replace(/\s+/g, " ").trim();
+  const t = md.replace(/\s*\\[()[\]]\s*(?=[.,;:?!])|\\[()[\]]/g, "").replace(/[#*_`>\[\]()$]/g, " ").replace(/\s+/g, " ").trim();
   return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
 }
 

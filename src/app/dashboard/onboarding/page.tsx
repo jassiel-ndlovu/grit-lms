@@ -12,6 +12,7 @@ import { isBillingEnabled } from "@/features/billing/errors";
 import { OnboardingFrame, StepHeading } from "@/features/courses/components/onboarding-frame";
 import { KindChooser } from "@/features/courses/components/onboarding-forms";
 import { getViewer } from "@/lib/viewer";
+import { TonePanel } from "@/components/ui/nexus";
 
 export const metadata = { title: "Set up Nexa" };
 
@@ -27,12 +28,12 @@ export default async function OnboardingPage() {
       {viewer.user.emailVerified ? (
         <KindChooser />
       ) : (
-        <p role="status" className="border-warning/40 bg-warning/5 rounded-lg border p-4 text-sm">
+        <TonePanel as="p" tone="warning" role="status" className="text-sm">
           Verify your email address first: open the link we sent to {viewer.user.email}.{" "}
           <Link href="/dashboard" className="text-foreground font-medium underline underline-offset-2">
             Back to Nexa
           </Link>
-        </p>
+        </TonePanel>
       )}
     </OnboardingFrame>
   );

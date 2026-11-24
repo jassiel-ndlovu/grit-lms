@@ -7,5 +7,6 @@ export const studentCourseRoutes = {
   saved: "/dashboard/courses/saved",
   overview: (id: string) => `/dashboard/courses/${id}`,
   lessons: (id: string, lessonId?: string) => `/dashboard/courses/lessons/${id}${lessonId ? `/${lessonId}` : ""}`,
+  topics: (id: string) => `/dashboard/courses/${id}/topics`,
   practice: (id: string, setId?: string) => `/dashboard/courses/${id}/practice${setId ? `/${setId}` : ""}`,
 };

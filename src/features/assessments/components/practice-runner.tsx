@@ -22,6 +22,7 @@ import type { PracticeAnswerKey, PracticeNode } from "../lib/practice";
 import { isAnswered } from "../lib/runner-state";
 import { answerPractice } from "../practice-actions";
 import { QuestionRenderer, type RendererQuestion } from "./question-renderer";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 export type PracticeRunnerItem = { id: string; nodes: PracticeNode[] };
 
@@ -168,16 +169,7 @@ export function PracticeRunner({ setId, items, backHref }: { setId: string; item
         </h2>
         <span>Practice: no marks</span>
       </div>
-      <div
-        role="progressbar"
-        aria-label="Session progress"
-        aria-valuemin={0}
-        aria-valuemax={queue.length}
-        aria-valuenow={pos}
-        className="bg-muted h-1.5 overflow-hidden rounded-full"
-      >
-        <div className="bg-primary h-full transition-[width] motion-reduce:transition-none" style={{ width: `${(pos / queue.length) * 100}%` }} />
-      </div>
+      <ProgressBar label="Session progress" value={pos} max={queue.length} valueText={`${pos} of ${queue.length}`} />
 
       <Card className="gap-6 p-4 sm:p-6">
         {item.nodes.map((node) => {

@@ -36,6 +36,7 @@ import { childRoutes, UPCOMING_DAYS, upcomingStatusLabel, isHandedIn } from "@/f
 import { getUserPreferences } from "@/features/users/preferences";
 import { DEFAULT_TIME_ZONE, formatDate, resolveLocale } from "@/lib/datetime";
 import { canIn, getViewer } from "@/lib/viewer";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 export const metadata = { title: "Your learner" };
 
@@ -118,9 +119,7 @@ export default async function ChildPage({ params }: { params: Promise<{ userId: 
                               {c.progress.done}/{c.progress.total}
                             </span>
                           </div>
-                          <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                            <div className="bg-brand-terracotta h-full" style={{ width: `${c.progress.percent}%` }} />
-                          </div>
+                          <ProgressBar label="Lessons completed" value={c.progress.percent} valueText={`${c.progress.done} of ${c.progress.total}`} />
                         </div>
                       </Card>
                     </li>

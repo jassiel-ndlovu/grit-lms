@@ -296,6 +296,10 @@ export const calendarRoutes = {
   attendance(eventId: string, occurrenceStart: string): string {
     return `/dashboard/calendar/attendance/${encodeURIComponent(eventId)}?at=${encodeURIComponent(occurrenceStart)}`;
   },
+  /** Class mode: the page for a session while it runs. */
+  classMode(eventId: string, occurrenceStart: string): string {
+    return `/dashboard/calendar/class/${encodeURIComponent(eventId)}?at=${encodeURIComponent(occurrenceStart)}`;
+  },
   ics(eventId: string): string {
     return `/api/calendar/events/${encodeURIComponent(eventId)}/ics`;
   },

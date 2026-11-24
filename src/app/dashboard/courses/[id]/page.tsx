@@ -52,6 +52,7 @@ import { buildLessonTree, flattenLessonTree } from "@/features/lessons/lib/lesso
 import { assignmentRoutes } from "@/features/assignments/routes";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { schoolDateFormat } from "@/lib/datetime";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -187,9 +188,7 @@ export default async function StudentCourseDetailPage({ params }: PageProps) {
                 <span>Course progress</span>
                 <span className="tabular-nums">{progressPct}%</span>
               </div>
-              <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-                <div className="bg-brand-terracotta h-full transition-all" style={{ width: `${progressPct}%` }} />
-              </div>
+              <ProgressBar label="Course progress" value={progressPct} className="h-2" />
             </div>
           </div>
         }

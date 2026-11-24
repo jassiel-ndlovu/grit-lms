@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { NexusCorner, TonePanel } from "@/components/ui/nexus";
 import { DEFAULT_WIDTH, FRAME_BODY_CLASS, FRAME_WIDTH_CLASS, type FrameWidth, type PageType } from "@/lib/ui-layout";
 import { cn } from "@/lib/utils";
 
@@ -89,8 +90,14 @@ export function PageTitle({
   illustration?: React.ReactNode;
   className?: string;
 }) {
+  const signature = !illustration && !actions;
   const body = (
-    <div data-slot="page-title" className={cn("flex min-w-0 flex-col gap-2", illustration ? "flex-1" : className)}>
+    <div
+      data-slot="page-title"
+      className={cn("relative isolate flex min-w-0 flex-col gap-2", illustration ? "flex-1" : className)}
+    >
+      {/* Nexa's mark on the page: where nothing else sits beside the title. */}
+      {signature ? <NexusCorner seed={typeof title === "string" ? title : "page-title"} size={80} className="-top-3" /> : null}
       {icon ? (
         <span aria-hidden className="text-muted-foreground mb-1 grid size-8 place-items-center text-2xl [&_svg]:size-7">
           {icon}
@@ -104,7 +111,7 @@ export function PageTitle({
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </div>
       {description ? <div className="text-muted-foreground max-w-prose text-sm">{description}</div> : null}
-      {properties ? <div className="pt-2">{properties}</div> : null}
+      {properties ? <div data-slot="page-title-properties" className="pt-2">{properties}</div> : null}
     </div>
   );
   if (!illustration) return body;
@@ -133,9 +140,9 @@ export function PageMessage({
     <PageFrame type="settings" breadcrumb={breadcrumb}>
       {title ? <PageTitle title={title} /> : null}
       {/* Boxed, so a page with nothing to show still reads as a page, not a stray line. */}
-      <div role="status" className="border-border text-muted-foreground rounded-lg border border-dashed px-6 py-10 text-center text-sm">
+      <TonePanel role="status" nexus="page-message" className="text-muted-foreground px-6 py-12 text-center text-sm">
         {children}
-      </div>
+      </TonePanel>
     </PageFrame>
   );
 }

@@ -1,0 +1,143 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Nexus: Nexa's geometry, panel tones, toasts and loaders (owner, 24 Nov).
+   Every colour is a token, so each theme, light and dark, gets its own.
+
+   The geometry is decoration: aria-hidden, takes no clicks, kept to a corner
+   where no text sits, and gone in High contrast, forced colours and print. It
+   shows only in the revamp UI; tones and toasts follow whichever tokens are on.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Tones. --tone is the colour; the fill stays light enough for body text. */
+[data-tone] { --tone: var(--muted-foreground); }
+:root { --tone-accent: var(--brand-terracotta); }
+[data-ui="revamp"] { --tone-accent: var(--link); }
+[data-tone="accent"] { --tone: var(--tone-accent); }
+[data-tone="success"] { --tone: var(--success); }
+[data-tone="warning"] { --tone: var(--warning); }
+[data-tone="danger"] { --tone: var(--destructive); }
+
+[data-slot="tone-panel"] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--tone) 6%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--tone) 32%, var(--border));
+}
+[data-slot="tone-panel"][data-tone="neutral"] {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+/* The geometry. */
+[data-slot="nexus"] {
+  display: none;
+  pointer-events: none;
+  opacity: 0.5;
+}
+[data-ui="revamp"] [data-slot="nexus"] { display: block; }
+/* Beside a page title, from 768 px: the words keep clear of it. */
+@media (max-width: 47.99rem) { [data-ui="revamp"] [data-slot="page-title"] > [data-slot="nexus"] { display: none; } }
+@media (min-width: 48rem) {
+  [data-ui="revamp"] [data-slot="page-title"]:has(> [data-slot="nexus"]) > :not(svg, [data-slot="page-title-properties"]) { padding-right: 6rem; }
+}
+[data-slot="nexus"] line {
+  stroke: color-mix(in oklab, var(--tone, var(--foreground)) 40%, transparent);
+  stroke-width: 1;
+}
+[data-slot="nexus"] [data-hue="1"] { fill: var(--tone, var(--strip-1)); }
+[data-slot="nexus"] [data-hue="2"] { fill: color-mix(in oklab, var(--tone, var(--strip-2)) 75%, transparent); }
+[data-slot="nexus"] [data-hue="3"] { fill: color-mix(in oklab, var(--tone, var(--strip-3)) 55%, transparent); }
+/* A neutral panel takes the theme's three colours rather than one tone. */
+[data-tone="neutral"] > [data-slot="nexus"] [data-hue="1"] { fill: var(--strip-1); }
+[data-tone="neutral"] > [data-slot="nexus"] [data-hue="2"] { fill: var(--strip-2); }
+[data-tone="neutral"] > [data-slot="nexus"] [data-hue="3"] { fill: var(--strip-3); }
+
+[data-ui="revamp"][data-theme="contrast"] [data-slot="nexus"],
+[data-theme="contrast"] [data-ui="revamp"] [data-slot="nexus"] { display: none; }
+@media (forced-colors: active), (prefers-contrast: more), print {
+  [data-ui="revamp"] [data-slot="nexus"] { display: none; }
+}
+
+/* Toasts: a light tint and a coloured border, with the state in a circle.
+   The tokens set every colour, so a toast follows the app's theme, not the computer's. */
+html [data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--popover);
+  --normal-bg-hover: var(--muted);
+  --normal-text: var(--popover-foreground);
+  --normal-border: var(--border);
+  --normal-border-hover: var(--border);
+  font-family: inherit;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] {
+  --tone: var(--muted-foreground);
+  background: color-mix(in oklab, var(--tone) 7%, var(--popover));
+  border-color: color-mix(in oklab, var(--tone) 45%, var(--border));
+  color: var(--popover-foreground);
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="success"] { --tone: var(--success); }
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="info"],
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="loading"] { --tone: var(--tone-accent); }
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="warning"] { --tone: var(--warning); }
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"][data-type="error"] { --tone: var(--destructive); }
+/* The figure is placed against the toast, not the small icon box. */
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-icon] {
+  position: static;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0 0.25rem 0 0;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-content] { position: relative; }
+[data-ui="revamp"] [data-sonner-toast][data-styled="true"] [data-content] { padding-right: 1.75rem; }
+[data-sonner-toast]:has([data-button]) [data-slot="nexus"] { display: none !important; }
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-close-button] {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border-color: color-mix(in oklab, var(--tone) 45%, var(--border));
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-description] { color: var(--muted-foreground); }
+
+/* Loaders: the hub waits while its points light up in turn. */
+@keyframes nexus-pulse {
+  0%, 70%, 100% { opacity: 0.25; }
+  25% { opacity: 1; }
+}
+[data-slot="nexus-loader"] line { stroke: color-mix(in oklab, currentColor 35%, transparent); stroke-width: 2; }
+[data-slot="nexus-loader"] circle { fill: currentColor; }
+[data-slot="nexus-loader"] [data-node] { animation: nexus-pulse 1.4s ease-in-out infinite; }
+
+/* A page is on its way: the signature strip moves. */
+@keyframes strip-travel {
+  from { background-position: 200% 0; }
+  to { background-position: 0 0; }
+}
+html[data-navigating] [data-slot="signature-strip"] {
+  background-image: linear-gradient(90deg, var(--strip-1), var(--strip-2), var(--strip-3), var(--strip-1));
+  background-size: 200% 100%;
+  animation: strip-travel 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="nexus-loader"] [data-node] { animation: none; opacity: 0.6; }
+  html[data-navigating] [data-slot="signature-strip"] { animation: none; opacity: 0.5; }
+}
+
+/* A list row that is due soon or late: the lightest tint, and a coloured edge. */
+[data-slot="tone-row"]:not([data-tone="neutral"]) {
+  background: color-mix(in oklab, var(--tone) 5%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in oklab, var(--tone) 70%, transparent);
+}
+
+/* The topic map: a figure per topic, and the trail that joins them. Meaning,
+   not decoration, so it shows in every theme (the words are beside it). */
+[data-slot="topic-figure"] line,
+[data-slot="topic-trail"] line { stroke: var(--border); stroke-width: 2; }
+[data-slot="topic-figure"] circle,
+[data-slot="topic-trail"] circle { fill: var(--card); stroke: var(--muted-foreground); stroke-width: 1.5; }
+[data-slot="topic-figure"] line[data-lit],
+[data-slot="topic-trail"] line[data-lit] { stroke: var(--success); }
+[data-slot="topic-figure"] circle[data-lit],
+[data-slot="topic-trail"] circle[data-lit] { fill: var(--tone-accent); stroke: var(--tone-accent); }
+[data-state="passed"] circle[data-hub] { fill: var(--success); stroke: var(--success); }
+[data-state="passed"] circle[data-lit],
+[data-slot="topic-figure"][data-state="passed"] circle[data-lit] { fill: var(--success); stroke: var(--success); }
+[data-state="started"] circle[data-hub] { fill: color-mix(in oklab, var(--tone-accent) 30%, var(--card)); stroke: var(--tone-accent); }

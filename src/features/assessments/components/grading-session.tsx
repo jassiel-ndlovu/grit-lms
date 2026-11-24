@@ -9,7 +9,7 @@
  */
 
 import * as React from "react";
-import { BookOpen, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Keyboard, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Kbd } from "@/components/ui/kbd";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import { RibbonButton, RibbonToolbar } from "@/components/shell/ribbon";
 import { useReadOnly } from "@/components/shell/workspace-access";
 import type { Rubric } from "@/features/ai-marking/rules";
 import { cn } from "@/lib/utils";
 
+import { MARK_SHORTCUTS } from "../lib/marking-flow";
 import { CONFIDENCE, flagLabel, isSafeToBulkAccept, riskRank, type AiSuggestion } from "../lib/ai-marking-ui";
 
 export type GradingBridge = {
@@ -89,6 +92,7 @@ export function GradingRibbon({
   position,
   rubrics,
   aiEnabled,
+  progress,
 }: {
   prevHref: string | null;
   nextHref: string | null;
@@ -96,6 +100,8 @@ export function GradingRibbon({
   position: string | null;
   rubrics: Array<{ id: string; label: string; points: number; rubric: Rubric | null }>;
   aiEnabled: boolean;
+  /** How much of the test is marked. */
+  progress?: { marked: number; total: number };
 }) {
   return (
     <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
@@ -120,11 +126,58 @@ export function GradingRibbon({
           </span>
         )}
       </nav>
+      {progress && progress.total > 0 ? (
+        <div className="hidden min-w-0 items-center gap-2 md:flex">
+          <ProgressBar
+            label="Scripts marked"
+            value={progress.marked}
+            max={progress.total}
+            valueText={`${progress.marked} of ${progress.total} marked`}
+            tone={progress.marked === progress.total ? "success" : "primary"}
+            className="w-28"
+          />
+          <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
+            {progress.marked} of {progress.total} marked
+          </span>
+        </div>
+      ) : null}
       <RibbonToolbar label="Marking tools">
+        <ShortcutsButton />
         <RubricButton rubrics={rubrics} />
         {aiEnabled ? <AiSuggestionsButton /> : null}
       </RibbonToolbar>
     </div>
+  );
+}
+
+/** What the keys do while marking (lib/marking-flow.ts). */
+function ShortcutsButton() {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <RibbonButton onClick={() => setOpen(true)} aria-label="Keyboard shortcuts">
+        <Keyboard /> <span className="hidden sm:inline">Keys</span>
+      </RibbonButton>
+      <span id="marking-keys" className="sr-only">
+        Enter for the next question, F for full marks, C to comment.
+      </span>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark with the keyboard</DialogTitle>
+            <DialogDescription>Start in a score box. Ctrl and Enter (⌘ and Enter on a Mac) work anywhere in the form.</DialogDescription>
+          </DialogHeader>
+          <dl className="divide-border divide-y text-sm">
+            {MARK_SHORTCUTS.map((s) => (
+              <div key={s.does} className="flex items-center justify-between gap-4 py-2">
+                <dt className="flex gap-1">{s.keys.map((k) => <Kbd key={k}>{k}</Kbd>)}</dt>
+                <dd className="text-muted-foreground">{s.does}</dd>
+              </div>
+            ))}
+          </dl>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

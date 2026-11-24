@@ -40,6 +40,7 @@ import { useLocalDraft } from "@/lib/use-local-draft";
 
 import { createSubmission, updateSubmission } from "../actions";
 import { assignmentRoutes } from "../routes";
+import { TonePanel } from "@/components/ui/nexus";
 
 export interface AssignmentFormValues {
   title: string;
@@ -253,12 +254,12 @@ export function AssignmentForm({
         <RestoreDraftBanner draft={draft} onRestore={restoreDraft} what="this assignment" />
 
         {!formData.isActive && (
-          <div className="border-brand-terracotta/30 bg-brand-terracotta/5 flex items-center gap-2 rounded-lg border px-4 py-3">
+          <TonePanel tone="accent" className="flex items-center gap-2 py-3">
             <EyeOff className="text-brand-terracotta size-4 shrink-0" />
             <p className="text-foreground text-sm">
               This assignment is in draft mode and won&apos;t be visible to students.
             </p>
-          </div>
+          </TonePanel>
         )}
 
         <Card className="space-y-5 p-6">
@@ -477,9 +478,9 @@ export function AssignmentForm({
         </Card>
 
         {errors.submit && (
-          <div role="alert" className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
+          <TonePanel tone="danger" role="alert" className="py-3">
             <p className="text-destructive text-sm">{errors.submit}</p>
-          </div>
+          </TonePanel>
         )}
 
         <div className="border-border bg-card fixed inset-x-0 bottom-0 z-40 border-t shadow-lg lg:left-60">
