@@ -167,8 +167,8 @@ export function coverable(e: ClassLike, now: Date): boolean {
 /** The calendar entry a cover request is for (`CalendarEntry.id`). */
 export const coverEntryId = (eventId: string, occurrenceStart: Date | string) => `${eventId}#${new Date(occurrenceStart).toISOString()}`;
 
-/** Why a tutor is offered for cover. */
-export function candidateNote(c: { teachesCourse: boolean; sameSubject: boolean }): string {
+/** Why a free tutor suits; null when it's only that they're free. */
+export function candidateNote(c: { teachesCourse: boolean; sameSubject: boolean }): string | null {
   if (c.teachesCourse) return "Teaches this course";
-  return c.sameSubject ? "Teaches this subject" : "Free at that time";
+  return c.sameSubject ? "Teaches this subject" : null;
 }

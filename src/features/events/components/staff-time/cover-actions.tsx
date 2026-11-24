@@ -135,7 +135,7 @@ export function CandidateList({ candidates, picked, onPick, name }: { candidates
           <input type="radio" name={name} value={c.membershipId} checked={picked === c.membershipId} onChange={() => onPick(c.membershipId)} className="accent-primary size-4 shrink-0" />
           <span className="min-w-0">
             <span className="text-foreground block text-sm break-words">{c.name}</span>
-            <span className="text-muted-foreground block text-xs">{candidateNote(c)}</span>
+            <span className="text-muted-foreground block text-xs empty:hidden">{candidateNote(c)}</span>
           </span>
         </label>
       ))}

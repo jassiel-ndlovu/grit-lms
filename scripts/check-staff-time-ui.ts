@@ -69,7 +69,7 @@ check("not over, cancelled, a deadline, or not an event", [
   coverable({ ...cls, end: "2026-11-24T10:00:00Z" }, now), coverable({ ...cls, cancelled: true }, now), coverable({ ...cls, type: "DEADLINE" }, now), coverable({ ...cls, kind: "booking" }, now), coverable({ ...cls, occurrenceStart: null }, now),
 ], [false, false, false, false, false]);
 check("the calendar entry's id", coverEntryId("e1", new Date("2026-11-24T09:30:00Z")), `e1#${cls.occurrenceStart}`);
-check("candidates", [candidateNote({ teachesCourse: true, sameSubject: true }), candidateNote({ teachesCourse: false, sameSubject: true }), candidateNote({ teachesCourse: false, sameSubject: false })], ["Teaches this course", "Teaches this subject", "Free at that time"]);
+check("candidates", [candidateNote({ teachesCourse: true, sameSubject: true }), candidateNote({ teachesCourse: false, sameSubject: true }), candidateNote({ teachesCourse: false, sameSubject: false })], ["Teaches this course", "Teaches this subject", null]);
 
 console.log(failures ? `\n${failures} failed` : "\nAll passed");
 process.exit(failures ? 1 : 0);
