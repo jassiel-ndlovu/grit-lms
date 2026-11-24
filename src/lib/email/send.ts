@@ -8,6 +8,8 @@
 
 import "server-only";
 
+import { fromWithName } from "@/features/workspaces/brand-rules";
+
 import { EMAIL_FROM, EMAIL_REPLY_TO, RESEND_API_KEY } from "./config";
 
 export interface EmailMessage {
@@ -17,6 +19,8 @@ export interface EmailMessage {
   text: string;
   /** Overrides EMAIL_REPLY_TO for this message (the enquirer, for enquiry emails). */
   replyTo?: string;
+  /** A display name for From, e.g. "Ubuntu Tutors via Nexa" (workspace branding). The address stays Nexa's. */
+  fromName?: string;
 }
 
 export type SendEmailResult =
@@ -52,7 +56,7 @@ export async function sendEmail(message: EmailMessage, opts: { idempotencyKey?: 
         ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}),
       },
       body: JSON.stringify({
-        from: EMAIL_FROM,
+        from: message.fromName ? fromWithName(EMAIL_FROM, message.fromName) : EMAIL_FROM,
         to: [message.to],
         subject: message.subject,
         html: message.html,

@@ -3,6 +3,106 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-24 #216 phase 3: AI marks on photo answers, session notes, diagrams, `revamp/a-ai-media`
+
+Migration `42_ai_media`: AiMarkSuggestion `fromPhotos` and `transcript` (B's assessments file; additive), and the `NOTES` and `DIAGRAM` values on AiAssistFeature. Viewer contract Draft 1.28.
+
+Done:
+- **AI marking:**
+  - `FILE_UPLOAD` questions and uploads are included;
+  - `readableFiles`: only Blob-store images and PDFs, at most 5;
+  - the marker sends them as URL image or document blocks, with photo rules in the prompt and a `transcript` field;
+  - photo answers go to the escalation model, and evidence is checked against the transcript;
+  - evidence matching now ignores notation (², TeX, ×, spacing).
+- **`ai-assist/media-rules.ts`** (pure): `transcriptText` (VTT, SRT, plain), `speakersOf`, `cleanSvg`.
+- **`ai-assist/pro.ts`**:
+  - `sessionNotes` (transcript text or file; speakers and roster scrubbed);
+  - `diagram` (SVG cleaned, or refused);
+  - both Pro only, with caps 200 and 300.
+
+Tested:
+- `check-ai-marking` (new photo and notation checks) and `check-ai-media` (in CI).
+- **Live:**
+  - a synthetic handwriting image, uploaded to the Blob store and deleted straight after, was transcribed exactly and marked 3/3. That run found the ² versus ^2 evidence problem, now fixed.
+  - Session notes from a VTT had homework and follow-ups right, with no names left.
+  - A free-body diagram came back as a clean SVG.
+  - Run rows were cleaned up.
+- **Not done:** audio and video transcription (needs a provider decision).
+
+## 2026-11-24 #216 phase 3: course study assistant (Pro), `revamp/a-study-assistant`
+
+Migration `41_study_assistant`: StudyChat and StudyMessage, plus the `study-assistant` Service row, backfilled where `ai-marking` is on. Viewer Draft 1.27, services Draft 1.8.
+
+Done:
+- **`study/study-rules.ts`** (pure): material picking (all lessons when they fit, so they cache; otherwise the most relevant), concern handling, citation checks.
+- **`study/study-model.ts`**: a cached system prompt and course material, structured answers (answer, citations, outOfScope, concern), refusal fallback, Opus 5.5.
+- **`study/study.ts` and `actions.ts`**:
+  - students and parents ask; 25 a day;
+  - credits spent;
+  - wellbeing and safety concerns flag the chat and alert the tutors;
+  - tutors list and read chats; the flag is hidden from students.
+  - Chats are pruned after a year, included in the user export, and deleted on anonymisation.
+
+Tested:
+- `scripts/check-study.ts` (in CI).
+- Live against the Preview DB (4 questions): a grounded answer with citations, off-topic marked out of scope, an assignment request refused (integrity), and a distress message (wellbeing: flag and tutor alert).
+- Access: the tutor list puts flagged chats first, and another student is refused.
+- Cleaned up afterwards.
+
+## 2026-11-24 #216 phase 3: branding, white-label and bulk onboarding, `revamp/a-whitelabel-onboarding`
+
+Migration `40_whitelabel_onboarding`:
+- Workspace `senderName`, `welcomeText`, `hideNexaBranding` and `supportEmail`;
+- Branch `rollout` (BranchRollout) and `rolloutAt`;
+- Invite `teamIds`.
+
+Viewer contract Draft 1.26, imports Draft 1.2. **Custom domains are on hold (owner).**
+
+Done:
+- **`billing/workspace-plan.ts`**: a workspace's plan from its courses' services (Pro while billing is off, or when comped).
+- **`workspaces/brand-rules.ts`** (pure):
+  - which templates are branded;
+  - the sender name and From header;
+  - `applyBrand`: the header logo and name, the accent colour, and with white-label the Nexa name swapped outside tags, with "through Nexa LMS" dropped.
+- **`workspaces/branding.ts`**:
+  - get and set branding (Plus), white-label (Pro, needs a support email);
+  - the public brand for `/w/<slug>`;
+  - `emailBrandFor`, cached for 5 minutes.
+- **The email queue** applies the brand to workspace emails; `sendEmail` takes `fromName`.
+- **Bulk onboarding:**
+  - the `branches` importer (`teams.manage`, whole-organisation scope);
+  - the staff importer's Teams column, with `Invite.teamIds` joined on accept;
+  - `workspaces/rollout.ts` and `onboarding-rules.ts`: the checklist, branch progress, rollout (LIVE needs staff and a course), and the admin overview.
+- **Two mistakes caught before commit:** I overwrote two existing files (`workspaces/onboarding.ts` and `scripts/check-branding.ts`) with new code and restored both from git; the new code is in `rollout.ts` and `check-whitelabel.ts`.
+
+Tested:
+- `scripts/check-whitelabel.ts` (in CI).
+- A real booking email rebranded: no Nexa left in the visible text.
+- 16 checks against the Preview DB: plan, logo and colour rules, the sender name, white-label and support email, the public brand, the branches import and re-check, the staff Teams column and invite teams, onboarding progress, and rollout rules. Restored and cleaned up.
+- Not tested: accepting an invitation end to end (joining its teams).
+
+## 2026-11-24 #216 phase 3: enquiry pipeline, tutor outcomes and reviews, `revamp/a-enquiries-reviews`
+
+Migration `39_enquiries_reviews`: WorkspaceEnquiry, EnquiryNote, StaffReview and their enums, plus `Workspace.enquiryFormOn`. Viewer contract Draft 1.25.
+
+Owner, 24 Nov: **white-labelling for businesses stays in scope; custom domains are on hold.**
+
+Done:
+- **`crm/enquiries.ts`**:
+  - the public form (off by default; honeypot, fill time, rate limits);
+  - in-app notes to managers in scope;
+  - create, update, stage moves (LOST needs a reason), notes;
+  - staff-written emails to the enquirer (`enquiry:reply`, Reply-To the staff member);
+  - the board with counts and search, and the funnel for the dashboard;
+  - follow-up reminders and a 24-month prune (housekeeping).
+- **`staff/outcomes-math.ts`** (pure) and **`staff/outcomes.ts`**: per-tutor outcomes; reviews (create with the outcomes saved, edit, share, acknowledge, list) with scope from `staff.reviews`.
+- **`crm/actions.ts`**.
+- Shared reviews are in the user export.
+
+Tested:
+- `scripts/check-outcomes.ts` (in CI).
+- 25 checks against the Preview DB covering form off and on, the honeypot, board, search, notes, stage rules, email, funnel, reminder, outcomes scope, and the review lifecycle. Cleaned up afterwards.
+
 ## 2026-11-24 #216 phase 3: timesheets, payroll export and cover, `revamp/a-timesheets-cover`
 
 Migration `38_timesheets_cover`: Timesheet, TimesheetEntry, PayRate and CoverRequest, with their enums. Viewer contract Draft 1.24.

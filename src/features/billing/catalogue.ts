@@ -16,7 +16,7 @@ export type ServiceKey =
   | "storage-allowance" | "bulk-import" | "attendance"
   | "math-input" | "graphing" | "question-bank" | "live-sessions"
   | "advanced-analytics" | "custom-branding" | "calendar-sync" | "session-booking" | "ai-assist"
-  | "secure-tests" | "ai-marking" | "at-risk-alerts" | "leaderboards" | "api-access"
+  | "secure-tests" | "ai-marking" | "at-risk-alerts" | "study-assistant" | "leaderboards" | "api-access"
   | "automarker" | "judge-mode" | "code-plagiarism";
 
 export type AddonKey = "day-pass" | "ai-credits" | "extra-storage" | "live-room" | "runner-capacity";
@@ -80,6 +80,7 @@ export const SERVICES: Record<ServiceKey, ServiceInfo> = {
   "secure-tests": premium("secure-tests", "Secure tests", "PRO", "v1"),
   "ai-marking": premium("ai-marking", "AI-suggested marks", "PRO", "v1", "AI_MARKS"),
   "at-risk-alerts": premium("at-risk-alerts", "At-risk alerts shared with parents and students", "PRO", "v1"),
+  "study-assistant": premium("study-assistant", "Course study assistant for students", "PRO", "v1"),
   leaderboards: premium("leaderboards", "Course leaderboards", "PRO", "later"),
   "api-access": premium("api-access", "API keys and webhooks", "PRO", "later", "API_REQUESTS"),
   automarker: premium("automarker", "Coding automarker", "PRO", "parked"),

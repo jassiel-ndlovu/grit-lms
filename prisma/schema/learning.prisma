@@ -58,6 +58,8 @@ model Course {
 
   bookings Booking[]
 
+  studyChats StudyChat[]
+
   @@index([workspaceId])
 }
 

@@ -7,15 +7,15 @@
  */
 
 /** QUESTIONS, OUTLINE and TIDY: Plus and Pro. The rest: Pro only (#216 phase 3). */
-export type AssistFeature = "QUESTIONS" | "OUTLINE" | "TIDY" | "LESSONS" | "FEEDBACK" | "REPORT_COMMENTS" | "GAPS";
-export const ASSIST_FEATURES: readonly AssistFeature[] = ["QUESTIONS", "OUTLINE", "TIDY", "LESSONS", "FEEDBACK", "REPORT_COMMENTS", "GAPS"];
+export type AssistFeature = "QUESTIONS" | "OUTLINE" | "TIDY" | "LESSONS" | "FEEDBACK" | "REPORT_COMMENTS" | "GAPS" | "NOTES" | "DIAGRAM";
+export const ASSIST_FEATURES: readonly AssistFeature[] = ["QUESTIONS", "OUTLINE", "TIDY", "LESSONS", "FEEDBACK", "REPORT_COMMENTS", "GAPS", "NOTES", "DIAGRAM"];
 export type AssistTier = "CORE" | "PLUS" | "PRO";
 
 /** Runs a month per workspace, by the course's plan. CORE gets none. Provisional. */
 export const AI_ASSIST_LIMITS: Record<AssistTier, Record<AssistFeature, number>> = {
-  CORE: { QUESTIONS: 0, OUTLINE: 0, TIDY: 0, LESSONS: 0, FEEDBACK: 0, REPORT_COMMENTS: 0, GAPS: 0 },
-  PLUS: { QUESTIONS: 10, OUTLINE: 3, TIDY: 50, LESSONS: 0, FEEDBACK: 0, REPORT_COMMENTS: 0, GAPS: 0 },
-  PRO: { QUESTIONS: 200, OUTLINE: 50, TIDY: 500, LESSONS: 40, FEEDBACK: 2000, REPORT_COMMENTS: 100, GAPS: 30 },
+  CORE: { QUESTIONS: 0, OUTLINE: 0, TIDY: 0, LESSONS: 0, FEEDBACK: 0, REPORT_COMMENTS: 0, GAPS: 0, NOTES: 0, DIAGRAM: 0 },
+  PLUS: { QUESTIONS: 10, OUTLINE: 3, TIDY: 50, LESSONS: 0, FEEDBACK: 0, REPORT_COMMENTS: 0, GAPS: 0, NOTES: 0, DIAGRAM: 0 },
+  PRO: { QUESTIONS: 200, OUTLINE: 50, TIDY: 500, LESSONS: 40, FEEDBACK: 2000, REPORT_COMMENTS: 100, GAPS: 30, NOTES: 200, DIAGRAM: 300 },
 };
 
 /** Size limits on what's sent. */
@@ -36,7 +36,7 @@ export const AI_ASSIST_INPUT = {
 } as const;
 
 /** Features only Pro gets (owner, 22 Nov: anything that marks, gives feedback or works week after week). */
-export const PRO_ONLY: ReadonlySet<AssistFeature> = new Set(["LESSONS", "FEEDBACK", "REPORT_COMMENTS", "GAPS"]);
+export const PRO_ONLY: ReadonlySet<AssistFeature> = new Set(["LESSONS", "FEEDBACK", "REPORT_COMMENTS", "GAPS", "NOTES", "DIAGRAM"]);
 
 export const FEATURE_LABEL: Record<AssistFeature, string> = {
   QUESTIONS: "question batches",
@@ -46,6 +46,8 @@ export const FEATURE_LABEL: Record<AssistFeature, string> = {
   FEEDBACK: "feedback drafts",
   REPORT_COMMENTS: "report comment batches",
   GAPS: "curriculum gap checks",
+  NOTES: "session notes",
+  DIAGRAM: "diagrams",
 };
 
 /** The calendar month (UTC) a run counts towards. */

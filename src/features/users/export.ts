@@ -43,7 +43,7 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     },
   });
   const studentId = u.studentProfile?.id;
-  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes, practice, riskAlerts, bookings, lessonCredits] = await Promise.all([
+  const [tests, assignments, grades, invoices, payments, bankQuestions, referralCodes, practice, riskAlerts, bookings, lessonCredits, reviews, studyChats] = await Promise.all([
     studentId ? prisma.testSubmission.findMany({
       where: { studentId },
       select: { startedAt: true, submittedAt: true, status: true, score: true, feedback: true, answers: true, test: { select: { title: true, course: { select: { name: true } } } }, aiSuggestions: { select: { questionId: true, totalAwarded: true, outOf: true, feedbackToStudent: true, tutorAction: true, model: true } } },
@@ -69,6 +69,10 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     // Session booking (#216): lessons booked and lesson credits, as a student.
     prisma.booking.findMany({ where: { learner: { userId: targetUserId } }, orderBy: { startsAt: "desc" }, select: { startsAt: true, endsAt: true, status: true, note: true, meetingLink: true, cancelledAt: true, cancelReason: true, course: { select: { name: true } }, membership: { select: { user: { select: { name: true } } } } } }),
     prisma.lessonCredit.findMany({ where: { learner: { userId: targetUserId } }, orderBy: { createdAt: "desc" }, select: { kind: true, lessons: true, note: true, createdAt: true, courseId: true } }),
+    // Staff reviews about this person (#216), once shared with them.
+    prisma.staffReview.findMany({ where: { membership: { userId: targetUserId }, status: { not: "DRAFT" } }, orderBy: { periodEnd: "desc" }, select: { periodStart: true, periodEnd: true, outcomes: true, strengths: true, improvements: true, goals: true, rating: true, sharedAt: true, acknowledgedAt: true, response: true } }),
+    // Study assistant chats (#216), with every message.
+    prisma.studyChat.findMany({ where: { studentUserId: targetUserId }, orderBy: { createdAt: "desc" }, select: { title: true, createdAt: true, course: { select: { name: true } }, messages: { orderBy: { createdAt: "asc" }, select: { role: true, content: true, createdAt: true } } } }),
   ]);
   await prisma.auditLog.create({ data: { workspaceId: actor.workspaceId, actorUserId: actor.userId, action: "user.export", targetType: "User", targetId: targetUserId, data: { self: actor.userId === targetUserId } } });
 
@@ -102,6 +106,8 @@ export async function exportUserData(targetUserId: string, actor: { userId: stri
     paymentsMade: payments,
     savedQuestions: bankQuestions,
     practice: practice.map((p) => ({ set: p.item.set.title, item: p.item.stem, answered: p.answered, correct: p.correct, lastAnsweredAt: p.lastAnsweredAt, nextDueAt: p.dueAt, box: p.box })),
+    staffReviews: reviews,
+    studyChats: studyChats.map((c) => ({ course: c.course.name, title: c.title, startedAt: c.createdAt, messages: c.messages })),
     bookings: bookings.map((x) => ({ course: x.course.name, tutor: x.membership.user.name, startsAt: x.startsAt, endsAt: x.endsAt, status: x.status, note: x.note, meetingLink: x.meetingLink, cancelledAt: x.cancelledAt, cancelReason: x.cancelReason })),
     lessonCredits: lessonCredits.map((x) => ({ courseId: x.courseId, kind: x.kind, lessons: x.lessons, note: x.note, at: x.createdAt })),
     riskAlerts: riskAlerts.map((r) => ({ course: r.course.name, level: r.level, status: r.status, summary: r.summary, firstSeenAt: r.firstSeenAt, lastSeenAt: r.lastSeenAt, sharedAt: r.sharedAt, sharedWith: r.sharedWith, note: r.shareNote, closedAt: r.closedAt })),

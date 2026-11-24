@@ -28,7 +28,7 @@ import {
 
 const ZAR_PER_USD = Number(process.env.AI_USD_TO_ZAR ?? 18.5);
 /** Credits held back before a run (rand cents of cost), so a near-empty budget is refused up front. */
-const ESTIMATE_CREDITS: Record<AssistFeature, number> = { QUESTIONS: 150, OUTLINE: 250, TIDY: 40, LESSONS: 600, FEEDBACK: 40, REPORT_COMMENTS: 300, GAPS: 150 };
+const ESTIMATE_CREDITS: Record<AssistFeature, number> = { QUESTIONS: 150, OUTLINE: 250, TIDY: 40, LESSONS: 600, FEEDBACK: 40, REPORT_COMMENTS: 300, GAPS: 150, NOTES: 400, DIAGRAM: 150 };
 
 export type CourseRow = { id: string; name: string; workspaceId: string; curriculum: string | null; subject: string | null; gradeLevel: number | null };
 

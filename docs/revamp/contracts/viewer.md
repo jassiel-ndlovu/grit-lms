@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.24, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.28, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,10 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.28. AI marks on photo and PDF answers; session notes from transcripts; diagrams |
+| 2026-11-24 | Draft 1.27. Course study assistant for students (Pro) |
+| 2026-11-24 | Draft 1.26. Branding (Plus), white-label (Pro; custom domains on hold) and bulk onboarding |
+| 2026-11-24 | Draft 1.25. Enquiry pipeline (with a public form), tutor outcomes and staff reviews |
 | 2026-11-24 | Draft 1.24. Timesheets, pay rates, payroll export and cover for absent tutors |
 | 2026-11-24 | (No change here.) API keys, the REST API and webhooks have their own contract: `contracts/api.md` |
 | 2026-11-24 | Draft 1.23. Pro AI drafts: lessons, tests and assignments from documents; feedback; report comments; curriculum gaps |
@@ -711,3 +715,165 @@ These use the same service, gate, credits and run records as above. They're in `
 - **"My timesheet":** month picker, suggestions with "Add all", entries, totals, Submit.
 - **"Timesheets" for managers:** month list with status badges, approve or reject with a note, pay rates, the payroll download.
 - **Calendar:** on an occurrence, "I need cover" for the tutor and "Arrange cover" for managers, with the candidate list.
+
+### Enquiry pipeline (Draft 1.25)
+
+#216 phase 3, organisations. This is a workspace's own enquiries from families, not `PlatformEnquiry` (enquiries to Nexa). Actions are in `@/features/crm/actions`.
+
+**Public form** at `/enquire/<slug>` (B builds the page; it's off until the owner switches it on):
+- `getEnquiryForm({ slug })` returns `{ name, logoUrl, accentColor, branches }`, or null when the form is off.
+- `submitWorkspaceEnquiryAction` takes:
+  - `slug`, `name`, and an `email` or `phone` (one is required);
+  - optional `studentName`, `gradeLevel`, `subjects`, `message` and `branchId`;
+  - the same `startedAt` and hidden `website` honeypot as the landing form.
+- It returns `{ ok: true }`. It's rate-limited, bots are dropped silently, and managers get an in-app note (plus email, by their settings).
+- `setEnquiryFormAction({ on })` (`workspace.settings`) returns `{ on, path }`. Show the link to share.
+
+**Staff** need `enquiries.manage`. A branch role sees enquiries for their branches plus those with no branch. An own-courses role sees those assigned to them.
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `listEnquiriesAction` | `{ stage?, assigned?: "me" \| "none", branchId?, q?, dueOnly?, limit? }` | `{ items, counts: { NEW, CONTACTED, TRIAL, ENROLLED, LOST } }` for a board or list |
+| `getEnquiryAction` | `{ id }` | The enquiry plus its `notes` (`NOTE`, `STAGE`, `EMAIL`, with author) |
+| `createEnquiryAction` | `{ name, email?, phone?, studentName?, gradeLevel?, subjects?, message?, source?, branchId?, assignedMembershipId?, nextFollowUpAt? }` | Sources: MANUAL, PHONE, WALK_IN, SOCIAL, REFERRAL, IMPORT, OTHER. Assigned to the creator by default |
+| `updateEnquiryAction` | `{ id, …same fields }` | A new follow-up date resets the reminder |
+| `moveEnquiryAction` | `{ id, stage, lostReason?, learnerId? }` | LOST needs a reason. ENROLLED can link the learner. Logged as a STAGE note |
+| `addEnquiryNoteAction` | `{ id, body }` | |
+| `emailEnquirerAction` | `{ id, subject, body }` | Staff write every word. Reply-To is them. Logged as an EMAIL note. A NEW enquiry moves to CONTACTED |
+| `enquiryFunnelAction` | `{ from, to }` | `{ total, byStage, bySource, conversionRate, medianDaysToEnrol, lostReasons }`, for the business dashboard |
+
+- **Follow-ups:** when `nextFollowUpAt` passes, the assigned person gets one reminder, from housekeeping.
+- **Retention:** enquiries untouched for 24 months are deleted.
+
+### Tutor outcomes and reviews (Draft 1.25)
+
+**Outcomes:** `listTutorOutcomesAction({ from, to, membershipIds? })` returns `[{ membershipId, name, outcomes }]`.
+- **Who sees what:** managers with `staff.reviews` or `reports.view` see the tutors in their scope; anyone else sees only their own.
+- **`outcomes`** comes from the courses the tutor teaches or owns:
+
+  | Field | Meaning |
+  | --- | --- |
+  | `courses`, `activeStudents` | Counts |
+  | `marks` | Number of marks in the period |
+  | `averagePercent` | Average mark |
+  | `averageChange` | Last mark minus first, per student, averaged |
+  | `studentsImproving`, `studentsDeclining` | Change of ±5 points or more |
+  | `completionRate` | Hand-ins against work due |
+  | `attendanceRate` | Present or late, out of all non-excused |
+  | `riskOpened`, `riskResolved` | At-risk alerts |
+  | `hours` | From approved timesheets |
+  | `bookingsCompleted`, `bookingsNoShow` | Booked lessons |
+
+  Where there's no data, the value is null, not 0.
+
+**Reviews** (`staff.reviews`, never your own):
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `createReviewAction` | `{ membershipId, from, to }` | Saves the outcomes with the review (DRAFT) |
+| `updateReviewAction` | `{ id, strengths?, improvements?, goals?, rating? (1–5), refreshOutcomes? }` | Not once acknowledged |
+| `shareReviewAction` | `{ id }` | Needs some text. The tutor gets a note (`/dashboard/reviews/<id>`) |
+| `acknowledgeReviewAction` | `{ id, response? }` | The tutor only, once it's shared |
+| `listReviewsAction` | `{ membershipId? }` | A manager sees reviews for staff in scope (drafts too) and their own shared ones; a tutor sees their shared ones |
+
+**Privacy:** shared reviews are in the tutor's data export.
+
+### Branding and white-label (Draft 1.26)
+
+#216 phase 3. **Owner, 24 Nov: custom domains are on hold.** Everything stays on www.nexa-lms.co.za. Actions are in `@/features/workspaces/brand-actions` and need `workspace.branding`.
+
+- **Plus (`custom-branding`):** a logo, an accent colour, a sender name and welcome text.
+  - Families' emails come from "<sender> via Nexa" (Nexa's address).
+  - Those emails carry the workspace's name and logo in the header, and its colour.
+- **Pro (white-label):** the same, plus:
+  - emails come from "<sender>";
+  - every "Nexa" and "Nexa LMS" in families' emails becomes the workspace's name; links stay;
+  - the branded pages show the workspace's support email instead of Nexa's.
+- **Not branded:** Nexa's own emails (billing, accounts, payouts, sign-in) keep Nexa's name.
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `getBrandingAction` | `{}` | `{ name, slug, logoUrl, accentColor, senderName, welcomeText, hideNexaBranding, supportEmail, plan, canBrand, canWhiteLabel, signInPath }` |
+| `setBrandingAction` | `{ logoUrl?, accentColor?, senderName?, welcomeText? }` | The logo must be uploaded through your Blob uploader. Colours look like `#1F6FEB`. Plus or Pro; otherwise "Your logo, colour and sender name are part of the Plus plan." |
+| `setWhiteLabelAction` | `{ hideNexaBranding, supportEmail? }` | Pro. Switching it on needs a support email |
+| `getBrandForSlug` | `{ slug }` (public) | For the branded sign-in page **`/w/<slug>`** (please build it): `{ slug, name, logoUrl, accentColor, welcomeText, whiteLabel, supportEmail }`, or null without branding |
+
+**For B:**
+- Use the brand in the dashboard shell for that workspace's members: the logo in the header, and the accent as the primary colour (`viewer.workspace.logoUrl` and `accentColor` are already on the viewer).
+- When `whiteLabel` is true, hide "Nexa" in the shell and footer for families, and show `supportEmail`.
+- Emails are handled by A.
+
+### Bulk onboarding (Draft 1.26)
+
+Bringing a whole organisation on, branch by branch. **The order:**
+1. Import "Branches and teams" (`branches`).
+2. Import "Tutors and admins" with the Teams column; people join their teams when they accept.
+3. Courses (your screens; put each course in a team).
+4. Import students.
+5. Import the timetable (`calendar`).
+
+| Action | Input | Notes |
+| --- | --- | --- |
+| `getOnboardingAction` | `{}` | `teams.manage`. Returns `{ name, plan, checklist: [{ key, label, done, optional }], branches: [{ id, name, rollout, rolloutAt, counts: { teams, staff, invited, courses, students, events }, progress: { steps, percent, waitingOnInvites } }], live }` |
+| `setBranchRolloutAction` | `{ branchId, rollout: "PLANNED" \| "PILOT" \| "LIVE" }` | Owners and admins. LIVE needs staff and at least one course |
+| `adminOnboardingOverviewAction` | `{ limit? }` | Nexa admins: each organisation's plan, branches (live and pilot) and checklist progress |
+
+**For B:**
+- An "Onboarding" page for organisation owners: the checklist with links to each import, and a row per branch with a progress bar, the rollout stage and "Start pilot" / "Go live".
+- On the admin console, a table of organisations.
+
+### Study assistant (Draft 1.27)
+
+#216 phase 3, **Pro** (service `study-assistant`; switched on for courses already on Pro). A student asks questions about a course, and answers come only from its lessons, with citations. **The course's tutors can read every chat**, and the student is told so. Actions are in `@/features/study/actions`.
+
+| Action | Who | Input | Returns |
+| --- | --- | --- | --- |
+| `getStudyStatus` | student; parent with `studentUserId` | `{ courseId, studentUserId? }` | `{ available, perDay: 25, leftToday, visibleToTutors: true }` |
+| `askStudyAction` | student; parent | `{ courseId, question (up to 1500 characters), chatId?, studentUserId? }` | `{ chatId, message: { id, content, citations: [{ ref, lessonId, title }], outOfScope, createdAt }, leftToday }`. Without `chatId` it starts a new chat |
+| `listMyStudyChats` | student; parent | `{ courseId, studentUserId? }` | `[{ id, title, createdAt, updatedAt }]` |
+| `getStudyChatAction` | that student, their parent, or the course's staff | `{ chatId }` | The chat and its messages. Staff also see `flaggedAt` and each message's `concern` |
+| `listCourseStudyChats` | course staff | `{ courseId, flaggedOnly?, limit? }` | `[{ id, studentUserId, studentName, title, flaggedAt, updatedAt, messages }]`, flagged first |
+| `clearStudyFlagAction` | course staff | `{ chatId }` | Once they've followed up |
+
+**Behaviour:**
+- **Grounding:** it answers only from the course's lessons. If the course is small, all its text is sent, and cached across questions; otherwise the most relevant lessons up to about 15,000 tokens.
+- **Off-topic:** answered briefly, with `outOfScope: true` and a suggestion to ask the tutor.
+- **Graded work:** for tests and assignments due recently or upcoming, it explains with a different example and won't write the work.
+- **Wellbeing or safety:** a supportive reply with helplines (SADAG 0800 456 789, Childline 116). The chat is flagged, and the course's tutors get a high-priority note (in-app, plus email by their settings) linking to `/dashboard/courses/<courseId>/study-chats/<chatId>`.
+- **Limits:**
+  - 25 questions per student per course per day;
+  - each answer spends the organisation's AI credits (with billing on);
+  - when credits run out, the student sees "The study assistant isn't available right now. Ask your tutor."
+- **Model:** Claude Opus 5.5 (`AI_STUDY_MODEL` overrides).
+- **Privacy:** chats are kept a year. They're in the student's data export and deleted with the account. No names are sent to the model.
+
+**For B:**
+- A "Study assistant" panel on the course page for students: chat with citations linking to lessons, the "left today" count, and a clear line that their tutor can read these chats.
+- A "Study chats" tab for tutors, flagged first.
+- A parent view per child (optional).
+
+### AI marks on photo answers, session notes and diagrams (Draft 1.28)
+
+#216 phase 3, Pro.
+
+**Photo and PDF answers (AI marking):**
+- AI marking now covers `FILE_UPLOAD` questions, and written answers that come with uploads.
+- **What it reads:** photos (JPEG, PNG, WebP) and PDFs on Nexa's Blob store, up to 5 per answer. HEIC, Word and ZIP files are left for the tutor.
+- **Model:** these answers go straight to the stronger model.
+- **Results:** the suggestion has two new fields:
+  - `fromPhotos: true`;
+  - `transcript`: the handwriting as the model read it, with maths in TeX.
+- **In grading:** show the transcript next to the photos so the tutor can check the reading. The `illegible` flag means part couldn't be read.
+- **Evidence:** quotes are checked against the transcript, so ² and ^2, spacing and TeX count as the same.
+- **Privacy:** names written on the page can't be scrubbed; the marker is told to ignore them.
+
+**From `@/features/ai-assist/actions`, Pro only:**
+
+| Action | Input | Returns | Monthly runs on Pro |
+| --- | --- | --- | --- |
+| `sessionNotesAction` | `{ courseId, transcript? \| fileUrl?, title? }`. `fileUrl` is a `.vtt`, `.srt` or `.txt` on Nexa's Blob store (Zoom, Teams and Meet export these) | `{ runId, notes: { summary, keyPoints, questions: [{ question, answer }], homework, followUps, studentRecap }, allowance }` | 200 |
+| `diagramAction` | `{ courseId, description (10–2000 characters), style?: "simple" \| "detailed" }` | `{ runId, title, altText, svg, allowance }` | 300 |
+
+- **Notes privacy:** every speaker name and the class roster are scrubbed before sending, so notes never name students. `followUps` is for the tutor only; `studentRecap` is written to share.
+- **Recordings:** audio and video can't be read yet. Turning speech into text needs a provider, which is an owner decision. Until then, upload the meeting's transcript file.
+- **Diagrams:** the SVG is cleaned to safe drawing elements (no scripts, styles, images, links or event handlers) and always has a `viewBox`. To keep it, upload it as an `.svg` through your uploader and use `altText` for accessibility.
