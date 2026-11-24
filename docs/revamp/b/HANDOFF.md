@@ -36,11 +36,14 @@ No migration, no env vars. Screens for viewer.md "AI help for tutors"
   comments get plain maths (they can't typeset), lesson and tidied text gets
   a blank line where the AI ended a line, and maths goes to the AI as `\(…\)`.
 - **Tested with the real AI on Preview (Maths Grade 10 (seed), Pro):**
-  questions, outline, lessons/tests/assignments, simplify. Everything added
-  was deleted. Not tested with the real AI, only with samples: comments on
-  answers, report comments and coverage gaps (the seed has no term, no
-  curriculum on the course, and no typed answer without an AI mark). The text
-  fixes above came out of that test and were checked with samples.
+  all seven, the last three (comments on answers, report comments, coverage
+  gaps) with a term, a curriculum and a throwaway test added for it.
+  Everything added was deleted.
+- **After that test** (`revamp/b-ai-help-2`): drafted comments show simple
+  maths as typed and the rest in `$…$` (`editableMaths`); report comments
+  come in the page's order with the report's own mark beside each, because
+  A's drafts average the marks differently from the gradebook; singular
+  counts ("1 question"); tests without a time limit don't mention a clock.
 - **Menus that open a dialog** must be `modal={false}`: the menu and dialog
   packages carry separate copies of Radix's dismissable layer, and deleting
   from such a menu left the whole page unclickable. Fixed in all eight of B's.

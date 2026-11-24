@@ -45,6 +45,20 @@ export function plainMaths(text: string): string {
     .replace(/(?<![\\\w])\$(?!\s)([^$\n]+?)(?<![\s\\])\$(?![\w])/g, (all, body: string) => (/^[\d.,]+$/.test(body) ? all : plainTex(body)));
 }
 
+/**
+ * Text to edit in a plain box but shown typeset: maths a person can read as
+ * typed becomes plain ("x² + 7x"), the rest keeps `$…$`, as the marking
+ * screen's own hint says to write it.
+ */
+export function editableMaths(text: string): string {
+  const one = (body: string) => {
+    const plain = plainTex(body);
+    // Anything that needs layout, or that lost its structure, stays as maths.
+    return /\\(?:[dt]?frac|sqrt|sum|int|lim|begin|overline|vec)|\\\\/.test(body) || /[\^_]/.test(plain) ? `$${body.trim()}$` : plain;
+  };
+  return text.replace(/\\\(([\s\S]+?)\\\)/g, (_, body: string) => one(body)).replace(/\\\[([\s\S]+?)\\\]/g, (_, body: string) => (body.includes("\n") ? `$$${body}$$` : one(body)));
+}
+
 const LIST = /^\s*(?:[-*+]|\d+[.)])\s+/;
 const QUOTE = /^\s*>/;
 const ROW = /^\s*\|/;

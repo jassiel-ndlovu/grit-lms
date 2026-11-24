@@ -97,7 +97,7 @@ export default async function TutorTestSubmissionsPage({ params }: PageProps) {
         title={test.title}
         description={
           <>
-            Due {dateFmt.format(test.dueDate)} · {test.totalPoints} marks · {submissions.length}{" "}
+            Due {dateFmt.format(test.dueDate)} · {test.totalPoints} {test.totalPoints === 1 ? "mark" : "marks"} · {submissions.length}{" "}
             {submissions.length === 1 ? "submission" : "submissions"} ({graded} marked, {submitted} to mark,{" "}
             {inProgress} in progress)
           </>

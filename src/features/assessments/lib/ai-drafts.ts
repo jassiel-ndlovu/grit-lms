@@ -11,7 +11,7 @@
 
 import type { DraftQuestion } from "@/features/ai-assist/model";
 import type { DraftLessons } from "@/features/ai-assist/model-pro";
-import { draftMarkdown, plainMaths } from "@/features/courses/lib/ai-text";
+import { draftMarkdown, editableMaths, plainMaths } from "@/features/courses/lib/ai-text";
 
 import type { ImportQuestion } from "./test-io";
 
@@ -144,5 +144,5 @@ export function assignmentBrief(a: DraftLessons["assignments"][number]): { title
 /** The comment to edit: the feedback, then what to do next. */
 export function feedbackText(d: { feedback: string; nextSteps: string[] }): string {
   const next = d.nextSteps.map((s) => s.trim()).filter(Boolean);
-  return [d.feedback.trim(), next.length ? `Next steps:\n${next.map((s) => `- ${s}`).join("\n")}` : ""].filter(Boolean).join("\n\n");
+  return editableMaths([d.feedback.trim(), next.length ? `Next steps:\n${next.map((s) => `- ${s}`).join("\n")}` : ""].filter(Boolean).join("\n\n"));
 }

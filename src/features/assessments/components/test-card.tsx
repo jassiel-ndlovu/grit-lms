@@ -135,7 +135,7 @@ export function TestCard({
           {test._count?.questions != null && (
             <span className="inline-flex items-center gap-1">
               <FileQuestion className="size-3" />
-              {test._count.questions} questions
+              {test._count.questions} {test._count.questions === 1 ? "question" : "questions"}
             </span>
           )}
         </div>

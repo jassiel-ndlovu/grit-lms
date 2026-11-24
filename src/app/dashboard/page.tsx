@@ -279,11 +279,11 @@ export default async function DashboardLanding({
                   <div className="text-muted-foreground flex items-center gap-3 text-xs">
                     <span className="inline-flex items-center gap-1">
                       <BookOpen className="size-3" />
-                      {course._count.lessons} lessons
+                      {course._count.lessons} {course._count.lessons === 1 ? "lesson" : "lessons"}
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <Users className="size-3" />
-                      {course._count.enrollments} students
+                      {course._count.enrollments} {course._count.enrollments === 1 ? "student" : "students"}
                     </span>
                   </div>
                   <div className="mt-auto space-y-1.5">

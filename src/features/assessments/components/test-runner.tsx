@@ -577,7 +577,7 @@ export function TestRunner({
                 variant="ghost"
                 size="sm"
                 disabled={submitting || saving}
-                title="Save your answers and leave. The clock keeps running."
+                title={ownLimit != null ? "Save your answers and leave. The clock keeps running." : "Save your answers and leave. You can come back until the test closes."}
                 onClick={async () => {
                   await saveNow();
                   router.push(exitHref);
