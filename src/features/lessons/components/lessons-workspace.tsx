@@ -16,6 +16,8 @@ import { CreateLessonButton } from "./create-lesson-button";
 import { LessonActions } from "./lesson-actions";
 import { TopicsProvider } from "@/features/courses/components/topic-picker";
 import { topicsFor, type CourseCurriculum } from "@/features/courses/lib/curriculum";
+import type { AiHelp } from "@/features/courses/lib/ai-help";
+import { AiDocumentDialog } from "./ai-document-dialog";
 import { LessonForm } from "./lesson-form";
 import { LessonSidebar } from "./lesson-sidebar";
 import { LessonTreeFold } from "./lesson-tree-fold";
@@ -36,9 +38,11 @@ export interface LessonsWorkspaceProps {
   selectedLesson: Awaited<ReturnType<typeof getLessonDetailById>>;
   /** Editor blocks this course may use, for example the Plus graph block. */
   editorFeatures?: Partial<EditorFeatures>;
+  /** AI help for tutors, when the course has it. */
+  ai?: AiHelp | null;
 }
 
-export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatures }: LessonsWorkspaceProps) {
+export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatures, ai = null }: LessonsWorkspaceProps) {
   const courseId = course.id;
   const selectedLessonId = selectedLesson?.id ?? null;
 
@@ -92,13 +96,16 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
               />
             )}
             footer={
-              <CreateLessonButton
-                courseId={courseId}
-                nextOrder={tree.length}
-                parentOptions={parentOptions}
-                editorFeatures={editorFeatures}
-                label={lessons.length === 0 ? "Create first lesson" : "Add lesson or group"}
-              />
+              <div className="space-y-2">
+                <CreateLessonButton
+                  courseId={courseId}
+                  nextOrder={tree.length}
+                  parentOptions={parentOptions}
+                  editorFeatures={editorFeatures}
+                  label={lessons.length === 0 ? "Create first lesson" : "Add lesson or group"}
+                />
+                {ai ? <AiDocumentDialog help={ai} /> : null}
+              </div>
             }
           />
           </LessonTreeFold>
@@ -120,6 +127,7 @@ export function LessonsWorkspace({ course, lessons, selectedLesson, editorFeatur
               </div>
               <LessonForm
                 layout="document"
+                ai={ai}
                 courseId={courseId}
                 editorFeatures={editorFeatures}
                 parentOptions={editParentOptions}

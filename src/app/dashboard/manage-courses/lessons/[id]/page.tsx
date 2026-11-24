@@ -13,6 +13,7 @@
 
 import { hasService } from "@/features/billing/services";
 import { PageMessage } from "@/components/shell/page-frame";
+import { aiHelpFor } from "@/features/courses/ai-help";
 import { courseRoutes } from "@/features/courses/components/course-frame";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
 import { LessonsWorkspace } from "@/features/lessons/components/lessons-workspace";
@@ -23,6 +24,9 @@ interface PageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ lesson?: string }>;
 }
+
+/** Drafting lessons from a long document with AI can take minutes. */
+export const maxDuration = 300;
 
 export const metadata = { title: "Lessons" };
 
@@ -41,9 +45,9 @@ export default async function ManageLessonsPage({ params, searchParams }: PagePr
   // offered only where the course has them. Graphs already in a lesson still
   // show, and TeX input stays for everyone.
   const viewer = await getViewer();
-  const [graph, mathInput] = viewer
-    ? await Promise.all([hasService(viewer, courseId, "graphing"), hasService(viewer, courseId, "math-input")])
-    : [false, false];
+  const [graph, mathInput, ai] = viewer
+    ? await Promise.all([hasService(viewer, courseId, "graphing"), hasService(viewer, courseId, "math-input"), aiHelpFor(viewer, courseId)])
+    : [false, false, null];
 
-  return <LessonsWorkspace course={course} lessons={lessons} selectedLesson={selectedLesson} editorFeatures={{ graph, mathInput }} />;
+  return <LessonsWorkspace course={course} lessons={lessons} selectedLesson={selectedLesson} editorFeatures={{ graph, mathInput }} ai={ai} />;
 }

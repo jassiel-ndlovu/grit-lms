@@ -34,6 +34,7 @@ import { emitNotification } from "@/features/notifications/server";
 
 import {
   CreateLessonSchema,
+  CreateLessonsFromDraftSchema,
   DeleteLessonSchema,
   MarkLessonCompleteSchema,
   ReorderLessonsSchema,
@@ -183,6 +184,78 @@ export const createLesson = tutorActionClient
     revalidatePath("/dashboard");
 
     return { id: created.id, courseId: created.courseId };
+  });
+
+/* ------------------------------------------------------------------------- */
+/* createLessonsFromDraft                                                    */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Adds the lessons a tutor kept from an AI draft, all or none, after the
+ * course's last top-level lesson. Students get one notification for the lot.
+ * The text is stored as markdown, like an imported lesson; the editor turns
+ * it into a rich document on the first save.
+ */
+export const createLessonsFromDraft = tutorActionClient
+  .schema(CreateLessonsFromDraftSchema)
+  .action(async ({ parsedInput: { courseId, groups }, ctx }) => {
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true, ...courseAccessSelect(ctx.session.user.email) },
+    });
+    if (!course) {
+      throw new Error("Course not found");
+    }
+    if (!managesCourse(await getCourseScope(ctx.session.user.id), course)) {
+      throw new Error("You don't own this course");
+    }
+
+    const last = await prisma.lesson.aggregate({ where: { courseId, parentId: null }, _max: { order: true } });
+    let order = (last._max.order ?? -1) + 1;
+    const total = groups.reduce((n, g) => n + g.lessons.length, 0);
+
+    await prisma.$transaction(
+      async (tx) => {
+        for (const g of groups) {
+          let parentId: string | null = null;
+          if (g.title !== null) {
+            const group: { id: string } = await tx.lesson.create({ data: { title: g.title, order: order++, type: "NONE", courseId }, select: { id: true } });
+            parentId = group.id;
+          }
+          await tx.lesson.createMany({
+            data: g.lessons.map((l, i) => ({
+              title: l.title,
+              ...descriptionData({ description: l.description }),
+              order: parentId ? i : order++,
+              topics: topicsToStore(l.topics),
+              type: "CONTENT" as const,
+              parentId,
+              courseId,
+            })),
+          });
+        }
+      },
+      { timeout: 20_000 },
+    );
+
+    const only = total === 1 ? groups[0].lessons[0].title : null;
+    await emitNotification(
+      {
+        title: only ? "New lesson" : "New lessons",
+        message: only ? `"${only}" was added to your lessons.` : `${total} lessons were added to your course.`,
+        link: `/dashboard/courses/lessons/${courseId}`,
+        type: "LESSON_CREATED",
+        priority: "NORMAL",
+        courseId,
+      },
+      { revalidate: false },
+    );
+
+    revalidateCourseLessons(courseId);
+    revalidatePath("/dashboard/notifications");
+    revalidatePath("/dashboard");
+
+    return { added: total };
   });
 
 /* ------------------------------------------------------------------------- */

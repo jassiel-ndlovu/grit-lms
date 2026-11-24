@@ -53,6 +53,7 @@ import {
   type Provenance,
 } from "../lib/ai-marking-ui";
 import { AiSuggestionCard, HighlightedAnswer } from "./ai-suggestion-card";
+import { AiFeedback, canDraftFeedback, type FeedbackContext } from "./ai-feedback";
 import { usePublishGrading } from "./grading-session";
 
 /* ─── Shapes ───────────────────────────────────────────────────────────── */
@@ -122,6 +123,8 @@ export interface GradingFormProps {
   comments?: Record<string, string[]>;
   /** The next script to mark, for "Save and next". */
   next?: { href: string; name: string } | null;
+  /** AI-drafted comments on written answers (Pro). */
+  drafts?: FeedbackContext | null;
 }
 
 const NO_COMMENTS: string[] = [];
@@ -188,6 +191,7 @@ export function GradingForm({
   ai = null,
   comments,
   next = null,
+  drafts = null,
 }: GradingFormProps) {
   const router = useRouter();
   const readOnly = useReadOnly();
@@ -543,6 +547,7 @@ export function GradingForm({
           onReject={rejectSuggestion}
           onUndo={undoSuggestion}
           comments={comments?.[r.q.id] ?? NO_COMMENTS}
+          drafts={drafts}
         />
       ))}
       </div>
@@ -668,6 +673,7 @@ const QuestionCard = React.memo(function QuestionCard({
   onReject,
   onUndo,
   comments,
+  drafts,
 }: {
   row: FlatRow;
   answer: unknown;
@@ -689,6 +695,7 @@ const QuestionCard = React.memo(function QuestionCard({
   onUndo: (s: AiSuggestion) => void;
   /** Used before on this question. */
   comments: string[];
+  drafts: FeedbackContext | null;
 }) {
   const { q, path, depth, gradable } = row;
   const isContext = !gradable;
@@ -832,6 +839,20 @@ const QuestionCard = React.memo(function QuestionCard({
                   ))}
                 </ul>
               ) : null}
+              {/* An AI-suggested mark brings its own draft comment. */}
+              {drafts && !suggestion && canDraftFeedback(q.type, answer) ? (
+                <AiFeedback
+                  context={drafts}
+                  path={path}
+                  question={q.question}
+                  answer={answer}
+                  memo={memoForFeedback(q)}
+                  maxPoints={q.points}
+                  hasComment={feedback.trim() !== ""}
+                  disabled={readOnly}
+                  onUse={(text) => onFeedback(q.id, withComment(feedback, text))}
+                />
+              ) : null}
             </div>
           </div>
         </>
@@ -839,6 +860,13 @@ const QuestionCard = React.memo(function QuestionCard({
     </section>
   );
 });
+
+/** The memo and rubric as text, for the AI to mark against. */
+function memoForFeedback(q: GradingQuestion): string {
+  const memo = typeof q.correctAnswer === "string" ? q.correctAnswer : "";
+  const rubric = (q.rubric?.criteria ?? []).map((c) => `${c.label}: ${c.max}`).join("\n");
+  return [memo.trim(), rubric ? `Rubric (marks):\n${rubric}` : ""].filter(Boolean).join("\n\n");
+}
 
 /* ──────────────────────────────────────────────────────────────────────── */
 /* AnswerView — mirrors the read-only renderer on the grade review page.     */

@@ -12,12 +12,18 @@ import { PageMessage, PageSection, PageTitle } from "@/components/shell/page-fra
 import { StatusChip, type StatusTone } from "@/components/shell/status-chip";
 import { Button } from "@/components/ui/button";
 import { TonePanel } from "@/components/ui/nexus";
+import { aiHelpFor } from "@/features/courses/ai-help";
+import { AiGaps } from "@/features/courses/components/ai-gaps";
 import { CourseFrame, courseRoutes } from "@/features/courses/components/course-frame";
 import { TopicMap } from "@/features/courses/components/topic-map";
 import { classTopicMap } from "@/features/courses/topic-map";
 import { coverage, curriculumLabel, topicsFor, type CoverageRow } from "@/features/courses/lib/curriculum";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
 import { prisma } from "@/lib/db";
+import { getViewer } from "@/lib/viewer";
+
+/** Comparing a course with its curriculum with AI can take a minute. */
+export const maxDuration = 120;
 
 export const metadata = { title: "Coverage" };
 
@@ -70,7 +76,7 @@ export default async function CourseCoveragePage({ params }: { params: Promise<{
       select: { topics: true, points: true, test: { select: { id: true, title: true } } },
     }),
   ]);
-  const map = await classTopicMap(course.id);
+  const [map, ai] = await Promise.all([classTopicMap(course.id), getViewer().then((viewer) => aiHelpFor(viewer, course.id))]);
   const rows = coverage(topics, lessons, questions);
   const withLessons = rows.filter((r) => r.lessons > 0).length;
   const withQuestions = rows.filter((r) => r.questions > 0).length;
@@ -90,6 +96,8 @@ export default async function CourseCoveragePage({ params }: { params: Promise<{
       ) : null}
 
       <TopicMap nodes={map} labels={{ none: "Not yet", started: "In progress", passed: "Class passing" }} />
+
+      {ai?.pro && rows.some((r) => !r.lessons && !r.questions) ? <AiGaps help={ai} lessonsHref={courseRoutes.lessons(course.id)} /> : null}
 
       <PageSection id="coverage-table" title="What covers each topic">
       <div className="relative border-border overflow-x-auto rounded-lg border">

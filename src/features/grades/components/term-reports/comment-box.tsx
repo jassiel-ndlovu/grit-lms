@@ -22,14 +22,22 @@ export type CommentTarget = { termId: string; learnerId: string; courseId: strin
 
 type State = "idle" | "waiting" | "saving" | "saved" | "failed";
 
-async function send(target: CommentTarget, text: string): Promise<string | null> {
+/** The comment was saved somewhere else on the page (AI drafts): the box takes the text. */
+const SAVED_ELSEWHERE = "nexa:report-comment";
+type SavedElsewhere = { target: CommentTarget; text: string };
+
+export function announceComment(target: CommentTarget, text: string) {
+  window.dispatchEvent(new CustomEvent<SavedElsewhere>(SAVED_ELSEWHERE, { detail: { target, text } }));
+}
+
+export async function sendComment(target: CommentTarget, text: string): Promise<string | null> {
   const { termId, learnerId, courseId } = target;
   const r = await (courseId ? saveCourseComment({ termId, learnerId, courseId, text }) : saveOverallComment({ termId, learnerId, text })).catch(() => null);
   if (r?.data) return null;
   return r?.serverError ?? "We couldn't save it. Check your connection.";
 }
 
-export function CommentBox({ target, initial, label, placeholder, save = send }: {
+export function CommentBox({ target, initial, label, placeholder, save = sendComment }: {
   target: CommentTarget;
   initial: string;
   /** The box's accessible name: "Comment for Lwazi Dube". */
@@ -84,6 +92,24 @@ export function CommentBox({ target, initial, label, placeholder, save = send }:
       void flushRef.current();
     };
   }, []);
+
+  const { termId, learnerId, courseId } = target;
+  React.useEffect(() => {
+    const take = (e: Event) => {
+      const { target: t, text: saved } = (e as CustomEvent<SavedElsewhere>).detail;
+      if (t.termId !== termId || t.learnerId !== learnerId || t.courseId !== courseId) return;
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+      latest.current = saved;
+      stored.current = saved.trim();
+      setText(saved);
+      setError(null);
+      setSavedAt(new Date());
+      setState("saved");
+    };
+    window.addEventListener(SAVED_ELSEWHERE, take);
+    return () => window.removeEventListener(SAVED_ELSEWHERE, take);
+  }, [termId, learnerId, courseId]);
 
   function change(next: string) {
     latest.current = next;
