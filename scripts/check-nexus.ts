@@ -109,8 +109,8 @@ check("a class with no marks isn't passing", classTopics(topics, lessons, [{ top
 const trail = topicTrail(Array.from({ length: 17 }, (_, i) => `t${i}`));
 check("the trail fits", trail.hubs.every((h) => h.x - 25 >= 0 && h.x + 25 <= trail.width && h.y - 25 >= 0 && h.y + 25 <= trail.height), true);
 
-// A redirect that streams in past a loading screen: at the dashboard's root it
-// crashes the app for a second (React #310), and elsewhere it waits a second.
+// A page that only redirects sends a real HTTP redirect when no loading screen
+// covers it. Past one, the redirect waits for the browser to load the page.
 const REDIRECTS = ["", "start/", "home/", "timesheets/", "submissions/", "browse-courses/"];
 check("no loading screen where a page's job is to redirect", REDIRECTS.filter((d) => existsSync(`src/app/dashboard/${d}loading.tsx`)), []);
 

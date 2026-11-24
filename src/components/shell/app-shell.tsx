@@ -275,6 +275,21 @@ export function ModeSwitch({ mode }: { mode: "organisation" | "tutor" }) {
   );
 }
 
+/**
+ * The bell, one step after the rest. It runs a server action as it mounts,
+ * and Next sends those through the router's queue. When a page redirected
+ * while it streamed (a loading.tsx), the action and the redirect would start
+ * together, and the router crashes (React #310, "Application error").
+ */
+function BellSlot() {
+  const [ready, setReady] = React.useState(false);
+  React.useEffect(() => {
+    const timer = setTimeout(() => setReady(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+  return ready ? <NotificationBell /> : <span aria-hidden className="size-9 shrink-0" />;
+}
+
 function ShellSidebar({
   user, sections, notifications, onSearch, onNavigate, className,
 }: {
@@ -309,7 +324,7 @@ function ShellSidebar({
     <Sidebar aria-label="Main" className={className}>
       <div className="flex items-center gap-1">
         <AccountMenu user={user} />
-        {notifications ? <NotificationBell /> : null}
+        {notifications ? <BellSlot /> : null}
       </div>
       {user.mode ? <ModeSwitch mode={user.mode} /> : null}
       <button
