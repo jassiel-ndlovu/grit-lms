@@ -58,7 +58,7 @@ export function AutoGradeButton({ submissionId }: AutoGradeButtonProps) {
       ) : (
         <Wand2 className="size-4" />
       )}
-      Mark automatic questions
+      Auto-mark
     </Button>
   );
 }

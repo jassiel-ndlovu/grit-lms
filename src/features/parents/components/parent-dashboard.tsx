@@ -149,7 +149,7 @@ function ChildSummaryLine({ summary }: { summary: ChildSummary }) {
             Latest mark <span className="text-foreground font-medium tabular-nums">{latestMark.percent}%</span> in {latestMark.title}
           </>
         ) : (
-          "No marks released yet"
+          "No marks yet"
         )}
         {dueSoon > 0 ? ` · ${dueSoon} due soon` : ""}
       </p>

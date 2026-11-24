@@ -29,7 +29,7 @@ import { EmptyState, Scene } from "@/components/ui/empty-state";
 import HeaderTests from "@/components/illustrations/generated/header-tests";
 import { PageFrame, PageMessage, PageTitle } from "@/components/shell/page-frame";
 
-export const metadata = { title: "Tests & Quizzes" };
+export const metadata = { title: "Tests" };
 
 type SubmissionStatus =
   | "NOT_STARTED"
@@ -140,7 +140,7 @@ export default async function StudentTestsPage() {
   return (
     <PageFrame type="list" breadcrumb={[{ label: "Tests" }]}>
       <PageTitle
-        eyebrow="Assessments"
+        eyebrow="Your courses"
         title="Tests"
         description="Tests and quizzes your tutors have set, with the ones you need to do first at the top."
         illustration={<HeaderTests />}

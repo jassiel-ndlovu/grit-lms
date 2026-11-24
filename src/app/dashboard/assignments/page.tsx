@@ -147,7 +147,7 @@ export default async function SubmissionsIndexPage() {
     return (
       <PageFrame type="list" breadcrumb={[{ label: "Assignments" }]}>
         <PageTitle
-          eyebrow="Coursework"
+          eyebrow="Your courses"
           title="Assignments"
           description="Work your tutors have set. Open one to read it and hand in your files."
           illustration={<HeaderAssignments />}

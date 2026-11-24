@@ -37,7 +37,7 @@ export interface PreviewRenderButtonProps {
 
 export function PreviewRenderButton({
   content,
-  title = "Preview render",
+  title = "Preview",
   className,
 }: PreviewRenderButtonProps) {
   const [open, setOpen] = React.useState(false);
@@ -56,7 +56,7 @@ export function PreviewRenderButton({
         onClick={() => setOpen(true)}
       >
         <Eye className="size-3.5" />
-        Preview render
+        Preview
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-3xl">
