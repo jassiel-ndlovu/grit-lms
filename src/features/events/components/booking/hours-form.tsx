@@ -186,6 +186,7 @@ export function TimeOff({ membershipId, rows, timeZone, today }: { membershipId:
       toast.error(r?.serverError ?? FAILED);
       return;
     }
+    setWarning(null);
     toast.success("Time off removed.");
     router.refresh();
   }
