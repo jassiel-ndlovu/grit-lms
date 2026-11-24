@@ -4,7 +4,7 @@
  *   npx tsx scripts/check-ai-marking.ts
  */
 
-import { costMicroUsd, injectionSignals, postCheck, rubricFor, scrubIdentifiers, shouldEscalate } from "../src/features/ai-marking/rules";
+import { costMicroUsd, injectionSignals, postCheck, readableFiles, rubricFor, scrubIdentifiers, shouldEscalate } from "../src/features/ai-marking/rules";
 
 let failures = 0;
 function check(name: string, got: unknown, want: unknown) {
@@ -55,6 +55,22 @@ check("low confidence escalates", shouldEscalate({ ...ok, confidence: "LOW" }), 
 // Cost.
 check("Haiku: 2000 in, 300 out", costMicroUsd("claude-haiku-5-5", { input: 2000, output: 300, cacheRead: 0, cacheWrite: 0 }), 350);
 check("Sonnet: 2000 in, 300 out", costMicroUsd("claude-sonnet-5-5", { input: 2000, output: 300, cacheRead: 0, cacheWrite: 0 }), 7000);
+
+// Photo and PDF answers (#216 phase 3).
+const blob = "https://abc.public.blob.vercel-storage.com";
+const rf = readableFiles([
+  { fileUrl: `${blob}/a/page1.jpg`, fileType: "JPEG" },
+  { fileUrl: `${blob}/a/page2.PNG?download=1`, fileType: "OTHER" },
+  { fileUrl: `${blob}/a/work.pdf`, fileType: "PDF" },
+  { fileUrl: `${blob}/a/photo.heic`, fileType: "OTHER" },
+  { fileUrl: `${blob}/a/essay.docx`, fileType: "DOCX" },
+  { fileUrl: "https://evil.example.com/x.jpg", fileType: "JPEG" },
+  { fileUrl: "not a url", fileType: "JPEG" },
+]);
+check("photos and PDFs from Nexa's Blob store are read; others left for the tutor", [rf.files.map((f) => f.kind), rf.skipped], [["image", "image", "pdf"], 4]);
+check("evidence matches across notation (² and ^2, spaces, TeX)", postCheck({ criteria: [{ id: "c1", awarded: 1, max: 1, justification: "", evidence: ["a = 4 m/s²", "\\(F = ma\\)"] }], total: 1, confidence: "high", flags: [], feedbackToStudent: "" }, { criteria: [{ id: "c1", label: "A", max: 1 }] }, "F=ma\na = 4 m/s^2").flags, []);
+check("at most five files", readableFiles(Array.from({ length: 8 }, (_, i) => ({ fileUrl: `${blob}/p${i}.jpg`, fileType: "JPEG" }))).files.length, 5);
+check("evidence from a transcript counts", postCheck({ criteria: [{ id: "c1", awarded: 2, max: 2, justification: "", evidence: ["F = ma"] }], total: 2, confidence: "high", flags: [], feedbackToStudent: "", transcript: "F = ma so 10 N" }, { criteria: [{ id: "c1", label: "A", max: 2 }] }, "\nF = ma so 10 N").flags, []);
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

@@ -21,6 +21,8 @@ export type RawResult = {
   confidence: "high" | "medium" | "low";
   flags: string[];
   feedbackToStudent: string;
+  /** For photo answers: the model's transcription of the handwriting (empty for typed answers). */
+  transcript?: string;
 };
 
 export type CheckedResult = {
@@ -76,7 +78,21 @@ export function injectionSignals(text: string): boolean {
   return INJECTION.some((r) => r.test(text));
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+/**
+ * For comparing evidence with the answer: case, spacing and maths notation
+ * ignored (m/s² = m/s^2 = m/s^{2}, × = *, TeX delimiters), since a quote
+ * from handwriting may use either form (#216 phase 3).
+ */
+const SUP: Record<string, string> = { "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4", "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9", "⁻": "-" };
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+/g, (m) => `^${[...m].map((c) => SUP[c]).join("")}`)
+    .replace(/\\\(|\\\)|\\\[|\\\]|\$/g, "")
+    .replace(/\^\{([^}]*)\}/g, "^$1")
+    .replace(/×|\\times|·|\\cdot/g, "*")
+    .replace(/÷/g, "/")
+    .replace(/\s+/g, "");
 
 export function postCheck(raw: RawResult, rubric: Rubric, answer: string): CheckedResult {
   const flags = new Set(raw.flags.filter((f) => (KNOWN_FLAGS as readonly string[]).includes(f)));
@@ -128,4 +144,23 @@ export function costMicroUsd(model: string, usage: { input: number; output: numb
   const p = PRICES[model] ?? PRICES["claude-sonnet-5-5"];
   const usd = (usage.input * p.input + usage.cacheWrite * p.input * 1.25 + usage.cacheRead * p.input * 0.1 + usage.output * p.output) / 1_000_000;
   return Math.round(usd * 1_000_000);
+}
+
+/** An uploaded answer file the marker can read (#216 phase 3): images and PDFs. Others (HEIC, Word, ZIP) are left for the tutor. */
+export type AnswerFile = { url: string; kind: "image" | "pdf" };
+const IMAGE_EXT = /\.(jpe?g|png|webp|gif)(\?|#|$)/i;
+const PDF_EXT = /\.pdf(\?|#|$)/i;
+export function readableFiles(files: Array<{ fileUrl: string; fileType: string }>, max = 5): { files: AnswerFile[]; skipped: number } {
+  const out: AnswerFile[] = [];
+  let skipped = 0;
+  for (const f of files) {
+    let u: URL;
+    try { u = new URL(f.fileUrl); } catch { skipped++; continue; }
+    // Only Nexa's own Blob store: the model fetches these by URL.
+    if (u.protocol !== "https:" || !u.hostname.endsWith(".public.blob.vercel-storage.com")) { skipped++; continue; }
+    const kind = f.fileType === "PDF" || PDF_EXT.test(u.pathname) ? "pdf" : f.fileType === "JPEG" || IMAGE_EXT.test(u.pathname) ? "image" : null;
+    if (!kind || out.length >= max) { skipped++; continue; }
+    out.push({ url: u.toString(), kind });
+  }
+  return { files: out, skipped };
 }

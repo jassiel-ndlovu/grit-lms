@@ -1,6 +1,6 @@
 # Contract: `getViewer()`
 
-Owner: Agent A. Reader: Agent B. Status: **Draft 1.27, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
+Owner: Agent A. Reader: Agent B. Status: **Draft 1.28, 2026-11-24** (first draft 2026-11-16). B asks for changes in `docs/revamp/b/HANDOFF.md` or an issue labelled `needs-a`; A edits this file in its own pull request.
 
 **Answer first.** `getViewer()` is the one server-side call every page, layout and server action uses to learn who is looking and in what context. It returns the user, the active workspace and their role in it (or their learner place), the children they guard, the permission keys they hold there, and whether an admin is impersonating them. It never returns billing amounts or another user's data. There is no `mode` field: the owner removed Simple and Technical modes (plan revision 3).
 
@@ -188,6 +188,7 @@ const viewer = await requireViewer({ persona: "guardian" });
 
 | Date | Change |
 | --- | --- |
+| 2026-11-24 | Draft 1.28. AI marks on photo and PDF answers; session notes from transcripts; diagrams |
 | 2026-11-24 | Draft 1.27. Course study assistant for students (Pro) |
 | 2026-11-24 | Draft 1.26. Branding (Plus), white-label (Pro; custom domains on hold) and bulk onboarding |
 | 2026-11-24 | Draft 1.25. Enquiry pipeline (with a public form), tutor outcomes and staff reviews |
@@ -850,3 +851,29 @@ Bringing a whole organisation on, branch by branch. **The order:**
 - A "Study assistant" panel on the course page for students: chat with citations linking to lessons, the "left today" count, and a clear line that their tutor can read these chats.
 - A "Study chats" tab for tutors, flagged first.
 - A parent view per child (optional).
+
+### AI marks on photo answers, session notes and diagrams (Draft 1.28)
+
+#216 phase 3, Pro.
+
+**Photo and PDF answers (AI marking):**
+- AI marking now covers `FILE_UPLOAD` questions, and written answers that come with uploads.
+- **What it reads:** photos (JPEG, PNG, WebP) and PDFs on Nexa's Blob store, up to 5 per answer. HEIC, Word and ZIP files are left for the tutor.
+- **Model:** these answers go straight to the stronger model.
+- **Results:** the suggestion has two new fields:
+  - `fromPhotos: true`;
+  - `transcript`: the handwriting as the model read it, with maths in TeX.
+- **In grading:** show the transcript next to the photos so the tutor can check the reading. The `illegible` flag means part couldn't be read.
+- **Evidence:** quotes are checked against the transcript, so ² and ^2, spacing and TeX count as the same.
+- **Privacy:** names written on the page can't be scrubbed; the marker is told to ignore them.
+
+**From `@/features/ai-assist/actions`, Pro only:**
+
+| Action | Input | Returns | Monthly runs on Pro |
+| --- | --- | --- | --- |
+| `sessionNotesAction` | `{ courseId, transcript? \| fileUrl?, title? }`. `fileUrl` is a `.vtt`, `.srt` or `.txt` on Nexa's Blob store (Zoom, Teams and Meet export these) | `{ runId, notes: { summary, keyPoints, questions: [{ question, answer }], homework, followUps, studentRecap }, allowance }` | 200 |
+| `diagramAction` | `{ courseId, description (10–2000 characters), style?: "simple" \| "detailed" }` | `{ runId, title, altText, svg, allowance }` | 300 |
+
+- **Notes privacy:** every speaker name and the class roster are scrubbed before sending, so notes never name students. `followUps` is for the tutor only; `studentRecap` is written to share.
+- **Recordings:** audio and video can't be read yet. Turning speech into text needs a provider, which is an owner decision. Until then, upload the meeting's transcript file.
+- **Diagrams:** the SVG is cleaned to safe drawing elements (no scripts, styles, images, links or event handlers) and always has a `viewBox`. To keep it, upload it as an `.svg` through your uploader and use `altText` for accessibility.

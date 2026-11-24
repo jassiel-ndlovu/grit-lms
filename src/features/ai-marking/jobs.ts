@@ -23,9 +23,10 @@ import { prisma } from "@/lib/db";
 import { AnthropicMarker, PROMPT_VERSION, type Marker } from "./marker";
 import { canSpend, spendCredits } from "@/features/ai-credits/credits";
 import { creditsForCost } from "@/features/ai-credits/credits-math";
-import { costMicroUsd, injectionSignals, postCheck, rubricFor, scrubIdentifiers, shouldEscalate, type CheckedResult } from "./rules";
+import { costMicroUsd, injectionSignals, postCheck, readableFiles, rubricFor, scrubIdentifiers, shouldEscalate, type CheckedResult } from "./rules";
 
-const WRITTEN = ["SHORT_ANSWER", "ESSAY"] as const;
+/** Written answers, and file uploads (photos or PDFs of handwritten work, #216 phase 3). */
+const WRITTEN = ["SHORT_ANSWER", "ESSAY", "FILE_UPLOAD"] as const;
 const HANDED_IN = ["SUBMITTED", "GRADED", "LATE"] as const;
 const MAX_ATTEMPTS = 3;
 const STALE_RUNNING_MS = 10 * 60 * 1000;
@@ -53,12 +54,13 @@ export async function queueAiMarkingFor(input: { testId: string; questionIds?: s
   if (!test) return { queued: 0, skipped: 0, reason: "NOT_FOUND" as const };
   if (!test.aiMarking) return { queued: 0, skipped: 0, reason: "OFF" as const };
   const questions = test.questions.filter((q) => !input.questionIds || input.questionIds.includes(q.id));
-  const subs = await prisma.testSubmission.findMany({ where: { testId: input.testId, status: { in: [...HANDED_IN] } }, select: { id: true, answers: true } });
+  const subs = await prisma.testSubmission.findMany({ where: { testId: input.testId, status: { in: [...HANDED_IN] } }, select: { id: true, answers: true, uploadedFiles: { select: { questionId: true, fileUrl: true, fileType: true } } } });
   const rows: Prisma.AiMarkSuggestionCreateManyInput[] = [];
   let skipped = 0;
   for (const s of subs) {
     for (const q of questions) {
-      if (!answerText(s.answers, q.id) || !memoText(q.answer).trim()) {
+      const photos = readableFiles(s.uploadedFiles.filter((u) => u.questionId === q.id)).files.length;
+      if ((!answerText(s.answers, q.id) && !photos) || !memoText(q.answer).trim()) {
         skipped++;
         continue;
       }
@@ -115,7 +117,7 @@ export async function runAiMarking(opts: { limit?: number; marker?: Marker; now?
       where: { id },
       select: {
         id: true, requestId: true, attempts: true, workspaceId: true, questionId: true, requestedByUserId: true,
-        testSubmission: { select: { answers: true, student: { select: { fullName: true } }, test: { select: { courseId: true } } } },
+        testSubmission: { select: { answers: true, student: { select: { fullName: true } }, test: { select: { courseId: true } }, uploadedFiles: { select: { questionId: true, fileUrl: true, fileType: true } } } },
       },
     });
     try {
@@ -141,7 +143,10 @@ export async function runAiMarking(opts: { limit?: number; marker?: Marker; now?
       const raw = answerText(s.testSubmission.answers, s.questionId);
       const answer = scrubIdentifiers(raw, names);
       const rubric = rubricFor(q.rubric, q.points);
-      const input = { requestId: s.requestId, question: scrubIdentifiers(q.question, names), memo: memoText(q.answer), rubric, answer };
+      const files = readableFiles(s.testSubmission.uploadedFiles.filter((u) => u.questionId === s.questionId)).files;
+      const input = { requestId: s.requestId, question: scrubIdentifiers(q.question, names), memo: memoText(q.answer), rubric, answer, files };
+      // Handwriting goes straight to the stronger model; typed answers start on the faster one.
+      const photos = files.length > 0;
       const injected = injectionSignals(raw);
 
       const usage = { micro: 0, input: 0, output: 0, cacheRead: 0 };
@@ -151,28 +156,31 @@ export async function runAiMarking(opts: { limit?: number; marker?: Marker; now?
         usage.output += o.usage.output;
         usage.cacheRead += o.usage.cacheRead;
       };
-      let out = await marker.mark(input, { escalate: false });
+      let out = await marker.mark(input, { escalate: photos });
       add(out);
-      let checked: CheckedResult | null = out.result ? postCheck(out.result, rubric, answer) : null;
+      // For photos, evidence is checked against the model's transcript as well as any typed text.
+      const against = (o: typeof out) => (photos ? `${answer}\n${o.result?.transcript ?? ""}` : answer);
+      let checked: CheckedResult | null = out.result ? postCheck(out.result, rubric, against(out)) : null;
       if (checked && injected && !checked.flags.includes("possible_injection")) checked.flags = [...checked.flags, "possible_injection"].sort();
       let escalated = false;
-      if (!checked || shouldEscalate(checked)) {
+      if (!photos && (!checked || shouldEscalate(checked))) {
         escalated = true;
         out = await marker.mark(input, { escalate: true });
         add(out);
-        const second = out.result ? postCheck(out.result, rubric, answer) : null;
+        const second = out.result ? postCheck(out.result, rubric, against(out)) : null;
         if (second) {
           if (injected && !second.flags.includes("possible_injection")) second.flags = [...second.flags, "possible_injection"].sort();
           checked = second;
         }
       }
-      if (escalated) r.escalated++;
+      if (escalated || photos) r.escalated++;
+      const transcript = photos ? (out.result?.transcript ?? "").slice(0, 8000) : null;
       await recordUsage(s.workspaceId, courseId, usage.micro, now);
       // The call has happened and cost money: spend its credits, even past the balance.
       if (s.workspaceId && s.requestedByUserId) {
         await spendCredits({ workspaceId: s.workspaceId, userId: s.requestedByUserId, credits: creditsForCost(usage.micro, ZAR_PER_USD), feature: "ai-marking", ref: id, force: true }, now);
       }
-      const common = { model: out.model, promptVersion: PROMPT_VERSION, escalated, inputTokens: usage.input, outputTokens: usage.output, cacheReadTokens: usage.cacheRead, costMicroUsd: usage.micro };
+      const common = { model: out.model, promptVersion: PROMPT_VERSION, escalated: escalated || photos, fromPhotos: photos, transcript, inputTokens: usage.input, outputTokens: usage.output, cacheReadTokens: usage.cacheRead, costMicroUsd: usage.micro };
       if (!checked) {
         await prisma.aiMarkSuggestion.update({ where: { id }, data: { ...common, status: "FAILED", flags: ["needs_tutor"], error: out.refused ? "The model declined to mark this answer" : "No usable answer from the model" } });
         r.failed++;
@@ -202,6 +210,7 @@ export async function suggestionsFor(testSubmissionId: string) {
   return rows.map((s) => ({
     id: s.id, questionId: s.questionId, status: s.status, criteria: s.criteria, totalAwarded: s.totalAwarded, outOf: s.outOf,
     confidence: s.confidence, flags: s.flags, feedbackToStudent: s.feedbackToStudent, escalated: s.escalated, error: s.error,
+    fromPhotos: s.fromPhotos, transcript: s.transcript,
     tutorAction: s.tutorAction, tutorScore: s.tutorScore, actedAt: s.actedAt?.toISOString() ?? null,
   }));
 }
