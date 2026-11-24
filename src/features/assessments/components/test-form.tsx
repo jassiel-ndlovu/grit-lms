@@ -64,8 +64,11 @@ import {
 import { TestMemoFiles } from "./test-memo-files";
 import { QuestionBankDialog } from "./question-bank-dialog";
 import { GenerateFromBankDialog } from "./generate-from-bank-dialog";
+import { AiQuestionsDialog } from "./ai-questions-dialog";
 import { saveQuestionToBank, type BankListItem } from "../bank-actions";
 import { bankNodeToEditor, editorToBankNode } from "../lib/question-bank";
+import type { ImportQuestion } from "../lib/test-io";
+import type { AiHelpWithLessons } from "@/features/courses/lib/ai-help";
 
 export interface TestFormCourse {
   id: string;
@@ -74,6 +77,8 @@ export interface TestFormCourse {
   curriculum?: CourseCurriculum;
   /** The course has the Plus question bank (contracts/question-bank.md). */
   questionBank?: boolean;
+  /** AI help for tutors, when the course has it (Plus; contracts/viewer.md). */
+  ai?: AiHelpWithLessons | null;
 }
 
 export interface TestFormProps {
@@ -314,6 +319,12 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
     if (copies.length === 0) return;
     setQuestions((prev) => [...prev, ...copies]);
     toast.success(copies.length === 1 ? "Question added from the bank" : `${copies.length} questions added from the bank`);
+  }
+  // AI help (Plus): the drafts the tutor kept, as ordinary questions.
+  function addDrafts(nodes: ImportQuestion[]) {
+    if (nodes.length === 0) return;
+    setQuestions((prev) => [...prev, ...nodes.map((n) => bankNodeToEditor(n, () => blankQuestion().clientId))]);
+    toast.success(nodes.length === 1 ? "Question added at the end. Check it before you publish." : `${nodes.length} questions added at the end. Check them before you publish.`);
   }
   async function saveToBank(q: EditorQuestion) {
     try {
@@ -594,6 +605,7 @@ export function TestForm({ courses, defaultValues, extraSettings }: TestFormProp
             {bankOn && topics.length > 0 ? (
               <GenerateFromBankDialog courseId={courseId} topics={topics} exclude={bankIdsInTest} onAdd={addFromBank} />
             ) : null}
+            {topicCourse?.ai ? <AiQuestionsDialog help={topicCourse.ai} onAdd={addDrafts} /> : null}
             <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
               <Plus className="size-3" /> Add question
             </Button>

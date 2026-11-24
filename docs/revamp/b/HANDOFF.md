@@ -3,6 +3,52 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-25 AI help for tutors, `revamp/b-ai-help`
+
+No migration, no env vars. Screens for viewer.md "AI help for tutors"
+(Drafts 1.22 and 1.23). Samples on /design-system/ai-help; pure rules in
+`check-ai-drafts.ts`.
+
+- **Where it shows:** `features/courses/ai-help.ts` (`aiHelpFor`) decides from
+  the course's plan and `courses.edit`, without counting runs. Dialogs read
+  what's left from `getAiAssistStatus` when they open. Plus: questions,
+  outlines, tidying. Pro: the rest, hidden on Plus except the document
+  dialog's second choice, which says it's Pro.
+- **Questions:** "Draft with AI" in the test designer. Kept drafts become
+  ordinary questions (`assessments/lib/ai-drafts.ts`). A short answer is
+  marked by exact match, so a model answer longer than one plain line becomes
+  a written question with the answer as its memo.
+- **From a document:** beside the lesson tree. An outline, or lessons, tests
+  and assignments. New action `createLessonsFromDraft`: all or none, one
+  notification. Lessons have no draft state, so the dialog says students see
+  them at once; tests and assignments are added unpublished. An assignment's
+  memo is shown to copy, never stored in the brief.
+- **Tidy or simplify:** in the lesson editor (`RichEditor` has a `tools` slot).
+  Whole blocks only; images, tables, graphs and code stop it. Replacing is one
+  undo step and isn't saved until the lesson is.
+- **Draft a comment:** under the comment box for typed answers in test
+  marking, when there's no AI-suggested mark (which has its own comment).
+- **Report comments:** "Draft comments" on a term's course page. Saved ones
+  fill their boxes on the page.
+- **Coverage:** "Suggest where to cover gaps". Changes nothing.
+- **maxDuration** is set on the pages that run these.
+- **Text from the AI** (`courses/lib/ai-text.ts`): titles, notes and report
+  comments get plain maths (they can't typeset), lesson and tidied text gets
+  a blank line where the AI ended a line, and maths goes to the AI as `\(…\)`.
+- **Tested with the real AI on Preview (Maths Grade 10 (seed), Pro):**
+  questions, outline, lessons/tests/assignments, simplify. Everything added
+  was deleted. Not tested with the real AI, only with samples: comments on
+  answers, report comments and coverage gaps (the seed has no term, no
+  curriculum on the course, and no typed answer without an AI mark). The text
+  fixes above came out of that test and were checked with samples.
+- **Menus that open a dialog** must be `modal={false}`: the menu and dialog
+  packages carry separate copies of Radix's dismissable layer, and deleting
+  from such a menu left the whole page unclickable. Fixed in all eight of B's.
+- **Not done:** session notes and diagrams (Draft 1.28), feedback on uploaded
+  assignment work.
+- **Owner, 25 Nov:** no need to name the AI company (the owner will confirm
+  with legal).
+
 ## 2026-11-24 Wording on the learning pages (part 2), `revamp/b-wording`
 
 No migration, no env vars. Follows copy.md.

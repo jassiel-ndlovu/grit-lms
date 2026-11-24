@@ -58,6 +58,8 @@ import { CreateLessonSchema, UpdateLessonSchema } from "../schemas";
 import { createLesson, updateLesson } from "../actions";
 import { AttachmentManager } from "./attachment-manager";
 import { VideoUrlList } from "./video-url-list";
+import { AiTidy } from "./ai-tidy";
+import type { AiHelp } from "@/features/courses/lib/ai-help";
 import { TopicPicker } from "@/features/courses/components/topic-picker";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +103,8 @@ export interface LessonFormProps {
    * the other settings in a Details box and a sticky save bar.
    */
   layout?: "stack" | "document";
+  /** AI help for tutors, when the course has it. */
+  ai?: AiHelp | null;
 }
 
 const TOP_LEVEL = "__top__";
@@ -114,6 +118,7 @@ export function LessonForm({
   parentOptions = [],
   layout = "stack",
   editorFeatures,
+  ai = null,
 }: LessonFormProps) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -300,6 +305,7 @@ export function LessonForm({
                   features={editorFeatures}
                   placeholder="Write the lesson. Type / for blocks, $ for maths"
                   className="[&_.rich-editor-surface]:min-h-64"
+                  tools={ai ? (editor) => <AiTidy editor={editor} help={ai} /> : undefined}
                 />
                 <FormDescription>
                   {editorFeatures?.graph

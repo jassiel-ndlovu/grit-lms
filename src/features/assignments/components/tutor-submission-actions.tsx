@@ -71,7 +71,8 @@ export function TutorSubmissionActions({
 
   return (
     <>
-      <DropdownMenu>
+      {/* Not modal: a modal menu and the dialog it opens each lock the page, and unlocking in the wrong order leaves it unclickable. */}
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="secondary"
@@ -97,10 +98,7 @@ export function TutorSubmissionActions({
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onSelect={(e) => {
-              e.preventDefault();
-              setConfirmOpen(true);
-            }}
+            onSelect={() => setConfirmOpen(true)}
           >
             <Trash2 className="size-4" /> Delete
           </DropdownMenuItem>

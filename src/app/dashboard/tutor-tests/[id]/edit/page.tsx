@@ -29,6 +29,7 @@ import type {
 } from "@/features/assessments/components/test-question-editor";
 import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/viewer";
+import { aiHelpForTests } from "@/features/courses/ai-help";
 import { getCourseScope } from "@/features/courses/course-access";
 import { courseRoutes } from "@/features/courses/components/course-frame";
 import { hasService } from "@/features/billing/services";
@@ -38,6 +39,9 @@ import { AiMarkingSwitch } from "@/features/assessments/components/ai-marking-sw
 interface PageProps {
   params: Promise<{ id: string }>;
 }
+
+/** Drafting questions with AI can take a minute. */
+export const maxDuration = 120;
 
 export const metadata = { title: "Edit test" };
 
@@ -118,6 +122,8 @@ export default async function EditTestPage({ params }: PageProps) {
   // The Plus question bank, per course (contracts/question-bank.md).
   const withBank = viewer ? await Promise.all(courses.map(async (c) => ((await hasService(viewer, c.id, "question-bank")) ? c.id : null))) : [];
   const bank = new Set(withBank.filter(Boolean));
+  // AI help for tutors (Plus), per course.
+  const ai = await aiHelpForTests(viewer, courses.map((c) => c.id));
 
   const editorQuestions = buildEditorTree(test.questions);
 
@@ -135,7 +141,7 @@ export default async function EditTestPage({ params }: PageProps) {
             servicesHref={isBillingEnabled() ? courseRoutes.services(test.courseId) : null}
           />
         }
-        courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel }, questionBank: bank.has(c.id) }))}
+        courses={courses.map((c) => ({ id: c.id, name: c.name, curriculum: { curriculum: c.curriculum, subject: c.subject, gradeLevel: c.gradeLevel }, questionBank: bank.has(c.id), ai: ai.get(c.id) ?? null }))}
         defaultValues={{
           id: test.id,
           title: test.title,

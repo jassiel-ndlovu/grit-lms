@@ -100,6 +100,35 @@ export const CreateLessonSchema = z.object({
 export type CreateLessonInput = z.infer<typeof CreateLessonSchema>;
 
 /**
+ * Lessons a tutor kept from an AI draft (contracts/viewer.md): groups of
+ * lessons added after the ones already there. A null title puts the lessons
+ * at the top level.
+ */
+export const CreateLessonsFromDraftSchema = z.object({
+  courseId: CuidSchema,
+  groups: z
+    .array(
+      z.object({
+        title: NonEmptyString.max(120, "That title is too long.").nullable(),
+        lessons: z
+          .array(
+            z.object({
+              title: NonEmptyString.max(120, "That title is too long."),
+              description: z.string().max(20000, "That lesson is too long."),
+              topics: z.array(z.string().max(120)).max(20).default([]),
+            }),
+          )
+          .min(1)
+          .max(50),
+      }),
+    )
+    .min(1)
+    .max(30)
+    .refine((groups) => groups.reduce((n, g) => n + g.lessons.length, 0) <= 100, "Add up to 100 lessons at a time."),
+});
+export type CreateLessonsFromDraftInput = z.infer<typeof CreateLessonsFromDraftSchema>;
+
+/**
  * Update input — `id` is required, every other field optional.
  * `attachments`, when supplied, REPLACES the attachment set (deleteMany + create).
  * Pass an empty array to clear all attachments; omit the field to keep them.

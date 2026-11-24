@@ -50,8 +50,10 @@ import {
 import { SubmissionAdminPanel } from "@/features/assessments/components/submission-admin-panel";
 import { AutoGradeButton } from "@/features/assessments/components/auto-grade-button";
 import { TestFrame, testRoutes } from "@/features/assessments/components/test-frame";
+import { aiHelpFor } from "@/features/courses/ai-help";
 import { getCourseScope } from "@/features/courses/course-access";
 import { schoolDateFormat } from "@/lib/datetime";
+import { getViewer } from "@/lib/viewer";
 
 interface PageProps {
   params: Promise<{ testId: string; studentId: string }>;
@@ -133,7 +135,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
     getTestDetailById(testId),
     prisma.student.findUnique({
       where: { id: studentId },
-      select: { id: true, fullName: true, email: true, imageUrl: true },
+      select: { id: true, fullName: true, email: true, imageUrl: true, userId: true },
     }),
     getTestSubmissionByStudentAndTest(studentId, testId),
     listSubmissionsForTest(testId),
@@ -204,6 +206,8 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
 
   // AI-suggested marks (#150), when the test has them on.
   const suggestions: AiSuggestion[] | null = test.aiMarking ? ((await suggestionsFor(submission.id)) as AiSuggestion[]) : null;
+  // AI-drafted comments on written answers (Pro).
+  const ai = await aiHelpFor(await getViewer(), test.courseId);
   const byId = new Map(test.questions.map((q) => [q.id, q]));
   const rubrics = writtenQuestions(test.questions, test.labelScheme).map((w) => {
     const q = byId.get(w.id)!;
@@ -272,6 +276,7 @@ export default async function GradeStudentSubmissionPage({ params }: PageProps) 
           labelScheme={test.labelScheme}
           ai={suggestions ? { initial: suggestions } : null}
           comments={comments}
+          drafts={ai?.pro ? { courseId: test.courseId, studentUserId: student.userId } : null}
           next={after ? { href: href(after.studentId), name: after.student.fullName } : null}
         />
 

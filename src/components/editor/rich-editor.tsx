@@ -20,7 +20,7 @@
  */
 
 import * as React from "react";
-import type { AnyExtension, JSONContent } from "@tiptap/core";
+import type { AnyExtension, Editor, JSONContent } from "@tiptap/core";
 import { Dropcursor, Gapcursor, Placeholder, TrailingNode, UndoRedo } from "@tiptap/extensions";
 import { EditorContent, useEditor } from "@tiptap/react";
 
@@ -52,6 +52,8 @@ export interface RichEditorProps {
   placeholder?: string;
   editable?: boolean;
   className?: string;
+  /** More tools under the toolbar, given the live editor (for example AI help). */
+  tools?: (editor: Editor) => React.ReactNode;
 }
 
 const EMPTY: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
@@ -66,7 +68,7 @@ function initialDoc(value: unknown, fallbackMarkdown: string | null | undefined)
 
 export function RichEditor({
   label, value, fallbackMarkdown, onChange, name, features: featureProp, placeholder = "Type / for blocks, $ for maths",
-  editable = true, className,
+  editable = true, className, tools,
 }: RichEditorProps) {
   const features = React.useMemo(() => ({ ...DEFAULT_FEATURES, ...featureProp }), [featureProp]);
   const [slash, setSlash] = React.useState<SlashState | null>(null);
@@ -125,6 +127,7 @@ export function RichEditor({
       {editor ? (
         <>
           {editable ? <EditorToolbar editor={editor} features={features} label={label} /> : null}
+          {editable && tools ? <div className="border-b px-1.5 py-1">{tools(editor)}</div> : null}
           <MathInputContext.Provider value={features.math && features.mathInput}>
             <EditorContent editor={editor} />
           </MathInputContext.Provider>

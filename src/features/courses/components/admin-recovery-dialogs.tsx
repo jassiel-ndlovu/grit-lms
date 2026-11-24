@@ -84,7 +84,7 @@ export function RecoveryActions({ recovery: r }: { recovery: Recovery }) {
   const close = () => setOpen(null);
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" aria-label={`Actions for the recovery from ${what}`}>
             <MoreHorizontal aria-hidden className="size-4" />
