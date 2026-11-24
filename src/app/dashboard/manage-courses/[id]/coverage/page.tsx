@@ -8,10 +8,13 @@
 import Link from "next/link";
 import { Settings } from "lucide-react";
 
-import { PageMessage, PageTitle } from "@/components/shell/page-frame";
+import { PageMessage, PageSection, PageTitle } from "@/components/shell/page-frame";
 import { StatusChip, type StatusTone } from "@/components/shell/status-chip";
 import { Button } from "@/components/ui/button";
+import { TonePanel } from "@/components/ui/nexus";
 import { CourseFrame, courseRoutes } from "@/features/courses/components/course-frame";
+import { TopicMap } from "@/features/courses/components/topic-map";
+import { classTopicMap } from "@/features/courses/topic-map";
 import { coverage, curriculumLabel, topicsFor, type CoverageRow } from "@/features/courses/lib/curriculum";
 import { loadTutorCourse } from "@/features/courses/tutor-course";
 import { prisma } from "@/lib/db";
@@ -39,7 +42,7 @@ export default async function CourseCoveragePage({ params }: { params: Promise<{
     return (
       <CourseFrame course={course} page="Coverage">
         <PageTitle title="Coverage" description="Which curriculum topics your lessons and tests cover." />
-        <div className="border-border space-y-3 rounded-lg border border-dashed p-6 text-center">
+        <TonePanel nexus="coverage" className="space-y-3 p-8 text-center">
           <p className="text-muted-foreground text-sm">
             {course.curriculum === "OTHER"
               ? "Coverage works with CAPS and IEB subjects for now."
@@ -51,7 +54,7 @@ export default async function CourseCoveragePage({ params }: { params: Promise<{
               Course settings
             </Link>
           </Button>
-        </div>
+        </TonePanel>
       </CourseFrame>
     );
   }
@@ -67,6 +70,7 @@ export default async function CourseCoveragePage({ params }: { params: Promise<{
       select: { topics: true, points: true, test: { select: { id: true, title: true } } },
     }),
   ]);
+  const map = await classTopicMap(course.id);
   const rows = coverage(topics, lessons, questions);
   const withLessons = rows.filter((r) => r.lessons > 0).length;
   const withQuestions = rows.filter((r) => r.questions > 0).length;
@@ -85,6 +89,9 @@ export default async function CourseCoveragePage({ params }: { params: Promise<{
         </p>
       ) : null}
 
+      <TopicMap nodes={map} labels={{ none: "Not yet", started: "In progress", passed: "Class passing" }} />
+
+      <PageSection id="coverage-table" title="What covers each topic">
       <div className="border-border overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-muted-foreground text-left text-xs">
@@ -134,6 +141,7 @@ export default async function CourseCoveragePage({ params }: { params: Promise<{
           </tbody>
         </table>
       </div>
+      </PageSection>
     </CourseFrame>
   );
 }

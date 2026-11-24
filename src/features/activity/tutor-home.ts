@@ -20,7 +20,7 @@ const DAY = 24 * 60 * 60 * 1000;
 export interface TutorHomeData {
   rows: AttentionRow[];
   stats: { courses: number; students: number; toMark: number; dueThisWeek: number };
-  upcoming: { id: string; title: string; course: string; date: Date }[];
+  upcoming: { id: string; eventId: string; title: string; course: string; date: Date }[];
 }
 
 export async function getTutorHome(scope: CourseScope, now: Date, timeZone: string): Promise<TutorHomeData> {
@@ -94,6 +94,7 @@ export async function getTutorHome(scope: CourseScope, now: Date, timeZone: stri
     .flatMap((e) =>
       occurrencesOf(e, now, weekEnd, timeZone).map((date) => ({
         id: `${e.id}#${date.getTime()}`,
+        eventId: e.id,
         title: e.title,
         course: e.course.name,
         date,

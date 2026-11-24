@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, Scene } from "@/components/ui/empty-state";
 import { TonePanel } from "@/components/ui/nexus";
 import { assignmentRoutes } from "@/features/assignments/routes";
+import { calendarRoutes } from "@/features/events/lib/calendar-ui";
 import { formatDate, greetingFor } from "@/lib/datetime";
 import { dueTone } from "@/lib/nexus";
 import { cn } from "@/lib/utils";
@@ -243,7 +244,12 @@ export function TutorHome({
                 {data.upcoming.map((e) => (
                   <li key={e.id} className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-foreground truncate">{e.title}</p>
+                      <Link
+                        href={calendarRoutes.classMode(e.eventId, e.date.toISOString())}
+                        className="text-foreground block truncate hover:underline"
+                      >
+                        {e.title}
+                      </Link>
                       <p className="text-muted-foreground truncate text-xs">{e.course}</p>
                     </div>
                     <span className="text-muted-foreground shrink-0 text-xs tabular-nums">

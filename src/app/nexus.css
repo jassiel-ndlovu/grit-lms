@@ -117,3 +117,18 @@ html[data-navigating] [data-slot="signature-strip"] {
   background: color-mix(in oklab, var(--tone) 5%, transparent);
   box-shadow: inset 3px 0 0 color-mix(in oklab, var(--tone) 70%, transparent);
 }
+
+/* The topic map: a figure per topic, and the trail that joins them. Meaning,
+   not decoration, so it shows in every theme (the words are beside it). */
+[data-slot="topic-figure"] line,
+[data-slot="topic-trail"] line { stroke: var(--border); stroke-width: 2; }
+[data-slot="topic-figure"] circle,
+[data-slot="topic-trail"] circle { fill: var(--card); stroke: var(--muted-foreground); stroke-width: 1.5; }
+[data-slot="topic-figure"] line[data-lit],
+[data-slot="topic-trail"] line[data-lit] { stroke: var(--success); }
+[data-slot="topic-figure"] circle[data-lit],
+[data-slot="topic-trail"] circle[data-lit] { fill: var(--tone-accent); stroke: var(--tone-accent); }
+[data-state="passed"] circle[data-hub] { fill: var(--success); stroke: var(--success); }
+[data-state="passed"] circle[data-lit],
+[data-slot="topic-figure"][data-state="passed"] circle[data-lit] { fill: var(--success); stroke: var(--success); }
+[data-state="started"] circle[data-hub] { fill: color-mix(in oklab, var(--tone-accent) 30%, var(--card)); stroke: var(--tone-accent); }
