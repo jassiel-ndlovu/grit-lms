@@ -33,7 +33,7 @@ import {
 import { UserError } from "@/lib/user-error";
 import { emitNotification, notifyHandIn } from "@/features/notifications/server";
 import { getExtraTime } from "./accommodations";
-import { closedToStart } from "./lib/attempt-deadline";
+import { closedToStart, startDecision } from "./lib/attempt-deadline";
 import { autoGradeSubmission } from "./lib/auto-grade";
 import { checkMaths } from "./lib/maths-check";
 import { criterionMarksToStore, readRubric, rubricToStore, rubricTotal } from "./lib/rubric";
@@ -498,32 +498,36 @@ export const startTestSubmission = studentActionClient
       throw new Error("You're not enrolled in this course");
     }
 
-    const existing = await prisma.testSubmission.findFirst({
-      where: { studentId: student.id, testId: test.id, status: "IN_PROGRESS" },
-      select: { id: true },
+    const extra = await getExtraTime(test.courseId, student.id);
+    const submission = await prisma.$transaction(async (tx) => {
+      // One learner, one test, one at a time: two clicks (or two tabs) at
+      // once would otherwise both find nothing and make two attempts.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`start-test:${student.id}:${test.id}`}))`;
+      const attempts = await tx.testSubmission.findMany({
+        where: { studentId: student.id, testId: test.id },
+        select: { id: true, status: true },
+      });
+      switch (startDecision(attempts.map((a) => a.status), closedToStart(test.dueDate, Date.now()))) {
+        // An attempt already begun carries on: the runner submits it with its answers.
+        case "resume":
+          return attempts.find((a) => a.status === "IN_PROGRESS")!;
+        case "handedIn":
+          throw new UserError("You've already handed this test in. Ask your tutor if you need another try.");
+        // A new attempt now would be submitted empty at once.
+        case "closed":
+          throw new UserError("This test has closed, so it can't be started any more. Ask your tutor if you missed it.");
+        case "new":
+          // The student's extra time goes onto the attempt, so the clock and
+          // the auto-submit job read one row (lib/attempt-deadline.ts).
+          return tx.testSubmission.create({
+            data: {
+              studentId: student.id, testId: test.id, startedAt: new Date(), status: "IN_PROGRESS",
+              answers: Prisma.JsonNull, ...extra,
+            },
+            select: { id: true },
+          });
+      }
     });
-
-    // An attempt already begun is returned above all else: the runner submits
-    // it with its answers. A new one would be submitted empty at once.
-    if (!existing && closedToStart(test.dueDate, Date.now())) {
-      throw new UserError("This test has closed, so it can't be started any more. Ask your tutor if you missed it.");
-    }
-
-    // The student's extra time on this course goes onto the attempt, so the
-    // clock and the auto-submit job read one row (lib/attempt-deadline.ts).
-    const submission =
-      existing ??
-      (await prisma.testSubmission.create({
-        data: {
-          studentId: student.id,
-          testId: test.id,
-          startedAt: new Date(),
-          status: "IN_PROGRESS",
-          answers: Prisma.JsonNull,
-          ...(await getExtraTime(test.courseId, student.id)),
-        },
-        select: { id: true },
-      }));
 
     revalidatePath(`/dashboard/tests/${test.id}`);
 

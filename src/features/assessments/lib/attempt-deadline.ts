@@ -58,6 +58,19 @@ export function closedToStart(dueDate: Date | number | null | undefined, now: Da
   return dueDate != null && Number(now) >= Number(dueDate);
 }
 
+export type StartDecision = "resume" | "new" | "handedIn" | "closed";
+
+/**
+ * What Begin does, from the learner's attempts at the test (any order). A
+ * test is one attempt: an attempt in progress carries on, one handed in ends
+ * it (a tutor deletes it to allow another), and a closed test can't be begun.
+ */
+export function startDecision(statuses: readonly string[], closed: boolean): StartDecision {
+  if (statuses.includes("IN_PROGRESS")) return "resume";
+  if (statuses.length > 0) return "handedIn";
+  return closed ? "closed" : "new";
+}
+
 /**
  * Grace the cron gives before force-submitting. The runner submits at zero
  * WITH the student's latest answers; the cron only flips the status on

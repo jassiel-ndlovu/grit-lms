@@ -7,7 +7,7 @@
  */
 import { readFileSync } from "node:fs";
 
-import { attemptDeadline, closedToStart } from "../src/features/assessments/lib/attempt-deadline";
+import { attemptDeadline, closedToStart, startDecision } from "../src/features/assessments/lib/attempt-deadline";
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -47,7 +47,10 @@ check("no due date never closes", !closedToStart(null, t0));
 // attempt that already began carry on.
 const action = readFileSync("src/features/assessments/actions.ts", "utf8");
 const page = readFileSync("src/app/dashboard/tests/pre-test/[id]/page.tsx", "utf8");
-check("the server refuses a closed test, but not one already begun", action.includes("if (!existing && closedToStart(test.dueDate, Date.now()))"));
+check("begin: nothing yet", [startDecision([], false), startDecision([], true)].join() === "new,closed");
+check("begin: one in progress carries on, closed or not", [startDecision(["IN_PROGRESS"], true), startDecision(["SUBMITTED", "IN_PROGRESS"], false)].join() === "resume,resume");
+check("begin: handed in is final", [startDecision(["SUBMITTED"], false), startDecision(["GRADED"], true)].join() === "handedIn,handedIn");
+check("the server decides with startDecision, under a lock", action.includes("pg_advisory_xact_lock") && action.includes("switch (startDecision("));
 check("the pre-test page asks too", page.includes("closedToStart(test.dueDate, now)"));
 
 console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
