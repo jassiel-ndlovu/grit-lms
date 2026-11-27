@@ -111,8 +111,10 @@ export function RibbonNav({
   // Exact-or-child match; the first link (the overview) only lights on itself.
   const current =
     forced ?? activeHref(pathname, links.slice(1).map((l) => l.href)) ?? (pathname === links[0]?.href ? links[0].href : null);
+  // A 4 px underline, so it still shows against the signature strip right under it.
+  // Phones swipe the links, so their scrollbar would only cover it.
   return (
-    <nav aria-label={label} className={cn("-mb-px flex min-w-0 flex-1 self-stretch overflow-x-auto", className)}>
+    <nav aria-label={label} className={cn("-mb-px flex min-w-0 flex-1 self-stretch overflow-x-auto max-md:[scrollbar-width:none]", className)}>
       <ul className="flex items-stretch gap-1">
         {links.map((l) => {
           const active = l.href === current;
@@ -122,8 +124,8 @@ export function RibbonNav({
                 href={l.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center border-b-2 px-2 text-sm whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  active ? "border-foreground font-medium" : "text-muted-foreground hover:text-foreground border-transparent",
+                  "flex items-center border-y-4 border-t-transparent px-2 text-sm whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  active ? "border-b-foreground font-medium" : "text-muted-foreground hover:text-foreground border-b-transparent",
                 )}
               >
                 {l.label}

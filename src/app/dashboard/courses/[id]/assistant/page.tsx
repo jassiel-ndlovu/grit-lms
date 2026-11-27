@@ -5,17 +5,13 @@
  * credits (/dashboard/credits), and tutors read the chats on their own page.
  */
 
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Eye, Plus } from "lucide-react";
 
-import { PageTitle } from "@/components/shell/page-frame";
-import { Button } from "@/components/ui/button";
+import { AssistantTop } from "@/features/courses/components/study/assistant-scene";
 import { StudyChat } from "@/features/courses/components/study/chat";
 import { StudentCourseFrame } from "@/features/courses/components/student-course-frame";
 import { messageView, reasonOf, studyRoutes } from "@/features/courses/lib/study-ui";
 import { orNotFound, studyCourse } from "@/features/courses/study";
-import { LinkSelect } from "@/features/events/components/booking/pickers";
 import { getStudyChat, myStudyChats, studyStatus } from "@/features/study/study";
 import { getViewer } from "@/lib/viewer";
 
@@ -54,51 +50,21 @@ export default async function StudyAssistantPage({ params, searchParams }: PageP
       : { note: "Ask your parent to buy them. They can do it from their own Nexa account." };
 
   return (
-    <StudentCourseFrame
-      course={course}
-      page="Assistant"
-      actions={
-        mine ? (
-          <Button asChild size="sm" variant="outline">
-            <Link href={studyRoutes.assistant(courseId)}>
-              <Plus aria-hidden className="size-4" />
-              New chat
-            </Link>
-          </Button>
-        ) : undefined
-      }
-    >
-      <PageTitle
-        title="Study assistant"
-        description="Ask about this course's lessons. Answers come from the lessons, and can be wrong: check them against the lesson."
-        properties={
-          <p className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
-            <Eye aria-hidden className="size-4 shrink-0" />
-            Your tutors and parents can read these chats. They&apos;re kept for a year.
-            {here && status.reason !== "COMING_SOON" && status.reason !== "NOT_ON_PLAN" ? (
-              <Link href={studyRoutes.credits} className="text-foreground underline underline-offset-2">
-                Study credits
-              </Link>
-            ) : null}
-          </p>
-        }
-      />
-      {chats.length ? (
-        <LinkSelect
-          label="Chat"
-          value={mine?.id ?? "new"}
-          options={[
-            { value: "new", label: "New chat", href: studyRoutes.assistant(courseId) },
-            ...chats.map((c) => ({ value: c.id, label: c.title, href: studyRoutes.assistant(courseId, c.id) })),
-          ]}
-        />
-      ) : null}
+    <StudentCourseFrame course={course} page="Assistant" type="editor">
       <StudyChat
         courseId={courseId}
         chatId={chat?.id ?? null}
         messages={chat?.messages.map(messageView) ?? []}
         status={{ reason: reasonOf(status.reason), credits: status.credits, perDay: status.perDay, leftToday: status.leftToday }}
         buy={buy}
+        creditsHref={here && status.reason !== "COMING_SOON" && status.reason !== "NOT_ON_PLAN" ? studyRoutes.credits : null}
+        top={
+          <AssistantTop
+            chats={chats.map((c) => ({ id: c.id, title: c.title, href: studyRoutes.assistant(courseId, c.id) }))}
+            current={mine?.id ?? null}
+            newHref={studyRoutes.assistant(courseId)}
+          />
+        }
       />
     </StudentCourseFrame>
   );

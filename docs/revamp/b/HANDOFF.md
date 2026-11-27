@@ -3,6 +3,26 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-25 The study assistant's own look, `revamp/b-study-scene`
+
+No migration, no env vars. All in B's paths.
+
+Done:
+- The student's assistant page has a gradient behind it, mixed from their
+  theme's own colours, so it's plain they're somewhere that spends credits
+  (owner, 24 and 25 Nov; a moon and stars were tried and dropped). Calm has
+  one plain blue tint instead. High contrast, forced colours and "more contrast" have no gradient. Nothing
+  moves but the waiting spinner.
+- The question card is in the middle of a new chat, with three openers that
+  only fill the box, and at the foot of a running one. The line saying who
+  can read the chats is always in it. The top says each answer uses credits.
+- Tutors and parents keep the plain messages (`messages.tsx` is unchanged).
+- The current tab's underline in the ribbon is 4 px (was 2), so the
+  signature strip doesn't hide it. Every page with tabs.
+- `/design-system/study?state=` shows every state, and the chat in every
+  theme. `check-study-scene.ts` checks the text's contrast in each.
+
+Not tested: a signed-in student on Preview, and a real answer.
 ## 2026-11-25 AI help for tutors, `revamp/b-ai-help`
 
 No migration, no env vars. Screens for viewer.md "AI help for tutors"
