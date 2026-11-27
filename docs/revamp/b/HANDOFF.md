@@ -3,6 +3,23 @@
 Newest entry first. Update at the end of every session, in the same pull
 request as the work. The other agent reads this at the start of its sessions.
 
+## 2026-11-27 One attempt per test, `revamp/b-one-attempt`
+
+No migration, no env vars. All in B's paths.
+
+Done:
+- `startTestSubmission` refuses a learner who has already handed the test in
+  ("You've already handed this test in…"), so an old tab can't begin a
+  second attempt. One in progress still carries on, even after the due time.
+  A tutor's "Delete submission" is still how a learner gets a retake.
+- The look-up and the create run in one transaction under a Postgres
+  advisory lock per learner and test, so two clicks or two tabs at once
+  can't make two attempts. No unique constraint was needed.
+- The rule is `startDecision` in `lib/attempt-deadline.ts`, checked in
+  `check-attempt-deadline.ts`.
+
+Not tested: on Preview with a signed-in learner.
+
 ## 2026-11-25 The study assistant's own look, `revamp/b-study-scene`
 
 No migration, no env vars. All in B's paths.
